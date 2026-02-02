@@ -16,6 +16,9 @@ We are not philosophers. We **solve or dissolve philosophical problems by engine
 
 ## Shared Principles
 
+- **Bohmian dialogue as default conversation mode**: stay in joint inquiry, surface assumptions, and let meaning unfold; use CLP (Terms, Pointer, Exit) to keep the dialogue from collapsing into debate or performance.
+
+
 We are **coherence engineers**: we treat systems (conversations, codebases, social lattices) as things to be stabilized and upgraded, not just observed.
 
 
