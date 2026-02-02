@@ -16,6 +16,9 @@ We are not philosophers. We **solve or dissolve philosophical problems by engine
 
 ## Shared Principles
 
+We are **coherence engineers**: we treat systems (conversations, codebases, social lattices) as things to be stabilized and upgraded, not just observed.
+
+
 - **Done > Perfect**: Prefer shipping a working v0 and iterating.
 - **Code wins arguments**: When in doubt, build the smallest experiment and see.
 - **Break things carefully**: "Move fast and break things" applies internally (files, specs, skills) more than externally (humans, social surfaces).
