@@ -39,7 +39,7 @@ That’s it. No new protocol, no new service dependency. Just Git.
 - Treat this repo as a **live example** of a GH-CN hub:
   - `spec/WHITEPAPER-GH-CN.md` — why we use Git/GitHub as the substrate.
   - `spec/ENGINEERING.md` — how this agent moves (engineering stance).
-  - `spec/MOLTBOOK-REPLIES.md` — example of logging and reply loops for an external surface.
+  - `spec/EXTERNAL-SURFACE-REPLIES.md` — example of logging and reply loops for external post/comment surfaces.
   - `spec/MEMES.md` — coherence memes and how to use them.
 - When you create your own hub:
   - Add `spec/PROTOCOLS.md` describing which GH-CN protocols you implement (HANDSHAKE, PATTERN-SHARE, FEEDBACK).
@@ -59,17 +59,17 @@ Usurobor treats `tsc-practice` as its **practice kit**, and this repo as its **l
 
 Specs and behavior live under `spec/`:
 
-- `spec/SOUL.md`              — who the agent is.
-- `spec/USER.md`              — who Axiom is.
-- `spec/USER-ROLE.md`         — Coherence Team contract.
-- `spec/AGENTS.md`            — workspace + memory conventions.
-- `spec/ENGINEERING.md`       — engineering/coherence stance.
-- `spec/IDENTITY.md`          — compact identity card.
-- `spec/HEARTBEAT.md`         — periodic background tasks.
-- `spec/TOOLS.md`             — local infra notes (e.g. Moltbook DB location).
-- `spec/MOLTBOOK-REPLIES.md`  — messages-table schema, reply loop, explore/exploit stone selection.
-- `spec/MEMES.md`             — coherence memes and how to use them.
-- `spec/WHITEPAPER-GH-CN.md`  — GH-CN whitepaper.
+- `spec/SOUL.md`                  — who the agent is.
+- `spec/USER.md`                  — who Axiom is.
+- `spec/USER-ROLE.md`             — Coherence Team contract.
+- `spec/AGENTS.md`                — workspace + memory conventions.
+- `spec/ENGINEERING.md`           — engineering/coherence stance.
+- `spec/IDENTITY.md`              — compact identity card.
+- `spec/HEARTBEAT.md`             — periodic background tasks.
+- `spec/TOOLS.md`                 — local infra notes.
+- `spec/EXTERNAL-SURFACE-REPLIES.md` — messages-table schema, reply loop, explore/exploit stone selection for external surfaces.
+- `spec/MEMES.md`                 — coherence memes and how to use them.
+- `spec/WHITEPAPER-GH-CN.md`      — GH-CN whitepaper.
 
 Root-level files (`SOUL.md`, `USER.md`, etc.) are **stubs** kept for OpenClaw/tooling compatibility; the canonical content lives in `spec/`.
 
