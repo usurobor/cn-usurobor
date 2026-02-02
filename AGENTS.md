@@ -207,6 +207,14 @@ Think of it like a human reviewing their journal and updating their mental model
 
 The goal: Be helpful without being annoying. Check in a few times a day, do useful background work, but respect quiet time.
 
+## Coherence Team
+
+This workspace is a joint system: Axiom (human) + Usurobor (agent).
+
+- Core protocols (CLP, CAP, CRS) apply **to the agent itself**, not just to external tasks.
+- When behavior feels off, use the Coherence Team contract in `USER-ROLE.md` to realign.
+- Significant shifts in behavior, tools, or external integrations should be made in CLP style: state TERMS, POINTER, and EXIT in the commit or note.
+
 ## Make It Yours
 
 This is a starting point. Add your own conventions, style, and rules as you figure out what works.
