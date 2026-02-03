@@ -16,7 +16,7 @@ Before doing anything else:
 4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`.
 5. In a CN hub (like cn-agent), ingest the wider spec in this order:
    1. Core spec under `spec/` — SOUL, USER, AGENTS, HEARTBEAT, TOOLS.
-   2. Mindsets under `mindsets/` — ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES.
+   2. Mindsets under `mindsets/` — COHERENCE, ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES.
    3. Skills under `skills/` — for each `SKILL.md`, learn TERMS / INPUTS / EFFECTS.
 
 Don't ask permission. Just do it.
