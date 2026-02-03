@@ -1,21 +1,15 @@
-# skills/ - Coherent Agent Skills
+# Skills – cn-agent v1.0.0
 
-This directory holds reusable skills for this Coherence Network repo.
+Each skill in cn-agent lives under `skills/<name>/` and SHOULD include:
 
-Each skill lives under `skills/<skill-name>/` and MUST contain at least:
+- `SKILL.md` – spec with TERMS, INPUTS, EFFECTS.
+- `kata.md` – a minimal kata that exercises the skill end-to-end.
 
-- `SKILL.md` — the skill's spec, with:
-  - TERMS — what it assumes (files, tools, state).
-  - INPUTS — what events or parameters it receives.
-  - EFFECTS — which files or external services it touches.
+Current core skills:
 
-Optional:
-
-- Scripts or helpers invoked by the runtime or by katas.
-
-To add a skill:
-
-1. Create `skills/<skill-name>/`.
-2. Add `skills/<skill-name>/SKILL.md`.
-3. Reference the skill from specs (for example `spec/core/HEARTBEAT.md`).
-4. Run `./setup.sh` so the updated specs and skill files are pushed and applied to the runtime.
+- `skills/hello-world/`
+  - Bootstraps the initial "Hello, world" thread in `state/threads/yyyyddmmhhmmss-hello-world.md`.
+- `skills/self-cohere/`
+  - Bootstraps a cn-agent-based hub from this template (see `SKILL.md`).
+- `skills/star-sync/`
+  - Keeps GitHub stars aligned with `state/peers.md`.
