@@ -19,9 +19,9 @@ To **add a skill** in this repo:
 
 1. Create `skills/<skill-name>/`.
 2. Add `skills/<skill-name>/SKILL.md` with clear TERMS / INPUTS / EFFECTS.
-3. Add any scripts under `skills/<skill-name>/` or `tools/` as needed.
-4. Reference the skill from `spec/core/HEARTBEAT.md` or other specs, so the agent knows when to run it.
-5. Run `./setup.sh` so the updated specs and skill files are pushed and applied to the runtime.
+3. Add any scripts under `skills/<skill-name>/` as needed.
+4. Reference the skill from `spec/HEARTBEAT.md` or other specs, so the agent knows when to run it.
+5. Commit and push so the updated specs and skill files are applied to the runtime.
 
 When a kata says “add skill `<name>`”, it means: perform steps 1–5 above for that skill.
 
