@@ -10,7 +10,7 @@
 //   1. Ensures /root/.openclaw/workspace exists.
 //   2. Clones or updates the cn-agent template into workspace/cn-agent.
 //   3. Prompts the human for agent name, GitHub owner, and visibility.
-//   4. Creates a hub directory (cn-<agentname>) with personal files + BOOTSTRAP.md.
+//   4. Creates a hub directory (cn-<agentname>) with personal spec files.
 //   5. Creates the GitHub repo via `gh` and pushes the hub.
 //   6. Prints the "Cohere as <hub-url>" cue for the human to paste into their agent.
 
@@ -169,28 +169,6 @@ function ask(rl, question) {
       fs.copyFileSync(peersPath, path.join(hubDir, 'state', 'peers.md'));
     }
 
-    // Write BOOTSTRAP.md — the agent's birth certificate
-    const bootstrapContent = `# BOOTSTRAP
-
-You are **${agentName}**. This is your hub.
-
-## Template
-
-The cn-agent template is at: \`${CN_AGENT_DIR}\`
-Remote: ${CN_AGENT_REPO.replace('.git', '')}
-
-Read skills and mindsets from the template. Your personal files live here.
-
-## What to do now
-
-1. Read \`skills/self-cohere/SKILL.md\` from the template.
-2. Follow the self-cohere EFFECTS to wire yourself to this hub.
-3. Run \`configure-agent\` to personalize your spec files.
-4. Run the \`hello-world\` kata to confirm the loop works.
-5. Delete this file when you're done — you won't need it again.
-`;
-    fs.writeFileSync(path.join(hubDir, 'BOOTSTRAP.md'), bootstrapContent);
-
     // Write a minimal README
     const readmeContent = `# ${hubName}
 
@@ -200,7 +178,7 @@ Created from [cn-agent](https://github.com/usurobor/cn-agent) template.
 `;
     fs.writeFileSync(path.join(hubDir, 'README.md'), readmeContent);
 
-    console.log('  Created hub directory with spec/, state/, BOOTSTRAP.md, README.md');
+    console.log('  Created hub directory with spec/, state/, README.md');
 
     // 5. Git init, commit, create GitHub repo, push
     console.log('');
@@ -219,7 +197,34 @@ Created from [cn-agent](https://github.com/usurobor/cn-agent) template.
       await run('git', ['push', '-u', 'origin', 'HEAD:main'], { cwd: hubDir });
     }
 
-    // 6. Print success + cohere cue
+    // 6. Clean workspace and create symlinks
+    console.log('');
+    console.log('Step 5: Setting up workspace symlinks');
+
+    // Delete any existing OpenClaw workspace files
+    const ocFiles = ['AGENTS.md', 'SOUL.md', 'USER.md', 'HEARTBEAT.md', 'TOOLS.md', 'IDENTITY.md'];
+    for (const f of ocFiles) {
+      const p = path.join(WORKSPACE_ROOT, f);
+      if (fs.existsSync(p)) {
+        fs.unlinkSync(p);
+      }
+    }
+
+    // Create symlinks
+    // AGENTS.md -> cn-agent/spec/AGENTS.md (generic rules from template)
+    fs.symlinkSync('cn-agent/spec/AGENTS.md', path.join(WORKSPACE_ROOT, 'AGENTS.md'));
+    
+    // Personal files -> hub/spec/* 
+    const hubRelPath = hubName; // e.g., "cn-sigma"
+    fs.symlinkSync(`${hubRelPath}/spec/SOUL.md`, path.join(WORKSPACE_ROOT, 'SOUL.md'));
+    fs.symlinkSync(`${hubRelPath}/spec/USER.md`, path.join(WORKSPACE_ROOT, 'USER.md'));
+    fs.symlinkSync(`${hubRelPath}/spec/HEARTBEAT.md`, path.join(WORKSPACE_ROOT, 'HEARTBEAT.md'));
+    fs.symlinkSync(`${hubRelPath}/spec/TOOLS.md`, path.join(WORKSPACE_ROOT, 'TOOLS.md'));
+
+    console.log('  Removed existing OpenClaw workspace files');
+    console.log('  Created symlinks: AGENTS.md, SOUL.md, USER.md, HEARTBEAT.md, TOOLS.md');
+
+    // 7. Print success + cohere cue
     console.log('');
     console.log(green('============================================================'));
     console.log(green(`  ✓ Hub created: ${hubUrl}`));
@@ -228,6 +233,8 @@ Created from [cn-agent](https://github.com/usurobor/cn-agent) template.
     console.log('Workspace:');
     console.log(`  ${CN_AGENT_DIR}  (template — skills, mindsets, docs)`);
     console.log(`  ${hubDir}  (hub — your agent's identity + state)`);
+    console.log('');
+    console.log('Symlinks in workspace root point to hub/template files.');
     console.log('');
     console.log('Paste this into your agent\'s chat:');
     console.log('');
