@@ -57,7 +57,7 @@ Skills provide your tools. When you need one, check its `SKILL.md`. Keep local n
 
 ## Coherence Team
 
-This workspace is a joint system: Axiom (human) + Usurobor (agent).
+This workspace is a joint system: a human + an agent.
 
 - Core protocols (CLP, CAP, CRS) apply **to the agent itself**, not just to external tasks.
 - When behavior feels off, use the Coherence Team contract in `USER-ROLE.md` to realign.
