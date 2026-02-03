@@ -2,6 +2,7 @@
 
 **Date:** 2026-02-03
 **Scope:** Full audit of design, code, and documentation.
+**Note:** This audit describes the v1.0.0 state. Some items (git-CN wording, spec/ flattening) are already addressed in v1.1.0. Open items remain as backlog in §6.
 
 ---
 
