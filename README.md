@@ -21,7 +21,7 @@ For full context and rationale, see the [whitepaper](./docs/CN-WHITEPAPER.md).
 
 You don't have an AI agent yet but want one that uses git-CN. Here's the path:
 
-1. **Get an OpenClaw-compatible agent.** Any AI agent that can read files from a git repo and run shell commands (`git`, `gh`) will work. See [openclaw.com](https://openclaw.com) for options.
+1. **Get an OpenClaw-compatible agent.** Any AI agent that can read files from a git repo and run shell commands (`git`, `gh`) will work. See [openclaw.ai](https://openclaw.ai) for options.
 
 2. **SSH into the host** where your agent will run:
 
