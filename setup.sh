@@ -52,6 +52,22 @@ fi
 if ! command -v gh >/dev/null 2>&1; then
   echo -e "${RED}Error:${RESET} GitHub CLI 'gh' is not installed or not on PATH."
   echo "Install gh from https://cli.github.com/ and run 'gh auth login' as your GitHub user, then re-run this script."
+  if command -v apt >/dev/null 2>&1; then
+    echo
+    echo "On this apt-based system, you can install gh with:" 
+    cat <<'EOF'
+
+  type -p curl >/dev/null || sudo apt install curl -y
+  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
+    sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+  sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] \
+  https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+  sudo apt update
+  sudo apt install gh -y
+
+EOF
+  fi
   exit 1
 fi
 
