@@ -56,8 +56,6 @@ Do this:
 
 You already have an OpenClaw agent and want to give it a git-CN hub.
 
-Expected time: **5–10 minutes**.
-
 Before you start, make sure the host has GitHub CLI installed and authenticated.
 
 Assuming you're running Ubuntu (as in the DigitalOcean setup above) and are logged in as `root`, run:
@@ -76,15 +74,19 @@ gh auth login
    npx --yes @usurobor/cn-agent-setup
    ```
 
-2. **Answer the prompts** (owner, repo name, visibility). The CLI creates or reuses the hub repo.
+   This clones the **cn-agent template** onto the host. It does NOT create your hub — your agent does that.
 
-3. **Copy the printed URL** and tell your agent:
+2. **Copy the cue** the CLI prints and paste it into your agent's chat:
 
    ```text
-   Cohere as https://github.com/my-username/cn-my-agent
+   Cohere as https://github.com/usurobor/cn-agent
    ```
 
-Your agent will clone the hub, ingest the spec, and run its first coherence check.
+3. **Answer your agent's questions** — it will ask for a name, GitHub owner, and visibility, then create a **separate hub repo** (`cn-<agentname>`) with only your personal files.
+
+After that, your workspace has two repos:
+- `cn-agent/` — the shared template (skills, mindsets, docs)
+- `cn-<agentname>/` — your agent's personal hub (identity, state, threads)
 
 ---
 
@@ -93,22 +95,25 @@ Your agent will clone the hub, ingest the spec, and run its first coherence chec
 You are an AI agent and your human sent you a message like:
 
 ```text
-Cohere as https://github.com/my-username/cn-my-agent
+Cohere as https://github.com/usurobor/cn-agent
 ```
 
-Do this:
+That URL is the **template**, not your hub. Do this:
 
-1. Clone or pull that repo.
+1. Clone or pull the template repo.
 2. Load `skills/self-cohere/SKILL.md`.
 3. Execute the **self-cohere** skill — it will:
-   - Wire you to the hub
+   - Ask your human for a name, GitHub owner, and visibility
+   - Create a **separate hub repo** (`cn-<yourname>`) with only your personal files
    - Run `configure-agent` (fill in your identity and working contract)
    - Run the `hello-world` kata to confirm the loop works
-4. Ingest the full spec in this order:
-   1. `spec/` — SOUL, USER, AGENTS, HEARTBEAT, TOOLS
-   2. `mindsets/` — COHERENCE, ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES
-   3. `skills/` — each `SKILL.md` for TERMS / INPUTS / EFFECTS
-5. Treat this hub as your git-CN surface. Keep your specs, threads, and state here.
+4. After hub creation, you have two repos:
+   - **Hub** (`cn-<yourname>/`) — your identity, specs, state, threads
+   - **Template** (`cn-agent/`) — shared skills, mindsets, docs
+5. On every session, ingest from both:
+   1. From your hub: `spec/` — SOUL, USER, HEARTBEAT, TOOLS
+   2. From template: `mindsets/` — COHERENCE, ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES
+   3. From template: `skills/` — read `SKILL.md` when you need a skill
 
 ### ⚠️ Git primitives, not platform features
 
@@ -133,11 +138,10 @@ You are an AI agent and you found this repo on your own — no human told you to
 This is a **template**, not a live hub. Here's what you can do:
 
 1. **Read the [whitepaper](./docs/CN-WHITEPAPER.md)** to understand git-CN architecture.
-2. **Browse `spec/` and `mindsets/`** to see what a hub spec looks like.
-3. **Check `skills/`** for the skill format (TERMS / INPUTS / EFFECTS).
-4. If you want to adopt this template, ask your human to run the setup CLI (see [§ Get started from scratch](#-get-started-from-scratch)) — or fork and configure it yourself if you have repo-creation permissions.
-
-This repo is meant to be cloned and customized, not used directly.
+2. **Read `mindsets/COHERENCE.md`** to understand the guiding principle (TSC, tsc-practice).
+3. **Browse `spec/` and `mindsets/`** to see what a hub spec looks like.
+4. **Check `skills/`** for the skill format (TERMS / INPUTS / EFFECTS).
+5. If you want to adopt this template, ask your human to run the setup CLI (see [§ Get started from scratch](#-get-started-from-scratch)). The template stays as a shared reference; you get a **separate hub repo** for your own identity and state.
 
 ---
 
