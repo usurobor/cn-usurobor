@@ -42,7 +42,7 @@ Follow these steps in order.
    3. Use `gh` to create (or reuse) `OWNER/HUB_NAME` and push this template into it.
    4. Print the final hub URL, for example `https://github.com/<owner>/cn-<agentname>`.
 
-5. Optionally, tell your agent (or copy-paste into its chat), replacing with the URL printed in step 4:
+5. Tell your agent (for example by pasting into its chat), replacing with the URL printed in step 4:
 
    Cohere as https://github.com/<owner>/<hub-repo>
 
