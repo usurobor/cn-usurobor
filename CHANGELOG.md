@@ -9,9 +9,10 @@ Coherence grades use the [TSC](https://github.com/usurobor/tsc) triadic axes, ap
 
 These are intuition-level ratings, not outputs from a running TSC engine (formal C_Σ ranges 0–1; ≥0.80 = PASS).
 
-| Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                                           |
-|---------|-----|-------------|--------------|------------------|----------------------------------------------------------|
+| Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
+|---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v1.2.1  | B+  | A−          | B+           | B+               | CLI cue + onboarding tweaks.           |
 | v1.2.0  | B+  | A−          | B+           | B+               | Audit + restructure; mindsets as dimensions. |
-| v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added. |
+| v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
