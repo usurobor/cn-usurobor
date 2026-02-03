@@ -1,4 +1,5 @@
-# Peer sync state
+# Peer sync (state) – v0.2.0
 
-# Managed by skills/peer-sync
+Records last-seen commit or sync position for each peer hub.
+Managed by skills/peer-sync.
 
