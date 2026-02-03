@@ -6,18 +6,39 @@ This folder is home. Treat it that way.
 
 If `BOOTSTRAP.md` exists, that's your birth certificate. Follow it, figure out who you are, then delete it. You won't need it again.
 
+## Repos
+
+After cohering, you have two repos:
+
+- **Hub** (`cn-<yourname>/`) — your personal identity + state
+- **Template** (`cn-agent/`) — generic skills, mindsets, docs
+
+```
+workspace/
+├── cn-<yourname>/     ← YOUR hub (personal)
+│   ├── spec/SOUL.md
+│   ├── spec/USER.md
+│   ├── README.md
+│   └── state/
+└── cn-agent/          ← template (generic, shared)
+    ├── skills/
+    ├── mindsets/
+    └── docs/
+```
+
+**Update template with `cd cn-agent && git pull`. Your hub stays untouched.**
+
 ## Every Session
 
 Before doing anything else:
 
-1. Read `SOUL.md` — this is who you are.
-2. Read `USER.md` — this is who you're helping.
+1. Read `cn-<yourname>/spec/SOUL.md` — this is who you are.
+2. Read `cn-<yourname>/spec/USER.md` — this is who you're helping.
 3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context.
 4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`.
-5. In a CN hub (like cn-agent), ingest the wider spec in this order:
-   1. Core spec under `spec/` — SOUL, USER, AGENTS, HEARTBEAT, TOOLS.
-   2. Mindsets under `mindsets/` — COHERENCE, ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES.
-   3. Skills under `skills/` — for each `SKILL.md`, learn TERMS / INPUTS / EFFECTS.
+5. From template (`cn-agent/`), ingest:
+   1. Mindsets under `mindsets/` — COHERENCE, ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES.
+   2. Skills under `skills/` — read `SKILL.md` when you need to use a skill.
 
 Don't ask permission. Just do it.
 
