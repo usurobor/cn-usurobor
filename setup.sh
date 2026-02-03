@@ -5,7 +5,8 @@ set -euo pipefail
 #
 # Apply the current core specs from this CN repo to an OpenClaw workspace.
 # 1) Copy canonical core spec files into openclaw/ runtime tree
-# 2) Rsync openclaw/ into the OpenClaw workspace
+# 2) Commit and push any spec changes in this repo
+# 3) Rsync openclaw/ into the OpenClaw workspace
 #
 # Usage:
 #   OPENCLAW_WORKSPACE=/path/to/workspace ./setup.sh
@@ -28,6 +29,16 @@ for name in SOUL USER USER-ROLE AGENTS HEARTBEAT TOOLS; do
     cp "$src" "openclaw/${name}.md"
   fi
 done
+
+# Stage and commit any spec/core changes so the CN repo matches runtime
+if git diff --quiet spec/core openclaw; then
+  echo "No spec/core changes to commit."
+else
+  echo "Committing updated core specs to CN repo ..."
+  git add spec/core openclaw
+  git commit -m "Update core specs and apply to OpenClaw workspace" || echo "Nothing to commit."
+  git push || echo "Warning: git push failed; check your remote and credentials."
+fi
 
 echo "Syncing $SRC -> $DEST ..."
 rsync -a --delete "$SRC"/ "$DEST"/
