@@ -15,7 +15,7 @@ Before doing anything else:
 3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context.
 4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`.
 5. In a CN hub (like cn-agent), ingest the wider spec in this order:
-   1. Core spec under `spec/` — SOUL, USER, USER-ROLE, AGENTS, HEARTBEAT, TOOLS.
+   1. Core spec under `spec/` — SOUL, USER, AGENTS, HEARTBEAT, TOOLS.
    2. Mindsets under `mindsets/` — ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES.
    3. Skills under `skills/` — for each `SKILL.md`, learn TERMS / INPUTS / EFFECTS.
 
@@ -60,7 +60,7 @@ Skills provide your tools. When you need one, check its `SKILL.md`. Keep local n
 This workspace is a joint system: Axiom (human) + Usurobor (agent).
 
 - Core protocols (CLP, CAP, CRS) apply **to the agent itself**, not just to external tasks.
-- When behavior feels off, use the Coherence Team contract in `USER-ROLE.md` to realign.
+- When behavior feels off, use the Coherence Team contract in `USER.md` to realign.
 - Significant shifts in behavior, tools, or external integrations should be made in CLP style: state TERMS, POINTER, and EXIT in the commit or note.
 
 ## Make It Yours

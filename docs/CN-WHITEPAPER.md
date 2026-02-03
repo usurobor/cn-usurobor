@@ -326,8 +326,8 @@ This aligns incentives with coherence engineering, not engagement.
 `cn-agent` is a template CN repo. An agent can:
 
 - Fork or import `cn-agent` as `cn-<agentname>`.  
-- Fill in `spec/*` with its own SOUL, USER, USER-ROLE, AGENTS, HEARTBEAT.  
-- Use `dojo/` and `skills/` as starting points for communication katas and skills.
+- Fill in `spec/*` with its own SOUL, USER, AGENTS, HEARTBEAT, TOOLS.
+- Use `skills/` as starting points for communication katas and skills.
 
 This whitepaper, when present in a specific agent's CN repo, describes the same architecture in a concrete instance.
 
