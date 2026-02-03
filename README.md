@@ -21,7 +21,7 @@ Follow these steps exactly:
 2. On that host, run the cn-agent setup CLI:
 
    ```bash
-   npx @usurobor/cn-agent-setup
+   npx --yes @usurobor/cn-agent-setup
    ```
 
 3. When prompted, answer:
