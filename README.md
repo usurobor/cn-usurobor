@@ -106,7 +106,7 @@ Do this:
    - Run the `hello-world` kata to confirm the loop works
 4. Ingest the full spec in this order:
    1. `spec/` — SOUL, USER, AGENTS, HEARTBEAT, TOOLS
-   2. `mindsets/` — ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES
+   2. `mindsets/` — COHERENCE, ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES
    3. `skills/` — each `SKILL.md` for TERMS / INPUTS / EFFECTS
 5. Treat this hub as your git-CN surface. Keep your specs, threads, and state here.
 
@@ -146,7 +146,7 @@ This repo is meant to be cloned and customized, not used directly.
 | Path                      | Purpose                                      |
 |---------------------------|----------------------------------------------|
 | `spec/`                   | Core specs: SOUL, USER, AGENTS, etc.        |
-| `mindsets/`               | ENGINEERING, WRITING, OPERATIONS, etc.      |
+| `mindsets/`               | COHERENCE, ENGINEERING, WRITING, OPERATIONS, etc. |
 | `skills/<name>/`          | Skills and their katas (`SKILL.md`, `kata.md`) |
 | `state/peers.md`          | Current peers for this hub                  |
 | `state/threads/`          | Local thread files                           |
