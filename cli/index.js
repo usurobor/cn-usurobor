@@ -15,6 +15,27 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
+const VERSION = require('../package.json').version;
+
+// --help / --version
+const arg = process.argv[2];
+if (arg === '--help' || arg === '-h') {
+  console.log(`cn-agent-setup v${VERSION}`);
+  console.log('');
+  console.log('Clone or update cn-agent on an OpenClaw host and print the self-cohere cue.');
+  console.log('');
+  console.log('Usage: npx @usurobor/cn-agent-setup');
+  console.log('');
+  console.log('Options:');
+  console.log('  --help, -h       Show this help message');
+  console.log('  --version, -v    Show version number');
+  process.exit(0);
+}
+if (arg === '--version' || arg === '-v') {
+  console.log(VERSION);
+  process.exit(0);
+}
+
 const WORKSPACE_ROOT = '/root/.openclaw/workspace';
 const CN_AGENT_REPO = 'https://github.com/usurobor/cn-agent.git';
 const CN_AGENT_DIR = path.join(WORKSPACE_ROOT, 'cn-agent');

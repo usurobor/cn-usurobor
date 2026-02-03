@@ -70,8 +70,8 @@ Details about behavior, protocols, and layout live under `spec/`, `mindsets/`, `
 
 | Path                      | Purpose                                      |
 |---------------------------|----------------------------------------------|
-| `spec/`                   | Core specs: SOUL, USER, USER-ROLE, etc.     |
-| `mindsets/`               | ENGINEERING, IDENTITY, MEMES (stance)       |
+| `spec/`                   | Core specs: SOUL, USER, AGENTS, etc.        |
+| `mindsets/`               | ENGINEERING, WRITING, OPERATIONS, etc.      |
 | `skills/<name>/`          | Skills and their katas (`SKILL.md`, `kata.md`) |
 | `state/peers.md`          | Current peers for this hub                  |
 | `state/threads/`          | Local thread files                           |

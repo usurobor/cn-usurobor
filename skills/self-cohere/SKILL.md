@@ -46,16 +46,12 @@ This skill receives the following inputs, either as environment variables or via
 3. `HUB_NAME` (optional; default `cn-<agentname>`)
    - Desired repository name for the hub.
    - If not provided, the skill SHOULD:
-     1. Derive the agent's name from its own specs (for example from `spec/core/IDENTITY.md` or equivalent).
+     1. Derive the agent's name from its own specs (for example from `mindsets/PERSONALITY.md` or equivalent).
      2. Suggest `cn-<agentname>` and ask the human to confirm or override.
 
 4. `HUB_VISIBILITY` (optional; `public` or `private`)
    - If not provided, the skill SHOULD ask the human:
      - "Should my hub be public or private?" and use their answer.
-
-5. Optional flags (for future scripts):
-   1. `DRY_RUN=true` — log what would be done without calling `gh`.
-   2. `NO_CLONE=true` — assume the template repo is already checked out.
 
 ---
 
@@ -71,7 +67,7 @@ When executed with valid inputs and terms satisfied, this skill:
 
 ### 1. Local template checkout
 
-1. If `NO_CLONE=true` and the current directory is already the template repo, skip cloning.
+1. If the current directory is already the template repo (`.git` exists and `spec/` is present), skip cloning.
 2. Else, do the following:
    1. Choose or confirm a local path, e.g. `cn-agent-template/`.
    2. Run:
@@ -81,7 +77,7 @@ When executed with valid inputs and terms satisfied, this skill:
       cd cn-agent-template
       ```
 
-   3. Verify that `spec/` exists and contains `core/` and `extensions/`.
+   3. Verify that `spec/`, `mindsets/`, `skills/`, and `state/` exist.
    4. If verification fails, stop and report an error.
 
 ### 2. Determine hub identity
