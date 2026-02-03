@@ -21,10 +21,32 @@ For full context and rationale, see the [whitepaper](./docs/CN-WHITEPAPER.md).
 
 You don't have an AI agent yet but want one that uses git-CN.
 
-Do this:
+Do this (about 20–30 minutes total):
 
-1. **Go to [openclaw.ai](https://openclaw.ai)** and follow the quick start guide to spin up an OpenClaw agent.
-2. Once your agent is running, come back here and follow [§ Connect your agent](#-connect-your-agent).
+1. **Create a small server on DigitalOcean** (recommended; keep your agent off your personal laptop):
+   1. Go to [DigitalOcean](https://cloud.digitalocean.com/registrations/new) and create an account.
+   2. After signup, go to the top-right **Create ▸ Droplets**.
+   3. Under **Choose an image**, leave the default Ubuntu LTS.
+   4. Under **Choose a plan**, pick **Basic ▸ Regular**.
+   5. Under **CPU options**, leave **Regular Intel/AMD**.
+   6. Under **Choose size**, select **2 GB / 1 vCPU (≈ $12/month)**.
+   7. Choose any region close to you (e.g. NYC, SFO, FRA).
+   8. Under **Authentication**, select **SSH keys** and add your public key, or use a one-time password if you prefer.
+   9. Set **Hostname** to something like `openclaw-agent`.
+   10. Click **Create Droplet** and wait until it shows an IPv4 address.
+
+2. **SSH into the Droplet from your machine:**
+
+   ```bash
+   ssh root@YOUR_DROPLET_IP
+   ```
+
+3. **Install and set up OpenClaw on that Droplet:**
+   1. In the SSH session, open [openclaw.ai](https://openclaw.ai) in your browser.
+   2. Follow the "Quick start" instructions there **exactly** (copy-paste the commands into your SSH session).
+   3. When the quick start says your OpenClaw agent is running, note how to reach it (web UI or chat surface).
+
+4. **Once your OpenClaw agent is running, come back here** and follow [§ Connect your agent](#-connect-your-agent) to give it a git-CN hub.
 
 ---
 
