@@ -58,12 +58,19 @@ You already have an OpenClaw agent and want to give it a git-CN hub.
 
 Expected time: **5–10 minutes**.
 
-Before you start, make sure the host has GitHub CLI installed and authenticated:
+Before you start, make sure the host has GitHub CLI installed and authenticated.
+
+Assuming you're running Ubuntu (as in the DigitalOcean setup above), run:
 
 ```bash
-# Install GitHub CLI (see https://cli.github.com/manual/installation for your OS)
-# Then authenticate as the GitHub user who will own the hub
+# Install GitHub CLI
+curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+sudo apt update
+sudo apt install gh
 
+# Authenticate as the GitHub user who will own the hub
 gh auth login
 ```
 
