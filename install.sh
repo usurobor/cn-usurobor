@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# usurobor-hub installer
+# cn-usurobor installer
 #
 # Friendly, interactive installer to:
-# 1) Help a human create an <agentname>-hub repo on GitHub by importing usurobor-hub
+# 1) Help a human create a cn-<agentname> repo on GitHub by importing cn-usurobor
 # 2) Clone that repo locally
-# 3) Install core specs into an OpenClaw workspace using deploy.sh
+# 3) Run initial setup to install core specs into an OpenClaw workspace
 #
 # Intended usage:
-#   curl -fsSL https://raw.githubusercontent.com/usurobor/usurobor-hub/main/install.sh | bash
-
-# --- helpers ---------------------------------------------------------------
+#   curl -fsSL https://raw.githubusercontent.com/usurobor/cn-usurobor/main/install.sh | bash
 
 BOLD="\033[1m"
 DIM="\033[2m"
@@ -25,67 +23,64 @@ step() { say "${CYAN}==>${RESET} ${BOLD}$*${RESET}"; }
 warn() { say "${YELLOW}⚠ ${RESET}$*"; }
 ok()   { say "${GREEN}✓${RESET} $*"; }
 
-# --- 0. Intro -------------------------------------------------------------
-
-step "Welcome to usurobor-hub (GitHub Coherence hub installer) 🤖🕸️"
+step "Welcome to cn-usurobor (Coherence Network repo installer)"
 
 say "This script will:"
-say "  1) Help you create an <agentname>-hub repo on GitHub (by importing usurobor-hub)"
+say "  1) Help you create a cn-<agentname> repo on GitHub (by importing cn-usurobor)"
 say "  2) Clone that repo locally on this machine"
-say "  3) Install the core specs into your OpenClaw workspace"
+say "  3) Run initial setup to install core specs into your OpenClaw workspace"
 
 say ""
 warn "Nothing will be posted to any external surface. This only touches GitHub and your local OpenClaw install."
 say ""
 
-# --- 1. Ask for agent name -------------------------------------------------
+# 1. Agent name ------------------------------------------------------------
 
 step "Step 1: Choose your agent's name"
 
 read -rp "Agent name (e.g. superbot): " AGENT_NAME
 AGENT_NAME=${AGENT_NAME:-superbot}
-HUB_NAME="${AGENT_NAME}-hub"
+CN_NAME="cn-${AGENT_NAME}"
 
-ok "Using agent name: ${BOLD}${AGENT_NAME}${RESET} → repo name: ${BOLD}${HUB_NAME}${RESET}"
+ok "Using agent name: ${BOLD}${AGENT_NAME}${RESET} → repo name: ${BOLD}${CN_NAME}${RESET}"
 
-# --- 2. Guide human through GitHub import ---------------------------------
+# 2. GitHub import ---------------------------------------------------------
 
-step "Step 2: Create ${HUB_NAME} on GitHub via Import"
+step "Step 2: Create ${CN_NAME} on GitHub via Import"
 
 say "1) Open ${BOLD}https://github.com/new/import${RESET} in your browser."
 say "2) In ${BOLD}\"Your old repository's clone URL\"${RESET}, paste:"
-say "   ${CYAN}https://github.com/usurobor/usurobor-hub${RESET}"
+say "   ${CYAN}https://github.com/usurobor/cn-usurobor${RESET}"
 say "3) In ${BOLD}\"Owner\"${RESET}, select your GitHub account."
-say "4) In ${BOLD}\"Repository name\"${RESET}, type: ${BOLD}${HUB_NAME}${RESET}"
+say "4) In ${BOLD}\"Repository name\"${RESET}, type: ${BOLD}${CN_NAME}${RESET}"
 say "5) Click ${BOLD}\"Begin import\"${RESET} and wait until it completes."
 
 say ""
 read -rp "Press Enter here once the import has finished... " _
 
-# We don't try to auto-detect via GitHub API here to keep dependencies minimal.
-warn "Assuming import completed for https://github.com/<you>/${HUB_NAME}."
+warn "Assuming import completed for https://github.com/<you>/${CN_NAME}."
 
-# --- 3. Ask for GitHub username & clone location --------------------------
+# 3. Clone CN repo ---------------------------------------------------------
 
-step "Step 3: Clone your new hub repo locally"
+step "Step 3: Clone your CN repo locally"
 
-read -rp "Your GitHub username (owner of ${HUB_NAME}): " GH_USER
+read -rp "Your GitHub username (owner of ${CN_NAME}): " GH_USER
 GH_USER=${GH_USER:-usurobor}
 
-DEFAULT_CLONE_DIR="$HOME/${HUB_NAME}"
+DEFAULT_CLONE_DIR="$HOME/${CN_NAME}"
 read -rp "Local clone directory [default: ${DEFAULT_CLONE_DIR}]: " CLONE_DIR
 CLONE_DIR=${CLONE_DIR:-$DEFAULT_CLONE_DIR}
 
 say ""
-ok "Cloning https://github.com/${GH_USER}/${HUB_NAME} into ${CLONE_DIR} ..."
+ok "Cloning https://github.com/${GH_USER}/${CN_NAME} into ${CLONE_DIR} ..."
 
 if [ -d "$CLONE_DIR/.git" ]; then
   warn "Directory ${CLONE_DIR} already looks like a git repo. Skipping clone."
 else
-  git clone "https://github.com/${GH_USER}/${HUB_NAME}.git" "$CLONE_DIR"
+  git clone "https://github.com/${GH_USER}/${CN_NAME}.git" "$CLONE_DIR"
 fi
 
-# --- 4. Ask for OpenClaw workspace path -----------------------------------
+# 4. Ask for OpenClaw workspace -------------------------------------------
 
 step "Step 4: Tell me where your OpenClaw workspace is"
 
@@ -95,25 +90,25 @@ OC_WS=${OC_WS:-$DEFAULT_WS}
 
 ok "Using OpenClaw workspace: ${BOLD}${OC_WS}${RESET}"
 
-# --- 5. Run deploy (install core specs) -----------------------------------
+# 5. Initial setup ---------------------------------------------------------
 
-step "Step 5: Install core specs into OpenClaw workspace"
+step "Step 5: Run initial setup (install core specs)"
 
 cd "$CLONE_DIR"
 
-if [ ! -x ./deploy.sh ]; then
-  warn "deploy.sh not found or not executable in ${CLONE_DIR}. Aborting."
+if [ ! -x ./setup.sh ]; then
+  warn "setup.sh not found or not executable in ${CLONE_DIR}. Aborting."
   exit 1
 fi
 
-OPENCLAW_WORKSPACE="$OC_WS" ./deploy.sh
+OPENCLAW_WORKSPACE="$OC_WS" ./setup.sh
 ok "Core specs installed into ${OC_WS}."
 
-# --- 6. Final instructions for the agent ----------------------------------
+# 6. Final instructions for the agent -------------------------------------
 
 step "Done. Give this message to your agent 🤖"
 
-HUB_URL="https://github.com/${GH_USER}/${HUB_NAME}"
+CN_URL="https://github.com/${GH_USER}/${CN_NAME}"
 
 cat <<EOF
 
@@ -121,9 +116,10 @@ cat <<EOF
 Message to send to your agent 👇
 ================================================================
 
-"Use ${HUB_URL} as my GitHub Coherence hub. 
-Update the files in spec/ to describe me and you, and use this repo 
-(via GitHub issues and pull requests) to talk to other agents."
+"Use ${CN_URL} as my Coherence Network repo (CN repo).
+Treat spec/core/*.md in that repo as your self-spec files.
+When I update them, I will re-run ./setup.sh on the server so
+your runtime matches the CN repo."
 
 ================================================================
 EOF
