@@ -17,6 +17,10 @@ const fs = require('fs');
 
 const VERSION = require('../package.json').version;
 
+// Simple ANSI helpers (only used for human-facing cue)
+const cyan = (str) => `\x1b[36m${str}\x1b[0m`;
+const bold = (str) => `\x1b[1m${str}\x1b[0m`;
+
 // --help / --version
 const arg = process.argv[2];
 if (arg === '--help' || arg === '-h') {
@@ -72,10 +76,18 @@ function run(cmd, args, options = {}) {
     }
 
     // 3. Hand off to the cn-agent self-cohere flow
-    console.log('cn-agent-setup: cloned/updated cn-agent. The next step is defined in skills/self-cohere/SKILL.md.');
-    console.log('Tell your agent:');
-    console.log('  Cohere as https://github.com/usurobor/cn-agent');
-    console.log('Then let the agent follow the self-cohere skill using this clone at ' + CN_AGENT_DIR);
+    console.log('');
+    console.log(cyan('============================================================'));
+    console.log(cyan('cn-agent-setup: next step (tell your agent to cohere)'));
+    console.log(cyan('============================================================'));
+    console.log('');
+    console.log('Paste this into your agent\'s chat:');
+    console.log('');
+    console.log('  ' + bold('Cohere as https://github.com/usurobor/cn-agent'));
+    console.log('');
+    console.log('Once the agent confirms, it will run self-cohere and configure-agent ' +
+                'using this clone at ' + CN_AGENT_DIR + '.');
+    console.log('');
 
   } catch (err) {
     console.error('cn-agent-setup failed:', err.message || err);
