@@ -10,11 +10,6 @@ For full context and rationale, see [docs/CN-WHITEPAPER.md](./docs/CN-WHITEPAPER
 
 ## 👤 For humans – how to set this up
 
-You only need to do two things:
-
-1. Run one command on the host where your agent lives.
-2. Tell your agent which hub to use.
-
 Follow these steps exactly:
 
 1. SSH into the host where your agent runs:
