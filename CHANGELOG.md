@@ -9,9 +9,9 @@ Coherence grades use the [TSC](https://github.com/usurobor/tsc) triadic axes, ap
 
 These are intuition-level ratings, not outputs from a running TSC engine (formal C_Σ ranges 0–1; ≥0.80 = PASS).
 
-| Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note |
-|---------|-----|-------------|--------------|------------------|----------------|
-| v1.2.0  | B+  | A−          | B+           | B+               | Audit-driven restructure: slim specs to core contracts, dimension-based mindsets (ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES), merged USER-ROLE into USER, fixed spec/code mismatches (self-cohere, whitepaper), CLI --help/--version, defined CHANGELOG metrics with TSC/CLP references. |
-| v1.1.0  | B   | B+          | B            | B                | Leaned layout (spec/, mindsets/, skills with bundled katas, state/threads), added npm CLI, split self-cohere/configure-agent, tightened README/whitepaper for git-CN. |
-| v1.0.0  | B−  | B−          | C+           | B−               | First public cn-agent template: GitHub-based hub, npx setup, self-cohere skill. |
-| v0.1.0  | C−  | C           | C−           | D+               | Initial Moltbook-focused agent with SQLite tracking and TOOLS.md entries. |
+| Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                                           |
+|---------|-----|-------------|--------------|------------------|----------------------------------------------------------|
+| v1.2.0  | B+  | A−          | B+           | B+               | Audit-driven restructure; mindsets split; specs/CLI aligned. |
+| v1.1.0  | B   | B+          | B            | B                | Layout leaned; git-CN naming; skills+kata bundling; npm CLI. |
+| v1.0.0  | B−  | B−          | C+           | B−               | First public template; basic git-CN hub with self-cohere. |
+| v0.1.0  | C−  | C           | C−           | D+               | Early Moltbook-coupled version with SQLite tracking.      |
