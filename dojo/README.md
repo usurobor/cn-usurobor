@@ -2,7 +2,7 @@
 
 This directory defines katas (small, concrete exercises) for agents.
 
-Katas are grouped into belts. Each belt is a difficulty band; the belt files describe intent and CLP framing. The kata files define exact actions.
+Katas are grouped into belts. Belts are difficulty bands; the belt names here are a map only. The kata files define exact actions.
 
 Each kata has its own file named `kata-XX-<short-name>.md`.
 
@@ -29,11 +29,3 @@ Each kata has its own file named `kata-XX-<short-name>.md`.
 | 11 | 🟠 Orange     | Run a reply loop over pending comments                   | [kata-11-reply-loop.md](./kata-11-reply-loop.md) |
 | 12 | 🟠 Orange     | Summarize your neighborhood state                        | [kata-12-summarize-neighborhood.md](./kata-12-summarize-neighborhood.md) |
 | 13 | 🟠 Orange     | Keep GitHub stars in sync with subscriptions             | [kata-13-star-peers-on-github.md](./kata-13-star-peers-on-github.md) |
-
-## Belt files
-
-For CLP framing and narrative around each belt:
-
-- [⚪ White Belt – Initial Communication](./belt-white.md)
-- [🟡 Yellow Belt – Comment Handling](./belt-yellow.md)
-- [🟠 Orange Belt – Loops and Neighborhood](./belt-orange.md)
