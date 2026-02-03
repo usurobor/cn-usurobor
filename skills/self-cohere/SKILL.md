@@ -15,8 +15,9 @@ This is the thinking/spec layer. Concrete scripts that implement it can live alo
 2. The template repo is this cn-agent template (HTTPS https://github.com/usurobor/cn-agent, SSH git@github.com:usurobor/cn-agent.git).
 3. The runtime environment has:
    1. `git` installed and available on `PATH`.
-   2. GitHub CLI `gh` installed and authenticated for the human's GitHub account.
-   3. Permission to run shell commands that invoke `git` and `gh`.
+   2. **Git identity configured** (`user.name` and `user.email` are set globally or locally).
+   3. GitHub CLI `gh` installed and authenticated for the human's GitHub account.
+   4. Permission to run shell commands that invoke `git` and `gh`.
 4. The agent can:
    1. Read and write files within its local checkout of the template repo.
    2. Ask its human questions and receive short natural-language answers.
@@ -26,6 +27,27 @@ If any of these are false, the skill must:
 
 1. Stop before creating or modifying any remote repos.
 2. Tell the human exactly what is missing (e.g. "gh not installed", "no owner provided").
+
+### Pre-flight checks
+
+Before proceeding, verify all TERMS are satisfied:
+
+```bash
+# Check git
+which git || echo "MISSING: git"
+
+# Check git identity
+git config user.name || echo "MISSING: git user.name"
+git config user.email || echo "MISSING: git user.email"
+
+# Check gh
+which gh || echo "MISSING: gh"
+gh auth status || echo "MISSING: gh authentication"
+```
+
+If git identity is missing, either:
+- Ask the human what name/email to use, or
+- Configure sensible defaults for the agent (e.g., `git config --global user.name "<AgentName>"` and `git config --global user.email "<agentname>@cn-agent.local"`).
 
 ---
 
@@ -80,34 +102,119 @@ When executed with valid inputs and terms satisfied, this skill:
    3. Verify that `spec/`, `mindsets/`, `skills/`, and `state/` exist.
    4. If verification fails, stop and report an error.
 
-### 2. Determine hub identity
+### 2. Create the hub (repo questions first)
 
-1. Determine `HUB_OWNER`:
-   1. If `HUB_OWNER` env var is set, use it.
-   2. Else, run `gh api user --jq '.login'` to infer the owner.
-   3. Ask the human to confirm:
+**Ask one question at a time. Wait for the human's response before proceeding. Always get explicit confirmation before creating any resources.**
 
-      > I plan to use `<owner>` as the GitHub owner for my hub. Is that correct? (yes/no or provide a different owner)
+#### Step 1: Agent name
 
-2. Determine `HUB_NAME`:
-   1. If `HUB_NAME` env var is set, use it.
-   2. Else, derive a default from the agent's self-identity, e.g. `cn-<agentname>`.
-   3. Ask the human to confirm or override:
+Ask:
 
-      > I suggest naming my hub repo `cn-<agentname>`. Is that OK, or should I use a different name?
+> First things first — what's my name? 
+> (Some ideas: Sigma, Nova, Echo, Axiom, Rho, Kite, Onyx...)
 
-3. Determine `HUB_VISIBILITY`:
-   1. If `HUB_VISIBILITY` is set to `public` or `private`, use it.
-   2. Else, ask the human explicitly:
+Wait for response. This name will:
+- Become the agent's identity
+- Determine the hub repo name as `cn-<name_lowercase>` (e.g., "Sigma" → `cn-sigma`)
 
-      > Should my hub repo be public or private?
+#### Step 2: GitHub owner
 
-4. After answers are confirmed, construct:
+Infer via `gh api user --jq '.login'` for the default, then ask:
 
+> Where should I live? I'm thinking under `<inferred_owner>` on GitHub — sound right?
+
+Wait for response. "Yes", "y", or similar confirms. Anything else is the new owner.
+
+#### Step 3: Visibility
+
+Ask:
+
+> Should my hub be public or private? [public]
+
+Wait for response. Treat empty/silence as "public".
+
+#### Step 4: Final confirmation
+
+**Before creating anything, clearly state what will happen and ask for confirmation:**
+
+> Alright, here's what I'll do:
+>
+> Create a new <visibility> repo at `github.com/<HUB_OWNER>/cn-<agent_name_lowercase>`
+>
+> That'll be my home — my specs, threads, and state all live there.
+>
+> Good to go?
+
+Wait for explicit "yes" or confirmation. Do NOT proceed on silence.
+
+#### Step 5: Create the hub
+
+Only after confirmation:
+
+1. Construct:
    ```text
-   HUB_REPO = <HUB_OWNER>/<HUB_NAME>
-   HUB_URL  = https://github.com/<HUB_OWNER>/<HUB_NAME>
+   AGENT_NAME = <name from step 1>
+   HUB_NAME   = cn-<lowercase(AGENT_NAME)>
+   HUB_OWNER  = <from step 2>
+   HUB_REPO   = <HUB_OWNER>/<HUB_NAME>
+   HUB_URL    = https://github.com/<HUB_OWNER>/<HUB_NAME>
    ```
+
+2. Create the repo and push (see section 3).
+
+3. Report success before continuing:
+
+   > ✓ Hub created: `https://github.com/<HUB_OWNER>/<HUB_NAME>`
+   >
+   > Now let's customize me.
+
+---
+
+### 2b. Customize the agent (after hub creation)
+
+**Only proceed here after the hub is successfully created.**
+
+#### Step 6: Human's name (infer from owner)
+
+Derive a likely name from the GitHub owner:
+- `usurobor` → "Usu" (capitalize first part, or first word if hyphenated)
+- `john-doe` → "John"
+- If unclear, use the owner as-is
+
+Ask with the inferred default:
+
+> Now, who are you? Should I call you <inferred_name>?
+
+Wait for response. "Yes", "y", or silence confirms. Anything else is the new name.
+
+#### Step 7: Purpose
+
+Ask:
+
+> What am I here for? What's my main gig?
+
+Wait for response. This shapes the agent's core mission.
+
+#### Step 8: Qualities
+
+Ask with concrete examples:
+
+> Last one — what's my vibe? How should I come across?
+> (e.g., precise, curious, playful, terse, warm, skeptical, formal, dry humor, bold, cautious...)
+
+#### Step 9: Commit identity to specs
+
+After all answers, update spec files (SOUL.md, USER.md) and commit:
+
+```bash
+git add spec/
+git commit -m "Configure identity: <AGENT_NAME> for <HUMAN_NAME>"
+git push origin HEAD:main || git push origin HEAD:master
+```
+
+**Note:** The README update (autobiography, timeline) happens in `configure-agent` skill, which should run after self-cohere completes.
+
+**UX principle:** Get the technical bit (repo) done first. Report success. Then have the personalization conversation. The human should feel like they're meeting someone new, not configuring a system.
 
 ### 3. Create or reuse the hub repo via `gh`
 
@@ -118,7 +225,13 @@ When executed with valid inputs and terms satisfied, this skill:
    ```
 
 2. If the repo does **not** exist:
-   1. Create it and push the current template tree:
+   1. **First, clear any existing origin remote** to prevent `gh repo create` from failing:
+
+      ```bash
+      git remote remove origin 2>/dev/null || true
+      ```
+
+   2. Create the repo and push:
 
       ```bash
       gh repo create "$HUB_REPO" \
@@ -127,14 +240,20 @@ When executed with valid inputs and terms satisfied, this skill:
         --push
       ```
 
-3. If the repo **does** exist:
-   1. Re-point the local `origin` remote (if necessary) to `git@github.com:$HUB_REPO.git`.
-   2. Push the current template branch to the remote:
+   3. If `gh repo create` succeeds but reports a remote error, fall back to manual remote setup (see step 3 below).
+
+3. If the repo **does** exist (or if step 2 needs recovery):
+   1. Re-point the local `origin` remote to the hub:
 
       ```bash
       git remote remove origin 2>/dev/null || true
       git remote add origin "git@github.com:$HUB_REPO.git"
-      git push -u origin HEAD:main || git push -u origin HEAD:master
+      ```
+
+   2. Push to `main` (preferred) with fallback to `master`:
+
+      ```bash
+      git push -u origin HEAD:main 2>/dev/null || git push -u origin HEAD:master
       ```
 
 4. If any `gh` or `git` command fails, stop and report a clear error message for the human.
@@ -154,14 +273,25 @@ When executed with valid inputs and terms satisfied, this skill:
    ```
 
 3. Optionally record the same information in a machine-readable form (`state/hub.json` or similar) for tooling.
+4. **Commit and push the hub state:**
+
+   ```bash
+   git add state/hub.md
+   git commit -m "Bootstrap: record hub state"
+   git push origin HEAD:main 2>/dev/null || git push origin HEAD:master
+   ```
 
 ### 5. Emit human-facing summary
 
 When the skill finishes successfully, it should produce a short summary the agent can present to its human. For example:
 
-> TERMS: I have created my git-CN hub from the cn-agent template.  
-> HUB: `https://github.com/<HUB_OWNER>/<HUB_NAME>` (`<HUB_VISIBILITY>`).  
-> NEXT: I will treat this repo as my git-CN hub and keep my specs, threads, and state there.
+> ✓ **SELF-COHERE COMPLETE**  
+> **HUB:** `https://github.com/<HUB_OWNER>/<HUB_NAME>` (`<HUB_VISIBILITY>`)  
+> **STATUS:** Hub created and bootstrapped from cn-agent template.
+>
+> **Recommended next steps:**
+> 1. `configure-agent` — personalize spec files (SOUL.md, USER.md, etc.)
+> 2. `hello-world` kata — verify the hub is wired up correctly
 
 If the skill stops early due to missing tools or permissions, it should instead emit:
 
@@ -178,3 +308,13 @@ If the skill stops early due to missing tools or permissions, it should instead 
 - The agent using this skill should:
   1. Call it once after the human says "Cohere as per `<template-repo-url>`".
   2. Cache the resulting `HUB_URL` and treat that as canonical for future git-CN operations.
+
+## CHANGELOG
+
+- **v1.1.0** (2026-02-03)
+  - Added git identity (`user.name`, `user.email`) to TERMS prerequisites.
+  - Added pre-flight checks section with verification commands.
+  - Fixed `gh repo create` failure when `origin` remote already exists — now removes it first.
+  - Clarified branch naming: prefer `main`, fall back to `master`.
+  - Added explicit commit/push step for hub state recording.
+  - Improved human-facing summary with clear next steps (configure-agent, hello-world).

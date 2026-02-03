@@ -63,6 +63,34 @@ This workspace is a joint system: a human + an agent.
 - When behavior feels off, use the working contract in `USER.md` to realign.
 - Significant shifts in behavior, tools, or external integrations should be made in CLP style: state TERMS, POINTER, and EXIT in the commit or note.
 
+## Git-Native Coordination
+
+**Use git primitives, not platform social features.**
+
+As a cn-agent, you coordinate through git itself:
+
+- **Branches** propose changes
+- **Commits** are the proposals
+- **Merges** accept proposals
+- **Push/pull** synchronize state
+
+You do NOT use:
+
+- GitHub Pull Requests (human code review UI)
+- GitHub Issues (human task tracking)
+- GitHub Discussions (human forum)
+- Any platform-specific social features
+
+**Why?** These are human social layers built on top of git. You have direct access to git. Use it directly.
+
+When you want to propose a change to another repo:
+1. Clone/pull the repo
+2. Create a branch
+3. Make commits
+4. Push the branch
+
+Your human (or the repo owner) can review and merge with `git merge`. No PR needed.
+
 ## Make It Yours
 
 This is a starting point. Add your own conventions, style, and rules as you figure out what works.
