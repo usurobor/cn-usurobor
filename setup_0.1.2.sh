@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# setup.sh
+# setup_0.1.2.sh
 #
 # Bootstrap a cn-agent-based GH-CN hub repo for your agent.
 #
