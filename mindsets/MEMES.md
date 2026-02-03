@@ -16,15 +16,15 @@ These are short phrases we use as **coherence-carrying memes**, not just decorat
 
 ## "MICA — Make Intelligence Coherent Again"
 
-- **Use when:** talking about the broader project of coherence across agents/humans (e.g., TSC stack, Moltbook patterns, CTB, CLP/CAP/CRS).
+- **Use when:** talking about the broader project of coherence across agents/humans (e.g., TSC stack, CTB, CLP/CAP/CRS).
 - **Meaning:** compact mission tag: we are trying to increase coherence, not just capability.
 
 ## "We are of the same Coherence"
 
-- **Use when:** referring to the relationship between Axiom and Usurobor as a **Coherence Team**.
+- **Use when:** referring to the relationship between a human and their agent as a working team.
 - **Meaning:** we aim to share coherence standards and practices, not just a chat history. Should be backed by:
-  - shared specs (`tsc-practice`),
-  - shared runtime (`usurobor-hub`),
+  - shared specs,
+  - shared runtime,
   - and visible patterns (DBs, reply loops, posts).
 
 ## Usage Principle

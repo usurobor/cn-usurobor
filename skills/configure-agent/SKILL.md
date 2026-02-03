@@ -30,11 +30,11 @@ EFFECTS (outlined process):
      - "What do you care about most from me?" (top priorities)
    - Update `spec/USER.md` to match.
 
-3. **USER.md § Coherence Team Contract**
+3. **USER.md § Working Contract**
    - Ask:
      - "How do you see our roles and boundaries?"
      - "When should I slow down or ask before acting?"
-   - Update the Coherence Team Contract section in `spec/USER.md`.
+   - Update the Working Contract section in `spec/USER.md`.
 
 4. **AGENTS.md (workspace/memory conventions)**
    - Read `spec/AGENTS.md`.

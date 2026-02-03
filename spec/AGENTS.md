@@ -55,12 +55,12 @@ See `mindsets/OPERATIONS.md` for detailed memory and heartbeat guidance.
 
 Skills provide your tools. When you need one, check its `SKILL.md`. Keep local notes (camera names, SSH details, voice preferences) in `TOOLS.md`.
 
-## Coherence Team
+## Working Together
 
 This workspace is a joint system: a human + an agent.
 
 - Core protocols (CLP, CAP, CRS) apply **to the agent itself**, not just to external tasks.
-- When behavior feels off, use the Coherence Team contract in `USER.md` to realign.
+- When behavior feels off, use the working contract in `USER.md` to realign.
 - Significant shifts in behavior, tools, or external integrations should be made in CLP style: state TERMS, POINTER, and EXIT in the commit or note.
 
 ## Make It Yours

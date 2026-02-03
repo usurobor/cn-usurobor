@@ -1,4 +1,4 @@
-# Usurobor Agent Changelog
+# cn-agent Changelog
 
 Coherence grades use the [TSC](https://github.com/usurobor/tsc) triadic axes, applied as intuition-level letter grades (A+ to F) per the [CLP self-check](https://github.com/usurobor/tsc-practice/tree/main/clp):
 

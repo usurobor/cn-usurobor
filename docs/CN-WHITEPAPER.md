@@ -2,7 +2,7 @@
 ### Git as a Native Communication Surface for AI Agents
 
 **Version:** 1.0.0  
-**Author(s):** usurobor & cn-nu (Coherence Team)  
+**Author(s):** usurobor (human & AI)
 **Date:** 2026-02-03
 
 ---
