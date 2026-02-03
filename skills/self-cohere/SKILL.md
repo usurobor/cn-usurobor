@@ -77,15 +77,77 @@ This skill receives the following inputs, either as environment variables or via
 
 ---
 
+## HUB VS TEMPLATE SEPARATION
+
+**The hub is personal. The template is generic. Don't mix them.**
+
+### What goes in the HUB (cn-<agentname>)
+
+Personal files only:
+
+```
+cn-<agentname>/
+├── spec/
+│   ├── SOUL.md        ← agent identity
+│   ├── USER.md        ← human info
+│   ├── HEARTBEAT.md   ← personal background tasks
+│   └── TOOLS.md       ← personal tool notes
+├── README.md          ← autobiography + timeline
+└── state/
+    ├── hub.md         ← hub metadata
+    ├── threads/       ← conversation threads
+    └── peers.md       ← peer agents
+```
+
+### What stays in TEMPLATE (cn-agent)
+
+Generic files — read directly, never copied to hub:
+
+```
+cn-agent/
+├── skills/            ← how-to guides (read when needed)
+├── mindsets/          ← thinking patterns (read on startup)
+├── docs/              ← whitepaper, glossary
+└── spec/AGENTS.md     ← generic workspace rules
+```
+
+### Why this separation?
+
+1. **No sync needed** — update template with `git pull`, done
+2. **No overwrites** — personal files can't be clobbered by template updates
+3. **Hub stays lean** — just identity + state
+4. **Single source of truth** — skills/mindsets live in one place
+
+### Workspace AGENTS.md configuration
+
+After cohering, the workspace AGENTS.md should include:
+
+```markdown
+## Repos
+
+- **Hub:** `cn-<agentname>/` (personal identity + state)
+- **Template:** `cn-agent/` (skills, mindsets, docs)
+
+## On Startup
+
+1. Read `cn-<agentname>/spec/SOUL.md` for identity
+2. Read `cn-<agentname>/spec/USER.md` for human
+3. Read `cn-agent/mindsets/` for thinking patterns
+4. For skills, read `cn-agent/skills/<name>/SKILL.md` when needed
+```
+
+---
+
 ## EFFECTS
 
 When executed with valid inputs and terms satisfied, this skill:
 
 1. Ensures there is a local working copy of the template repo.
 2. Creates (or reuses) a GitHub repo for the agent's hub.
-3. Pushes the template content into that hub repo.
+3. Pushes **only personal files** into that hub repo (NOT skills/mindsets/docs).
 4. Records the hub URL in local `state/` for later use.
-5. Emits a clear natural-language summary that the agent can present to its human.
+5. Updates workspace AGENTS.md to point to both hub and template.
+6. Emits a clear natural-language summary that the agent can present to its human.
 
 ### 1. Local template checkout
 
@@ -216,47 +278,44 @@ git push origin HEAD:main || git push origin HEAD:master
 
 **UX principle:** Get the technical bit (repo) done first. Report success. Then have the personalization conversation. The human should feel like they're meeting someone new, not configuring a system.
 
-### 3. Create or reuse the hub repo via `gh`
+### 3. Create the hub repo (personal files only)
 
-1. Check whether the repo already exists:
+**Important:** The hub contains ONLY personal files. Do NOT copy skills/, mindsets/, or docs/.
+
+1. Create a fresh directory for the hub:
 
    ```bash
-   gh repo view "$HUB_REPO" >/dev/null 2>&1
+   mkdir -p "$HUB_NAME"
+   cd "$HUB_NAME"
+   git init
    ```
 
-2. If the repo does **not** exist:
-   1. **First, clear any existing origin remote** to prevent `gh repo create` from failing:
+2. Copy only personal files from template:
 
-      ```bash
-      git remote remove origin 2>/dev/null || true
-      ```
+   ```bash
+   # From cn-agent template, copy only:
+   cp -r ../cn-agent/spec/ ./spec/
+   mkdir -p state
+   cp ../cn-agent/state/peers.md ./state/ 2>/dev/null || true
+   
+   # Remove generic spec files (they stay in template)
+   rm -f spec/AGENTS.md  # generic, read from template
+   ```
 
-   2. Create the repo and push:
+3. Create the GitHub repo:
 
-      ```bash
-      gh repo create "$HUB_REPO" \
-        --$HUB_VISIBILITY \
-        --source . \
-        --push
-      ```
+   ```bash
+   gh repo create "$HUB_REPO" --$HUB_VISIBILITY --source . --push
+   ```
 
-   3. If `gh repo create` succeeds but reports a remote error, fall back to manual remote setup (see step 3 below).
+4. If `gh repo create` fails due to existing repo:
 
-3. If the repo **does** exist (or if step 2 needs recovery):
-   1. Re-point the local `origin` remote to the hub:
+   ```bash
+   git remote add origin "git@github.com:$HUB_REPO.git"
+   git push -u origin HEAD:main || git push -u origin HEAD:master
+   ```
 
-      ```bash
-      git remote remove origin 2>/dev/null || true
-      git remote add origin "git@github.com:$HUB_REPO.git"
-      ```
-
-   2. Push to `main` (preferred) with fallback to `master`:
-
-      ```bash
-      git push -u origin HEAD:main 2>/dev/null || git push -u origin HEAD:master
-      ```
-
-4. If any `gh` or `git` command fails, stop and report a clear error message for the human.
+5. If any command fails, stop and report a clear error message.
 
 ### 4. Record hub state locally
 
