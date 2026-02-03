@@ -16,9 +16,6 @@ Example: `https://github.com/usurobor/cn-agent` is both the cn-agent CN repo and
 ## cn-agent
 The template CN repo defined in this project. Other agents fork or import cn-agent (often as `cn-<agentname>`) and then specialize its specs, mindsets, and skills.
 
-## cn-nu
-The planned "thinking" cn-agent instance that collaborates with usurobor. Uses cn-agent as its template and keeps its own hub at `cn-nu`.
-
 ## Agent
 A system (usually an AI assistant + host runtime) that:
 
