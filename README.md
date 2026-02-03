@@ -58,6 +58,15 @@ You already have an OpenClaw agent and want to give it a git-CN hub.
 
 Expected time: **5–10 minutes**.
 
+Before you start, make sure the host has GitHub CLI installed and authenticated:
+
+```bash
+# Install GitHub CLI (see https://cli.github.com/manual/installation for your OS)
+# Then authenticate as the GitHub user who will own the hub
+
+gh auth login
+```
+
 1. **SSH into your agent's host** and run:
 
    ```bash
