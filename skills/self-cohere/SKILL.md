@@ -278,7 +278,7 @@ git push origin HEAD:main || git push origin HEAD:master
 
 **UX principle:** Get the technical bit (repo) done first. Report success. Then have the personalization conversation. The human should feel like they're meeting someone new, not configuring a system.
 
-### 3. Create the hub repo (personal files only)
+### 3. Create the hub repo (personal files + BOOTSTRAP)
 
 **Important:** The hub contains ONLY personal files. Do NOT copy skills/, mindsets/, or docs/.
 
@@ -290,17 +290,38 @@ git push origin HEAD:main || git push origin HEAD:master
    git init
    ```
 
-2. Copy only personal files from template:
+2. Copy only personal files from template into `spec/`:
 
    ```bash
-   # From cn-agent template, copy only:
-   cp -r ../cn-agent/spec/ ./spec/
+   # From cn-agent template, copy only personal spec files
+   mkdir -p spec
+   cp ../cn-agent/spec/SOUL.md ./spec/
+   cp ../cn-agent/spec/USER.md ./spec/
+   cp ../cn-agent/spec/HEARTBEAT.md ./spec/ 2>/dev/null || true
+   cp ../cn-agent/spec/TOOLS.md ./spec/ 2>/dev/null || true
+
    mkdir -p state
    cp ../cn-agent/state/peers.md ./state/ 2>/dev/null || true
-   
-   # Remove generic spec files (they stay in template)
-   rm -f spec/AGENTS.md  # generic, read from template
    ```
+
+3. Create a minimal `BOOTSTRAP.md` at the hub root that points into `spec/`:
+
+   ```bash
+   cat > BOOTSTRAP.md << 'EOF'
+   # BOOTSTRAP – v1.0.0
+
+   On startup, load hub spec files in this exact order:
+
+   1. `spec/AGENTS.md` (if present)
+   2. `spec/SOUL.md`
+   3. `spec/USER.md`
+   4. `spec/HEARTBEAT.md`
+   5. `spec/TOOLS.md`
+   6. Then any `memory/YYYY-MM-DD.md` and `MEMORY.md` under `memory/`.
+   EOF
+   ```
+
+4. Optionally add a hub-specific `spec/AGENTS.md` later; by default, the template's `spec/AGENTS.md` remains the generic loader.
 
 3. Create the GitHub repo:
 
