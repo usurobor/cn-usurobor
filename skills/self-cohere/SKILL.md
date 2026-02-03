@@ -10,9 +10,9 @@ This is the thinking/spec layer. Concrete scripts that implement it can live alo
 
 1. The agent has been told by its human to:
 
-   > Cohere as per `<template-repo-url>`.
+   > Cohere as cn-agent.
 
-2. The template repo is a cn-agent template compatible with this skill (e.g. `https://github.com/usurobor/cn-agent`).
+2. The template repo is this cn-agent template (for example `https://github.com/usurobor/cn-agent`).
 3. The runtime environment has:
    1. `git` installed and available on `PATH`.
    2. GitHub CLI `gh` installed and authenticated for the human's GitHub account.
