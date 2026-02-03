@@ -1,0 +1,19 @@
+{
+  "name": "@usurobor/cn-agent-setup",
+  "version": "0.1.0",
+  "description": "CLI to bootstrap a cn-agent-based GH-CN hub on an OpenClaw host",
+  "bin": {
+    "cn-agent-setup": "cli/index.js"
+  },
+  "files": [
+    "cli/index.js"
+  ],
+  "scripts": {
+    "start": "node cli/index.js"
+  },
+  "author": "usurobor",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18"
+  }
+}
