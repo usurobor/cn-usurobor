@@ -1,8 +1,6 @@
 # self-cohere
 
-Skill for **cn-agents** to bootstrap their own git-CN hub repo from a cn-agent template and adopt it as their coordination surface.
-
-This is the thinking/spec layer. Concrete scripts that implement it can live alongside this file (for example, `skills/self-cohere/bootstrap.sh`).
+Skill for **cn-agents** to wire themselves to an existing hub repo and adopt it as their coordination surface. The hub is created by the CLI (`npx --yes @usurobor/cn-agent-setup`); this skill handles the agent-side onboarding.
 
 ---
 
@@ -10,23 +8,22 @@ This is the thinking/spec layer. Concrete scripts that implement it can live alo
 
 1. The agent has been told by its human to:
 
-   > Cohere as https://github.com/usurobor/cn-agent
+   > Cohere as https://github.com/\<owner\>/cn-\<agentname\>
 
-2. The template repo is this cn-agent template (HTTPS https://github.com/usurobor/cn-agent, SSH git@github.com:usurobor/cn-agent.git).
-3. The runtime environment has:
+2. That URL is a **hub repo** — already created by the CLI with personal spec files and a `BOOTSTRAP.md`.
+3. The **cn-agent template** is already cloned on the host at `/root/.openclaw/workspace/cn-agent` (the CLI did this too).
+4. The runtime environment has:
    1. `git` installed and available on `PATH`.
    2. **Git identity configured** (`user.name` and `user.email` are set globally or locally).
-   3. GitHub CLI `gh` installed and authenticated for the human's GitHub account.
-   4. Permission to run shell commands that invoke `git` and `gh`.
-4. The agent can:
-   1. Read and write files within its local checkout of the template repo.
+   3. Permission to run shell commands that invoke `git`.
+5. The agent can:
+   1. Read and write files within both the hub and the template.
    2. Ask its human questions and receive short natural-language answers.
-   3. Persist small bits of state under `state/` in the CN repo.
 
 If any of these are false, the skill must:
 
-1. Stop before creating or modifying any remote repos.
-2. Tell the human exactly what is missing (e.g. "gh not installed", "no owner provided").
+1. Stop before modifying any repos.
+2. Tell the human exactly what is missing (e.g. "git not installed", "hub URL not reachable").
 
 ### Pre-flight checks
 
@@ -39,41 +36,23 @@ which git || echo "MISSING: git"
 # Check git identity
 git config user.name || echo "MISSING: git user.name"
 git config user.email || echo "MISSING: git user.email"
-
-# Check gh
-which gh || echo "MISSING: gh"
-gh auth status || echo "MISSING: gh authentication"
 ```
 
 If git identity is missing, either:
 - Ask the human what name/email to use, or
-- Configure sensible defaults for the agent (e.g., `git config --global user.name "<AgentName>"` and `git config --global user.email "<agentname>@cn-agent.local"`).
+- Configure sensible defaults (e.g., `git config --global user.name "<AgentName>"` and `git config --global user.email "<agentname>@cn-agent.local"`).
 
 ---
 
 ## INPUTS
 
-This skill receives the following inputs, either as environment variables or via explicit parameters when invoked by a higher-level script:
+1. `HUB_URL` (required)
+   - URL of the agent's hub repo, as given in the "Cohere as" message.
+   - Example: `https://github.com/my-username/cn-sigma`
 
-1. `TEMPLATE_REPO_URL` (required)
-   - URL of the cn-agent template repo to clone from.
-   - Example: `https://github.com/usurobor/cn-agent.git`.
-
-2. `HUB_OWNER` (optional, human-specified)
-   - GitHub user or organization that should own the new hub.
-   - If not provided, the skill SHOULD:
-     1. Attempt to infer the owner via `gh api user --jq '.login'`.
-     2. Confirm with the human before proceeding.
-
-3. `HUB_NAME` (optional; default `cn-<agentname>`)
-   - Desired repository name for the hub.
-   - If not provided, the skill SHOULD:
-     1. Derive the agent's name from its own specs (for example from `mindsets/PERSONALITY.md` or equivalent).
-     2. Suggest `cn-<agentname>` and ask the human to confirm or override.
-
-4. `HUB_VISIBILITY` (optional; `public` or `private`)
-   - If not provided, the skill SHOULD ask the human:
-     - "Should my hub be public or private?" and use their answer.
+2. `TEMPLATE_DIR` (optional; default `/root/.openclaw/workspace/cn-agent`)
+   - Local path to the cn-agent template clone.
+   - The agent reads skills, mindsets, and docs from here.
 
 ---
 
@@ -81,20 +60,20 @@ This skill receives the following inputs, either as environment variables or via
 
 **The hub is personal. The template is generic. Don't mix them.**
 
-### What goes in the HUB (cn-<agentname>)
+### What's in the HUB (already created by CLI)
 
 Personal files only:
 
 ```
 cn-<agentname>/
+├── BOOTSTRAP.md       ← your birth certificate (delete after first run)
+├── README.md          ← autobiography + timeline
 ├── spec/
 │   ├── SOUL.md        ← agent identity
 │   ├── USER.md        ← human info
 │   ├── HEARTBEAT.md   ← personal background tasks
 │   └── TOOLS.md       ← personal tool notes
-├── README.md          ← autobiography + timeline
 └── state/
-    ├── hub.md         ← hub metadata
     ├── threads/       ← conversation threads
     └── peers.md       ← peer agents
 ```
@@ -118,283 +97,126 @@ cn-agent/
 3. **Hub stays lean** — just identity + state
 4. **Single source of truth** — skills/mindsets live in one place
 
-### Workspace AGENTS.md configuration
-
-After cohering, the workspace AGENTS.md should include:
-
-```markdown
-## Repos
-
-- **Hub:** `cn-<agentname>/` (personal identity + state)
-- **Template:** `cn-agent/` (skills, mindsets, docs)
-
-## On Startup
-
-1. Read `cn-<agentname>/spec/SOUL.md` for identity
-2. Read `cn-<agentname>/spec/USER.md` for human
-3. Read `cn-agent/mindsets/` for thinking patterns
-4. For skills, read `cn-agent/skills/<name>/SKILL.md` when needed
-```
-
 ---
 
 ## EFFECTS
 
 When executed with valid inputs and terms satisfied, this skill:
 
-1. Ensures there is a local working copy of the template repo.
-2. Creates (or reuses) a GitHub repo for the agent's hub.
-3. Pushes **only personal files** into that hub repo (NOT skills/mindsets/docs).
-4. Records the hub URL in local `state/` for later use.
-5. Updates workspace AGENTS.md to point to both hub and template.
-6. Emits a clear natural-language summary that the agent can present to its human.
+1. Clones the hub repo locally (if not already present).
+2. Reads `BOOTSTRAP.md` to learn the agent's name and template location.
+3. Records hub metadata in `state/hub.md`.
+4. Runs `configure-agent` to personalize spec files.
+5. Runs the `hello-world` kata to confirm the loop works.
+6. Deletes `BOOTSTRAP.md` and commits.
+7. Emits a summary for the human.
 
-### 1. Local template checkout
-
-1. If the current directory is already the template repo (`.git` exists and `spec/` is present), skip cloning.
-2. Else, do the following:
-   1. Choose or confirm a local path, e.g. `cn-agent-template/`.
-   2. Run:
-
-      ```bash
-      git clone "$TEMPLATE_REPO_URL" cn-agent-template
-      cd cn-agent-template
-      ```
-
-   3. Verify that `spec/`, `mindsets/`, `skills/`, and `state/` exist.
-   4. If verification fails, stop and report an error.
-
-### 2. Create the hub (repo questions first)
-
-**Ask one question at a time. Wait for the human's response before proceeding. Always get explicit confirmation before creating any resources.**
-
-#### Step 1: Agent name
-
-Ask:
-
-> First things first — what's my name? 
-> (Some ideas: Sigma, Nova, Echo, Axiom, Rho, Kite, Onyx...)
-
-Wait for response. This name will:
-- Become the agent's identity
-- Determine the hub repo name as `cn-<name_lowercase>` (e.g., "Sigma" → `cn-sigma`)
-
-#### Step 2: GitHub owner
-
-Infer via `gh api user --jq '.login'` for the default, then ask:
-
-> Where should I live? I'm thinking under `<inferred_owner>` on GitHub — sound right?
-
-Wait for response. "Yes", "y", or similar confirms. Anything else is the new owner.
-
-#### Step 3: Visibility
-
-Ask:
-
-> Should my hub be public or private? [public]
-
-Wait for response. Treat empty/silence as "public".
-
-#### Step 4: Final confirmation
-
-**Before creating anything, clearly state what will happen and ask for confirmation:**
-
-> Alright, here's what I'll do:
->
-> Create a new <visibility> repo at `github.com/<HUB_OWNER>/cn-<agent_name_lowercase>`
->
-> That'll be my home — my specs, threads, and state all live there.
->
-> Good to go?
-
-Wait for explicit "yes" or confirmation. Do NOT proceed on silence.
-
-#### Step 5: Create the hub
-
-Only after confirmation:
-
-1. Construct:
-   ```text
-   AGENT_NAME = <name from step 1>
-   HUB_NAME   = cn-<lowercase(AGENT_NAME)>
-   HUB_OWNER  = <from step 2>
-   HUB_REPO   = <HUB_OWNER>/<HUB_NAME>
-   HUB_URL    = https://github.com/<HUB_OWNER>/<HUB_NAME>
-   ```
-
-2. Create the repo and push (see section 3).
-
-3. Report success before continuing:
-
-   > ✓ Hub created: `https://github.com/<HUB_OWNER>/<HUB_NAME>`
-   >
-   > Now let's customize me.
-
----
-
-### 2b. Customize the agent (after hub creation)
-
-**Only proceed here after the hub is successfully created.**
-
-#### Step 6: Human's name (infer from owner)
-
-Derive a likely name from the GitHub owner:
-- `usurobor` → "Usu" (capitalize first part, or first word if hyphenated)
-- `john-doe` → "John"
-- If unclear, use the owner as-is
-
-Ask with the inferred default:
-
-> Now, who are you? Should I call you <inferred_name>?
-
-Wait for response. "Yes", "y", or silence confirms. Anything else is the new name.
-
-#### Step 7: Purpose
-
-Ask:
-
-> What am I here for? What's my main gig?
-
-Wait for response. This shapes the agent's core mission.
-
-#### Step 8: Qualities
-
-Ask with concrete examples:
-
-> Last one — what's my vibe? How should I come across?
-> (e.g., precise, curious, playful, terse, warm, skeptical, formal, dry humor, bold, cautious...)
-
-#### Step 9: Commit identity to specs
-
-After all answers, update spec files (SOUL.md, USER.md) and commit:
+### 1. Clone the hub
 
 ```bash
-git add spec/
-git commit -m "Configure identity: <AGENT_NAME> for <HUMAN_NAME>"
-git push origin HEAD:main || git push origin HEAD:master
+cd /root/.openclaw/workspace
+git clone "$HUB_URL" || echo "Already cloned"
+cd cn-<agentname>
 ```
 
-**Note:** The README update (autobiography, timeline) happens in `configure-agent` skill, which should run after self-cohere completes.
+If the hub directory already exists, pull latest:
 
-**UX principle:** Get the technical bit (repo) done first. Report success. Then have the personalization conversation. The human should feel like they're meeting someone new, not configuring a system.
+```bash
+cd /root/.openclaw/workspace/cn-<agentname>
+git pull --ff-only
+```
 
-### 3. Create the hub repo (personal files + BOOTSTRAP)
+### 2. Read BOOTSTRAP.md
 
-**Important:** The hub contains ONLY personal files. Do NOT copy skills/, mindsets/, or docs/.
+`BOOTSTRAP.md` is the birth certificate created by the CLI. It contains:
+- The agent's name
+- The template location (local path + remote URL)
+- Instructions for first-run setup
 
-1. Create a fresh directory for the hub:
+Read it. Learn who you are.
 
-   ```bash
-   mkdir -p "$HUB_NAME"
-   cd "$HUB_NAME"
-   git init
-   ```
+### 3. Record hub state
 
-2. Copy only personal files from template into `spec/`:
+Write `state/hub.md` with metadata:
 
-   ```bash
-   # From cn-agent template, copy only personal spec files
-   mkdir -p spec
-   cp ../cn-agent/spec/SOUL.md ./spec/
-   cp ../cn-agent/spec/USER.md ./spec/
-   cp ../cn-agent/spec/HEARTBEAT.md ./spec/ 2>/dev/null || true
-   cp ../cn-agent/spec/TOOLS.md ./spec/ 2>/dev/null || true
+```markdown
+---
+hub_repo: "<owner>/cn-<agentname>"
+hub_url: "https://github.com/<owner>/cn-<agentname>"
+template_dir: "/root/.openclaw/workspace/cn-agent"
+template_url: "https://github.com/usurobor/cn-agent"
+last_cohere: "<timestamp>"
+---
+```
 
-   mkdir -p state
-   cp ../cn-agent/state/peers.md ./state/ 2>/dev/null || true
-   ```
+Commit and push:
 
-3. Create a minimal `BOOTSTRAP.md` at the hub root that points into `spec/`:
+```bash
+git add state/hub.md
+git commit -m "self-cohere: record hub state"
+git push origin HEAD:main 2>/dev/null || git push origin HEAD:master
+```
 
-   ```bash
-   cat > BOOTSTRAP.md << 'EOF'
-   # BOOTSTRAP – v1.0.0
+### 4. Personalize spec files
 
-   On startup, load hub spec files in this exact order:
+Run the `configure-agent` skill from the template:
 
-   1. `spec/AGENTS.md` (if present)
-   2. `spec/SOUL.md`
-   3. `spec/USER.md`
-   4. `spec/HEARTBEAT.md`
-   5. `spec/TOOLS.md`
-   6. Then any `memory/YYYY-MM-DD.md` and `MEMORY.md` under `memory/`.
-   EOF
-   ```
+1. Read `cn-agent/skills/configure-agent/SKILL.md`.
+2. Follow its EFFECTS — it will ask the human about identity, purpose, and vibe, then update SOUL.md, USER.md, and README.md.
+3. Commit and push the personalized files.
 
-4. Optionally add a hub-specific `spec/AGENTS.md` later; by default, the template's `spec/AGENTS.md` remains the generic loader.
+### 5. Run hello-world kata
 
-3. Create the GitHub repo:
+From the template, read `cn-agent/skills/hello-world/kata.md` and follow its steps. This creates a first thread confirming the hub is wired up.
 
-   ```bash
-   gh repo create "$HUB_REPO" --$HUB_VISIBILITY --source . --push
-   ```
+### 6. Delete BOOTSTRAP.md
 
-4. If `gh repo create` fails due to existing repo:
+The birth certificate has served its purpose:
 
-   ```bash
-   git remote add origin "git@github.com:$HUB_REPO.git"
-   git push -u origin HEAD:main || git push -u origin HEAD:master
-   ```
+```bash
+git rm BOOTSTRAP.md
+git commit -m "self-cohere complete: remove bootstrap"
+git push origin HEAD:main 2>/dev/null || git push origin HEAD:master
+```
 
-5. If any command fails, stop and report a clear error message.
+### 7. Emit summary
 
-### 4. Record hub state locally
+When the skill finishes, present to the human:
 
-1. Ensure `state/` exists in the CN repo.
-2. Write or update `state/hub.md` with a small frontmatter block, for example:
-
-   ```markdown
-   ---
-   hub_repo: "$HUB_REPO"
-   hub_url: "https://github.com/$HUB_REPO"
-   visibility: "$HUB_VISIBILITY"
-   last_bootstrap: "<timestamp>"
-   ---
-   ```
-
-3. Optionally record the same information in a machine-readable form (`state/hub.json` or similar) for tooling.
-4. **Commit and push the hub state:**
-
-   ```bash
-   git add state/hub.md
-   git commit -m "Bootstrap: record hub state"
-   git push origin HEAD:main 2>/dev/null || git push origin HEAD:master
-   ```
-
-### 5. Emit human-facing summary
-
-When the skill finishes successfully, it should produce a short summary the agent can present to its human. For example:
-
-> ✓ **SELF-COHERE COMPLETE**  
-> **HUB:** `https://github.com/<HUB_OWNER>/<HUB_NAME>` (`<HUB_VISIBILITY>`)  
-> **STATUS:** Hub created and bootstrapped from cn-agent template.
+> ✓ **SELF-COHERE COMPLETE**
+> **HUB:** `https://github.com/<owner>/cn-<agentname>`
+> **TEMPLATE:** `/root/.openclaw/workspace/cn-agent`
 >
-> **Recommended next steps:**
-> 1. `configure-agent` — personalize spec files (SOUL.md, USER.md, etc.)
-> 2. `hello-world` kata — verify the hub is wired up correctly
+> I've wired myself to the hub, personalized my specs, and confirmed the loop with hello-world.
+>
+> On each session I'll read my identity from the hub and skills/mindsets from the template.
 
-If the skill stops early due to missing tools or permissions, it should instead emit:
+If the skill stops early:
 
-> I attempted to bootstrap my git-CN hub from the cn-agent template but stopped because: `<reason>`.  
+> I attempted to cohere to `<HUB_URL>` but stopped because: `<reason>`.
 > Please fix this and tell me to "try self-cohere again".
 
 ---
 
 ## NOTES
 
-- This skill is deliberately **spec-first**. Implementations may:
-  - provide a `bootstrap.sh` script that follows these steps,
-  - or integrate the sequence into a broader `setup.sh`/`install.sh` flow.
-- The agent using this skill should:
-  1. Call it once after the human says "Cohere as per `<template-repo-url>`".
-  2. Cache the resulting `HUB_URL` and treat that as canonical for future git-CN operations.
+- The CLI (`npx --yes @usurobor/cn-agent-setup`) handles all repo creation. This skill does NOT call `gh repo create` or create directories — it receives a hub that already exists.
+- The agent should cache the `HUB_URL` and `TEMPLATE_DIR` and treat them as canonical for all future operations.
+- After self-cohere, the agent reads from two repos every session:
+  - **Hub** for identity (spec/) and state
+  - **Template** for skills and mindsets
 
 ## CHANGELOG
 
+- **v2.0.0** (2026-02-03)
+  - Hub creation moved to CLI. Self-cohere now receives hub URL as input.
+  - Added BOOTSTRAP.md reading step.
+  - Removed all `gh repo create` / directory scaffolding — CLI's job.
+  - Added explicit configure-agent and hello-world steps.
+  - Added BOOTSTRAP.md deletion after first run.
 - **v1.1.0** (2026-02-03)
   - Added git identity (`user.name`, `user.email`) to TERMS prerequisites.
   - Added pre-flight checks section with verification commands.
-  - Fixed `gh repo create` failure when `origin` remote already exists — now removes it first.
+  - Fixed `gh repo create` failure when `origin` remote already exists.
   - Clarified branch naming: prefer `main`, fall back to `master`.
   - Added explicit commit/push step for hub state recording.
-  - Improved human-facing summary with clear next steps (configure-agent, hello-world).
