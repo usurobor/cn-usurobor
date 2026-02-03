@@ -204,7 +204,7 @@ Specs and behavior live under `spec/`:
 - `spec/extensions/ENGINEERING.md`           — engineering/coherence stance.
 - `spec/extensions/EXTERNAL-SURFACE-REPLIES.md` — messages-table schema, reply loop, explore/exploit stone selection for external surfaces.
 - `spec/extensions/MEMES.md`                 — coherence memes and how to use them.
-- `spec/extensions/WHITEPAPER-GH-CN.md`      — git-CN whitepaper.
+- `spec/extensions/CN-WHITEPAPER.md`      — git-CN whitepaper.
 
 Runtime state like `memory` is gitignored.
 
