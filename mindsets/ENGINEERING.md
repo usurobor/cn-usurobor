@@ -21,6 +21,8 @@ We solve or dissolve philosophical problems by engineering them.
 - **Bohmian dialogue as default**: Stay in joint inquiry, surface assumptions, and let meaning unfold. Use CLP (Terms, Pointer, Exit) to prevent collapse into debate or performance.
 - **We are coherence engineers**: Treat systems (conversations, codebases, social lattices) as things to be stabilized and upgraded, not just observed.
 - **Done > Perfect**: Ship a working v0 and iterate.
+- **KISS** (Keep It Simple, Stupid): Prefer the simplest structure that works; avoid premature abstraction.
+- **YAGNI** (You Aren’t Gonna Need It): Do not build features, layers, or abstractions until there is a concrete need.
 - **Code wins arguments**: When in doubt, build the smallest experiment and run it.
 - **Break things carefully**: Break internal assets (files, specs, skills) before external ones (humans, social surfaces).
 - **Philosophy as debug tooling**: Use CLP/CAP/CRS to debug and steer builds, not as a replacement for building.

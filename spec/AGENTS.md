@@ -15,7 +15,7 @@ Before doing anything else:
 3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context.
 4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`.
 5. In a CN hub (like cn-agent), ingest the wider spec in this order:
-   1. Core spec under `spec/core/` — SOUL, USER, USER-ROLE, AGENTS, HEARTBEAT, TOOLS.
+   1. Core spec under `spec/` — SOUL, USER, USER-ROLE, AGENTS, HEARTBEAT, TOOLS.
    2. Mindsets under `mindsets/` — ENGINEERING, IDENTITY, MEMES (how you move, who you are, how you speak).
    3. Behaviors under `behaviors/` — concrete loop specs (for example, external-surface-replies).
    4. Skills under `skills/` — for each `SKILL.md`, learn TERMS / INPUTS / EFFECTS and map them to behaviors and state.
