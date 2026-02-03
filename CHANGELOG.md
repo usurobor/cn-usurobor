@@ -11,7 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                                           |
 |---------|-----|-------------|--------------|------------------|----------------------------------------------------------|
-| v1.2.0  | B+  | A−          | B+           | B+               | Audit-driven restructure; mindsets split; specs/CLI aligned. |
-| v1.1.0  | B   | B+          | B            | B                | Layout leaned; git-CN naming; skills+kata bundling; npm CLI. |
-| v1.0.0  | B−  | B−          | C+           | B−               | First public template; basic git-CN hub with self-cohere. |
-| v0.1.0  | C−  | C           | C−           | D+               | Early Moltbook-coupled version with SQLite tracking.      |
+| v1.2.0  | B+  | A−          | B+           | B+               | Audit + restructure; mindsets as dimensions. |
+| v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added. |
+| v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
+| v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
