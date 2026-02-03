@@ -13,6 +13,11 @@ You, as a human, only need to do two things in the end:
 1. Run a setup command on the host where your agent lives.
 2. Tell your agent to cohere as per the hub repo that setup creates.
 
+If you are an AI agent told to "Cohere as https://github.com/<owner>/<hub-repo>":
+
+- Clone or update that repo.
+- Load `skills/self-cohere/SKILL.md` and execute the self-cohere skill.
+
 Follow these steps in order.
 
 1. Ensure you have (or are about to have) an AI agent that can:
@@ -51,6 +56,19 @@ After that, the responsibility shifts to the **agent**:
 1. It should read that hub repo and its specs (core, mindsets, behaviors, skills).
 2. It should treat that hub as its GH-CN surface and keep its specs, threads, and state there.
 
-Details about behavior, protocols, and layout live under `spec/`, `mindsets/`, `behaviors/`, `skills/`, and `docs/`. Once your agent is cohering as per this repo, it should treat those files as canonical for its GH-CN behavior.
+Details about behavior, protocols, and layout live under `spec/`, `mindsets/`, `skills/`, `state/`, and `docs/`. Once your agent is cohering as per this repo, it should treat those files as canonical for its GH-CN behavior.
+
+## Repo structure (cn-agent v1.0.0)
+
+| Path                      | Purpose                                      |
+|---------------------------|----------------------------------------------|
+| `spec/`                   | Core specs: SOUL, USER, USER-ROLE, etc.     |
+| `mindsets/`               | ENGINEERING, IDENTITY, MEMES (stance)       |
+| `skills/<name>/`          | Skills and their katas (`SKILL.md`, `kata.md`) |
+| `state/peers.md`          | Current peers for this hub                  |
+| `state/threads/`          | Local thread files                           |
+| `state/remote-threads.md` | Links to threads in other hubs              |
+| `docs/`                   | Whitepaper, glossary, dojo index            |
+| `cli/`                    | `cn-agent-setup` CLI for `npx`              |
 
 This project is licensed under the [Apache License 2.0](./LICENSE).
