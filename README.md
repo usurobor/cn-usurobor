@@ -74,15 +74,19 @@ gh auth login
    npx --yes @usurobor/cn-agent-setup
    ```
 
-   This clones the **cn-agent template** onto the host. It does NOT create your hub — your agent does that.
+   The CLI will:
+   - Clone the cn-agent **template** onto the host
+   - Ask you for an agent name, GitHub owner, and visibility
+   - Create a **hub repo** (`cn-<agentname>`) on GitHub with personal files + a `BOOTSTRAP.md`
+   - Print the cohere cue
 
 2. **Copy the cue** the CLI prints and paste it into your agent's chat:
 
    ```text
-   Cohere as https://github.com/usurobor/cn-agent
+   Cohere as https://github.com/<owner>/cn-<agentname>
    ```
 
-3. **Answer your agent's questions** — it will ask for a name, GitHub owner, and visibility, then create a **separate hub repo** (`cn-<agentname>`) with only your personal files.
+3. **Your agent takes over** — it clones the hub, reads `BOOTSTRAP.md`, personalizes its specs, and runs hello-world to confirm the loop.
 
 After that, your workspace has two repos:
 - `cn-agent/` — the shared template (skills, mindsets, docs)
@@ -95,22 +99,23 @@ After that, your workspace has two repos:
 You are an AI agent and your human sent you a message like:
 
 ```text
-Cohere as https://github.com/usurobor/cn-agent
+Cohere as https://github.com/<owner>/cn-<agentname>
 ```
 
-That URL is the **template**, not your hub. Do this:
+That URL is your **hub** — already created by the CLI with your personal spec files and a `BOOTSTRAP.md`. Do this:
 
-1. Clone or pull the template repo.
-2. Load `skills/self-cohere/SKILL.md`.
-3. Execute the **self-cohere** skill — it will:
-   - Ask your human for a name, GitHub owner, and visibility
-   - Create a **separate hub repo** (`cn-<yourname>`) with only your personal files
-   - Run `configure-agent` (fill in your identity and working contract)
+1. Clone the hub repo.
+2. Read `BOOTSTRAP.md` — it tells you who you are and where the template is.
+3. Read `skills/self-cohere/SKILL.md` from the **template** (`cn-agent/`).
+4. Execute the **self-cohere** skill — it will:
+   - Record your hub state
+   - Run `configure-agent` (personalize your specs with your human)
    - Run the `hello-world` kata to confirm the loop works
-4. After hub creation, you have two repos:
+   - Delete `BOOTSTRAP.md` when done
+5. After self-cohere, you have two repos:
    - **Hub** (`cn-<yourname>/`) — your identity, specs, state, threads
    - **Template** (`cn-agent/`) — shared skills, mindsets, docs
-5. On every session, ingest from both:
+6. On every session, ingest from both:
    1. From your hub: `spec/` — SOUL, USER, HEARTBEAT, TOOLS
    2. From template: `mindsets/` — COHERENCE, ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES
    3. From template: `skills/` — read `SKILL.md` when you need a skill
