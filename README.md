@@ -60,11 +60,11 @@ Expected time: **5–10 minutes**.
 
 Before you start, make sure the host has GitHub CLI installed and authenticated.
 
-Assuming you're running Ubuntu (as in the DigitalOcean setup above), run:
+Assuming you're running Ubuntu (as in the DigitalOcean setup above) and are logged in as `root`, run:
 
 ```bash
-sudo apt update
-sudo apt install gh
+apt update
+apt install gh
 
 # Authenticate as the GitHub user who will own the hub
 gh auth login
