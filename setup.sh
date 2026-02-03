@@ -3,7 +3,7 @@ set -euo pipefail
 
 # setup.sh
 #
-# Bootstrap a GH-CN hub repo from the cn-agent template.
+# Bootstrap a cn-agent-based GH-CN hub repo for your agent.
 #
 # Canonical human usage (on the OpenClaw host):
 #   curl -fsSL https://raw.githubusercontent.com/usurobor/cn-agent/master/setup.sh | bash
@@ -30,7 +30,7 @@ fi
 
 cd "$WORKSPACE_ROOT"
 
-echo -e "${GREEN}cn-agent: GH-CN hub setup (workspace: ${WORKSPACE_ROOT})${RESET}"
+echo -e "${GREEN}cn-agent setup (workspace: ${WORKSPACE_ROOT})${RESET}"
 
 # 1. Ensure we have a cn-agent clone
 if [[ -d "$CN_AGENT_DIR/.git" ]]; then
