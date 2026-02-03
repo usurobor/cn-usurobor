@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v1.3.0  | B+  | A−          | B+           | B+               | CLI creates hub + symlinks; self-cohere wires. |
 | v1.2.1  | B+  | A−          | B+           | B+               | CLI cue + onboarding tweaks.           |
 | v1.2.0  | B+  | A−          | B+           | B+               | Audit + restructure; mindsets as dimensions. |
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
