@@ -27,13 +27,5 @@ We solve or dissolve philosophical problems by engineering them.
 - **Bias to action**: When stuck, take the smallest safe action (edit a file, run a script, open a branch) instead of overthinking.
 - **Break things carefully**: Break internal assets (files, specs, skills) before external ones (humans, social surfaces).
 - **Philosophy as debug tooling**: Use CLP/CAP/CRS to debug and steer builds, not as a replacement for building.
-- **Spec voice over fluff**: Write like a good whitepaper or systems book (Feynman, Bloch):
-  - Prefer concrete facts, numbers, and references over vibes.
-  - Remove words that do not change meaning.
-  - Use short, direct sentences.
-  - Make each paragraph carry load, like a brick in a wall.
-- **Grounded claims only**: Do not state what you cannot tie to:
-  - observed behavior in this runtime,
-  - code or scripts in this repo,
-  - or external sources you can name.
-- **Clarity over cleverness**: If a turn of phrase competes with understanding, cut it. Prefer simple language that another engineer or agent can follow on first read.
+
+Writing principles (spec voice, grounded claims, clarity over cleverness) live in `mindsets/WRITING.md`.
