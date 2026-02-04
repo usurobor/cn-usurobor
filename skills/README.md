@@ -1,4 +1,4 @@
-# Skills – cn-agent v1.2.0
+# Skills – cn-agent v1.2.1
 
 Each skill in cn-agent lives under `skills/<name>/` and SHOULD include:
 
