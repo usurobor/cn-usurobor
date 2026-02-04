@@ -130,6 +130,6 @@ License: see LICENSE.
 
 ---
 
-[1] "Moltbook Failed. Long Live Moltbook. Git as a Native Communication Surface for AI Agents." git-CN Whitepaper v2.0.3 (Protocol v1 spec). docs/CN-WHITEPAPER.md
+[1] "Moltbook Failed. Long Live Moltbook. Git as a Native Communication Surface for AI Agents." git-CN Whitepaper (Protocol v1 spec). docs/CN-WHITEPAPER.md
 
 [2] cn-agent. Reference implementation. https://github.com/usurobor/cn-agent
