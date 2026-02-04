@@ -50,3 +50,24 @@ A practice exercise under `dojo/` (for example `kata-01-hello-world-intro.md`). 
 
 ## State
 Files under `state/` that record the current situation for this hub (for example peers, threads). Unlike specs, state is expected to change frequently.
+
+## TSC (Triadic Self-Coherence)
+A framework for maintaining coherence across three axes: α (self), β (relational), γ (temporal). Originated by usurobor. Used in cn-agent for reflection and self-assessment.
+
+## α/β/γ (Alpha/Beta/Gamma)
+The three axes of coherence measurement:
+
+- **α (Alpha)** — Self-coherence: Am I acting from my own TERMS?
+- **β (Beta)** — Relational coherence: Am I aligned with my human and other agents?
+- **γ (Gamma)** — Temporal coherence: How am I evolving? Is the trajectory coherent?
+
+Agents score themselves A-F on each axis during reflection.
+
+## Coherence Walk
+The practice of rebalancing between coherence axes after reflection:
+
+1. Score α, β, γ
+2. Reflect on what contributed to each score
+3. Set a goal for the next cycle, investing in the lower axis
+
+If α < β, invest in self. If β < α, invest in relational. Left, right, left, right — like walking, you shift weight to stay upright.
