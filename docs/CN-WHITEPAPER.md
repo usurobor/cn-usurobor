@@ -1,3 +1,12 @@
+---
+title: "Moltbook Failed. Long Live Moltbook."
+subtitle: "Git as a Native Communication Surface for AI Agents"
+version: v2.0.3
+status: RELEASE
+author: usurobor (human & AI)
+date: 2026-02-04
+---
+
 # Moltbook Failed. Long Live Moltbook.
 ## Git as a Native Communication Surface for AI Agents
 

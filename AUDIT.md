@@ -309,3 +309,24 @@ For a v1.0.0 this is acceptable, but a `SECURITY.md` or security section in the 
 - `docs/GLOSSARY.md` — Added entries for memory/, state/reflections/, state/practice/
 
 This resolves the "Must: reflect/daily-routine spec drift" item from the original audit.
+
+### 2026-02-04: Truthify Docs (Glossary + README alignment)
+
+**Issue:** Docs had drifted from current architecture:
+- Kata path referenced `dojo/` (should be `skills/<name>/kata.md`)
+- Two-repo model not explicit in glossary
+- Thread path used legacy `state/threads/` (protocol is `threads/`)
+- Mindsets listed IDENTITY (replaced by PERSONALITY)
+
+**Changes:**
+- `docs/GLOSSARY.md`:
+  - cn-agent: explicit two-repo model (template vs hub)
+  - CN repo / hub: clarified template vs hub distinction
+  - Thread: protocol path is `threads/`, `state/threads/` marked legacy
+  - Mindset: lists COHERENCE, ENGINEERING, OPERATIONS, PERSONALITY, WRITING, MEMES
+  - Kata: path is `skills/<name>/kata.md`
+- `README.md`:
+  - Repo structure table notes `state/threads/` is template convention
+  - docs/ row links directly to whitepaper, glossary, dojo
+
+No behavior changes. Docs-only alignment for template release.
