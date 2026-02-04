@@ -109,6 +109,20 @@ function ask(rl, question) {
       await run('git', ['config', '--global', 'user.email', gitEmail]);
     }
 
+    // 1c. Ensure GitHub CLI is installed and authenticated
+    const ghVersion = runCapture('gh', ['--version']);
+    if (!ghVersion) {
+      console.error('Error: GitHub CLI (gh) is not installed or not on PATH.');
+      console.error('Install gh, then run: gh auth login');
+      process.exit(1);
+    }
+    const ghUser = runCapture('gh', ['api', 'user', '--jq', '.login']);
+    if (!ghUser) {
+      console.error('Error: gh is installed but not authenticated.');
+      console.error('Run: gh auth login');
+      process.exit(1);
+    }
+
     // 2. Clone or update cn-agent template
     console.log('Step 1: Template');
     if (!fs.existsSync(path.join(CN_AGENT_DIR, '.git'))) {
