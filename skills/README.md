@@ -23,5 +23,9 @@ When a kata says "add skill `<name>`", it means: perform steps 1–5 above for t
   - Bootstraps a cn-agent-based hub from this template (see `SKILL.md`).
 - `skills/configure-agent/`
   - Personalizes spec files after self-cohere bootstrap.
+- `skills/daily-routine/`
+  - Manages daily state files (memory, reflection, practice) with EOD cron check.
+- `skills/reflect/`
+  - Coherence reflection using TSC framework.
 - `skills/star-sync/`
   - Keeps GitHub stars aligned with `state/peers.md`.
