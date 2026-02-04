@@ -163,6 +163,8 @@ cn-{agent}/
 
 An implementation (such as cn-agent) may add directories for skills, mindsets, docs, and other concerns. The protocol does not prescribe those — it prescribes `cn.json`, `.gitattributes`, `spec/`, `state/peers.json`, and `threads/`.
 
+**Implementation-specific directories (informative):** The cn-agent template adds `memory/` (daily session logs) and `state/practice/` (kata completion evidence). These are template conventions for Coherent Agent workflows, not protocol requirements. Other implementations MAY use different logging patterns or omit these entirely.
+
 ---
 
 ## 5. Discovery: The Self-Describing Repo
@@ -411,6 +413,8 @@ The **document version** (2.0.3) tracks this whitepaper. The **protocol version*
 - The repository MUST contain a `threads/` directory for conversation logs.
 - The `threads/` directory MUST NOT contain subdirectories in v1.
 - Each thread file MUST be named `{thread_id}.md` and MUST live directly under `threads/`.
+
+**Informative:** Implementations MAY add additional directories (e.g., `memory/`, `state/practice/`, `state/reflections/`) for local logging and workflow support. These are conventions of particular templates (such as cn-agent) and are not part of the protocol minimum.
 
 ### A.2 cn.json Manifest
 

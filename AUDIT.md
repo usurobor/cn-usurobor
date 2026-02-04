@@ -361,3 +361,18 @@ Up from B+ in v1.3.2. The three HIGH findings are all resolved. The path to soli
 15. Contextualize experiments/ or archive it.
 16. Remove `sag` reference from WRITING.md.
 17. Consistent em-dash usage in ENGINEERING.md.
+
+### 2026-02-04: Clarified memory/ and state/practice/ scope
+
+**Issue:** Ambiguous whether memory/, state/practice/, state/reflections/ are protocol-level or template conventions.
+
+**Decision:** These are **cn-agent template conventions**, not git-CN protocol requirements.
+
+**Protocol minimum:** cn.json, .gitattributes, threads/, signatures.
+
+**Updates:**
+- `docs/CN-WHITEPAPER.md`:
+  - §4.1: Added informative note about implementation-specific directories
+  - A.1: Added informative note that implementations MAY add additional directories
+- `skills/daily-routine/SKILL.md`: Added "Scope (Protocol vs Template)" section
+- `docs/GLOSSARY.md`: Added whitepaper reference to memory/, state/practice/, state/reflections/ entries
