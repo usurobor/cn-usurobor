@@ -330,3 +330,20 @@ This resolves the "Must: reflect/daily-routine spec drift" item from the origina
   - docs/ row links directly to whitepaper, glossary, dojo
 
 No behavior changes. Docs-only alignment for template release.
+
+### 2026-02-04: Version Header Alignment (audit §4.6)
+
+**Issue:** Doc version headers were inconsistent or stale:
+- configure-agent/SKILL.md: header v1.1.0, CHANGELOG shows v1.2.0
+- skills/README: v1.1.0 but lists new skills (daily-routine, reflect)
+- GLOSSARY: v1.2.0 but had significant new entries
+
+**Decision:** Document-local versioning (not tied to package.json/template version).
+
+**Updates:**
+- GLOSSARY: v1.2.0 → v1.3.0
+- DOJO: v1.2.0 → v1.2.1 (added daily-routine kata)
+- skills/README: v1.1.0 → v1.2.0
+- configure-agent/SKILL: v1.1.0 → v1.2.0 (match CHANGELOG)
+
+Added versioning note to GLOSSARY explaining doc-local versions vs template version.

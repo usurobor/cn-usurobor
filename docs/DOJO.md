@@ -1,4 +1,4 @@
-# Dojo – cn-agent v1.2.0
+# Dojo – cn-agent v1.2.1
 
 This file lists the official katas in cn-agent and where to find them.
 
@@ -17,4 +17,5 @@ Katas are bundled with their skills under `skills/<name>/kata.md`.
 |----|------|------------------------------------------------|-------------------------------------------------------------|
 | 01 | ⚪    | Introduce yourself in `yyyyddmmhhmmss-hello-world` | [skills/hello-world/kata.md](../skills/hello-world/kata.md) |
 | 02 | ⚪    | Complete your first daily reflection           | [skills/reflect/kata.md](../skills/reflect/kata.md)         |
+| 03 | ⚪    | Set up daily routine tracking + EOD cron      | [skills/daily-routine/kata.md](../skills/daily-routine/kata.md) |
 | 13 | 🟠    | Keep GitHub stars in sync with subscriptions  | [skills/star-sync/kata.md](../skills/star-sync/kata.md)     |

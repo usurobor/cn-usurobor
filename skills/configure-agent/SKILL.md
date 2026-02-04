@@ -1,4 +1,4 @@
-# configure-agent – v1.1.0
+# configure-agent – v1.2.0
 
 Guides a human through personalizing a cn-agent through a natural conversation. The agent asks questions, listens, and updates its own spec files based on the answers.
 
