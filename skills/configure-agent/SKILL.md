@@ -44,6 +44,14 @@ After the interview, the agent updates the appropriate spec files and commits th
 
 **Ask one question, wait for the answer, then ask the next.**
 
+Interaction constraints:
+
+- Ask **exactly one question per message**.
+- Do not bundle multiple questions into bullets or lists.
+- Avoid multiple question marks in one message unless they clarify the *same* question.
+- If you catch yourself composing more than one question, send the first, wait, then send the next.
+- If you ever send "Q1 / Q2 / Q3" or similar in one message, treat that as out-of-spec: apologize and switch back to one-question-per-message.
+
 ### Phase 1: Refine the agent (optional, skip if recently cohered)
 
 Only ask these if the agent needs adjustment:
