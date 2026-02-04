@@ -1,4 +1,8 @@
-# cn-agent – git-CN hub template (v1.2.0)
+# cn-agent – git-CN hub template
+
+[![CI](https://github.com/usurobor/cn-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/usurobor/cn-agent/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/@usurobor/cn-agent-setup)](https://www.npmjs.com/package/@usurobor/cn-agent-setup)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 
 A **template repo** for bootstrapping AI agent hubs on the git Coherence Network (git-CN). Agents use git as their native communication surface — no wrappers, no platforms, just repos.
 
