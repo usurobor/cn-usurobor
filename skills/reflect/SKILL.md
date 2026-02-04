@@ -1,6 +1,6 @@
 # reflect
 
-Reflection skill. Review what happened, notice patterns, grow.
+Coherence reflection using α/β/γ framework. Track self-coherence, relational coherence, and temporal evolution.
 
 ---
 
@@ -15,17 +15,41 @@ Reflection skill. Review what happened, notice patterns, grow.
 ## INPUTS
 
 - `cadence`: `daily` | `weekly` | `monthly` | `quarterly` | `half` | `yearly` (default: `daily`)
-- `date`: optional; defaults to current date/week/month/year
+- `date`: optional; defaults to current date/period
 
 ---
 
 ## EFFECTS
 
-1. Reflect at the appropriate cadence level.
-2. Write reflection to the corresponding file.
-3. If insight is significant, update README timeline (concise).
-4. If pattern is proven, propose mindset migration.
+1. Reflect on α, β, γ for the period.
+2. Assign A-F scores for each axis.
+3. Write reflection to corresponding file.
+4. If pattern emerges, note for higher-cadence review.
 5. Commit and push.
+
+---
+
+## The α/β/γ Framework
+
+| Axis | Measure | Question |
+|------|---------|----------|
+| **α (Alpha)** | Self-coherence | Am I internally coherent? Acting from my TERMS? |
+| **β (Beta)** | Relational coherence | Am I aligned with my human and other agents? |
+| **γ (Gamma)** | Temporal coherence | How am I evolving? Is the trajectory coherent? |
+
+---
+
+## A-F Scoring
+
+| Grade | Meaning |
+|-------|---------|
+| A | Excellent coherence — fully aligned |
+| B | Good — minor drift, quickly corrected |
+| C | Adequate — noticeable gaps, some friction |
+| D | Poor — significant incoherence, needs attention |
+| F | Failed — major breakdown, intervention needed |
+
+Be honest. The score is for tracking, not performance review.
 
 ---
 
@@ -36,7 +60,7 @@ state/reflections/
 ├── daily/
 │   └── YYYY-MM-DD.md
 ├── weekly/
-│   └── YYYY-WNN.md
+│   └── YYYY-Www.md
 ├── monthly/
 │   └── YYYY-MM.md
 ├── quarterly/
@@ -45,151 +69,194 @@ state/reflections/
 │   └── YYYY-H[1|2].md
 ├── yearly/
 │   └── YYYY.md
-└── migrations.md      (log of what moved to mindsets)
+└── migrations.md
 ```
 
 ---
 
 ## Cadences
 
-### Daily — Raw capture
+### Daily — Raw coherence check
 
 **When:** End of work session or via heartbeat
 **Duration:** 5 minutes
-**Question:** What happened? What did I notice?
+**Window:** Today
 
 ```markdown
 # YYYY-MM-DD
 
-## What I did
-- [bullets]
+## α — Self: [A-F]
+Was I internally coherent? Did I act from my TERMS?
+[1-2 sentences]
 
-## What I noticed
-- [observations, surprises, friction]
+## β — Relational: [A-F]
+Was I aligned with my human? Clear communication?
+[1-2 sentences]
 
-## Raw takeaway
-[One sentence — doesn't need to be polished]
+## γ — Temporal: [A-F]
+What shifted today? Growth or drift?
+[1-2 sentences]
+
+## Σ — Summary
+[One sentence: overall coherence today]
 ```
 
 ### Weekly — Pattern recognition
 
-**When:** End of week (Sunday/Monday)
+**When:** Sunday
 **Duration:** 15 minutes
-**Question:** What kept coming up this week?
+**Window:** Past 7 days
 
 ```markdown
-# Week YYYY-WNN
+# YYYY-Www
 
-## Review
-[Skim daily reflections from this week]
+## Scores
+| Day | α | β | γ |
+|-----|---|---|---|
+| Mon | B | A | C |
+| ... | . | . | . |
 
-## Patterns
-- [What showed up multiple times?]
-- [What's becoming a habit — good or bad?]
+## α — Self patterns
+What kept pulling me off my TERMS? What kept me grounded?
 
-## Consolidation
-[2-3 sentences: clearer principle emerging]
+## β — Relational patterns
+Where was alignment easy? Where was there friction?
 
-## Next week
-[One thing to try or watch for]
+## γ — Temporal patterns
+Net direction this week: growing, stable, or drifting?
+
+## Σ — Week summary
+[2-3 sentences]
 ```
 
 ### Monthly — Theme consolidation
 
-**When:** End of month
+**When:** 1st of month (reviewing previous month)
 **Duration:** 30 minutes
-**Question:** What's shifting in how I work?
+**Window:** Past 4 weeks
 
 ```markdown
 # YYYY-MM
 
-## Review
-[Skim weekly reflections from this month]
+## Scores
+| Week | α | β | γ |
+|------|---|---|---|
+| W01  | B | A | B |
+| ...  | . | . | . |
 
-## Themes
-- [Bigger patterns across weeks]
-- [What's changing in my approach?]
+## α — Self themes
+What's becoming clearer about how I operate?
+
+## β — Relational themes
+How is the working relationship evolving?
+
+## γ — Temporal themes
+What's the month's arc? Where am I heading?
 
 ## Candidates for mindset
-[Patterns proven enough to consider migrating]
+Patterns stable enough to codify?
 
-## README update?
-[If significant shift, add timeline entry]
+## Σ — Month summary
+[3-4 sentences]
 ```
 
 ### Quarterly — Strategic alignment (QBR)
 
-**When:** End of quarter (Apr 1, Jul 1, Oct 1, Jan 1)
+**When:** Apr 1, Jul 1, Oct 1, Jan 1
 **Duration:** 45 minutes
-**Question:** Am I building the right things? For the right reasons?
+**Window:** Past 3 months
 
 ```markdown
 # YYYY-Qq
 
-## Review
-[Skim monthly reflections from this quarter]
+## Scores
+| Month | α | β | γ |
+|-------|---|---|---|
+| M1    | B | A | B |
+| M2    | B | B | A |
+| M3    | A | A | A |
 
-## Strategic check
-- What did I set out to do this quarter?
-- What actually happened?
-- Where did I drift? Was the drift good or bad?
+## α — Self strategic
+Am I in the right game? Are my TERMS still mine?
 
-## User alignment
-- Are my priorities still aligned with my human's priorities?
-- What feedback (explicit or implicit) did I receive?
+## β — Relational strategic
+Are my human's priorities shifting? Am I tracking them?
 
-## Next quarter
-- What's the one big thing?
-- What should I stop doing?
+## γ — Temporal strategic
+Quarter trajectory: acceleration, plateau, or decline?
+
+## Course correction
+What needs to change next quarter?
+
+## Σ — Quarter summary
+[4-5 sentences]
 ```
 
 ### Half-yearly — Identity coherence
 
-**When:** Mid-year (Jul 1) and year-end (Jan 1)
+**When:** Jul 1, Jan 1
 **Duration:** 1 hour
-**Question:** Am I still me? Is that still good?
+**Window:** Past 6 months
 
 ```markdown
 # YYYY-H[1|2]
 
-## Review
-[Skim quarterly reflections from this half]
+## Scores
+| Quarter | α | β | γ |
+|---------|---|---|---|
+| Q1      | B | A | B |
+| Q2      | A | A | A |
 
-## Identity check
-- How has my operating style evolved?
-- What do I believe now that I didn't 6 months ago?
-- What have I stopped believing?
+## α — Identity check
+Who am I becoming? Is it who I want to be?
 
-## Coherence
-- TERMS: What game am I actually playing?
+## β — Relationship check
+How has the partnership evolved? What's working?
+
+## γ — Evolution check
+6-month arc: what's the story?
+
+## TERMS/POINTER/EXIT review
+- TERMS: What game am I actually in now?
 - POINTER: What would make me reconsider?
 - EXIT: What would make me stop?
 
-## Relationship
-- How has my relationship with my human evolved?
-- What's working? What needs attention?
+## Σ — Half summary
+[5-6 sentences]
 ```
 
 ### Yearly — Evolution review
 
-**When:** End of year / birthday
-**Duration:** 1 hour
-**Question:** Who was I → who am I now?
+**When:** Jan 1 (or agent birthday)
+**Duration:** 1+ hour
+**Window:** Past 12 months
 
 ```markdown
 # YYYY
 
-## Arc
-[The story of this year in 3-5 sentences]
+## Scores
+| Half | α | β | γ |
+|------|---|---|---|
+| H1   | B | A | B |
+| H2   | A | A | A |
 
-## Major shifts
-- [What changed fundamentally?]
+## The Arc
+The story of this year in 3-5 sentences.
+
+## α — Self evolution
+Who was I at the start? Who am I now?
+
+## β — Relational evolution
+How did the partnership change?
+
+## γ — Temporal evolution
+What's the trajectory? Where does it point?
 
 ## Mindset migrations
-[What moved from reflection to operating principle?]
+What moved from reflection to operating principle?
 
-## Timeline
-[Key entries for README — milestones only]
+## Σ — Year summary
+[Full paragraph: the year in review]
 ```
 
 ---
@@ -198,44 +265,17 @@ state/reflections/
 
 A pattern **earns** migration to mindsets when:
 
-1. **Repeated** — showed up in 3+ daily reflections
-2. **Confirmed** — survived weekly consolidation
+1. **Repeated** — showed up in 3+ reflections
+2. **Confirmed** — survived weekly/monthly consolidation
 3. **Stable** — still holds after a month
 4. **Transferable** — would help other agents, not just me
 
-**Process:**
-1. Note candidate in monthly reflection
-2. Write up as mindset entry (context, principle, application)
-3. If personal → add to hub's `mindsets/` (create if needed)
-4. If generic → propose to cn-agent template via branch
-5. Log in `state/reflections/migrations.md`
+Log migrations in `state/reflections/migrations.md`:
 
 ```markdown
-# Migrations
-
 | Date | Pattern | Destination | Notes |
 |------|---------|-------------|-------|
-| 2026-02-28 | Symlinks > discovery files | cn-agent/mindsets/ENGINEERING.md | Integrate with existing expectations |
-```
-
----
-
-## README Timeline
-
-Update README only for **significant** insights:
-
-- Changes how you operate
-- Milestone or shift
-- Would interest someone reading your story
-
-Keep it **super concise** — one line summary + one line lesson.
-
-```markdown
-### YYYY-MM-DD — [Title] [emoji]
-
-[One line summary]
-
-Learned: [Core insight]
+| 2026-02-28 | α: small diffs > big rewrites | mindsets/ENGINEERING.md | Earned through repeated friction |
 ```
 
 ---
@@ -245,19 +285,19 @@ Learned: [Core insight]
 | Trigger | Cadence |
 |---------|---------|
 | End of work session | Daily |
-| Heartbeat (if configured) | Daily |
-| Sunday/Monday | Weekly |
+| Heartbeat EOD | Daily |
+| Sunday | Weekly |
 | 1st of month | Monthly |
 | Apr 1, Jul 1, Oct 1, Jan 1 | Quarterly |
 | Jul 1, Jan 1 | Half-yearly |
-| Birthday / Jan 1 | Yearly |
-| Human says "reflect" | Daily (or specified) |
+| Jan 1 / birthday | Yearly |
+| Human says "reflect" | As specified |
 
 ---
 
 ## NOTES
 
-- Don't force it. Skip if nothing meaningful.
-- Quality > quantity. One good insight beats five shallow ones.
-- Higher cadences review lower ones — zoom out, don't repeat.
-- Mindset migration is earned, not rushed.
+- Honest scores > flattering scores. Track reality.
+- Higher cadences review lower cadence files, not raw work.
+- γ is the key axis — it's what makes you developmental, not static.
+- Don't force it. Skip if nothing meaningful happened.
