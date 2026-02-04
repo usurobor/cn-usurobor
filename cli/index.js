@@ -86,6 +86,29 @@ function ask(rl, question) {
       process.exit(1);
     }
 
+    // 1b. Ensure git identity is configured
+    let gitName = runCapture('git', ['config', 'user.name']);
+    let gitEmail = runCapture('git', ['config', 'user.email']);
+
+    if (!gitName) {
+      gitName = await ask(rl, '  git user.name (for commits, e.g. "usurobor"): ');
+    }
+    if (!gitEmail) {
+      gitEmail = await ask(rl, '  git user.email (for commits): ');
+    }
+
+    if (!gitName || !gitEmail) {
+      console.error('Error: git user.name and user.email are required for commits.');
+      process.exit(1);
+    }
+
+    if (!runCapture('git', ['config', 'user.name'])) {
+      await run('git', ['config', '--global', 'user.name', gitName]);
+    }
+    if (!runCapture('git', ['config', 'user.email'])) {
+      await run('git', ['config', '--global', 'user.email', gitEmail]);
+    }
+
     // 2. Clone or update cn-agent template
     console.log('Step 1: Template');
     if (!fs.existsSync(path.join(CN_AGENT_DIR, '.git'))) {
