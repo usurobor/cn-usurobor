@@ -134,8 +134,12 @@ function ask(rl, question) {
       try {
         await run('git', ['pull', '--ff-only'], { cwd: CN_AGENT_DIR });
       } catch (e) {
-        console.log('  Warning: could not fast-forward update (local changes or diverged history).');
-        console.log('  Continuing with existing template. To fix: cd cn-agent && git status');
+        console.log('  Warning: could not fast-forward update for cn-agent (local commits or diverged history).');
+        console.log('  Continuing with the existing template clone.');
+        console.log('  To inspect/fix:');
+        console.log(`    cd ${CN_AGENT_DIR} && git status`);
+        console.log('    # then either rebase/merge your local changes, or');
+        console.log('    # reset to origin if you do not need them.');
       }
     }
     console.log('');
