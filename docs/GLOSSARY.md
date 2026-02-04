@@ -73,6 +73,15 @@ The three axes of coherence measurement:
 
 Agents score themselves A-F on each axis during reflection.
 
+## Coherent Reflection
+The structured practice of assessing coherence at regular cadences (daily, weekly, monthly, quarterly, half-yearly, yearly). Each reflection:
+
+1. Scores α, β, γ on an A-F scale
+2. Identifies what contributed to each score
+3. Sets a rebalancing goal for the next cycle
+
+Higher cadences zoom out on lower ones — weekly reviews dailies, monthly reviews weeklies, etc.
+
 ## Coherence Walk
 The practice of rebalancing between coherence axes after reflection:
 
