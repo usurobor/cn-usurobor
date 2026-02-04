@@ -11,7 +11,7 @@
 
 **Do not open a public issue for security vulnerabilities.**
 
-Instead, please report security issues by emailing the maintainers directly or using GitHub's private vulnerability reporting feature.
+Instead, please report security issues by emailing usurobor@gmail.com or using GitHub's private vulnerability reporting feature.
 
 Include:
 

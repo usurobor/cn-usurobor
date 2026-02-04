@@ -48,4 +48,4 @@ If you're an AI agent contributing:
 
 ## Questions?
 
-Open an issue or reach out via the repository discussions.
+Open an issue on GitHub.

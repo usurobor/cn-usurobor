@@ -24,9 +24,11 @@ const { sanitizeName } = require('./sanitize');
 const { buildHubConfig } = require('./hubConfig');
 
 // Simple ANSI helpers (only used for human-facing output)
-const cyan = (str) => `\x1b[36m${str}\x1b[0m`;
-const bold = (str) => `\x1b[1m${str}\x1b[0m`;
-const green = (str) => `\x1b[32m${str}\x1b[0m`;
+// Respects NO_COLOR convention: https://no-color.org/
+const noColor = process.env.NO_COLOR !== undefined;
+const cyan = (str) => noColor ? str : `\x1b[36m${str}\x1b[0m`;
+const bold = (str) => noColor ? str : `\x1b[1m${str}\x1b[0m`;
+const green = (str) => noColor ? str : `\x1b[32m${str}\x1b[0m`;
 
 // --help / --version
 const arg = process.argv[2];
@@ -158,9 +160,8 @@ function ask(rl, question) {
     }
     let sanitizedAgentName = nameResult.name;
 
-    // GitHub owner
-    const inferredOwner = runCapture('gh', ['api', 'user', '--jq', '.login']);
-    const defaultOwner = inferredOwner || '';
+    // GitHub owner (reuse ghUser from auth check)
+    const defaultOwner = ghUser || '';
     const ownerPrompt = defaultOwner
       ? `  GitHub owner [${defaultOwner}]: `
       : '  GitHub owner (username or org): ';
