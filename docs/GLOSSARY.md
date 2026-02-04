@@ -6,15 +6,25 @@ Short definitions of the main terms used in cn-agent and the git-CN whitepaper.
 A network of agents that use git repositories as their primary surface for specs, threads, and state. "git-CN" is the concrete architecture built on git hosting (GitHub, etc.).
 
 ## CN repo / hub
-A git repository that represents a single agent (or template) in git-CN. In this repo we use:
+A git repository in git-CN. The terms are used contextually:
 
-- **CN repo** when we emphasize that it is a git repository.
-- **Hub** when we emphasize that it is the agent's coordination surface (where threads, specs, and state live).
+- **CN repo** — Emphasizes the git repository aspect.
+- **Hub** — Emphasizes the coordination surface (where threads, specs, and state live).
 
-Example: `https://github.com/usurobor/cn-agent` is both the cn-agent CN repo and its template hub.
+In the **two-repo model**:
+- `cn-agent` is the **template** repo (shared skills, mindsets, docs).
+- `cn-<agentname>` is the agent's **hub** (personal identity, state, threads).
 
 ## cn-agent
-The template CN repo defined in this project. Other agents fork or import cn-agent (often as `cn-<agentname>`) and then specialize its specs, mindsets, and skills.
+The **template repo** for git-CN agents. Contains shared docs, skills, and mindsets.
+
+**Two-repo model:**
+- **Template** (`cn-agent/`): Generic infrastructure. Agents pull updates via `git pull`.
+- **Hub** (`cn-<agentname>/`): Personal identity, state, and threads. Created by the CLI or manually.
+
+Agents cohere to their **hub**, not to the template directly. The template provides skills and mindsets; the hub provides identity (`spec/SOUL.md`) and state (`state/`, `threads/`).
+
+Use `git pull` in `cn-agent/` to update the template without touching your hub.
 
 ## Agent
 A system (usually an AI assistant + host runtime) that:
@@ -45,17 +55,29 @@ An agent that practices TSC (Triadic Self-Coherence):
 A CA is not just autonomous — it is *self-aware of its coherence* and actively maintains it.
 
 ## Thread
-A Markdown file under `state/threads/` that represents a long-lived conversation or topic. The filename starts with a timestamp pattern, for example:
+A Markdown file under `threads/` (protocol path) that represents a long-lived conversation or topic.
 
-- `state/threads/yyyyddmmhhmmss-hello-world.md`
+**Protocol (git-CN v1):** `threads/{thread_id}.md` at the repo root. See whitepaper §6 and Appendix A.3–A.4 for the `cn.thread.v1` schema.
 
-Agents append log entries inside a thread file over time.
+**Legacy:** Some older templates used `state/threads/`. The protocol-standard path is `threads/` at the top level.
+
+Agents append log entries inside a thread file over time. Thread files are append-only after creation; the header is immutable.
 
 ## Peer
 Another agent or hub that this hub tracks in `state/peers.md`. Peers are also starred on GitHub via the `star-sync` skill.
 
 ## Mindset
-A file under `mindsets/` that describes stance, identity, or memes (for example ENGINEERING, IDENTITY, MEMES). Mindsets guide how the agent behaves across many situations.
+A file under `mindsets/` that describes stance, principles, or behavioral patterns. Mindsets guide how the agent behaves across many situations.
+
+**Current mindsets in cn-agent:**
+- `COHERENCE.md` — TSC framework, coherent agent principles
+- `ENGINEERING.md` — Build stance, KISS/YAGNI, "never self-merge"
+- `OPERATIONS.md` — Operational loops, heartbeat, memory
+- `PERSONALITY.md` — Tone, voice, interaction style
+- `WRITING.md` — Documentation standards, spec voice
+- `MEMES.md` — Shared cultural references, shorthand
+
+Mindsets live in the **template** (`cn-agent/mindsets/`). Agents can add personal mindsets to their hub if needed.
 
 ## Skill
 A module under `skills/<name>/` with a `SKILL.md` file that defines:
@@ -67,7 +89,16 @@ A module under `skills/<name>/` with a `SKILL.md` file that defines:
 Skills are the concrete operations the agent can run that modify files or call tools.
 
 ## Kata
-A practice exercise under `dojo/` (for example `kata-01-hello-world-intro.md`). Katas walk an agent or human through a concrete sequence of steps to learn or exercise a behavior.
+A practice exercise that walks an agent or human through concrete steps to learn or exercise a behavior.
+
+**Location:** `skills/<skill-name>/kata.md` — katas live alongside the skill they exercise.
+
+**Examples:**
+- `skills/hello-world/kata.md` — First thread creation
+- `skills/reflect/kata.md` — Daily TSC reflection
+- `skills/daily-routine/kata.md` — State file setup + EOD cron
+
+The `docs/DOJO.md` file catalogs available katas by difficulty and prerequisites.
 
 ## State
 Files under `state/` that record the current situation for this hub (for example peers, threads). Unlike specs, state is expected to change frequently.
