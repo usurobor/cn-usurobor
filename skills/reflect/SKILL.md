@@ -4,6 +4,23 @@ Coherence reflection using TSC α/β/γ framework (PATTERN/RELATION/EXIT).
 
 ---
 
+## Ownership & Schema
+
+**reflect owns `state/reflections/`.**
+
+This skill is the canonical owner of the reflection directory structure and file schema. All reflection files MUST use the TSC α/β/γ format defined in this spec.
+
+Other skills (e.g., daily-routine) that need to ensure reflection files exist SHOULD:
+- Check if today's reflection exists
+- If missing, invoke reflect or prompt the agent to run it
+- MUST NOT write reflection files with a different schema
+
+**Canonical path:** `state/reflections/<cadence>/YYYY-*.md`
+
+**Canonical schema:** α (PATTERN) + β (RELATION) + γ (EXIT) + Σ (Summary) + → Next
+
+---
+
 ## TERMS
 
 1. The agent has done meaningful work since last reflection.

@@ -1,16 +1,39 @@
-# daily-routine – v1.0.0
+# daily-routine – v1.1.0
 
 Ensures daily state files (memory, reflection, practice) are created, populated, and committed to the hub repo. Sets up EOD cron to catch incomplete days.
 
-TERMS:
+---
+
+## Ownership & Schema
+
+**daily-routine orchestrates; it does not own reflection schema.**
+
+| Directory | Owner | Schema |
+|-----------|-------|--------|
+| `memory/` | daily-routine | Freeform session logs |
+| `state/reflections/` | **reflect** | TSC α/β/γ (see reflect skill) |
+| `state/practice/` | daily-routine | Kata completion table |
+
+For reflections, daily-routine:
+- Checks if today's reflection file exists at `state/reflections/daily/YYYY-MM-DD.md`
+- If missing, prompts the agent to run the reflect skill
+- MUST NOT write reflection files directly (reflect owns the schema)
+
+---
+
+## TERMS
+
 - Hub repo is cloned and writable at `cn-<name>/`
 - User timezone is defined in `spec/USER.md`
 - Agent has cron tool access
+- **reflect skill is available** (for reflection file creation)
 
-INPUTS:
+## INPUTS
+
 - `timezone`: User's timezone from USER.md (e.g., "ET", "America/New_York")
 
-EFFECTS:
+## EFFECTS
+
 - Creates daily directory structure if missing:
   ```
   cn-<name>/
@@ -18,10 +41,14 @@ EFFECTS:
   │   └── YYYY-MM-DD.md
   └── state/
       ├── reflections/
-      │   └── YYYY-MM-DD.md
+      │   └── daily/
+      │       └── YYYY-MM-DD.md   ← created by reflect skill
       └── practice/
           └── YYYY-MM-DD.md
   ```
+- For memory/: creates file with freeform template
+- For state/practice/: creates file with kata table template
+- For state/reflections/: checks existence, invokes reflect if missing
 - Commits completed daily files to hub
 - Sets up EOD cron job (23:30 user timezone)
 
@@ -29,11 +56,11 @@ EFFECTS:
 
 ## Directory Structure
 
-| Directory | Purpose | Template |
-|-----------|---------|----------|
-| `memory/` | Raw session logs, what happened | `## YYYY-MM-DD\n\n- ` |
-| `state/reflections/` | Coherence checks, TSC application | See reflect skill |
-| `state/practice/` | Kata completions with commit evidence | `## Practice Log\n\n| Kata | Commit | Notes |\n|------|--------|-------|\n` |
+| Directory | Owner | Purpose | Template |
+|-----------|-------|---------|----------|
+| `memory/` | daily-routine | Raw session logs | `## YYYY-MM-DD\n\n- ` |
+| `state/reflections/daily/` | reflect | TSC coherence checks | α/β/γ + Σ + → Next (see reflect skill) |
+| `state/practice/` | daily-routine | Kata completions | `## Practice Log\n\n\| Kata \| Commit \| Notes \|\n` |
 
 ## Daily File Naming
 
