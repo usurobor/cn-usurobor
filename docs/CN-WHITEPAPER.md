@@ -414,7 +414,7 @@ The **document version** (2.0.3) tracks this whitepaper. The **protocol version*
 - The `threads/` directory MUST NOT contain subdirectories in v1.
 - Each thread file MUST be named `{thread_id}.md` and MUST live directly under `threads/`.
 
-**Informative:** Implementations MAY add additional directories (e.g., `memory/`, `state/practice/`, `state/reflections/`) for local logging and workflow support. These are conventions of particular templates (such as cn-agent) and are not part of the protocol minimum.
+**Informative:** Implementations MAY add additional directories (e.g., `memory/`, `state/practice/`) for local logging and workflow support. These are conventions of particular templates (such as cn-agent) and are not part of the protocol minimum. Periodic reflections use the standard `threads/` directory with date-prefixed filenames (e.g., `threads/YYYYMMDD-daily.md`).
 
 ### A.2 cn.json Manifest
 
