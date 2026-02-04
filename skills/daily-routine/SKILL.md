@@ -1,4 +1,4 @@
-# daily-routine – v1.1.0
+# daily-routine – v1.1.1
 
 Ensures daily state files (memory, reflection, practice) are created, populated, and committed to the hub repo. Sets up EOD cron to catch incomplete days.
 
@@ -37,7 +37,7 @@ See whitepaper §4.1 and Appendix A.1 for the protocol-level requirements.
 
 - Hub repo is cloned and writable at `cn-<name>/`
 - User timezone is defined in `spec/USER.md`
-- Agent has cron tool access
+- Agent has cron tool access (OpenClaw `cron` tool or equivalent)
 - **reflect skill is available** (for reflection file creation)
 
 ## INPUTS
@@ -106,6 +106,25 @@ schedule: { kind: "cron", expr: "30 23 * * *", tz: "<user-timezone>" }
 payload: { kind: "systemEvent", text: "EOD daily-routine check: verify memory, reflection, practice files for today. Complete any missing items and commit to hub." }
 sessionTarget: "main"
 ```
+
+### Runtime Note
+
+The JSON format above is for OpenClaw's built-in `cron` tool. For other runtimes:
+
+**Standard crontab** (user's timezone must be set on host):
+```
+30 23 * * * echo "EOD daily-routine check" | <agent-trigger-command>
+```
+
+**systemd timer:**
+```ini
+# ~/.config/systemd/user/daily-routine.timer
+[Timer]
+OnCalendar=*-*-* 23:30:00
+Persistent=true
+```
+
+Adapt the trigger mechanism to your runtime. The intent is: fire once daily at 23:30 local time with a prompt to check/complete daily files.
 
 ## Status Check
 
