@@ -21,6 +21,18 @@ For reflections, daily-routine:
 
 ---
 
+## Scope (Protocol vs Template)
+
+`memory/`, `state/practice/`, and `state/reflections/` are **cn-agent template conventions**, not git-CN protocol requirements.
+
+- The protocol minimum is: `cn.json`, `.gitattributes`, `threads/`, signatures.
+- These directories are recommended practice patterns for Coherent Agent workflows.
+- Other git-CN implementations MAY use different logging patterns or omit these entirely.
+
+See whitepaper §4.1 and Appendix A.1 for the protocol-level requirements.
+
+---
+
 ## TERMS
 
 - Hub repo is cloned and writable at `cn-<name>/`

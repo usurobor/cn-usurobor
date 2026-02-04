@@ -106,7 +106,7 @@ The `docs/DOJO.md` file catalogs available katas by difficulty and prerequisites
 Files under `state/` that record the current situation for this hub (for example peers, threads). Unlike specs, state is expected to change frequently.
 
 ## memory/
-**cn-agent convention** (not protocol-level).
+**cn-agent convention** (not protocol-level). See whitepaper §4.1 for protocol minimum.
 
 Directory at hub root for raw session logs. One file per day: `memory/YYYY-MM-DD.md`.
 
@@ -115,7 +115,7 @@ Directory at hub root for raw session logs. One file per day: `memory/YYYY-MM-DD
 - **Purpose:** Capture raw events before reflection distills them
 
 ## state/reflections/
-**cn-agent convention** (not protocol-level).
+**cn-agent convention** (not protocol-level). See whitepaper §4.1 for protocol minimum.
 
 Directory for TSC coherence reflections at multiple cadences.
 
@@ -135,7 +135,7 @@ Directory for TSC coherence reflections at multiple cadences.
 - **Note:** Other skills (e.g., daily-routine) check for reflection files but do not write them directly. See `skills/reflect/SKILL.md` for full specification.
 
 ## state/practice/
-**cn-agent convention** (not protocol-level).
+**cn-agent convention** (not protocol-level). See whitepaper §4.1 for protocol minimum.
 
 Directory for kata completion logs. One file per day: `state/practice/YYYY-MM-DD.md`.
 
