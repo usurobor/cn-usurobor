@@ -685,13 +685,42 @@ Created from [cn-agent](https://github.com/usurobor/cn-agent) template.
     if (repoExists) {
       console.log('  Attaching to existing GitHub repo...');
       await run('git', ['remote', 'add', 'origin', `https://github.com/${hubRepo}.git`], { cwd: hubDir, quiet: true });
+      
+      // Try to fetch and check if remote has content
+      let remoteIsEmpty = true;
       try {
-        await run('git', ['pull', '--rebase', 'origin', 'main'], { cwd: hubDir, quiet: true, timeout: 60000 });
+        await run('git', ['fetch', 'origin'], { cwd: hubDir, quiet: true, timeout: 60000 });
+        const remoteRef = runCapture('git', ['rev-parse', 'origin/main'], { cwd: hubDir });
+        remoteIsEmpty = !remoteRef;
       } catch {
-        // Might fail if repo is empty or different branch - that's ok
+        // Fetch failed or no main branch - assume empty
       }
-      await run('git', ['push', '-u', 'origin', 'HEAD:main', '--force-with-lease'], { cwd: hubDir, timeout: 60000 });
-      console.log(green('  ✓ Attached to existing repo'));
+      
+      if (remoteIsEmpty) {
+        // Remote is empty, safe to push
+        await run('git', ['push', '-u', 'origin', 'HEAD:main'], { cwd: hubDir, timeout: 60000 });
+        console.log(green('  ✓ Pushed to empty repo'));
+      } else {
+        // Remote has content - try to integrate without force
+        try {
+          await run('git', ['pull', '--rebase', 'origin', 'main'], { cwd: hubDir, quiet: true, timeout: 60000 });
+          await run('git', ['push', '-u', 'origin', 'HEAD:main'], { cwd: hubDir, timeout: 60000 });
+          console.log(green('  ✓ Attached to existing repo'));
+        } catch {
+          // Histories diverged - don't force push, fail safely
+          console.error('');
+          console.error(red('Error: Cannot attach to existing repo - histories have diverged.'));
+          console.error('');
+          console.error('The GitHub repo has existing content that conflicts with this setup.');
+          console.error('');
+          console.error('Options:');
+          console.error(`  1. Delete the GitHub repo and rerun: gh repo delete ${hubRepo}`);
+          console.error(`  2. Clone the existing repo instead: gh repo clone ${hubRepo}`);
+          console.error(`  3. Manually resolve: cd ${hubDir} && git status`);
+          console.error('');
+          process.exit(1);
+        }
+      }
     } else {
       console.log('  Creating GitHub repo...');
       try {
