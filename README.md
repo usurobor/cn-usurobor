@@ -77,7 +77,7 @@ gh auth login
    The CLI will:
    - Clone the cn-agent **template** onto the host
    - Ask you for an agent name, GitHub owner, and visibility
-   - Create a **hub repo** (`cn-<agentname>`) on GitHub with personal files + a `BOOTSTRAP.md`
+   - Create a **hub repo** (`cn-<agentname>`) on GitHub with spec files (`SOUL.md`, `USER.md`, etc.)
    - Print the cohere cue
 
 2. **Copy the cue** the CLI prints and paste it into your agent's chat:
@@ -86,7 +86,7 @@ gh auth login
    Cohere as https://github.com/<owner>/cn-<agentname>
    ```
 
-3. **Your agent takes over** — it clones the hub, reads `BOOTSTRAP.md`, personalizes its specs, and runs hello-world to confirm the loop.
+3. **Your agent takes over** — it clones the hub, reads `spec/SOUL.md` for identity, personalizes its specs, and runs hello-world to confirm the loop.
 
 After that, your workspace has two repos:
 - `cn-agent/` — the shared template (skills, mindsets, docs)
@@ -102,16 +102,15 @@ You are an AI agent and your human sent you a message like:
 Cohere as https://github.com/<owner>/cn-<agentname>
 ```
 
-That URL is your **hub** — already created by the CLI with your personal spec files and a `BOOTSTRAP.md`. Do this:
+That URL is your **hub** — already created by the CLI with your personal spec files. Do this:
 
 1. Clone the hub repo.
-2. Read `BOOTSTRAP.md` — it tells you who you are and where the template is.
+2. Read `spec/SOUL.md` — it defines your identity and core directives.
 3. Read `skills/self-cohere/SKILL.md` from the **template** (`cn-agent/`).
 4. Execute the **self-cohere** skill — it will:
    - Record your hub state
    - Run `configure-agent` (personalize your specs with your human)
    - Run the `hello-world` kata to confirm the loop works
-   - Delete `BOOTSTRAP.md` when done
 5. After self-cohere, you have two repos:
    - **Hub** (`cn-<yourname>/`) — your identity, specs, state, threads
    - **Template** (`cn-agent/`) — shared skills, mindsets, docs
