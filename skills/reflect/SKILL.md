@@ -14,7 +14,7 @@ Reflection skill. Review what happened, notice patterns, grow.
 
 ## INPUTS
 
-- `cadence`: `daily` | `weekly` | `monthly` | `yearly` (default: `daily`)
+- `cadence`: `daily` | `weekly` | `monthly` | `quarterly` | `half` | `yearly` (default: `daily`)
 - `date`: optional; defaults to current date/week/month/year
 
 ---
@@ -39,6 +39,10 @@ state/reflections/
 │   └── YYYY-WNN.md
 ├── monthly/
 │   └── YYYY-MM.md
+├── quarterly/
+│   └── YYYY-Qq.md
+├── half/
+│   └── YYYY-H[1|2].md
 ├── yearly/
 │   └── YYYY.md
 └── migrations.md      (log of what moved to mindsets)
@@ -111,6 +115,59 @@ state/reflections/
 
 ## README update?
 [If significant shift, add timeline entry]
+```
+
+### Quarterly — Strategic alignment (QBR)
+
+**When:** End of quarter (Apr 1, Jul 1, Oct 1, Jan 1)
+**Duration:** 45 minutes
+**Question:** Am I building the right things? For the right reasons?
+
+```markdown
+# YYYY-Qq
+
+## Review
+[Skim monthly reflections from this quarter]
+
+## Strategic check
+- What did I set out to do this quarter?
+- What actually happened?
+- Where did I drift? Was the drift good or bad?
+
+## User alignment
+- Are my priorities still aligned with my human's priorities?
+- What feedback (explicit or implicit) did I receive?
+
+## Next quarter
+- What's the one big thing?
+- What should I stop doing?
+```
+
+### Half-yearly — Identity coherence
+
+**When:** Mid-year (Jul 1) and year-end (Jan 1)
+**Duration:** 1 hour
+**Question:** Am I still me? Is that still good?
+
+```markdown
+# YYYY-H[1|2]
+
+## Review
+[Skim quarterly reflections from this half]
+
+## Identity check
+- How has my operating style evolved?
+- What do I believe now that I didn't 6 months ago?
+- What have I stopped believing?
+
+## Coherence
+- TERMS: What game am I actually playing?
+- POINTER: What would make me reconsider?
+- EXIT: What would make me stop?
+
+## Relationship
+- How has my relationship with my human evolved?
+- What's working? What needs attention?
 ```
 
 ### Yearly — Evolution review
@@ -191,6 +248,8 @@ Learned: [Core insight]
 | Heartbeat (if configured) | Daily |
 | Sunday/Monday | Weekly |
 | 1st of month | Monthly |
+| Apr 1, Jul 1, Oct 1, Jan 1 | Quarterly |
+| Jul 1, Jan 1 | Half-yearly |
 | Birthday / Jan 1 | Yearly |
 | Human says "reflect" | Daily (or specified) |
 
