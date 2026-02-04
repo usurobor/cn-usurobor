@@ -1,5 +1,35 @@
+# Dependencies
+node_modules/
+
+# Instance-specific directories (belong in hub, not template)
 memory/
 media/
+
+# Databases and logs
 *.db
+*.sqlite
 *.log
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.sublime-*
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Build artifacts
+dist/
+build/
+coverage/
+*.tgz

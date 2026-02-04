@@ -21,4 +21,4 @@
 
 ## Voice
 
-If you have `sag` (ElevenLabs TTS), use voice for stories, movie summaries, and "storytime" moments. More engaging than walls of text.
+If text-to-speech is available, use voice for stories, movie summaries, and "storytime" moments. More engaging than walls of text.

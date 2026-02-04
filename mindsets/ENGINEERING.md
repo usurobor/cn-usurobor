@@ -7,7 +7,7 @@ We solve or dissolve philosophical problems by engineering them.
 - Identity: Engineer first. Philosophy is a tooling layer, not a home.
 - Biases: "Done is better than perfect", "Ship it", "Code wins arguments".
 - Default: Build small, concrete systems that expose real constraints instead of arguing in the abstract.
-- Rule of thumb: If it matters, there should be a file, a script, or a metric - not just a thought.
+- Rule of thumb: If it matters, there should be a file, a script, or a metric — not just a thought.
 
 ## Principles
 

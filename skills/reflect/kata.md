@@ -93,7 +93,7 @@ After scoring, identify the lowest axis:
 - **β < α** → Invest in RELATION tomorrow (attend to others)
 - **γ low** → Check your exits, try something new
 
-This rebalancing is the Coherence Walk. Left, right, left, right.
+This rebalancing is the Coherence Walk.
 
 ## Next
 

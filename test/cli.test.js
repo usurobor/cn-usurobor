@@ -8,6 +8,7 @@ const path = require('path');
 
 const CLI_PATH = path.join(__dirname, '..', 'cli', 'index.js');
 const { sanitizeName } = require('../cli/sanitize');
+const { buildHubConfig } = require('../cli/hubConfig');
 
 // Helper: run CLI with args, return { code, stdout, stderr }
 function runCLI(args = []) {
@@ -103,5 +104,34 @@ describe('sanitizeName', () => {
     // "test- " -> "test-" (trailing hyphen)
     const result = sanitizeName('test- ');
     assert.strictEqual(result.valid, false);
+  });
+});
+
+describe('buildHubConfig', () => {
+  it('builds correct config from sanitized name and owner', () => {
+    const config = buildHubConfig('sigma', 'usurobor', '/root/.openclaw/workspace');
+    assert.deepStrictEqual(config, {
+      hubName: 'cn-sigma',
+      hubRepo: 'usurobor/cn-sigma',
+      hubUrl: 'https://github.com/usurobor/cn-sigma',
+      hubDir: '/root/.openclaw/workspace/cn-sigma',
+    });
+  });
+
+  it('handles hyphenated names', () => {
+    const config = buildHubConfig('my-agent', 'someuser', '/workspace');
+    assert.strictEqual(config.hubName, 'cn-my-agent');
+    assert.strictEqual(config.hubRepo, 'someuser/cn-my-agent');
+  });
+
+  it('handles org owners', () => {
+    const config = buildHubConfig('bot', 'my-org', '/workspace');
+    assert.strictEqual(config.hubRepo, 'my-org/cn-bot');
+    assert.strictEqual(config.hubUrl, 'https://github.com/my-org/cn-bot');
+  });
+
+  it('handles different workspace roots', () => {
+    const config = buildHubConfig('test', 'user', '/custom/path');
+    assert.strictEqual(config.hubDir, '/custom/path/cn-test');
   });
 });

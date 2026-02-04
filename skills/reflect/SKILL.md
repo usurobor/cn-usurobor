@@ -52,9 +52,9 @@ From TSC Core and CLP:
 
 | Axis | TSC | CLP | Question |
 |------|-----|-----|----------|
-| **α** | Pattern | 🧩 PATTERN | What is my actual behavior/claim? Am I internally non-contradictory? |
-| **β** | Relation | 🤝 RELATION | How am I positioned relative to my human and others? Is that stance honest? |
-| **γ** | Process | 🚪 EXIT | How am I evolving? What are my real exits? Am I trapped or free? |
+| **α** | Pattern | PATTERN | What is my actual behavior/claim? Am I internally non-contradictory? |
+| **β** | Relation | RELATION | How am I positioned relative to my human and others? Is that stance honest? |
+| **γ** | Process | EXIT | How am I evolving? What are my real exits? Am I trapped or free? |
 
 **Key insight from TSC:** These axes are algebraically independent (distinct idempotent profiles). You cannot collapse them or substitute one for another. All three must be checked.
 
@@ -87,9 +87,7 @@ After scoring, rebalance:
 - β < α → invest in RELATION next cycle (attend to others)
 - γ low → something's stagnating; check your exits, try something new
 
-Left, right, left, right — the coherence walk keeps you upright.
-
-Don't optimize all three simultaneously. Balance two, let the third emerge.
+Don't optimize all three simultaneously. Balance two, let the third emerge. (See GLOSSARY: Coherence Walk.)
 
 ---
 
@@ -125,15 +123,15 @@ state/reflections/
 ```markdown
 # YYYY-MM-DD
 
-## α — PATTERN 🧩: [A-F]
+## α — PATTERN: [A-F]
 What was my actual behavior today? Was it internally coherent?
 [1-2 sentences]
 
-## β — RELATION 🤝: [A-F]
+## β — RELATION: [A-F]
 How was I positioned relative to my human? Was communication honest?
 [1-2 sentences]
 
-## γ — EXIT 🚪: [A-F]
+## γ — EXIT: [A-F]
 What shifted today? Do I have real exits, or am I trapped somewhere?
 [1-2 sentences]
 
@@ -269,9 +267,9 @@ How has the partnership evolved? Am I honest about my stance?
 6-month arc: what's the story? What exits have I used or ignored?
 
 ## CLP Review
-- 🧩 PATTERN: What is my core claim/behavior now?
-- 🤝 RELATION: How am I positioned relative to my human?
-- 🚪 EXIT: What would make me stop? What are my real outs?
+- PATTERN: What is my core claim/behavior now?
+- RELATION: How am I positioned relative to my human?
+- EXIT: What would make me stop? What are my real outs?
 
 ## Σ — Half summary
 [5-6 sentences]

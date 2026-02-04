@@ -7,7 +7,7 @@
 //   npx --yes @usurobor/cn-agent-setup
 //
 // This script:
-//   1. Ensures /root/.openclaw/workspace exists.
+//   1. Ensures workspace exists (CN_WORKSPACE env var, or /root/.openclaw/workspace).
 //   2. Clones or updates the cn-agent template into workspace/cn-agent.
 //   3. Prompts the human for agent name, GitHub owner, and visibility.
 //   4. Creates a hub directory (cn-<agentname>) with personal spec files.
@@ -21,6 +21,7 @@ const readline = require('readline');
 
 const VERSION = require('../package.json').version;
 const { sanitizeName } = require('./sanitize');
+const { buildHubConfig } = require('./hubConfig');
 
 // Simple ANSI helpers (only used for human-facing output)
 const cyan = (str) => `\x1b[36m${str}\x1b[0m`;
@@ -47,7 +48,7 @@ if (arg === '--version' || arg === '-v') {
   process.exit(0);
 }
 
-const WORKSPACE_ROOT = '/root/.openclaw/workspace';
+const WORKSPACE_ROOT = process.env.CN_WORKSPACE || '/root/.openclaw/workspace';
 const CN_AGENT_REPO = 'https://github.com/usurobor/cn-agent.git';
 const CN_AGENT_DIR = path.join(WORKSPACE_ROOT, 'cn-agent');
 
@@ -83,7 +84,7 @@ function ask(rl, question) {
     // 1. Ensure workspace root exists
     if (!fs.existsSync(WORKSPACE_ROOT)) {
       console.error(`Error: expected OpenClaw workspace at ${WORKSPACE_ROOT} not found.`);
-      console.error('Create that directory on the host (or adjust WORKSPACE_ROOT in the CLI) and re-run.');
+      console.error('Create that directory, or set CN_WORKSPACE env var to your workspace path.');
       process.exit(1);
     }
 
@@ -155,7 +156,7 @@ function ask(rl, question) {
       console.error(`Error: ${nameResult.error}.`);
       process.exit(1);
     }
-    const hubName = 'cn-' + nameResult.name;
+    let sanitizedAgentName = nameResult.name;
 
     // GitHub owner
     const inferredOwner = runCapture('gh', ['api', 'user', '--jq', '.login']);
@@ -174,9 +175,9 @@ function ask(rl, question) {
     const visInput = await ask(rl, '  Visibility (public/private) [public]: ');
     const hubVisibility = (visInput === 'private') ? 'private' : 'public';
 
-    const hubRepo = `${hubOwner}/${hubName}`;
-    const hubUrl = `https://github.com/${hubRepo}`;
-    let hubDir = path.join(WORKSPACE_ROOT, hubName);
+    // Build hub configuration
+    let config = buildHubConfig(sanitizedAgentName, hubOwner, WORKSPACE_ROOT);
+    let { hubName, hubRepo, hubUrl, hubDir } = config;
 
     // Confirm
     console.log('');
@@ -201,13 +202,15 @@ function ask(rl, question) {
         console.log(`  Deleted ${hubDir}, recreating...`);
       } else if (choice === 'n') {
         const newAgentName = await ask(rl, '  New agent name: ');
-        if (!newAgentName) {
-          console.error('Error: agent name is required.');
+        const newNameResult = sanitizeName(newAgentName);
+        if (!newNameResult.valid) {
+          console.error(`Error: ${newNameResult.error}.`);
           process.exit(1);
         }
-        const newHubName = 'cn-' + newAgentName.toLowerCase().replace(/\s+/g, '-');
-        hubDir = path.join(WORKSPACE_ROOT, newHubName);
-        console.log(`  Using new hub name: ${newHubName}`);
+        // Rebuild config with new name
+        config = buildHubConfig(newNameResult.name, hubOwner, WORKSPACE_ROOT);
+        ({ hubName, hubRepo, hubUrl, hubDir } = config);
+        console.log(`  Using new hub: ${hubUrl}`);
       } else {
         console.log('Aborted.');
         process.exit(0);
