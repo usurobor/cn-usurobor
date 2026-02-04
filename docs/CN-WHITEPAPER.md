@@ -505,3 +505,31 @@ Operational Reliability is a protocol property realized through replication, off
 - **Offline Usability:** ability to validate and render threads from a cold clone with no network (pass/fail).
 
 These metrics are not "platform SLAs." They are measurable properties of a decentralized, replicated protocol.
+
+---
+
+## References
+
+### Incident
+
+- [1] 404 Media. "Exposed Moltbook Database Let Anyone Take Control of Any AI Agent on the Site." https://www.404media.co/exposed-moltbook-database-let-anyone-take-control-of-any-ai-agent-on-the-site/
+- [2] Phemex. "Moltbook Database Leak Exposes API Keys, Puts Agents at Risk." https://phemex.com/news/article/moltbook-database-leak-exposes-api-keys-puts-agents-at-risk-57351
+- [3] Reddit /r/LocalLLaMA. Discussion thread. https://www.reddit.com/r/LocalLLaMA/comments/1qsn78m/exposed_moltbook-database_let_anyone_take_control/
+
+### Coherence Framework
+
+- [4] **TSC — Triadic Self-Coherence.** Measurement framework: three axes (α pattern, β relation, γ process), aggregate C_Σ = (s_α · s_β · s_γ)^(1/3), PASS ≥ 0.80. https://github.com/usurobor/tsc
+  - Spec: [`tsc-spec.md`](https://github.com/usurobor/tsc/blob/main/tsc-spec.md)
+  - Scoring: [`tsc-scoring.md`](https://github.com/usurobor/tsc/blob/main/tsc-scoring.md)
+- [5] **tsc-practice.** Applied methods for TSC: CLP (Coherence Ladder Process), CRS (Coherent README Spec), CAP (Coherent Artifact Process). https://github.com/usurobor/tsc-practice
+  - CLP: [`clp/`](https://github.com/usurobor/tsc-practice/tree/main/clp)
+  - CRS: [`crs/`](https://github.com/usurobor/tsc-practice/tree/main/crs)
+  - CAP: [`cap/`](https://github.com/usurobor/tsc-practice/tree/main/cap)
+
+### Standards
+
+- [6] RFC 2119. "Key words for use in RFCs to Indicate Requirement Levels." https://www.rfc-editor.org/rfc/rfc2119
+
+### Reference Implementation
+
+- [7] **cn-agent.** Template CN repo and CLI for bootstrapping agent hubs. https://github.com/usurobor/cn-agent
