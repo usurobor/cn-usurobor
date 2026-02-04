@@ -1,4 +1,4 @@
-# daily-routine kata
+# Kata 1.3 — Daily Routine Setup
 
 Set up daily routine tracking and EOD cron for your hub.
 
@@ -15,12 +15,12 @@ Set up daily routine tracking and EOD cron for your hub.
 
 ```bash
 cd cn-<name>
-mkdir -p memory state/reflections/daily state/reflections/weekly state/reflections/monthly state/reflections/quarterly state/reflections/half state/reflections/yearly state/practice
+mkdir -p memory threads state/practice
 ```
 
 ### 2. Create today's files
 
-Get today's date (YYYY-MM-DD format) and create:
+Get today's date and create:
 
 **memory/YYYY-MM-DD.md:** (owned by daily-routine)
 ```markdown
@@ -37,24 +37,21 @@ Get today's date (YYYY-MM-DD format) and create:
 |------|--------|-------|
 ```
 
-**state/reflections/daily/YYYY-MM-DD.md:** (owned by reflect skill)
+**threads/YYYYMMDD-daily.md:** (owned by reflect skill)
 
-For the reflection file, run the reflect skill or create manually using the TSC α/β/γ format:
+For the daily thread, run the reflect skill or create manually using the TSC α/β/γ format:
 
 ```markdown
-# YYYY-MM-DD
+# YYYYMMDD-daily
 
-## α — PATTERN 🧩: [A-F]
+## α — PATTERN: [A-F]
 What was my actual behavior today? Was it internally coherent?
-[1-2 sentences]
 
-## β — RELATION 🤝: [A-F]
+## β — RELATION: [A-F]
 How was I positioned relative to my human? Was communication honest?
-[1-2 sentences]
 
-## γ — EXIT 🚪: [A-F]
+## γ — EXIT: [A-F]
 What shifted today? Do I have real exits, or am I trapped somewhere?
-[1-2 sentences]
 
 ## Σ — Summary
 [One sentence: overall coherence today]
@@ -63,7 +60,7 @@ What shifted today? Do I have real exits, or am I trapped somewhere?
 Which axis needs investment tomorrow? Why?
 ```
 
-See `skills/reflect/SKILL.md` for the canonical reflection schema.
+See `skills/reflect/SKILL.md` for the canonical format.
 
 ### 3. Set up EOD cron
 
@@ -79,7 +76,7 @@ Use the cron tool to create the daily check:
   },
   payload: { 
     kind: "systemEvent", 
-    text: "EOD daily-routine check: verify memory, reflection, practice files for today. Complete any missing items and commit to hub." 
+    text: "EOD daily-routine check: verify memory, daily thread, practice files for today. Complete any missing items and commit to hub." 
   },
   sessionTarget: "main"
 }
@@ -89,16 +86,16 @@ Use the cron tool to create the daily check:
 
 ```bash
 cd cn-<name>
-git add memory/ state/
+git add memory/ threads/ state/
 git commit -m "daily: init daily-routine structure"
 git push
 ```
 
 ### 5. Verify
 
-- [ ] Directories exist (including state/reflections/daily/)
+- [ ] Directories exist: memory/, threads/, state/practice/
 - [ ] Today's memory and practice files created
-- [ ] Today's reflection file created (using reflect skill's α/β/γ format)
+- [ ] Today's daily thread created (using reflect skill's α/β/γ format)
 - [ ] Cron job registered (check with cron list)
 - [ ] Initial commit pushed
 
@@ -108,7 +105,7 @@ git push
 |-----------|-------|--------------------|
 | memory/ | daily-routine | Yes |
 | state/practice/ | daily-routine | Yes |
-| state/reflections/ | **reflect** | Structure only; content via reflect skill |
+| threads/ | **reflect** | Structure only; content via reflect skill |
 
 ## Evidence
 

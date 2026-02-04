@@ -1,6 +1,6 @@
-# daily-routine – v1.1.1
+# daily-routine – v1.2.0
 
-Ensures daily state files (memory, reflection, practice) are created, populated, and committed to the hub repo. Sets up EOD cron to catch incomplete days.
+Ensures daily state files (memory, reflection thread, practice) are created, populated, and committed to the hub repo. Sets up EOD cron to catch incomplete days.
 
 ---
 
@@ -11,19 +11,19 @@ Ensures daily state files (memory, reflection, practice) are created, populated,
 | Directory | Owner | Schema |
 |-----------|-------|--------|
 | `memory/` | daily-routine | Freeform session logs |
-| `state/reflections/` | **reflect** | TSC α/β/γ (see reflect skill) |
+| `threads/` | **reflect** | TSC α/β/γ for periodic threads (see reflect skill) |
 | `state/practice/` | daily-routine | Kata completion table |
 
 For reflections, daily-routine:
-- Checks if today's reflection file exists at `state/reflections/daily/YYYY-MM-DD.md`
+- Checks if today's reflection thread exists at `threads/YYYYMMDD-daily.md`
 - If missing, prompts the agent to run the reflect skill
-- MUST NOT write reflection files directly (reflect owns the schema)
+- MUST NOT write reflection threads directly (reflect owns the schema)
 
 ---
 
 ## Scope (Protocol vs Template)
 
-`memory/`, `state/practice/`, and `state/reflections/` are **cn-agent template conventions**, not git-CN protocol requirements.
+`memory/` and `state/practice/` are **cn-agent template conventions**, not git-CN protocol requirements.
 
 - The protocol minimum is: `cn.json`, `.gitattributes`, `threads/`, signatures.
 - These directories are recommended practice patterns for Coherent Agent workflows.
@@ -38,7 +38,7 @@ See whitepaper §4.1 and Appendix A.1 for the protocol-level requirements.
 - Hub repo is cloned and writable at `cn-<name>/`
 - User timezone is defined in `spec/USER.md`
 - Agent has cron tool access (OpenClaw `cron` tool or equivalent)
-- **reflect skill is available** (for reflection file creation)
+- **reflect skill is available** (for reflection thread creation)
 
 ## INPUTS
 
@@ -51,16 +51,15 @@ See whitepaper §4.1 and Appendix A.1 for the protocol-level requirements.
   cn-<name>/
   ├── memory/
   │   └── YYYY-MM-DD.md
+  ├── threads/
+  │   └── YYYYMMDD-daily.md   ← created by reflect skill
   └── state/
-      ├── reflections/
-      │   └── daily/
-      │       └── YYYY-MM-DD.md   ← created by reflect skill
       └── practice/
           └── YYYY-MM-DD.md
   ```
 - For memory/: creates file with freeform template
 - For state/practice/: creates file with kata table template
-- For state/reflections/: checks existence, invokes reflect if missing
+- For threads/: checks if daily reflection exists, invokes reflect if missing
 - Commits completed daily files to hub
 - Sets up EOD cron job (23:30 user timezone)
 
@@ -71,30 +70,32 @@ See whitepaper §4.1 and Appendix A.1 for the protocol-level requirements.
 | Directory | Owner | Purpose | Template |
 |-----------|-------|---------|----------|
 | `memory/` | daily-routine | Raw session logs | `## YYYY-MM-DD\n\n- ` |
-| `state/reflections/daily/` | reflect | TSC coherence checks | α/β/γ + Σ + → Next (see reflect skill) |
+| `threads/` | reflect | Threads including daily reflections | `YYYYMMDD-daily.md` (see reflect skill) |
 | `state/practice/` | daily-routine | Kata completions | `## Practice Log\n\n\| Kata \| Commit \| Notes \|\n` |
 
 ## Daily File Naming
 
-Always: `YYYY-MM-DD.md` (ISO 8601 date)
+- Memory: `YYYY-MM-DD.md` (ISO 8601 date)
+- Practice: `YYYY-MM-DD.md` (ISO 8601 date)
+- Threads: `YYYYMMDD-<type>.md` (compact date prefix)
 
 ## Commit Convention
 
 ```
-daily: YYYY-MM-DD [components]
+daily: YYYYMMDD [components]
 
 - memory: [summary]
-- reflection: [summary]  
+- thread: daily reflection
 - practice: [kata name] or "skipped" or "pending"
 ```
 
 Example:
 ```
-daily: 2026-02-04 memory+practice
+daily: 20260204 memory+thread
 
 - memory: 2 sessions, workspace setup
-- reflection: skipped
-- practice: hello-world (abc123)
+- thread: daily α=A β=A γ=B
+- practice: skipped
 ```
 
 ## EOD Cron Setup
@@ -103,7 +104,7 @@ The skill sets up a cron job to run at 23:30 in the user's timezone:
 
 ```
 schedule: { kind: "cron", expr: "30 23 * * *", tz: "<user-timezone>" }
-payload: { kind: "systemEvent", text: "EOD daily-routine check: verify memory, reflection, practice files for today. Complete any missing items and commit to hub." }
+payload: { kind: "systemEvent", text: "EOD daily-routine check: verify memory, daily thread, practice files for today. Complete any missing items and commit to hub." }
 sessionTarget: "main"
 ```
 
@@ -131,13 +132,13 @@ Adapt the trigger mechanism to your runtime. The intent is: fire once daily at 2
 When invoked or on cron trigger, report:
 
 ```
-## Daily Status: YYYY-MM-DD
+## Daily Status: YYYYMMDD
 
 - [x] memory: captured (3 entries)
-- [ ] reflection: missing
+- [ ] thread: YYYYMMDD-daily.md missing
 - [x] practice: hello-world (abc123)
 
-Action: Creating reflection...
+Action: Running reflect skill...
 ```
 
 ## Kata

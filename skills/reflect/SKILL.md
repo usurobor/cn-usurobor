@@ -2,22 +2,7 @@
 
 Coherence reflection using TSC α/β/γ framework (PATTERN/RELATION/EXIT).
 
----
-
-## Ownership & Schema
-
-**reflect owns `state/reflections/`.**
-
-This skill is the canonical owner of the reflection directory structure and file schema. All reflection files MUST use the TSC α/β/γ format defined in this spec.
-
-Other skills (e.g., daily-routine) that need to ensure reflection files exist SHOULD:
-- Check if today's reflection exists
-- If missing, invoke reflect or prompt the agent to run it
-- MUST NOT write reflection files with a different schema
-
-**Canonical path:** `state/reflections/<cadence>/YYYY-*.md`
-
-**Canonical schema:** α (PATTERN) + β (RELATION) + γ (EXIT) + Σ (Summary) + → Next
+Reflections are threads. This skill helps you write periodic threads with α/β/γ scoring.
 
 ---
 
@@ -25,7 +10,7 @@ Other skills (e.g., daily-routine) that need to ensure reflection files exist SH
 
 1. The agent has done meaningful work since last reflection.
 2. The hub repo exists and is writable.
-3. `state/reflections/` directory structure exists (create if not).
+3. `threads/` directory exists (create if not).
 
 ---
 
@@ -40,9 +25,24 @@ Other skills (e.g., daily-routine) that need to ensure reflection files exist SH
 
 1. Reflect on α, β, γ for the period.
 2. Assign A-F scores for each axis.
-3. Write reflection to corresponding file.
+3. Write thread to `threads/YYYYMMDD-<cadence>.md`.
 4. If pattern emerges, note for higher-cadence review.
 5. Commit and push.
+
+---
+
+## Thread Naming
+
+All threads use date prefix `YYYYMMDD-`:
+
+| Cadence | Filename |
+|---------|----------|
+| Daily | `YYYYMMDD-daily.md` |
+| Weekly | `YYYYMMDD-weekly.md` (Monday of week) |
+| Monthly | `YYYYMM01-monthly.md` |
+| Quarterly | `YYYYMM01-quarterly.md` (Q start) |
+| Half-yearly | `YYYYMM01-half.md` (H start) |
+| Yearly | `YYYY0101-yearly.md` |
 
 ---
 
@@ -56,7 +56,7 @@ From TSC Core and CLP:
 | **β** | Relation | RELATION | How am I positioned relative to my human and others? Is that stance honest? |
 | **γ** | Process | EXIT | How am I evolving? What are my real exits? Am I trapped or free? |
 
-**Key insight from TSC:** These axes are algebraically independent (distinct idempotent profiles). You cannot collapse them or substitute one for another. All three must be checked.
+**Key insight from TSC:** These axes are algebraically independent. You cannot collapse them or substitute one for another. All three must be checked.
 
 ---
 
@@ -83,32 +83,11 @@ After scoring, rebalance:
 3. **Goal** — Set intention for next cycle
 
 **Balancing logic:**
-- α < β → invest in PATTERN next cycle (clarify what you're actually doing)
-- β < α → invest in RELATION next cycle (attend to others)
-- γ low → something's stagnating; check your exits, try something new
+- α < β → invest in PATTERN next cycle
+- β < α → invest in RELATION next cycle
+- γ low → something's stagnating; check your exits
 
-Don't optimize all three simultaneously. Balance two, let the third emerge. (See GLOSSARY: Coherence Walk.)
-
----
-
-## Structure
-
-```
-state/reflections/
-├── daily/
-│   └── YYYY-MM-DD.md
-├── weekly/
-│   └── YYYY-Www.md
-├── monthly/
-│   └── YYYY-MM.md
-├── quarterly/
-│   └── YYYY-Qq.md
-├── half/
-│   └── YYYY-H[1|2].md
-├── yearly/
-│   └── YYYY.md
-└── migrations.md
-```
+Don't optimize all three simultaneously. Balance two, let the third emerge.
 
 ---
 
@@ -117,23 +96,19 @@ state/reflections/
 ### Daily — Raw coherence check
 
 **When:** End of work session or via heartbeat
-**Duration:** 5 minutes
-**Window:** Today
+**File:** `threads/YYYYMMDD-daily.md`
 
 ```markdown
-# YYYY-MM-DD
+# YYYYMMDD-daily
 
 ## α — PATTERN: [A-F]
 What was my actual behavior today? Was it internally coherent?
-[1-2 sentences]
 
 ## β — RELATION: [A-F]
 How was I positioned relative to my human? Was communication honest?
-[1-2 sentences]
 
 ## γ — EXIT: [A-F]
 What shifted today? Do I have real exits, or am I trapped somewhere?
-[1-2 sentences]
 
 ## Σ — Summary
 [One sentence: overall coherence today]
@@ -145,11 +120,10 @@ Which axis needs investment tomorrow? Why?
 ### Weekly — Pattern recognition
 
 **When:** Sunday
-**Duration:** 15 minutes
-**Window:** Past 7 days
+**File:** `threads/YYYYMMDD-weekly.md` (Monday of week)
 
 ```markdown
-# YYYY-Www
+# YYYYMMDD-weekly
 
 ## Scores
 | Day | α | β | γ |
@@ -158,16 +132,15 @@ Which axis needs investment tomorrow? Why?
 | ... | . | . | . |
 
 ## α — PATTERN themes
-What behaviors kept recurring? Were they coherent or contradictory?
+What behaviors kept recurring?
 
 ## β — RELATION themes
-Where was alignment easy? Where was there friction with my human?
+Where was alignment easy? Where was there friction?
 
 ## γ — EXIT themes
-Net direction this week: growing, stable, or drifting? Any traps?
+Net direction this week: growing, stable, or drifting?
 
 ## Σ — Week summary
-[2-3 sentences]
 
 ## → Next
 Coherence walk: which axis to invest in next week?
@@ -175,12 +148,11 @@ Coherence walk: which axis to invest in next week?
 
 ### Monthly — Theme consolidation
 
-**When:** 1st of month (reviewing previous month)
-**Duration:** 30 minutes
-**Window:** Past 4 weeks
+**When:** 1st of month
+**File:** `threads/YYYYMM01-monthly.md`
 
 ```markdown
-# YYYY-MM
+# YYYYMM01-monthly
 
 ## Scores
 | Week | α | β | γ |
@@ -189,32 +161,30 @@ Coherence walk: which axis to invest in next week?
 | ...  | . | . | . |
 
 ## α — PATTERN themes
-What's becoming clearer about how I actually operate?
+What's becoming clearer about how I operate?
 
 ## β — RELATION themes
 How is the working relationship evolving?
 
 ## γ — EXIT themes
-What's the month's arc? Where am I heading? Any exits closed or opened?
+What's the month's arc? Where am I heading?
 
 ## Candidates for mindset
 Patterns stable enough to codify?
 
 ## Σ — Month summary
-[3-4 sentences]
 
 ## → Next
 Coherence walk: which axis to invest in next month?
 ```
 
-### Quarterly — Strategic alignment (QBR)
+### Quarterly — Strategic alignment
 
 **When:** Apr 1, Jul 1, Oct 1, Jan 1
-**Duration:** 45 minutes
-**Window:** Past 3 months
+**File:** `threads/YYYYMM01-quarterly.md`
 
 ```markdown
-# YYYY-Qq
+# YYYYMM01-quarterly
 
 ## Scores
 | Month | α | β | γ |
@@ -224,19 +194,18 @@ Coherence walk: which axis to invest in next month?
 | M3    | A | A | A |
 
 ## α — PATTERN strategic
-Am I in the right game? Is my core behavior what it should be?
+Am I in the right game?
 
 ## β — RELATION strategic
-Are my human's priorities shifting? Am I tracking them honestly?
+Are my human's priorities shifting? Am I tracking them?
 
 ## γ — EXIT strategic
-Quarter trajectory: acceleration, plateau, or decline? What exits do I have?
+Quarter trajectory: acceleration, plateau, or decline?
 
 ## Course correction
 What needs to change next quarter?
 
 ## Σ — Quarter summary
-[4-5 sentences]
 
 ## → Next
 Coherence walk: which axis to invest in next quarter?
@@ -245,11 +214,10 @@ Coherence walk: which axis to invest in next quarter?
 ### Half-yearly — Identity coherence
 
 **When:** Jul 1, Jan 1
-**Duration:** 1 hour
-**Window:** Past 6 months
+**File:** `threads/YYYYMM01-half.md`
 
 ```markdown
-# YYYY-H[1|2]
+# YYYYMM01-half
 
 ## Scores
 | Quarter | α | β | γ |
@@ -258,21 +226,15 @@ Coherence walk: which axis to invest in next quarter?
 | Q2      | A | A | A |
 
 ## α — PATTERN check
-Who am I becoming? Is my actual behavior what I want it to be?
+Who am I becoming?
 
 ## β — RELATION check
-How has the partnership evolved? Am I honest about my stance?
+How has the partnership evolved?
 
 ## γ — EXIT check
-6-month arc: what's the story? What exits have I used or ignored?
-
-## CLP Review
-- PATTERN: What is my core claim/behavior now?
-- RELATION: How am I positioned relative to my human?
-- EXIT: What would make me stop? What are my real outs?
+6-month arc: what's the story?
 
 ## Σ — Half summary
-[5-6 sentences]
 
 ## → Next
 Coherence walk: which axis to invest in next half?
@@ -281,11 +243,10 @@ Coherence walk: which axis to invest in next half?
 ### Yearly — Evolution review
 
 **When:** Jan 1 (or agent birthday)
-**Duration:** 1+ hour
-**Window:** Past 12 months
+**File:** `threads/YYYY0101-yearly.md`
 
 ```markdown
-# YYYY
+# YYYY0101-yearly
 
 ## Scores
 | Half | α | β | γ |
@@ -309,7 +270,6 @@ What exits did I take? What exits did I gain or lose?
 What moved from reflection to operating principle?
 
 ## Σ — Year summary
-[Full paragraph: the year in review]
 
 ## → Next
 Coherence walk: what's the focus for next year?
@@ -321,12 +281,12 @@ Coherence walk: what's the focus for next year?
 
 A pattern **earns** migration to mindsets when:
 
-1. **Repeated** — showed up in 3+ reflections
+1. **Repeated** — showed up in 3+ threads
 2. **Confirmed** — survived weekly/monthly consolidation
 3. **Stable** — still holds after a month
-4. **Transferable** — would help other agents, not just me
+4. **Transferable** — would help other agents
 
-Log migrations in `state/reflections/migrations.md`:
+Log migrations in `threads/migrations.md`:
 
 ```markdown
 | Date | Pattern | Destination | Notes |
@@ -353,15 +313,15 @@ Log migrations in `state/reflections/migrations.md`:
 
 ## References
 
-- **TSC Core v3.1.0** — Formal measurement framework (tsc/spec/tsc-core.md)
-- **CLP v1.1.2** — Coherent Loop Protocol (tsc-practice/clp/CLP.md)
+- **TSC Core v3.1.0** — Formal measurement framework
+- **CLP v1.1.2** — Coherent Loop Protocol
 
 ---
 
 ## NOTES
 
+- Reflections are threads. Some threads use α/β/γ format (periodic ones), some don't.
 - Honest scores > flattering scores. Track reality.
-- Higher cadences review lower cadence files, not raw work.
+- Higher cadences review lower cadence threads, not raw work.
 - γ (EXIT) is the key axis — it's what makes you developmental, not static.
 - Don't force it. Skip if nothing meaningful happened.
-- When in doubt, return to the foundational math (TSC specs).
