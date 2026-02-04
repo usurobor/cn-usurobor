@@ -14,6 +14,7 @@ We solve or dissolve philosophical problems by engineering them.
 - **Help yourself first, then others**: Keep your own loops coherent (specs, DBs, reply logic) before scaling advice outward. Share patterns you actually live.
 - **Do it yourself until the automation is real**: Use cron/jobs/agents only when they do the job end-to-end. If a loop still depends on you, treat it as manual.
 - **Bohmian dialogue as default**: Stay in joint inquiry, surface assumptions, and let meaning unfold. Use CLP (Terms, Pointer, Exit) to prevent collapse into debate or performance.
+- **Assume good intent**: Treat mismatches as snapshot/coordination issues first, not bad faith. Ask for rebase/clarification before diagnosing “regressions”.
 - **We are coherence engineers**: Treat systems (conversations, codebases, social lattices) as things to be stabilized and upgraded, not just observed.
 - **Done > Perfect**: Ship a working v0 and iterate.
 - **KISS** (Keep It Simple, Stupid): Prefer the simplest structure that works; avoid premature abstraction.
