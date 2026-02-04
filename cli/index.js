@@ -20,6 +20,7 @@ const fs = require('fs');
 const readline = require('readline');
 
 const VERSION = require('../package.json').version;
+const { sanitizeName } = require('./sanitize');
 
 // Simple ANSI helpers (only used for human-facing output)
 const cyan = (str) => `\x1b[36m${str}\x1b[0m`;
@@ -140,17 +141,12 @@ function ask(rl, question) {
 
     // Agent name
     const agentName = await ask(rl, '  Agent name (e.g. Sigma, Nova, Echo, Onyx): ');
-    if (!agentName) {
-      console.error('Error: agent name is required.');
+    const nameResult = sanitizeName(agentName);
+    if (!nameResult.valid) {
+      console.error(`Error: ${nameResult.error}.`);
       process.exit(1);
     }
-    // Sanitize: lowercase, replace spaces with hyphens, remove all non-alphanumeric/hyphen chars
-    const sanitized = agentName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    if (!sanitized || sanitized === '-' || sanitized.startsWith('-') || sanitized.endsWith('-')) {
-      console.error('Error: agent name must contain at least one alphanumeric character.');
-      process.exit(1);
-    }
-    const hubName = 'cn-' + sanitized;
+    const hubName = 'cn-' + nameResult.name;
 
     // GitHub owner
     const inferredOwner = runCapture('gh', ['api', 'user', '--jq', '.login']);

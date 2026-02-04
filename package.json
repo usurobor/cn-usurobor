@@ -6,10 +6,12 @@
     "cn-agent-setup": "cli/index.js"
   },
   "files": [
-    "cli/index.js"
+    "cli/index.js",
+    "cli/sanitize.js"
   ],
   "scripts": {
-    "start": "node cli/index.js"
+    "start": "node cli/index.js",
+    "test": "node --test test/*.test.js"
   },
   "author": "usurobor",
   "license": "Apache-2.0",
