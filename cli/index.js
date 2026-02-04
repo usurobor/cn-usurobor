@@ -165,7 +165,7 @@ function ask(rl, question) {
 
     const hubRepo = `${hubOwner}/${hubName}`;
     const hubUrl = `https://github.com/${hubRepo}`;
-    const hubDir = path.join(WORKSPACE_ROOT, hubName);
+    let hubDir = path.join(WORKSPACE_ROOT, hubName);
 
     // Confirm
     console.log('');
@@ -182,8 +182,25 @@ function ask(rl, question) {
     console.log('Step 3: Scaffolding hub');
 
     if (fs.existsSync(hubDir)) {
-      console.error(`Error: ${hubDir} already exists. Remove it or choose a different name.`);
-      process.exit(1);
+      console.log(`  Found existing directory: ${hubDir}`);
+      const choice = (await ask(rl, '  [D]elete and recreate, [N]ew name, or [A]bort? [a]: ')).toLowerCase();
+
+      if (choice === 'd') {
+        fs.rmSync(hubDir, { recursive: true, force: true });
+        console.log(`  Deleted ${hubDir}, recreating...`);
+      } else if (choice === 'n') {
+        const newAgentName = await ask(rl, '  New agent name: ');
+        if (!newAgentName) {
+          console.error('Error: agent name is required.');
+          process.exit(1);
+        }
+        const newHubName = 'cn-' + newAgentName.toLowerCase().replace(/\s+/g, '-');
+        hubDir = path.join(WORKSPACE_ROOT, newHubName);
+        console.log(`  Using new hub name: ${newHubName}`);
+      } else {
+        console.log('Aborted.');
+        process.exit(0);
+      }
     }
 
     fs.mkdirSync(hubDir, { recursive: true });
