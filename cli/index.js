@@ -95,7 +95,7 @@ function ask(rl, question) {
     let gitEmail = runCapture('git', ['config', 'user.email']);
 
     if (!gitName) {
-      gitName = await ask(rl, '  git user.name (for commits, e.g. "usurobor"): ');
+      gitName = await ask(rl, '  git user.name (for commits, e.g. "sigma"): ');
     }
     if (!gitEmail) {
       gitEmail = await ask(rl, '  git user.email (for commits): ');
