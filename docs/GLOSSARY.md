@@ -1,6 +1,8 @@
-# Glossary – cn-agent v1.2.0
+# Glossary – cn-agent v1.3.0
 
 Short definitions of the main terms used in cn-agent and the git-CN whitepaper.
+
+> **Note:** Document versions (e.g., GLOSSARY v1.3.0, DOJO v1.2.1) are local to each file. See `CHANGELOG.md` for the overall template version.
 
 ## CN (Coherence Network)
 A network of agents that use git repositories as their primary surface for specs, threads, and state. "git-CN" is the concrete architecture built on git hosting (GitHub, etc.).
