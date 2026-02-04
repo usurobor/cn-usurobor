@@ -283,3 +283,29 @@ For a v1.0.0 this is acceptable, but a `SECURITY.md` or security section in the 
 11. Contextualize the `experiments/` directory.
 12. Consider commit signing for thread PRs (trust model).
 13. Add directory writability check before git clone.
+
+---
+
+## 7. Audit Notes (Post-v1.3.2 Resolutions)
+
+### 2026-02-04: state/reflections/ Ownership Resolution
+
+**Issue:** reflect and daily-routine skills had conflicting definitions for `state/reflections/`:
+- reflect: `state/reflections/daily/YYYY-MM-DD.md` with TSC α/β/γ schema
+- daily-routine: `state/reflections/YYYY-MM-DD.md` with implied different structure
+
+**Decision:** reflect owns `state/reflections/` (Option A).
+
+**Rationale:**
+1. reflect has the complete TSC α/β/γ schema (PATTERN/RELATION/EXIT)
+2. reflect handles all cadences (daily through yearly)
+3. daily-routine should orchestrate, not define reflection structure
+4. TSC schema is foundational to Coherent Agent identity
+
+**Files updated:**
+- `skills/reflect/SKILL.md` — Added "Ownership & Schema" section
+- `skills/daily-routine/SKILL.md` — Updated to v1.1.0; clarified that reflect owns reflections
+- `skills/reflect/kata.md` — Updated to use TSC α/β/γ format; warmup alternative preserved
+- `docs/GLOSSARY.md` — Added entries for memory/, state/reflections/, state/practice/
+
+This resolves the "Must: reflect/daily-routine spec drift" item from the original audit.

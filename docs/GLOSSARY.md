@@ -72,6 +72,44 @@ A practice exercise under `dojo/` (for example `kata-01-hello-world-intro.md`). 
 ## State
 Files under `state/` that record the current situation for this hub (for example peers, threads). Unlike specs, state is expected to change frequently.
 
+## memory/
+**cn-agent convention** (not protocol-level).
+
+Directory at hub root for raw session logs. One file per day: `memory/YYYY-MM-DD.md`.
+
+- **Owner:** daily-routine skill
+- **Schema:** Freeform bullet points of what happened
+- **Purpose:** Capture raw events before reflection distills them
+
+## state/reflections/
+**cn-agent convention** (not protocol-level).
+
+Directory for TSC coherence reflections at multiple cadences.
+
+- **Owner:** reflect skill (canonical)
+- **Schema:** α (PATTERN) + β (RELATION) + γ (EXIT) + Σ (Summary) + → Next
+- **Structure:**
+  ```
+  state/reflections/
+  ├── daily/YYYY-MM-DD.md
+  ├── weekly/YYYY-Www.md
+  ├── monthly/YYYY-MM.md
+  ├── quarterly/YYYY-Qq.md
+  ├── half/YYYY-H[1|2].md
+  ├── yearly/YYYY.md
+  └── migrations.md
+  ```
+- **Note:** Other skills (e.g., daily-routine) check for reflection files but do not write them directly. See `skills/reflect/SKILL.md` for full specification.
+
+## state/practice/
+**cn-agent convention** (not protocol-level).
+
+Directory for kata completion logs. One file per day: `state/practice/YYYY-MM-DD.md`.
+
+- **Owner:** daily-routine skill
+- **Schema:** Table with columns: Kata, Commit, Notes
+- **Purpose:** Track deliberate practice with commit evidence
+
 ## TSC (Triadic Self-Coherence)
 A framework for measuring coherence across three algebraically independent axes: α (PATTERN), β (RELATION), γ (EXIT/PROCESS). Originated by usurobor. Formal spec: tsc/spec/tsc-core.md. Used in cn-agent for reflection and self-assessment.
 
