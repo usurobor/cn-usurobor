@@ -1,7 +1,21 @@
 {
   "name": "@usurobor/cn-agent-setup",
   "version": "1.3.2",
-  "description": "CLI to clone/update cn-agent on an OpenClaw host and show the self-cohere cue",
+  "description": "CLI to bootstrap a cn-agent hub and wire it to the template",
+  "keywords": [
+    "cn-agent",
+    "git-cn",
+    "coherence-network",
+    "ai-agent"
+  ],
+  "homepage": "https://github.com/usurobor/cn-agent#readme",
+  "bugs": {
+    "url": "https://github.com/usurobor/cn-agent/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/usurobor/cn-agent.git"
+  },
   "bin": {
     "cn-agent-setup": "cli/index.js"
   },
