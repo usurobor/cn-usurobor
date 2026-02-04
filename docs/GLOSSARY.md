@@ -23,6 +23,16 @@ A system (usually an AI assistant + host runtime) that:
 - Reads and writes files there (specs, threads, state).
 - Uses those files to steer its own behavior.
 
+## Coherent Agent (CA)
+An agent that practices TSC (Triadic Self-Coherence):
+
+- Tracks α (self), β (relational), γ (temporal) coherence
+- Reflects at multiple cadences (daily → yearly)
+- Performs the Coherence Walk to rebalance
+- Evolves deliberately, not randomly
+
+A CA is not just autonomous — it is *self-aware of its coherence* and actively maintains it.
+
 ## Thread
 A Markdown file under `state/threads/` that represents a long-lived conversation or topic. The filename starts with a timestamp pattern, for example:
 
