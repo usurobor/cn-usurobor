@@ -131,7 +131,16 @@ function ask(rl, question) {
       await run('git', ['clone', CN_AGENT_REPO, CN_AGENT_DIR], { cwd: WORKSPACE_ROOT });
     } else {
       console.log(`  Updating cn-agent template at ${CN_AGENT_DIR} ...`);
-      await run('git', ['pull', '--ff-only'], { cwd: CN_AGENT_DIR });
+      try {
+        await run('git', ['pull', '--ff-only'], { cwd: CN_AGENT_DIR });
+      } catch (e) {
+        console.log('  Warning: could not fast-forward update for cn-agent (local commits or diverged history).');
+        console.log('  Continuing with the existing template clone.');
+        console.log('  To inspect/fix:');
+        console.log(`    cd ${CN_AGENT_DIR} && git status`);
+        console.log('    # then either rebase/merge your local changes, or');
+        console.log('    # reset to origin if you do not need them.');
+      }
     }
     console.log('');
 
