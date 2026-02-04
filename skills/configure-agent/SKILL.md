@@ -64,7 +64,7 @@ Only ask these if the agent needs adjustment:
 
 ### Phase 2: Deepen understanding of the human
 
-> What's your timezone? [helps with scheduling]
+> What's your timezone? (required, e.g., "America/New_York") — this drives cron and EOD checks.
 
 > What do you care about most from me? (e.g., speed, accuracy, proactivity, brevity)
 
