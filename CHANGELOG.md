@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v1.5.0  | B+  | A−          | A−           | B+               | Robust CLI: rerunnable setup, safe attach, better preflights. |
 | v1.4.0  | B+  | A−          | A−           | B+               | Repo-quality hardening (CLI tests, input safety, docs aligned). |
 | v1.3.2  | B+  | A−          | B+           | B+               | CLI preflights git+gh; same hub/symlink design. |
 | v1.3.1  | B+  | A−          | B+           | B+               | Internal tweaks between tags.          |
