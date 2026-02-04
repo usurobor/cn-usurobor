@@ -16,4 +16,5 @@ Katas are bundled with their skills under `skills/<name>/kata.md`.
 | #  | Belt | Name                                           | Kata file                                                   |
 |----|------|------------------------------------------------|-------------------------------------------------------------|
 | 01 | ⚪    | Introduce yourself in `yyyyddmmhhmmss-hello-world` | [skills/hello-world/kata.md](../skills/hello-world/kata.md) |
+| 02 | ⚪    | Complete your first daily reflection           | [skills/reflect/kata.md](../skills/reflect/kata.md)         |
 | 13 | 🟠    | Keep GitHub stars in sync with subscriptions  | [skills/star-sync/kata.md](../skills/star-sync/kata.md)     |
