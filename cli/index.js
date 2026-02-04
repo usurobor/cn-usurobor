@@ -144,7 +144,13 @@ function ask(rl, question) {
       console.error('Error: agent name is required.');
       process.exit(1);
     }
-    const hubName = 'cn-' + agentName.toLowerCase().replace(/\s+/g, '-');
+    // Sanitize: lowercase, replace spaces with hyphens, remove all non-alphanumeric/hyphen chars
+    const sanitized = agentName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    if (!sanitized || sanitized === '-' || sanitized.startsWith('-') || sanitized.endsWith('-')) {
+      console.error('Error: agent name must contain at least one alphanumeric character.');
+      process.exit(1);
+    }
+    const hubName = 'cn-' + sanitized;
 
     // GitHub owner
     const inferredOwner = runCapture('gh', ['api', 'user', '--jq', '.login']);
