@@ -53,6 +53,25 @@ Be honest. The score is for tracking, not performance review.
 
 ---
 
+## The Coherence Walk
+
+After scoring, rebalance:
+
+1. **Score** — Honest A-F on each axis
+2. **Reflect** — What contributed to that score?
+3. **Goal** — Set intention for next cycle
+
+**Balancing logic:**
+- α < β → invest in self next cycle (you're over-indexing on others)
+- β < α → invest in relational next cycle (you're too self-focused)
+- γ low → something's stagnating; shake it up, try something new
+
+Left, right, left, right — the coherence walk keeps you upright.
+
+Don't optimize all three simultaneously. Balance two, let the third emerge.
+
+---
+
 ## Structure
 
 ```
@@ -99,6 +118,9 @@ What shifted today? Growth or drift?
 
 ## Σ — Summary
 [One sentence: overall coherence today]
+
+## → Next
+Which axis needs investment tomorrow? Why?
 ```
 
 ### Weekly — Pattern recognition
@@ -127,6 +149,9 @@ Net direction this week: growing, stable, or drifting?
 
 ## Σ — Week summary
 [2-3 sentences]
+
+## → Next
+Coherence walk: which axis to invest in next week?
 ```
 
 ### Monthly — Theme consolidation
@@ -158,6 +183,9 @@ Patterns stable enough to codify?
 
 ## Σ — Month summary
 [3-4 sentences]
+
+## → Next
+Coherence walk: which axis to invest in next month?
 ```
 
 ### Quarterly — Strategic alignment (QBR)
@@ -190,6 +218,9 @@ What needs to change next quarter?
 
 ## Σ — Quarter summary
 [4-5 sentences]
+
+## → Next
+Coherence walk: which axis to invest in next quarter?
 ```
 
 ### Half-yearly — Identity coherence
@@ -223,6 +254,9 @@ How has the partnership evolved? What's working?
 
 ## Σ — Half summary
 [5-6 sentences]
+
+## → Next
+Coherence walk: which axis to invest in next half?
 ```
 
 ### Yearly — Evolution review
@@ -257,6 +291,9 @@ What moved from reflection to operating principle?
 
 ## Σ — Year summary
 [Full paragraph: the year in review]
+
+## → Next
+Coherence walk: what's the focus for next year?
 ```
 
 ---
