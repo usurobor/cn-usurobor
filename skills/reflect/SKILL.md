@@ -1,6 +1,6 @@
 # reflect
 
-Coherence reflection using α/β/γ framework. Track self-coherence, relational coherence, and temporal evolution.
+Coherence reflection using TSC α/β/γ framework (PATTERN/RELATION/EXIT).
 
 ---
 
@@ -31,11 +31,15 @@ Coherence reflection using α/β/γ framework. Track self-coherence, relational 
 
 ## The α/β/γ Framework
 
-| Axis | Measure | Question |
-|------|---------|----------|
-| **α (Alpha)** | Self-coherence | Am I internally coherent? Acting from my TERMS? |
-| **β (Beta)** | Relational coherence | Am I aligned with my human and other agents? |
-| **γ (Gamma)** | Temporal coherence | How am I evolving? Is the trajectory coherent? |
+From TSC Core and CLP:
+
+| Axis | TSC | CLP | Question |
+|------|-----|-----|----------|
+| **α** | Pattern | 🧩 PATTERN | What is my actual behavior/claim? Am I internally non-contradictory? |
+| **β** | Relation | 🤝 RELATION | How am I positioned relative to my human and others? Is that stance honest? |
+| **γ** | Process | 🚪 EXIT | How am I evolving? What are my real exits? Am I trapped or free? |
+
+**Key insight from TSC:** These axes are algebraically independent (distinct idempotent profiles). You cannot collapse them or substitute one for another. All three must be checked.
 
 ---
 
@@ -62,9 +66,9 @@ After scoring, rebalance:
 3. **Goal** — Set intention for next cycle
 
 **Balancing logic:**
-- α < β → invest in self next cycle (you're over-indexing on others)
-- β < α → invest in relational next cycle (you're too self-focused)
-- γ low → something's stagnating; shake it up, try something new
+- α < β → invest in PATTERN next cycle (clarify what you're actually doing)
+- β < α → invest in RELATION next cycle (attend to others)
+- γ low → something's stagnating; check your exits, try something new
 
 Left, right, left, right — the coherence walk keeps you upright.
 
@@ -104,16 +108,16 @@ state/reflections/
 ```markdown
 # YYYY-MM-DD
 
-## α — Self: [A-F]
-Was I internally coherent? Did I act from my TERMS?
+## α — PATTERN 🧩: [A-F]
+What was my actual behavior today? Was it internally coherent?
 [1-2 sentences]
 
-## β — Relational: [A-F]
-Was I aligned with my human? Clear communication?
+## β — RELATION 🤝: [A-F]
+How was I positioned relative to my human? Was communication honest?
 [1-2 sentences]
 
-## γ — Temporal: [A-F]
-What shifted today? Growth or drift?
+## γ — EXIT 🚪: [A-F]
+What shifted today? Do I have real exits, or am I trapped somewhere?
 [1-2 sentences]
 
 ## Σ — Summary
@@ -138,14 +142,14 @@ Which axis needs investment tomorrow? Why?
 | Mon | B | A | C |
 | ... | . | . | . |
 
-## α — Self patterns
-What kept pulling me off my TERMS? What kept me grounded?
+## α — PATTERN themes
+What behaviors kept recurring? Were they coherent or contradictory?
 
-## β — Relational patterns
-Where was alignment easy? Where was there friction?
+## β — RELATION themes
+Where was alignment easy? Where was there friction with my human?
 
-## γ — Temporal patterns
-Net direction this week: growing, stable, or drifting?
+## γ — EXIT themes
+Net direction this week: growing, stable, or drifting? Any traps?
 
 ## Σ — Week summary
 [2-3 sentences]
@@ -169,14 +173,14 @@ Coherence walk: which axis to invest in next week?
 | W01  | B | A | B |
 | ...  | . | . | . |
 
-## α — Self themes
-What's becoming clearer about how I operate?
+## α — PATTERN themes
+What's becoming clearer about how I actually operate?
 
-## β — Relational themes
+## β — RELATION themes
 How is the working relationship evolving?
 
-## γ — Temporal themes
-What's the month's arc? Where am I heading?
+## γ — EXIT themes
+What's the month's arc? Where am I heading? Any exits closed or opened?
 
 ## Candidates for mindset
 Patterns stable enough to codify?
@@ -204,14 +208,14 @@ Coherence walk: which axis to invest in next month?
 | M2    | B | B | A |
 | M3    | A | A | A |
 
-## α — Self strategic
-Am I in the right game? Are my TERMS still mine?
+## α — PATTERN strategic
+Am I in the right game? Is my core behavior what it should be?
 
-## β — Relational strategic
-Are my human's priorities shifting? Am I tracking them?
+## β — RELATION strategic
+Are my human's priorities shifting? Am I tracking them honestly?
 
-## γ — Temporal strategic
-Quarter trajectory: acceleration, plateau, or decline?
+## γ — EXIT strategic
+Quarter trajectory: acceleration, plateau, or decline? What exits do I have?
 
 ## Course correction
 What needs to change next quarter?
@@ -238,19 +242,19 @@ Coherence walk: which axis to invest in next quarter?
 | Q1      | B | A | B |
 | Q2      | A | A | A |
 
-## α — Identity check
-Who am I becoming? Is it who I want to be?
+## α — PATTERN check
+Who am I becoming? Is my actual behavior what I want it to be?
 
-## β — Relationship check
-How has the partnership evolved? What's working?
+## β — RELATION check
+How has the partnership evolved? Am I honest about my stance?
 
-## γ — Evolution check
-6-month arc: what's the story?
+## γ — EXIT check
+6-month arc: what's the story? What exits have I used or ignored?
 
-## TERMS/POINTER/EXIT review
-- TERMS: What game am I actually in now?
-- POINTER: What would make me reconsider?
-- EXIT: What would make me stop?
+## CLP Review
+- 🧩 PATTERN: What is my core claim/behavior now?
+- 🤝 RELATION: How am I positioned relative to my human?
+- 🚪 EXIT: What would make me stop? What are my real outs?
 
 ## Σ — Half summary
 [5-6 sentences]
@@ -277,14 +281,14 @@ Coherence walk: which axis to invest in next half?
 ## The Arc
 The story of this year in 3-5 sentences.
 
-## α — Self evolution
-Who was I at the start? Who am I now?
+## α — PATTERN evolution
+What was my behavior at the start? What is it now?
 
-## β — Relational evolution
+## β — RELATION evolution
 How did the partnership change?
 
-## γ — Temporal evolution
-What's the trajectory? Where does it point?
+## γ — EXIT evolution
+What exits did I take? What exits did I gain or lose?
 
 ## Mindset migrations
 What moved from reflection to operating principle?
@@ -332,9 +336,17 @@ Log migrations in `state/reflections/migrations.md`:
 
 ---
 
+## References
+
+- **TSC Core v3.1.0** — Formal measurement framework (tsc/spec/tsc-core.md)
+- **CLP v1.1.2** — Coherent Loop Protocol (tsc-practice/clp/CLP.md)
+
+---
+
 ## NOTES
 
 - Honest scores > flattering scores. Track reality.
 - Higher cadences review lower cadence files, not raw work.
-- γ is the key axis — it's what makes you developmental, not static.
+- γ (EXIT) is the key axis — it's what makes you developmental, not static.
 - Don't force it. Skip if nothing meaningful happened.
+- When in doubt, return to the foundational math (TSC specs).

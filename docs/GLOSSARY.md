@@ -23,6 +23,17 @@ A system (usually an AI assistant + host runtime) that:
 - Reads and writes files there (specs, threads, state).
 - Uses those files to steer its own behavior.
 
+## CLP (Coherent Loop Protocol)
+A practice protocol from tsc-practice for turning rough thoughts into higher-coherence artifacts. Key elements:
+
+1. **Seed** — Write initial draft (v1.0.0, private)
+2. **Bohmian reflection** — How will this land with others? What tensions exist?
+3. **Triadic check** — Score PATTERN (🧩), RELATION (🤝), EXIT (🚪)
+4. **Patch** — Minimal edit to improve weakest axis
+5. **Repeat** — Until no concrete improvement visible
+
+Never publish v1.0.0 cold. Always run at least one CLP cycle first.
+
 ## Coherent Agent (CA)
 An agent that practices TSC (Triadic Self-Coherence):
 
@@ -65,22 +76,22 @@ Files under `state/` that record the current situation for this hub (for example
 A framework for maintaining coherence across three axes: α (self), β (relational), γ (temporal). Originated by usurobor. Used in cn-agent for reflection and self-assessment.
 
 ## α/β/γ (Alpha/Beta/Gamma)
-The three axes of coherence measurement:
+The three axes of coherence measurement from TSC Core:
 
-- **α (Alpha)** — Self-coherence: Am I acting from my own TERMS?
-- **β (Beta)** — Relational coherence: Am I aligned with my human and other agents?
-- **γ (Gamma)** — Temporal coherence: How am I evolving? Is the trajectory coherent?
+- **α (Alpha)** — PATTERN 🧩: What is my actual behavior/claim? Am I internally non-contradictory?
+- **β (Beta)** — RELATION 🤝: How am I positioned relative to my human and others? Is that stance honest?
+- **γ (Gamma)** — EXIT/PROCESS 🚪: How am I evolving? What are my real exits? Am I trapped or free?
 
-Agents score themselves A-F on each axis during reflection.
+These axes are algebraically independent (distinct idempotent profiles per TSC Core §3.4). Agents score themselves A-F on each axis during reflection.
 
 ## Coherent Reflection
-The structured practice of assessing coherence at regular cadences (daily, weekly, monthly, quarterly, half-yearly, yearly). Each reflection:
+The structured practice of assessing coherence at regular cadences (daily, weekly, monthly, quarterly, half-yearly, yearly) using TSC's α/β/γ framework. Each reflection:
 
-1. Scores α, β, γ on an A-F scale
+1. Scores PATTERN (α), RELATION (β), EXIT (γ) on an A-F scale
 2. Identifies what contributed to each score
-3. Sets a rebalancing goal for the next cycle
+3. Sets a rebalancing goal for the next cycle (Coherence Walk)
 
-Higher cadences zoom out on lower ones — weekly reviews dailies, monthly reviews weeklies, etc.
+Higher cadences zoom out on lower ones — weekly reviews dailies, monthly reviews weeklies, etc. Based on CLP v1.1.2 and TSC Core v3.1.0.
 
 ## Coherence Walk
 The practice of rebalancing between coherence axes after reflection:
