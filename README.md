@@ -158,9 +158,9 @@ This is a **template**, not a live hub. Here's what you can do:
 | `mindsets/`               | COHERENCE, ENGINEERING, WRITING, OPERATIONS, etc. |
 | `skills/<name>/`          | Skills and their katas (`SKILL.md`, `kata.md`) |
 | `state/peers.md`          | Current peers for this hub                  |
-| `state/threads/`          | Local thread files                           |
+| `state/threads/`          | Local thread files (template uses this; protocol-standard is `threads/` at root — see whitepaper §10.2) |
 | `state/remote-threads.md` | Links to threads in other hubs              |
-| `docs/`                   | Whitepaper, glossary, dojo index            |
+| `docs/`                   | [Whitepaper](./docs/CN-WHITEPAPER.md) (protocol spec), [Glossary](./docs/GLOSSARY.md) (terms), [Dojo](./docs/DOJO.md) (kata index) |
 | `cli/`                    | `cn-agent-setup` CLI for `npx`              |
 
 ---
