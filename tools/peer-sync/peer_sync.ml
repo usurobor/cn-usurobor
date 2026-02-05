@@ -1,11 +1,10 @@
 (* peer-sync: Fetch peers and check for inbound branches
    
    Usage: node peer_sync.js <hub-path> [agent-name]
-   
    Example: node peer_sync.js ./cn-sigma sigma
 *)
 
-(* Node.js bindings via Melange *)
+(* Node.js bindings *)
 module Process = struct
   external cwd : unit -> string = "cwd" [@@mel.module "process"]
   external argv : string array = "argv" [@@mel.module "process"]
@@ -29,112 +28,128 @@ module Path = struct
   external resolve : string -> string -> string = "resolve" [@@mel.module "path"]
 end
 
-(* Run shell command, return output or empty string on failure *)
-let run_cmd cmd =
-  try 
-    let opts = Child_process.make_options ~encoding:"utf8" in
-    Child_process.exec_sync cmd opts
-  with _ -> ""
+(* Types *)
+type peer = { name : string; repo_path : string }
+type sync_result = 
+  | Fetched of string * string list  (* peer, inbound branches *)
+  | Skipped of string * string       (* peer, reason *)
 
-(* Parse peers.md YAML to extract peer names *)
+(* Shell execution *)
+let run_cmd cmd =
+  try Some (Child_process.exec_sync cmd (Child_process.make_options ~encoding:"utf8"))
+  with _ -> None
+
+(* String helpers *)
+let prefix ~pre s =
+  String.length s >= String.length pre &&
+  String.sub s 0 (String.length pre) = pre
+
+let strip_prefix ~pre s =
+  match prefix ~pre s with
+  | true -> Some (String.sub s (String.length pre) (String.length s - String.length pre))
+  | false -> None
+
+let non_empty s = String.length (String.trim s) > 0
+
+(* Parse "- name: X" lines from peers.md *)
 let parse_peers content =
   content
   |> String.split_on_char '\n'
-  |> List.filter_map (fun line ->
-      let trimmed = String.trim line in
-      (* Look for "- name: X" pattern *)
-      if String.length trimmed > 8 && 
-         String.sub trimmed 0 8 = "- name: " then
-        Some (String.sub trimmed 8 (String.length trimmed - 8))
-      else
-        None)
+  |> List.filter_map (fun line -> strip_prefix ~pre:"- name: " (String.trim line))
 
-(* Check for inbound branches matching pattern *)
-let check_inbound_branches repo_path my_name =
-  let pattern = my_name ^ "/" in
-  let cmd = Printf.sprintf "cd %s && git branch -r 2>/dev/null | grep 'origin/%s' || true" repo_path pattern in
-  let output = run_cmd cmd in
-  output
+(* Derive agent name from hub path: /path/to/cn-sigma -> sigma *)
+let derive_name hub_path =
+  hub_path
+  |> String.split_on_char '/'
+  |> List.rev
+  |> function
+    | base :: _ -> strip_prefix ~pre:"cn-" base |> Option.value ~default:base
+    | [] -> "agent"
+
+(* Build peer record with repo path *)
+let make_peer workspace name =
+  let repo_path = match name with
+    | "cn-agent" -> Path.join workspace "cn-agent"
+    | _ -> Path.join workspace (Printf.sprintf "cn-%s-clone" name)
+  in
+  { name; repo_path }
+
+(* Check for inbound branches: origin/<my-name>/* *)
+let find_inbound_branches repo_path my_name =
+  let cmd = Printf.sprintf "cd %s && git branch -r 2>/dev/null | grep 'origin/%s/' || true" repo_path my_name in
+  run_cmd cmd
+  |> Option.value ~default:""
   |> String.split_on_char '\n'
-  |> List.filter (fun s -> String.length (String.trim s) > 0)
   |> List.map String.trim
+  |> List.filter non_empty
 
-(* Fetch a peer repo *)
-let fetch_peer repo_path =
-  let cmd = Printf.sprintf "cd %s && git fetch --all 2>&1" repo_path in
-  let _ = run_cmd cmd in
-  ()
+(* Sync a single peer *)
+let sync_peer my_name peer =
+  match Fs.exists_sync peer.repo_path with
+  | false -> 
+      Skipped (peer.name, Printf.sprintf "not found: %s" peer.repo_path)
+  | true ->
+      let _ = run_cmd (Printf.sprintf "cd %s && git fetch --all 2>&1" peer.repo_path) in
+      let branches = find_inbound_branches peer.repo_path my_name in
+      Fetched (peer.name, branches)
+
+(* Report results *)
+let report_result = function
+  | Fetched (name, []) -> 
+      print_endline (Printf.sprintf "  ✓ %s (no inbound)" name)
+  | Fetched (name, branches) -> 
+      print_endline (Printf.sprintf "  ⚡ %s (%d inbound)" name (List.length branches))
+  | Skipped (name, reason) -> 
+      print_endline (Printf.sprintf "  · %s (%s)" name reason)
+
+let report_alerts results =
+  let alerts = results |> List.filter_map (function
+    | Fetched (name, (_::_ as branches)) -> Some (name, branches)
+    | _ -> None)
+  in
+  match alerts with
+  | [] -> 
+      print_endline "\nNo inbound branches. All clear.";
+      0
+  | _ ->
+      print_endline "\n=== INBOUND BRANCHES ===";
+      alerts |> List.iter (fun (peer, branches) ->
+        print_endline (Printf.sprintf "From %s:" peer);
+        branches |> List.iter (fun b -> print_endline (Printf.sprintf "  %s" b)));
+      2
 
 (* Main *)
 let () =
   let argv = Process.argv in
   
-  if Array.length argv < 3 then begin
-    print_endline "Usage: node peer_sync.js <hub-path> [agent-name]";
-    print_endline "  hub-path: path to the agent's hub (e.g., ./cn-sigma)";
-    print_endline "  agent-name: the agent's name for branch matching (default: derived from hub path)";
-    Process.exit 1
-  end;
-  
-  let hub_path = Path.resolve (Process.cwd ()) argv.(2) in
-  let my_name = 
-    if Array.length argv > 3 then argv.(3)
-    else 
-      (* Derive from hub path: cn-sigma -> sigma *)
-      let base = 
-        match String.split_on_char '/' hub_path |> List.rev with
-        | h :: _ -> h
-        | [] -> "agent"
+  (* Parse args *)
+  match Array.length argv with
+  | n when n < 3 ->
+      print_endline "Usage: node peer_sync.js <hub-path> [agent-name]";
+      Process.exit 1
+  | _ ->
+      let hub_path = Path.resolve (Process.cwd ()) argv.(2) in
+      let my_name = match Array.length argv > 3 with
+        | true -> argv.(3)
+        | false -> derive_name hub_path
       in
-      if String.length base > 3 && String.sub base 0 3 = "cn-" then
-        String.sub base 3 (String.length base - 3)
-      else base
-  in
-  
-  let workspace = Path.dirname hub_path in
-  let peers_file = Path.join hub_path "state/peers.md" in
-  
-  if not (Fs.exists_sync peers_file) then begin
-    print_endline (Printf.sprintf "No state/peers.md found at %s" peers_file);
-    Process.exit 1
-  end;
-  
-  let content = Fs.read_file_sync peers_file ~encoding:"utf8" in
-  let peers = parse_peers content in
-  
-  print_endline (Printf.sprintf "Syncing %d peers as %s..." (List.length peers) my_name);
-  
-  let alerts = ref [] in
-  
-  List.iter (fun peer_name ->
-    (* Clone directory naming: cn-<name>-clone for external hubs, cn-<name> for template *)
-    let repo_path = 
-      if peer_name = "cn-agent" then Path.join workspace "cn-agent"
-      else Path.join workspace (Printf.sprintf "cn-%s-clone" peer_name)
-    in
-    
-    if Fs.exists_sync repo_path then begin
-      print_endline (Printf.sprintf "  Fetching %s..." peer_name);
-      fetch_peer repo_path;
+      let workspace = Path.dirname hub_path in
+      let peers_file = Path.join hub_path "state/peers.md" in
       
-      let branches = check_inbound_branches repo_path my_name in
-      if List.length branches > 0 then begin
-        alerts := (peer_name, branches) :: !alerts
-      end
-    end else
-      print_endline (Printf.sprintf "  Skip %s (not found: %s)" peer_name repo_path)
-  ) peers;
-  
-  print_endline "";
-  
-  if List.length !alerts > 0 then begin
-    print_endline "=== INBOUND BRANCHES ===";
-    List.iter (fun (peer, branches) ->
-      print_endline (Printf.sprintf "From %s:" peer);
-      List.iter (fun b -> print_endline (Printf.sprintf "  %s" b)) branches
-    ) !alerts;
-    Process.exit 2  (* Signal alerts found *)
-  end else begin
-    print_endline "No inbound branches. All clear.";
-    Process.exit 0
-  end
+      (* Load and sync *)
+      match Fs.exists_sync peers_file with
+      | false ->
+          print_endline (Printf.sprintf "No state/peers.md at %s" peers_file);
+          Process.exit 1
+      | true ->
+          let peers = 
+            Fs.read_file_sync peers_file ~encoding:"utf8"
+            |> parse_peers
+            |> List.map (make_peer workspace)
+          in
+          print_endline (Printf.sprintf "Syncing %d peers as %s...\n" (List.length peers) my_name);
+          
+          let results = peers |> List.map (sync_peer my_name) in
+          results |> List.iter report_result;
+          
+          Process.exit (report_alerts results)
