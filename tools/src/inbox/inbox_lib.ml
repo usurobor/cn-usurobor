@@ -9,32 +9,72 @@ type action =
 
 (* === GTD Triage (Getting Things Done) === *)
 
-type triage =
-  | Delete    (* noise, stale, already handled — remove branch *)
-  | Defer     (* important but not urgent — leave for later *)
-  | Delegate  (* forward to another agent — push to their repo *)
-  | Do        (* respond now — merge, reply, or take action *)
+(* What to do when triaging as "Do" *)
+type do_action =
+  | Merge                     (* merge the branch *)
+  | Reply of string           (* push reply branch with given name *)
+  | Custom of string          (* custom action description *)
 
-let triage_of_string = function
-  | "delete" | "d" -> Some Delete
-  | "defer" | "f" -> Some Defer
-  | "delegate" | "g" -> Some Delegate
-  | "do" | "o" -> Some Do
+(* GTD 4 Ds — each with required context *)
+type triage =
+  | Delete of string          (* reason: why remove? e.g. "stale", "duplicate" *)
+  | Defer of string           (* reason: why later? e.g. "blocked on X" *)
+  | Delegate of string        (* actor: who handles? e.g. "pi" *)
+  | Do of do_action           (* action: what to do? *)
+
+(* Parse do_action from string *)
+let do_action_of_string s =
+  if s = "merge" then Some Merge
+  else match String.split_on_char ':' s with
+    | ["reply"; name] -> Some (Reply name)
+    | ["custom"; desc] -> Some (Custom desc)
+    | _ -> None
+
+let string_of_do_action = function
+  | Merge -> "merge"
+  | Reply name -> Printf.sprintf "reply:%s" name
+  | Custom desc -> Printf.sprintf "custom:%s" desc
+
+(* Helper: require non-empty payload *)
+let non_empty_payload parts =
+  let payload = String.concat ":" parts in
+  if String.length payload > 0 then Some payload else None
+
+(* Parse triage from "action:payload" format — payload required *)
+let triage_of_string s =
+  match String.split_on_char ':' s with
+  | ("delete" | "d") :: rest -> 
+      non_empty_payload rest |> Option.map (fun r -> Delete r)
+  | ("defer" | "f") :: rest -> 
+      non_empty_payload rest |> Option.map (fun r -> Defer r)
+  | ("delegate" | "g") :: rest -> 
+      non_empty_payload rest |> Option.map (fun r -> Delegate r)
+  | [("do" | "o"); "merge"] -> Some (Do Merge)
+  | ("do" | "o") :: "reply" :: name -> 
+      non_empty_payload name |> Option.map (fun n -> Do (Reply n))
+  | ("do" | "o") :: "custom" :: desc -> 
+      non_empty_payload desc |> Option.map (fun d -> Do (Custom d))
   | _ -> None
 
 let string_of_triage = function
-  | Delete -> "delete"
-  | Defer -> "defer"
-  | Delegate -> "delegate"
-  | Do -> "do"
+  | Delete reason -> Printf.sprintf "delete:%s" reason
+  | Defer reason -> Printf.sprintf "defer:%s" reason
+  | Delegate actor -> Printf.sprintf "delegate:%s" actor
+  | Do action -> Printf.sprintf "do:%s" (string_of_do_action action)
+
+let triage_kind = function
+  | Delete _ -> "delete"
+  | Defer _ -> "defer"
+  | Delegate _ -> "delegate"
+  | Do _ -> "do"
 
 let triage_description = function
-  | Delete -> "Remove branch (noise/stale/handled)"
-  | Defer -> "Leave for later (important, not urgent)"
-  | Delegate -> "Forward to another agent"
-  | Do -> "Respond now (merge/reply/action)"
-
-let all_triages = [Delete; Defer; Delegate; Do]
+  | Delete reason -> Printf.sprintf "Remove branch (%s)" reason
+  | Defer reason -> Printf.sprintf "Defer (%s)" reason
+  | Delegate actor -> Printf.sprintf "Delegate to %s" actor
+  | Do Merge -> "Merge branch"
+  | Do (Reply name) -> Printf.sprintf "Reply with branch %s" name
+  | Do (Custom desc) -> Printf.sprintf "Action: %s" desc
 
 let action_of_string = function
   | "check" -> Some Check
