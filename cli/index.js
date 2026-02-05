@@ -438,9 +438,9 @@ function isGitRepo(dir) {
 
     console.log('');
 
-    // Configure gh to use HTTPS (avoids SSH key setup)
+    // Configure git to use gh as credential helper for HTTPS
     try {
-      await run('gh', ['config', 'set', 'git_protocol', 'https'], { quiet: true });
+      await run('gh', ['auth', 'setup-git'], { quiet: true });
     } catch {}
 
     // =========================================================================
