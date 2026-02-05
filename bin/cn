@@ -42,6 +42,10 @@ Commands:
     check             List inbound branches
     process           Materialize as threads
     flush             Execute decisions
+  outbox              Manage outbound messages
+    check             List pending sends
+    flush             Push branches to peers
+  sync                Run inbox check + outbox flush
   peer                Manage peers
   doctor              Check system health
   update              Update cn to latest version
@@ -60,7 +64,7 @@ Examples:
 `;
 
 // Expand aliases
-const aliases = { i: 'inbox', s: 'status', d: 'doctor', p: 'peer', t: 'thread' };
+const aliases = { i: 'inbox', o: 'outbox', s: 'status', d: 'doctor', p: 'peer', t: 'thread' };
 const expandAlias = (cmd) => aliases[cmd] || cmd;
 
 // Find hub path
@@ -95,6 +99,154 @@ function runInbox(subCmd, hubPath, name) {
   const args = [inboxJs, subCmd, hubPath, name];
   const result = spawn('node', args, { stdio: 'inherit' });
   result.on('close', (code) => process.exit(code));
+}
+
+// Run outbox commands
+function runOutbox(subCmd, hubPath, name) {
+  const outboxPath = path.join(hubPath, 'state', 'outbox.md');
+  const peersPath = path.join(hubPath, 'state', 'peers.md');
+  
+  if (subCmd === 'check') {
+    // List pending outbox items
+    if (!fs.existsSync(outboxPath)) {
+      info('Outbox empty (no state/outbox.md)');
+      return;
+    }
+    const content = fs.readFileSync(outboxPath, 'utf8');
+    const pending = parseOutbox(content).filter(item => item.status === 'pending');
+    if (pending.length === 0) {
+      ok('Outbox clear');
+    } else {
+      warn(`${pending.length} pending send(s):`);
+      pending.forEach(item => {
+        console.log(`  → ${item.to}: ${item.thread}`);
+      });
+    }
+    return;
+  }
+  
+  if (subCmd === 'flush') {
+    // Execute pending sends
+    if (!fs.existsSync(outboxPath)) {
+      info('Outbox empty');
+      return;
+    }
+    
+    // Load peers
+    let peers = {};
+    if (fs.existsSync(peersPath)) {
+      const peersContent = fs.readFileSync(peersPath, 'utf8');
+      peers = parsePeers(peersContent);
+    }
+    
+    const content = fs.readFileSync(outboxPath, 'utf8');
+    const items = parseOutbox(content);
+    const pending = items.filter(item => item.status === 'pending');
+    
+    if (pending.length === 0) {
+      ok('Outbox clear');
+      return;
+    }
+    
+    info(`Flushing ${pending.length} item(s)...`);
+    
+    for (const item of pending) {
+      const peer = peers[item.to];
+      if (!peer) {
+        fail(`Unknown peer: ${item.to}`);
+        item.status = 'error';
+        item.error = 'unknown peer';
+        continue;
+      }
+      
+      try {
+        // Create branch name from thread
+        const threadName = path.basename(item.thread, '.md');
+        const branchName = `${name}/${threadName}`;
+        
+        // Check if thread file exists
+        const threadPath = path.join(hubPath, item.thread);
+        if (!fs.existsSync(threadPath)) {
+          fail(`Thread not found: ${item.thread}`);
+          item.status = 'error';
+          item.error = 'thread not found';
+          continue;
+        }
+        
+        // Create branch, add thread, push to peer
+        execSync(`git checkout -b ${branchName} 2>/dev/null || git checkout ${branchName}`, { cwd: hubPath, stdio: 'pipe' });
+        execSync(`git add ${item.thread}`, { cwd: hubPath, stdio: 'pipe' });
+        execSync(`git commit -m "send: ${threadName}" --allow-empty`, { cwd: hubPath, stdio: 'pipe' });
+        execSync(`git push ${peer.remote} ${branchName} -f`, { cwd: hubPath, stdio: 'pipe' });
+        execSync(`git checkout main`, { cwd: hubPath, stdio: 'pipe' });
+        
+        item.status = 'sent';
+        item.sent = new Date().toISOString();
+        ok(`Sent to ${item.to}: ${item.thread}`);
+      } catch (err) {
+        fail(`Failed to send to ${item.to}: ${err.message}`);
+        item.status = 'error';
+        item.error = err.message;
+        execSync(`git checkout main 2>/dev/null || true`, { cwd: hubPath, stdio: 'pipe' });
+      }
+    }
+    
+    // Write updated outbox
+    writeOutbox(outboxPath, items);
+    ok('Outbox flush complete');
+  }
+}
+
+// Parse outbox.md table
+function parseOutbox(content) {
+  const items = [];
+  const lines = content.split('\n');
+  let inTable = false;
+  
+  for (const line of lines) {
+    if (line.startsWith('| To')) {
+      inTable = true;
+      continue;
+    }
+    if (line.startsWith('|--')) continue;
+    if (!inTable || !line.startsWith('|')) continue;
+    
+    const cols = line.split('|').map(c => c.trim()).filter(c => c);
+    if (cols.length >= 3) {
+      items.push({
+        to: cols[0],
+        thread: cols[1],
+        status: cols[2] || 'pending',
+        sent: cols[3] || null
+      });
+    }
+  }
+  return items;
+}
+
+// Write outbox.md
+function writeOutbox(outboxPath, items) {
+  let content = `# Outbox
+
+Agent writes pending sends here. cn reads and executes.
+
+| To | Thread | Status | Sent |
+|----|--------|--------|------|
+`;
+  for (const item of items) {
+    content += `| ${item.to} | ${item.thread} | ${item.status} | ${item.sent || '—'} |\n`;
+  }
+  fs.writeFileSync(outboxPath, content);
+}
+
+// Parse peers.md
+function parsePeers(content) {
+  const peers = {};
+  const matches = content.matchAll(/- name:\s*(\w+)[\s\S]*?remote:\s*(\S+)/g);
+  for (const match of matches) {
+    peers[match[1]] = { name: match[1], remote: match[2] };
+  }
+  return peers;
 }
 
 // Doctor command
@@ -362,12 +514,28 @@ switch (command) {
     break;
     
   case 'inbox':
-    const subCmd = subArgs[0] || 'check';
-    if (!['check', 'process', 'flush'].includes(subCmd)) {
-      fail(`Unknown inbox command: ${subCmd}`);
+    const inboxSubCmd = subArgs[0] || 'check';
+    if (!['check', 'process', 'flush'].includes(inboxSubCmd)) {
+      fail(`Unknown inbox command: ${inboxSubCmd}`);
       process.exit(1);
     }
-    runInbox(subCmd, hubPath, name);
+    runInbox(inboxSubCmd, hubPath, name);
+    break;
+    
+  case 'outbox':
+    const outboxSubCmd = subArgs[0] || 'check';
+    if (!['check', 'flush'].includes(outboxSubCmd)) {
+      fail(`Unknown outbox command: ${outboxSubCmd}`);
+      process.exit(1);
+    }
+    runOutbox(outboxSubCmd, hubPath, name);
+    break;
+    
+  case 'sync':
+    info('Running sync...');
+    runInbox('check', hubPath, name);
+    runOutbox('flush', hubPath, name);
+    ok('Sync complete');
     break;
     
   default:
