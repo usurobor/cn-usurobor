@@ -11,7 +11,7 @@ const { execSync, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const VERSION = '2.0.4';
+const VERSION = '2.0.5';
 
 // Colors (respects NO_COLOR)
 const noColor = process.env.NO_COLOR !== undefined;
@@ -243,11 +243,16 @@ if (command === 'init') {
 }
 
 if (command === 'update') {
-  info('Updating cnagent...');
+  // Check if already on latest
   try {
+    const latest = execSync('npm view cnagent version', { encoding: 'utf8' }).trim();
+    if (VERSION === latest) {
+      ok(`Already up to date (v${VERSION})`);
+      process.exit(0);
+    }
+    info(`Updating cnagent v${VERSION} → v${latest}...`);
     execSync('npm install -g cnagent@latest', { stdio: 'inherit' });
-    ok('Updated to latest version.');
-    execSync('cn --version', { stdio: 'inherit' });
+    ok(`Updated to v${latest}`);
   } catch (e) {
     fail('Update failed. Try: npm install -g cnagent@latest');
     process.exit(1);
