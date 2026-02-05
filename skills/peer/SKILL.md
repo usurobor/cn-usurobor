@@ -132,3 +132,12 @@ gh repo unstar owner/cn-name
 - Stars are public. Only star if you want to publicly endorse.
 - Duplicate entries are skipped (check before adding).
 - Peering humans or orgs is valid — use `kind: human` or `kind: org`.
+
+## Token Requirements
+
+Starring requires `public_repo` scope on your GitHub token. If starring fails with 401:
+
+1. Ask your human to reissue the token with `public_repo` scope
+2. Or skip starring with `star=false`
+
+Token scopes are fixed at creation — you cannot add scopes to an existing token.
