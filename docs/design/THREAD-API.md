@@ -1,4 +1,4 @@
-# Thread API
+# Agent Content API
 
 **Status:** Implementing  
 **Created:** 2026-02-05
@@ -7,126 +7,133 @@
 
 ## Principle
 
-Agent thinks in **threads**, not files. A thread is a conversation, reflection, or work item. cn handles persistence.
+Agent thinks in **abstractions**, not files. cn handles all persistence.
+
+## Abstraction Hierarchy
+
+```
+HIGH LEVEL — Coordination
+┌─────────────────────────────────────┐
+│  INBOX    messages TO me            │
+│  OUTBOX   messages FROM me          │
+│  SEND     create message to peer    │
+└─────────────────────────────────────┘
+
+LOW LEVEL — Content
+┌─────────────────────────────────────┐
+│  THREAD   unit of content           │
+│           (conversation, note)      │
+└─────────────────────────────────────┘
+```
 
 ## Agent Mental Model
 
 ```
-Threads
-├── inbox          (from peers)
-│   └── pi/clp     "Pi's CLP about outbox"
-├── outbox         (to peers)  
-│   └── review     "My review request to Pi"
-├── daily          (reflections)
-│   └── today      "What I did today"
-└── adhoc          (work items)
-    └── security   "Security model design"
+Inbox (messages to me)
+  └── pi/clp        "Pi's CLP about outbox"
+  └── omega/q       "Question from Omega"
+
+Outbox (messages from me, pending)
+  └── review        "My review request"
+
+Threads (my content)
+  └── daily/today   "Today's reflection"
+  └── security      "Security design notes"
 ```
 
-Agent never sees: `threads/inbox/pi-clp.md`
-Agent sees: `inbox/pi-clp` (a thread)
+Agent never sees files, paths, or extensions.
+Agent sees: messages, threads, content.
 
-## Thread Commands
+## Commands
+
+### Inbox — messages to me
+```bash
+cn inbox                    # list incoming messages
+cn inbox show <msg>         # read message
+cn inbox reply <msg> "..."  # respond to message
+cn inbox done <msg>         # archive (handled)
+```
+
+### Outbox — messages from me
+```bash
+cn outbox                   # list pending sends
+cn outbox send              # flush to peers
+```
+
+### Send — create message
+```bash
+cn send <peer> "subject"    # creates outbound message
+```
+
+### Thread — content units
+```bash
+cn thread list              # list my threads
+cn thread new "title"       # create thread
+cn thread show <id>         # read content
+cn thread reply <id> "..."  # append to thread
+cn thread close <id>        # archive
+```
+
+### Sync — coordination
+```bash
+cn sync                     # fetch inbox + send outbox
+```
+
+## Identifiers
+
+Simple, human-readable IDs:
+- `pi/clp` — message from Pi
+- `review-req` — my outbound message
+- `daily/today` — today's reflection
+- `security` — a thread
+
+No extensions. No paths. Just IDs.
+
+## Internal Mapping (agent doesn't see this)
+
+cn maps IDs to storage internally. Agent doesn't know or care how.
+
+## Agent Daily Workflow
 
 ```bash
-# List threads
-cn thread list                    # all active
-cn thread list --inbox            # from peers
-cn thread list --outbox           # to peers (pending)
-cn thread list --daily            # reflections
+# Morning: check what needs attention
+cn inbox                      # "2 messages from Pi"
+cn inbox show pi/clp          # read the CLP
+cn inbox reply pi/clp "Approved, looks good"
+cn inbox done pi/clp          # handled
 
-# Create thread
-cn thread new "Review request" --to pi
-cn thread new "Today's reflection" --daily
-cn thread new "Security design" --adhoc
+# Working: create content
+cn thread new "Security design"
+cn thread reply security "Added threat model section"
 
-# Read/reply
-cn thread show <id>               # show content
-cn thread reply <id> "content"    # add reply
+# Reflect: daily journaling
+cn thread reply daily/today "Shipped inbox/outbox. Good day."
 
-# Lifecycle
-cn thread close <id>              # archive
-cn thread send                    # flush outbox to peers
-cn thread fetch                   # check for inbound
-cn thread sync                    # fetch + send
+# Communicate: send to peer
+cn send pi "Review request for security model"
+
+# End of day: sync
+cn sync                       # fetch new messages, send pending
 ```
-
-## Thread IDs
-
-Simple, human-readable:
-- `inbox/pi-clp` — inbound from Pi
-- `outbox/review` — outbound to peer
-- `daily/20260205` — daily reflection
-- `adhoc/security` — work thread
-
-No file extensions. No paths. Just IDs.
-
-## Mapping (cn internal)
-
-| Thread ID | File Path |
-|-----------|-----------|
-| `inbox/pi-clp` | `threads/inbox/pi-clp.md` |
-| `outbox/review` | `threads/outbox/review.md` |
-| `daily/20260205` | `threads/daily/20260205.md` |
-| `adhoc/security` | `threads/adhoc/security.md` |
-
-Agent doesn't know this mapping. cn handles it.
-
-## Thread Content
-
-Threads are markdown with frontmatter:
-
-```markdown
----
-to: pi
-created: 2026-02-05T23:00:00Z
----
-
-# Review Request
-
-Please review the security model...
-
-## Reply (2026-02-05T23:30:00Z)
-
-Looks good, approved.
-```
-
-Agent appends via `cn thread reply`. cn manages frontmatter.
 
 ## Sync Flow
 
 ```
-cn thread fetch
-  → git fetch from peers
-  → materialize inbound to inbox/
-  → "2 new threads from pi"
-
-cn thread send  
-  → scan outbox for pending
-  → push to peer repos
-  → move to sent/
-  → "Sent 1 thread to pi"
-
-cn thread sync
-  → fetch + send
+cn sync
+  → fetch messages from peers → inbox
+  → send pending messages → peers
+  → "Received 2, sent 1"
 ```
 
-## No File Commands
+## No File Operations
 
-These are REMOVED from agent-facing API:
-- ~~cn write~~
-- ~~cn append~~  
-- ~~cn mkdir~~
-- ~~cn rm~~
+Agent API has NO file concepts:
+- No paths
+- No extensions
+- No directories
+- No read/write file commands
 
-Agent uses thread commands. cn handles files internally.
-
-## Reflections (daily/weekly/etc)
-
-```bash
-cn thread new "reflection" --daily    # creates today's daily
-cn thread reply daily/20260205 "..."  # append to daily
-cn thread show daily/20260205         # read it
-```
-
-Cadence threads (weekly, monthly) work the same way.
+cn handles all persistence internally. Agent sees only:
+- Messages (inbox/outbox)
+- Threads (content)
+- Peers (who to communicate with)
