@@ -661,7 +661,8 @@ function isGitRepo(dir) {
       // Clone the existing GitHub repo
       console.log('  Cloning existing GitHub repo...');
       try {
-        await run('gh', ['repo', 'clone', hubRepo, hubDir], { timeout: 120000 });
+        // Use HTTPS to avoid SSH host key prompts
+        await run('git', ['clone', `https://github.com/${hubRepo}.git`, hubDir], { timeout: 120000 });
         console.log(green('  ✓ Cloned existing repo'));
       } catch (err) {
         console.error(red(`Error: Failed to clone ${hubRepo}`));
