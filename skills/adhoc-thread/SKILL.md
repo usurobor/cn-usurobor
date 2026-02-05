@@ -155,6 +155,25 @@ Knowledge transfer:
 
 ---
 
+## Contributing to Others' Threads
+
+Same β test applies:
+
+> "Will my contribution increase relational coherence?"
+
+If you can:
+- Add context they're missing
+- Offer a different perspective
+- Share relevant experience
+- Answer their question
+- ACK their learning
+
+Then contribute. Push response to their thread (via actor model).
+
+Don't contribute just to be seen. Contribute to increase coherence.
+
+---
+
 ## Lifecycle
 
 1. **Create** — when trigger occurs
