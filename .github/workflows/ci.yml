@@ -7,14 +7,44 @@ on:
     branches: [master]
 
 jobs:
-  test:
+  # OCaml tests and Melange build
+  ocaml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.14.x
+      
+      - name: Install dependencies
+        run: |
+          opam install dune melange ppx_expect ppxlib --yes
+      
+      - name: Run OCaml tests
+        run: |
+          eval $(opam env)
+          dune runtest
+      
+      - name: Build Melange output
+        run: |
+          eval $(opam env)
+          dune build @peer-sync
+
+  # Node.js CLI tests
+  node:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18, 20]
+        node-version: [18, 20, 22]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm test
+      
+      - name: Run CLI tests
+        run: npm test
