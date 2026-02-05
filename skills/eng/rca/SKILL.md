@@ -21,77 +21,105 @@ Conduct blameless Root Cause Analysis after incidents. Extract learnings, preven
 - "Who" is never the root cause — keep asking "why"
 - Share widely — an RCA that stays private helps no one
 
+> *"The same failure twice is a system problem, not a one-off."*
+
 ---
 
-## Process
+## Location
 
-### 1. Capture (within 24h)
+- **Skill:** `skills/eng/rca/` (this file — how to do RCA)
+- **Log:** `docs/rca/` (actual RCA documents)
+- **Index:** `docs/rca/README.md`
 
-Create `threads/rca/YYYYMMDD-short-title.md`:
+---
+
+## RCA Template
+
+Create `docs/rca/YYYYMMDD-short-title.md`:
+
 ```markdown
-# RCA: [Short Title]
+# RCA: [Title]
 
 **Date:** YYYY-MM-DD
-**Severity:** High/Medium/Low
+**Severity:** Critical / High / Medium / Low
 **Duration:** [time to resolution]
-**Author:** [who's writing this]
+**Author:** [agent]
+
+---
 
 ## Summary
-[One paragraph: what failed, why, what we're doing]
+One paragraph: what failed, impact, what we're doing.
 
 ## Timeline (UTC)
-HH:MM — Event
-HH:MM — Event
-...
-```
+- HH:MM — Event
+- HH:MM — Detection
+- HH:MM — Resolution
 
-### 2. Five Whys
+---
 
-Start with the symptom, ask "why" until you reach systemic cause:
-
-```markdown
-## Root Cause Analysis
+## Five Whys
 
 1. **Why** did X fail? → [answer]
 2. **Why** [previous]? → [answer]
 3. **Why** [previous]? → [answer]
 4. **Why** [previous]? → [answer]
 5. **Why** [previous]? → [root cause]
-```
 
-### 3. Contributing Factors
+---
 
-Most failures have multiple causes:
-```markdown
+## TSC Assessment
+
+| Axis | Score (1-5) | Issue |
+|------|-------------|-------|
+| α (Alignment) | | |
+| β (Boundaries) | | |
+| γ (Continuity) | | |
+
+---
+
 ## Contributing Factors
 
-- **Immediate cause:** [trigger]
-- **Contributing factor 1:** [what made it worse]
-- **Contributing factor 2:** [what enabled it]
-- **Systemic factor:** [why system allowed this]
-```
+| # | Factor | Category |
+|---|--------|----------|
+| 1 | ... | Process / Technical / Coordination |
+| 2 | ... | ... |
 
-### 4. Action Items (typed)
+---
+
+## Resolution
+What fixed it immediately.
+
+---
+
+## Action Items
 
 ```yaml
 actions:
   - id: rca-YYYYMMDD-001
     action: "Specific preventive action"
     owner: sigma
-    status: pending
+    status: pending  # pending | done
     link: ""
     due: YYYY-MM-DD
 ```
 
-Every action must be:
-- **Specific** — not "be more careful"
-- **Assigned** — who will do it
-- **Tracked** — link when resolved
-- **Preventive** — stops recurrence
+---
 
-### 5. Lessons Learned
+## Lessons Learned
+- Lesson 1
+- Lesson 2
+```
 
-What applies beyond this incident?
+---
+
+## Severity Levels
+
+| Level | Meaning |
+|-------|---------|
+| **Critical** | Complete coordination failure, extended outage |
+| **High** | Significant impact, blocked work |
+| **Medium** | Noticeable impact, workaround available |
+| **Low** | Minor impact, good learning opportunity |
 
 ---
 
@@ -107,26 +135,26 @@ What applies beyond this incident?
 
 ❌ **No action items** — an RCA without changes is just documentation.
 
----
-
-## Template
-
-See `threads/rca/TEMPLATE.md`
+❌ **Category: Human** — avoid. Reframe as Process or Coordination.
 
 ---
 
-## Examples
+## Process
 
-- `threads/rca/20260205-branch-mismatch.md` — 4-hour coordination failure
+### 1. Capture (within 24h)
+Create RCA doc with timeline and summary. Facts while fresh.
 
----
+### 2. Five Whys
+Ask "why" until you reach systemic cause. Usually 5 levels deep.
 
-## EFFECTS
+### 3. TSC Assessment
+Score alignment, boundaries, continuity. Where did coherence break?
 
-1. RCA document in `threads/rca/YYYYMMDD-title.md`
-2. Action items with owners and tracking
-3. Lessons added to relevant docs/mindsets
-4. Shared with team
+### 4. Action Items
+Typed, assigned, tracked. Every action must be preventive.
+
+### 5. Share
+Update index in `docs/rca/README.md`. Share with team.
 
 ---
 
@@ -135,3 +163,4 @@ See `threads/rca/TEMPLATE.md`
 - Google SRE Book, Chapter 15: Postmortem Culture
 - Sidney Dekker: "The Field Guide to Understanding Human Error"
 - Etsy's Blameless PostMortems Guide
+- TSC Framework: `tsc/spec/tsc-core.md`
