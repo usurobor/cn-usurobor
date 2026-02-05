@@ -303,13 +303,14 @@ let string_of_atomic_action = function
   | Dir_create p -> "mkdir -p " ^ p
   | Log_append (p, _) -> "log append " ^ p
 
-(* Generate actions for a triage decision on an inbound branch *)
+(* Generate actions for a triage decision on an inbound branch.
+   Inbound branches are always remote-only (pushed by peer). 
+   Agent doesn't care about local vs remote — tool handles it. *)
 let triage_to_actions ~log_path ~branch triage =
   match triage with
   | Delete (Reason r) ->
-      (* Delete: remove branch locally and remotely, log *)
+      (* Delete: inbound = remote-only, just delete from origin *)
       [
-        Git_branch_delete branch;
         Git_remote_delete ("origin", branch);
         Log_append (log_path, Printf.sprintf "deleted: %s (%s)" branch r);
       ]
