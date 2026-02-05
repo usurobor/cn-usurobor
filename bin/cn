@@ -11,7 +11,7 @@ const { execSync, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const VERSION = '2.0.0';
+const VERSION = '2.0.2';
 
 // Colors (respects NO_COLOR)
 const noColor = process.env.NO_COLOR !== undefined;
@@ -98,6 +98,7 @@ function runInbox(subCmd, hubPath, name) {
 
 // Doctor command
 function doctor(hubPath) {
+  console.log(`cn v${VERSION}`);
   info(`Checking health...`);
   console.log('');
   
