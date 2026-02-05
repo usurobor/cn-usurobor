@@ -200,13 +200,7 @@ function isGitRepo(dir) {
 
   try {
     console.log(`cn-agent-setup v${VERSION}`);
-    console.log('');
-
-    // =========================================================================
-    // PREREQUISITES CHECK (autoconf style - show all, then handle)
-    // =========================================================================
     console.log(bold('Checking prerequisites...'));
-    console.log('');
 
     // Collect all check results
     const checks = {};
@@ -271,8 +265,6 @@ function isGitRepo(dir) {
     showCheck('workspace', checks.workspace, details.workspace);
     showCheck('openclaw', checks.openclaw);
 
-    console.log('');
-
     // Collect failures
     const failed = Object.entries(checks)
       .filter(([_, status]) => status === false)
@@ -280,16 +272,14 @@ function isGitRepo(dir) {
 
     if (failed.length > 0) {
       // Show install instructions for each failure (compact)
-      console.log(red(`Missing: ${failed.join(', ')}`));
       console.log('');
-      
+      console.log(red(`Missing: ${failed.join(', ')}`));
       for (const name of failed) {
         console.log(bold(`${name}:`));
         for (const line of installInstructions[name]) {
           console.log(`  ${line}`);
         }
       }
-      console.log('');
       process.exit(1);
     }
 
