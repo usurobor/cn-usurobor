@@ -23,7 +23,8 @@
     "cli/index.js",
     "cli/sanitize.js",
     "cli/hubConfig.js",
-    "cli/github.js"
+    "cli/github.js",
+    "cli/log.js"
   ],
   "scripts": {
     "start": "node cli/index.js",
