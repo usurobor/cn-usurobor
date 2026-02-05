@@ -438,21 +438,9 @@ function isGitRepo(dir) {
 
     console.log('');
 
-    // Ensure github.com SSH host key is in known_hosts (avoids interactive prompt)
-    const sshDir = path.join(process.env.HOME || '/root', '.ssh');
-    const knownHosts = path.join(sshDir, 'known_hosts');
-    if (!fs.existsSync(sshDir)) {
-      fs.mkdirSync(sshDir, { mode: 0o700 });
-    }
+    // Configure gh to use HTTPS (avoids SSH key setup)
     try {
-      const hasGithub = fs.existsSync(knownHosts) && 
-        fs.readFileSync(knownHosts, 'utf8').includes('github.com');
-      if (!hasGithub) {
-        const keys = runCapture('ssh-keyscan', ['-t', 'ed25519,rsa', 'github.com']);
-        if (keys) {
-          fs.appendFileSync(knownHosts, keys + '\n');
-        }
-      }
+      await run('gh', ['config', 'set', 'git_protocol', 'https'], { quiet: true });
     } catch {}
 
     // =========================================================================
