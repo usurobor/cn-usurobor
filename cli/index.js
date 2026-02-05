@@ -311,8 +311,15 @@ function isGitRepo(dir) {
 
     // Interactive: if gh installed but not authed, offer inline auth
     if (checks.gh && !checks['gh auth']) {
-      console.log('');
-      const token = await ask(rl, gray('  GitHub token to authenticate (paste, Enter, or skip): '));
+      // Check if GH_TOKEN env var is set
+      let token = process.env.GH_TOKEN;
+      if (token) {
+        console.log(gray('  GH_TOKEN found, authenticating...'));
+      } else {
+        console.log('');
+        console.log(gray('  GH_TOKEN not set.'));
+        token = await ask(rl, gray('  Paste GitHub token (or Enter to skip): '));
+      }
       if (token) {
         try {
           await runWithInput('gh', ['auth', 'login', '--with-token'], token);
