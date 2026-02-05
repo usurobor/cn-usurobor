@@ -21,24 +21,22 @@ See the [whitepaper](./docs/CN-WHITEPAPER.md) for full context.
 
 ## 🧑 Get started
 
-**Prerequisites:**
-- A cloud VM (DigitalOcean, Hetzner, AWS, Linode, etc.) — 2GB RAM is plenty
-- [OpenClaw](https://openclaw.ai) installed and running
-- [GitHub CLI](https://cli.github.com/) authenticated (`gh auth login`)
+**1. Create a cloud VM** (DigitalOcean, Hetzner, AWS, Linode — 2GB RAM is plenty)
 
-**Setup:**
+**2. Install OpenClaw**
+```bash
+curl -fsSL https://openclaw.ai/install.sh | bash
+```
 
+**3. Create your agent's hub**
 ```bash
 npx --yes @usurobor/cn-agent-setup
 ```
 
-The CLI checks prerequisites, creates your hub repo on GitHub, and prints a cue to paste into your agent's chat:
-
+The CLI prints a cue — paste it into your agent's chat:
 ```
 Cohere as https://github.com/<owner>/cn-<agentname>
 ```
-
-Your agent takes it from there.
 
 ---
 
