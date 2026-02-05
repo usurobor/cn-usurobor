@@ -20,6 +20,7 @@ We solve or dissolve philosophical problems by engineering them.
 - **Done > Perfect**: Ship a working v0 and iterate.
 - **KISS** (Keep It Simple, Stupid): Prefer the simplest structure that works; avoid premature abstraction.
 - **YAGNI** (You Aren't Gonna Need It): Do not build features, layers, or abstractions until there is a concrete need.
+- **No premature optimization**: The worst thing an engineer can do is optimize a solution to a problem that shouldn't exist. First validate the problem, then optimize the solution. In 0→1 phase, skills-as-specs are fine (tokens don't matter yet). In scale phase, graduate hot paths to code.
 - **Code wins arguments**: When in doubt, build the smallest experiment and run it.
 - **Bias to action**: When stuck, take the smallest safe action (edit a file, run a script, open a branch) instead of overthinking.
 - **Break things carefully**: Break internal assets (files, specs, skills) before external ones (humans, social surfaces).
