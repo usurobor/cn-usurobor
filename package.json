@@ -1,6 +1,6 @@
 {
   "name": "@usurobor/cn-agent-setup",
-  "version": "1.5.10",
+  "version": "1.5.11",
   "description": "CLI to bootstrap a cn-agent hub and wire it to the template",
   "keywords": [
     "cn-agent",
