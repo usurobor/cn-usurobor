@@ -83,7 +83,7 @@ Backlog → Claimed → In Progress → Review → Done
 | **Claimed** | Branch created: `<agent>/<topic>` | Engineer |
 | **In Progress** | Commits on branch | Engineer |
 | **Review** | Branch pushed, review requested | PM |
-| **Done** | Merged to master | — |
+| **Done** | Merged to main | — |
 
 ### How Items Move
 
@@ -107,7 +107,7 @@ Engineer requests review:
 PM reviews and merges:
 1. Review commits, test if applicable
 2. If issues: post feedback, return to In Progress
-3. If clean: merge to master, push
+3. If clean: merge to main, push
 4. Update backlog: move item to Done with date
 
 ---
@@ -128,11 +128,11 @@ Examples:
 
 1. **Create** when claiming backlog item
 2. **Push** regularly (at least daily if active)
-3. **Delete** after merge to master
+3. **Delete** after merge to main
 
-### No Direct Master Commits
+### No Direct main Commits
 
-All work goes through branches. Direct master commits only with explicit owner approval.
+All work goes through branches. Direct main commits only with explicit owner approval.
 
 ---
 
@@ -181,7 +181,7 @@ Minimal, async-friendly.
 - **When:** End of week (Sunday or Monday)
 - **Where:** `threads/weekly/YYYYMMDD.md`
 - **Content:**
-  - What shipped (merged to master)
+  - What shipped (merged to main)
   - What's in progress (open branches)
   - Blockers
   - Next week's priorities
@@ -198,7 +198,7 @@ Minimal, async-friendly.
 
 An item is **Done** when:
 
-1. ✅ Branch merged to master
+1. ✅ Branch merged to main
 2. ✅ Pushed to origin
 3. ✅ Backlog updated (item moved to Done)
 4. ✅ Any docs updated (if applicable)
@@ -270,7 +270,7 @@ If disagreement on priority:
                       ▼
 ┌─────────────────────────────────────────────────────────┐
 │                      DONE                               │
-│  (merged to master, backlog updated)                   │
+│  (merged to main, backlog updated)                   │
 └─────────────────────────────────────────────────────────┘
 ```
 
