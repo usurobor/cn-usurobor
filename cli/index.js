@@ -361,6 +361,30 @@ function isGitRepo(dir) {
       }
     }
 
+    // If gh is authed but git identity still not set, offer to set it from profile
+    if (checks['gh auth'] && !checks['git identity']) {
+      const ghName = runCapture('gh', ['api', 'user', '--jq', '.name']);
+      const ghEmail = runCapture('gh', ['api', 'user', '--jq', '.email']);
+      
+      const defaultName = ghName || ghUser;
+      const defaultEmail = ghEmail || `${ghUser}@users.noreply.github.com`;
+      
+      console.log('');
+      console.log(gray('  Set git identity from GitHub profile:'));
+      const nameInput = await ask(rl, gray(`    Name [${defaultName}]: `));
+      const emailInput = await ask(rl, gray(`    Email [${defaultEmail}]: `));
+      
+      gitName = nameInput || defaultName;
+      gitEmail = emailInput || defaultEmail;
+      
+      await run('git', ['config', '--global', 'user.name', gitName], { quiet: true });
+      await run('git', ['config', '--global', 'user.email', gitEmail], { quiet: true });
+      
+      checks['git identity'] = true;
+      details['git identity'] = `${gitName} <${gitEmail}>`;
+      console.log(`    git identity....... ${green('✓')} ${gray(`(${gitName})`)}`);
+    }
+
     // Collect failures
     const failed = Object.entries(checks)
       .filter(([_, status]) => status === false)
