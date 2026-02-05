@@ -272,7 +272,6 @@ function isGitRepo(dir) {
 
     if (failed.length > 0) {
       // Show install instructions for each failure (compact)
-      console.log('');
       console.log(red(`Missing: ${failed.join(', ')}`));
       for (const name of failed) {
         console.log(bold(`${name}:`));
