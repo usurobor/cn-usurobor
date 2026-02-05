@@ -24311,7 +24311,101 @@ var require_inbox_lib = __commonJS({
         };
       }
     }
+    var log_dir = "logs/inbox";
+    function daily_log_path(date_str) {
+      return Curry2._2(Stdlib__Printf2.sprintf({
+        TAG: (
+          /* Format */
+          0
+        ),
+        _0: {
+          TAG: (
+            /* String */
+            2
+          ),
+          _0: (
+            /* No_padding */
+            0
+          ),
+          _1: {
+            TAG: (
+              /* Char_literal */
+              12
+            ),
+            _0: (
+              /* '/' */
+              47
+            ),
+            _1: {
+              TAG: (
+                /* String */
+                2
+              ),
+              _0: (
+                /* No_padding */
+                0
+              ),
+              _1: {
+                TAG: (
+                  /* String_literal */
+                  11
+                ),
+                _0: ".md",
+                _1: (
+                  /* End_of_format */
+                  0
+                )
+              }
+            }
+          }
+        },
+        _1: "%s/%s.md"
+      }), log_dir, date_str);
+    }
+    function daily_log_header(date_str) {
+      return Curry2._1(Stdlib__Printf2.sprintf({
+        TAG: (
+          /* Format */
+          0
+        ),
+        _0: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: "# Inbox Log: ",
+          _1: {
+            TAG: (
+              /* String */
+              2
+            ),
+            _0: (
+              /* No_padding */
+              0
+            ),
+            _1: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: "\n\n| Time | Actor | Source | Decision |\n|------|-------|--------|----------|",
+              _1: (
+                /* End_of_format */
+                0
+              )
+            }
+          }
+        },
+        _1: "# Inbox Log: %s\n\n| Time | Actor | Source | Decision |\n|------|-------|--------|----------|"
+      }), Stdlib__String2.sub(date_str, 0, 4) + ("-" + (Stdlib__String2.sub(date_str, 4, 2) + ("-" + Stdlib__String2.sub(date_str, 6, 2)))));
+    }
     function format_log_row(entry) {
+      let time;
+      try {
+        time = Stdlib__String2.sub(entry.timestamp, 11, 5);
+      } catch (exn) {
+        time = entry.timestamp;
+      }
       return Curry2._5(Stdlib__Printf2.sprintf({
         TAG: (
           /* Format */
@@ -24417,7 +24511,185 @@ var require_inbox_lib = __commonJS({
           }
         },
         _1: "| %s | %s | %s/%s | `%s` |"
-      }), entry.timestamp, entry.actor, entry.peer, entry.branch, string_of_triage(entry.decision));
+      }), time, entry.actor, entry.peer, entry.branch, string_of_triage(entry.decision));
+    }
+    function update_stats(stats, param) {
+      switch (param.TAG) {
+        case /* Delete */
+        0:
+          return {
+            total: stats.total + 1 | 0,
+            deleted: stats.deleted + 1 | 0,
+            deferred: stats.deferred,
+            delegated: stats.delegated,
+            done_count: stats.done_count
+          };
+        case /* Defer */
+        1:
+          return {
+            total: stats.total + 1 | 0,
+            deleted: stats.deleted,
+            deferred: stats.deferred + 1 | 0,
+            delegated: stats.delegated,
+            done_count: stats.done_count
+          };
+        case /* Delegate */
+        2:
+          return {
+            total: stats.total + 1 | 0,
+            deleted: stats.deleted,
+            deferred: stats.deferred,
+            delegated: stats.delegated + 1 | 0,
+            done_count: stats.done_count
+          };
+        case /* Do */
+        3:
+          return {
+            total: stats.total + 1 | 0,
+            deleted: stats.deleted,
+            deferred: stats.deferred,
+            delegated: stats.delegated,
+            done_count: stats.done_count + 1 | 0
+          };
+      }
+    }
+    function format_daily_summary(stats) {
+      return Curry2._5(Stdlib__Printf2.sprintf({
+        TAG: (
+          /* Format */
+          0
+        ),
+        _0: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: "\n## Summary\n- Processed: ",
+          _1: {
+            TAG: (
+              /* Int */
+              4
+            ),
+            _0: (
+              /* Int_d */
+              0
+            ),
+            _1: (
+              /* No_padding */
+              0
+            ),
+            _2: (
+              /* No_precision */
+              0
+            ),
+            _3: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: "\n- Delete: ",
+              _1: {
+                TAG: (
+                  /* Int */
+                  4
+                ),
+                _0: (
+                  /* Int_d */
+                  0
+                ),
+                _1: (
+                  /* No_padding */
+                  0
+                ),
+                _2: (
+                  /* No_precision */
+                  0
+                ),
+                _3: {
+                  TAG: (
+                    /* String_literal */
+                    11
+                  ),
+                  _0: "\n- Defer: ",
+                  _1: {
+                    TAG: (
+                      /* Int */
+                      4
+                    ),
+                    _0: (
+                      /* Int_d */
+                      0
+                    ),
+                    _1: (
+                      /* No_padding */
+                      0
+                    ),
+                    _2: (
+                      /* No_precision */
+                      0
+                    ),
+                    _3: {
+                      TAG: (
+                        /* String_literal */
+                        11
+                      ),
+                      _0: "\n- Delegate: ",
+                      _1: {
+                        TAG: (
+                          /* Int */
+                          4
+                        ),
+                        _0: (
+                          /* Int_d */
+                          0
+                        ),
+                        _1: (
+                          /* No_padding */
+                          0
+                        ),
+                        _2: (
+                          /* No_precision */
+                          0
+                        ),
+                        _3: {
+                          TAG: (
+                            /* String_literal */
+                            11
+                          ),
+                          _0: "\n- Do: ",
+                          _1: {
+                            TAG: (
+                              /* Int */
+                              4
+                            ),
+                            _0: (
+                              /* Int_d */
+                              0
+                            ),
+                            _1: (
+                              /* No_padding */
+                              0
+                            ),
+                            _2: (
+                              /* No_precision */
+                              0
+                            ),
+                            _3: (
+                              /* End_of_format */
+                              0
+                            )
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        _1: "\n## Summary\n- Processed: %d\n- Delete: %d\n- Defer: %d\n- Delegate: %d\n- Do: %d"
+      }), stats.total, stats.deleted, stats.deferred, stats.delegated, stats.done_count);
     }
     function action_of_string(param) {
       switch (param) {
@@ -24845,7 +25117,13 @@ var require_inbox_lib = __commonJS({
         };
       }
     }
-    var log_header = "# Inbox Triage Log\n\n| Timestamp | Actor | Source | Decision |\n|-----------|-------|--------|----------|";
+    var empty_stats = {
+      total: 0,
+      deleted: 0,
+      deferred: 0,
+      delegated: 0,
+      done_count: 0
+    };
     var all_actions = {
       hd: (
         /* Check */
@@ -24879,8 +25157,13 @@ var require_inbox_lib = __commonJS({
       format_log_entry,
       format_log_entry_human,
       parse_log_entry,
-      log_header,
+      log_dir,
+      daily_log_path,
+      daily_log_header,
       format_log_row,
+      empty_stats,
+      update_stats,
+      format_daily_summary,
       action_of_string,
       string_of_action,
       all_actions,

@@ -123,16 +123,51 @@ let parse_log_entry line =
        | None -> None)
   | _ -> None
 
-(* Format for appending to log file *)
-let log_header = "# Inbox Triage Log\n\n| Timestamp | Actor | Source | Decision |\n|-----------|-------|--------|----------|"
+(* === Daily Log Files === *)
+
+(* logs/inbox/YYYYMMDD.md *)
+let log_dir = "logs/inbox"
+
+let daily_log_path date_str =
+  Printf.sprintf "%s/%s.md" log_dir date_str
+
+let daily_log_header date_str =
+  Printf.sprintf "# Inbox Log: %s\n\n| Time | Actor | Source | Decision |\n|------|-------|--------|----------|"
+    (String.sub date_str 0 4 ^ "-" ^ String.sub date_str 4 2 ^ "-" ^ String.sub date_str 6 2)
 
 let format_log_row entry =
+  (* Extract time from ISO timestamp *)
+  let time = 
+    try String.sub entry.timestamp 11 5  (* HH:MM *)
+    with _ -> entry.timestamp 
+  in
   Printf.sprintf "| %s | %s | %s/%s | `%s` |"
-    entry.timestamp
+    time
     entry.actor
     entry.peer
     entry.branch
     (string_of_triage entry.decision)
+
+(* Summary stats for daily log *)
+type daily_stats = {
+  total: int;
+  deleted: int;
+  deferred: int;
+  delegated: int;
+  done_count: int;
+}
+
+let empty_stats = { total = 0; deleted = 0; deferred = 0; delegated = 0; done_count = 0 }
+
+let update_stats stats = function
+  | Delete _ -> { stats with total = stats.total + 1; deleted = stats.deleted + 1 }
+  | Defer _ -> { stats with total = stats.total + 1; deferred = stats.deferred + 1 }
+  | Delegate _ -> { stats with total = stats.total + 1; delegated = stats.delegated + 1 }
+  | Do _ -> { stats with total = stats.total + 1; done_count = stats.done_count + 1 }
+
+let format_daily_summary stats =
+  Printf.sprintf "\n## Summary\n- Processed: %d\n- Delete: %d\n- Defer: %d\n- Delegate: %d\n- Do: %d"
+    stats.total stats.deleted stats.deferred stats.delegated stats.done_count
 
 let action_of_string = function
   | "check" -> Some Check
