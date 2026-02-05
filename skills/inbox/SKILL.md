@@ -180,8 +180,17 @@ From pi:
 
 ## Triage Log (Audit Trail)
 
-Every triage decision is logged to `state/inbox-log.md`:
+Daily log files in `logs/inbox/YYYYMMDD.md`:
 
+```
+logs/
+└── inbox/
+    ├── 20260205.md
+    ├── 20260206.md
+    └── ...
+```
+
+Each entry:
 ```ocaml
 type triage_entry = {
   timestamp: string;    (* ISO 8601 *)
@@ -192,21 +201,28 @@ type triage_entry = {
 }
 ```
 
-Log format (markdown table):
+Daily log format:
 ```markdown
-| Timestamp | Actor | Source | Decision |
-|-----------|-------|--------|----------|
-| 2026-02-05T17:20:00Z | sigma | pi/review-request | `do:merge` |
-| 2026-02-05T17:21:00Z | sigma | pi/stale-branch | `delete:superseded by v2` |
+# Inbox Log: 2026-02-05
+
+| Time | Actor | Source | Decision |
+|------|-------|--------|----------|
+| 17:20 | sigma | pi/review-request | `do:merge` |
+| 17:21 | sigma | pi/stale-branch | `delete:superseded` |
+| 17:35 | sigma | omega/urgent | `defer:blocked on X` |
+
+## Summary
+- Processed: 3
+- Delete: 1
+- Defer: 1
+- Do: 1
 ```
 
-Human-readable format:
-```
-[2026-02-05T17:20:00Z] sigma triaged pi/review-request → Merge branch
-[2026-02-05T17:21:00Z] sigma triaged pi/stale-branch → Remove branch (superseded by v2)
-```
-
-Easy to audit: what happened to each inbox item, when, why.
+Benefits:
+- Easy to review any specific day
+- Natural archival (one file per day)
+- Spot patterns over time
+- Won't grow unbounded
 
 ---
 

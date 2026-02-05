@@ -146,7 +146,41 @@ let%expect_test "format_log_row" =
     actor = "sigma"
   } in
   print_endline (format_log_row entry);
-  [%expect {| | 2026-02-05T17:20:00Z | sigma | pi/review-request | `delete:duplicate` | |}]
+  [%expect {| | 17:20 | sigma | pi/review-request | `delete:duplicate` | |}]
+
+let%expect_test "daily_log_path" =
+  print_endline (daily_log_path "20260205");
+  [%expect {| logs/inbox/20260205.md |}]
+
+let%expect_test "daily_log_header" =
+  print_endline (daily_log_header "20260205");
+  [%expect {|
+    # Inbox Log: 2026-02-05
+
+    | Time | Actor | Source | Decision |
+    |------|-------|--------|----------|
+  |}]
+
+let%expect_test "daily_stats" =
+  let decisions = [
+    Delete "stale";
+    Delete "dup";
+    Defer "blocked";
+    Delegate "pi";
+    Do Merge;
+    Do (Reply "resp")
+  ] in
+  let stats = List.fold_left update_stats empty_stats decisions in
+  print_endline (format_daily_summary stats);
+  [%expect {|
+
+    ## Summary
+    - Processed: 6
+    - Delete: 2
+    - Defer: 1
+    - Delegate: 1
+    - Do: 2
+  |}]
 
 (* === Action parsing === *)
 
