@@ -375,3 +375,43 @@ let%expect_test "triage_to_actions do merge" =
     git push origin --delete pi/feature
     log append logs/inbox.md
   |}]
+
+(* === Git Command Generation (testable shell commands) === *)
+
+let%expect_test "git_cmd_of_action with hub_path" =
+  let hub = "/path/to/hub" in
+  [
+    Git_checkout "main";
+    Git_merge "pi/feature";
+    Git_push ("origin", "main");
+    Git_branch_delete "pi/old";
+    Git_remote_delete ("origin", "pi/old");
+  ]
+  |> List.iter (fun a ->
+    match git_cmd_of_action ~hub_path:hub a with
+    | Some cmd -> print_endline cmd
+    | None -> print_endline "NONE");
+  [%expect {|
+    cd /path/to/hub && git checkout main
+    cd /path/to/hub && git merge pi/feature
+    cd /path/to/hub && git push origin main
+    cd /path/to/hub && git branch -d pi/old
+    cd /path/to/hub && git push origin --delete pi/old
+  |}]
+
+let%expect_test "git_cmd_of_action file actions return None" =
+  let hub = "/hub" in
+  [
+    File_write ("test.md", "content");
+    Dir_create "logs";
+    Log_append ("log.md", "entry");
+  ]
+  |> List.iter (fun a ->
+    match git_cmd_of_action ~hub_path:hub a with
+    | Some _ -> print_endline "SOME"
+    | None -> print_endline "NONE");
+  [%expect {|
+    NONE
+    NONE
+    NONE
+  |}]

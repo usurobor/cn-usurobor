@@ -86,26 +86,22 @@ end
 
 let execute_action ~hub_path action =
   try
-    match action with
-    | Git_checkout b -> 
-        run_cmd (Printf.sprintf "cd %s && git checkout %s" hub_path b) |> Option.is_some
-    | Git_merge b -> 
-        run_cmd (Printf.sprintf "cd %s && git merge %s" hub_path b) |> Option.is_some
-    | Git_push (r, b) -> 
-        run_cmd (Printf.sprintf "cd %s && git push %s %s" hub_path r b) |> Option.is_some
-    | Git_branch_delete b -> 
-        run_cmd (Printf.sprintf "cd %s && git branch -d %s" hub_path b) |> Option.is_some
-    | Git_remote_delete (r, b) -> 
-        run_cmd (Printf.sprintf "cd %s && git push %s --delete %s" hub_path r b) |> Option.is_some
-    | File_write (p, content) -> 
-        Fs_write.write_file_sync p content; true
-    | Dir_create p -> 
-        Fs_write.mkdir_sync p [%mel.obj { recursive = true }]; true
-    | Log_append (p, line) ->
-        (* Ensure parent dir exists *)
-        let dir = Path.dirname p in
-        Fs_write.mkdir_sync dir [%mel.obj { recursive = true }];
-        Fs_write.append_file_sync p (line ^ "\n"); true
+    match git_cmd_of_action ~hub_path action with
+    | Some cmd -> 
+        (* Git action: run the generated command *)
+        run_cmd cmd |> Option.is_some
+    | None ->
+        (* File action: use Node.js fs *)
+        match action with
+        | File_write (p, content) -> 
+            Fs_write.write_file_sync p content; true
+        | Dir_create p -> 
+            Fs_write.mkdir_sync p [%mel.obj { recursive = true }]; true
+        | Log_append (p, line) ->
+            let dir = Path.dirname p in
+            Fs_write.mkdir_sync dir [%mel.obj { recursive = true }];
+            Fs_write.append_file_sync p (line ^ "\n"); true
+        | _ -> false  (* shouldn't happen *)
   with _ -> 
     print_endline (Printf.sprintf "  ✗ Failed: %s" (string_of_atomic_action action));
     false
