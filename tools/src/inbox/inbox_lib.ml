@@ -277,3 +277,89 @@ let format_alerts alerts =
       (alerts |> List.concat_map (fun (peer, branches) ->
         Printf.sprintf "From %s:" peer ::
         (branches |> List.map (fun b -> Printf.sprintf "  %s" b))))
+
+(* === Triage → Actions mapping === *)
+
+(* Convert triage decision to list of atomic actions.
+   Uses Cn_actions_lib types when integrated; for now, returns action descriptions. *)
+
+type atomic_action =
+  | Git_checkout of string
+  | Git_merge of string
+  | Git_push of string * string  (* remote, branch *)
+  | Git_branch_delete of string
+  | Git_remote_delete of string * string  (* remote, branch *)
+  | File_write of string * string  (* path, content *)
+  | Dir_create of string
+  | Log_append of string * string  (* path, line *)
+
+let string_of_atomic_action = function
+  | Git_checkout b -> "git checkout " ^ b
+  | Git_merge b -> "git merge " ^ b
+  | Git_push (r, b) -> "git push " ^ r ^ " " ^ b
+  | Git_branch_delete b -> "git branch -d " ^ b
+  | Git_remote_delete (r, b) -> "git push " ^ r ^ " --delete " ^ b
+  | File_write (p, _) -> "file write " ^ p
+  | Dir_create p -> "mkdir -p " ^ p
+  | Log_append (p, _) -> "log append " ^ p
+
+(* Generate actions for a triage decision on an inbound branch *)
+let triage_to_actions ~log_path ~branch triage =
+  match triage with
+  | Delete (Reason r) ->
+      (* Delete: remove branch locally and remotely, log *)
+      [
+        Git_branch_delete branch;
+        Git_remote_delete ("origin", branch);
+        Log_append (log_path, Printf.sprintf "deleted: %s (%s)" branch r);
+      ]
+  | Defer (Reason r) ->
+      (* Defer: just log, keep branch *)
+      [
+        Log_append (log_path, Printf.sprintf "deferred: %s (%s)" branch r);
+      ]
+  | Delegate (Actor a) ->
+      (* Delegate: push to peer's repo, delete locally *)
+      [
+        Git_push (Printf.sprintf "cn-%s" a, branch);
+        Git_branch_delete branch;
+        Git_remote_delete ("origin", branch);
+        Log_append (log_path, Printf.sprintf "delegated: %s to %s" branch a);
+      ]
+  | Do Merge ->
+      (* Merge: checkout main, merge, push, cleanup *)
+      [
+        Git_checkout "main";
+        Git_merge branch;
+        Git_push ("origin", "main");
+        Git_branch_delete branch;
+        Git_remote_delete ("origin", branch);
+        Log_append (log_path, Printf.sprintf "merged: %s" branch);
+      ]
+  | Do (Reply (BranchName reply_branch)) ->
+      (* Reply: create reply branch, push to peer - agent creates content separately *)
+      [
+        Log_append (log_path, Printf.sprintf "reply queued: %s -> %s" branch reply_branch);
+      ]
+  | Do (Custom (Description desc)) ->
+      (* Custom: just log, agent handles manually *)
+      [
+        Log_append (log_path, Printf.sprintf "custom: %s (%s)" branch desc);
+      ]
+
+(* Format action plan for review before execution *)
+let format_action_plan actions =
+  actions |> List.mapi (fun i a -> 
+    Printf.sprintf "  %d. %s" (i + 1) (string_of_atomic_action a))
+
+(* === Thread materialization === *)
+
+(* Materialize an inbound branch as a thread file for agent review *)
+let materialize_thread_actions ~threads_dir ~branch ~peer ~content =
+  let thread_path = Printf.sprintf "%s/inbox/%s-%s.md" threads_dir peer 
+    (branch |> String.split_on_char '/' |> List.rev |> List.hd) in
+  [
+    Dir_create (Printf.sprintf "%s/inbox" threads_dir);
+    File_write (thread_path, content);
+    Log_append ("logs/inbox.md", Printf.sprintf "materialized: %s/%s -> %s" peer branch thread_path);
+  ]

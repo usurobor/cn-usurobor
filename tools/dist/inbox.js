@@ -25159,6 +25159,791 @@ var require_inbox_lib = __commonJS({
         };
       }
     }
+    function string_of_atomic_action(b) {
+      switch (b.TAG) {
+        case /* Git_checkout */
+        0:
+          return "git checkout " + b._0;
+        case /* Git_merge */
+        1:
+          return "git merge " + b._0;
+        case /* Git_push */
+        2:
+          return "git push " + (b._0 + (" " + b._1));
+        case /* Git_branch_delete */
+        3:
+          return "git branch -d " + b._0;
+        case /* Git_remote_delete */
+        4:
+          return "git push " + (b._0 + (" --delete " + b._1));
+        case /* File_write */
+        5:
+          return "file write " + b._0;
+        case /* Dir_create */
+        6:
+          return "mkdir -p " + b._0;
+        case /* Log_append */
+        7:
+          return "log append " + b._0;
+      }
+    }
+    function triage_to_actions(log_path, branch, triage) {
+      switch (triage.TAG) {
+        case /* Delete */
+        0:
+          return {
+            hd: {
+              TAG: (
+                /* Git_branch_delete */
+                3
+              ),
+              _0: branch
+            },
+            tl: {
+              hd: {
+                TAG: (
+                  /* Git_remote_delete */
+                  4
+                ),
+                _0: "origin",
+                _1: branch
+              },
+              tl: {
+                hd: {
+                  TAG: (
+                    /* Log_append */
+                    7
+                  ),
+                  _0: log_path,
+                  _1: Curry2._2(Stdlib__Printf2.sprintf({
+                    TAG: (
+                      /* Format */
+                      0
+                    ),
+                    _0: {
+                      TAG: (
+                        /* String_literal */
+                        11
+                      ),
+                      _0: "deleted: ",
+                      _1: {
+                        TAG: (
+                          /* String */
+                          2
+                        ),
+                        _0: (
+                          /* No_padding */
+                          0
+                        ),
+                        _1: {
+                          TAG: (
+                            /* String_literal */
+                            11
+                          ),
+                          _0: " (",
+                          _1: {
+                            TAG: (
+                              /* String */
+                              2
+                            ),
+                            _0: (
+                              /* No_padding */
+                              0
+                            ),
+                            _1: {
+                              TAG: (
+                                /* Char_literal */
+                                12
+                              ),
+                              _0: (
+                                /* ')' */
+                                41
+                              ),
+                              _1: (
+                                /* End_of_format */
+                                0
+                              )
+                            }
+                          }
+                        }
+                      }
+                    },
+                    _1: "deleted: %s (%s)"
+                  }), branch, triage._0._0)
+                },
+                tl: (
+                  /* [] */
+                  0
+                )
+              }
+            }
+          };
+        case /* Defer */
+        1:
+          return {
+            hd: {
+              TAG: (
+                /* Log_append */
+                7
+              ),
+              _0: log_path,
+              _1: Curry2._2(Stdlib__Printf2.sprintf({
+                TAG: (
+                  /* Format */
+                  0
+                ),
+                _0: {
+                  TAG: (
+                    /* String_literal */
+                    11
+                  ),
+                  _0: "deferred: ",
+                  _1: {
+                    TAG: (
+                      /* String */
+                      2
+                    ),
+                    _0: (
+                      /* No_padding */
+                      0
+                    ),
+                    _1: {
+                      TAG: (
+                        /* String_literal */
+                        11
+                      ),
+                      _0: " (",
+                      _1: {
+                        TAG: (
+                          /* String */
+                          2
+                        ),
+                        _0: (
+                          /* No_padding */
+                          0
+                        ),
+                        _1: {
+                          TAG: (
+                            /* Char_literal */
+                            12
+                          ),
+                          _0: (
+                            /* ')' */
+                            41
+                          ),
+                          _1: (
+                            /* End_of_format */
+                            0
+                          )
+                        }
+                      }
+                    }
+                  }
+                },
+                _1: "deferred: %s (%s)"
+              }), branch, triage._0._0)
+            },
+            tl: (
+              /* [] */
+              0
+            )
+          };
+        case /* Delegate */
+        2:
+          const a = triage._0._0;
+          return {
+            hd: {
+              TAG: (
+                /* Git_push */
+                2
+              ),
+              _0: Curry2._1(Stdlib__Printf2.sprintf({
+                TAG: (
+                  /* Format */
+                  0
+                ),
+                _0: {
+                  TAG: (
+                    /* String_literal */
+                    11
+                  ),
+                  _0: "cn-",
+                  _1: {
+                    TAG: (
+                      /* String */
+                      2
+                    ),
+                    _0: (
+                      /* No_padding */
+                      0
+                    ),
+                    _1: (
+                      /* End_of_format */
+                      0
+                    )
+                  }
+                },
+                _1: "cn-%s"
+              }), a),
+              _1: branch
+            },
+            tl: {
+              hd: {
+                TAG: (
+                  /* Git_branch_delete */
+                  3
+                ),
+                _0: branch
+              },
+              tl: {
+                hd: {
+                  TAG: (
+                    /* Git_remote_delete */
+                    4
+                  ),
+                  _0: "origin",
+                  _1: branch
+                },
+                tl: {
+                  hd: {
+                    TAG: (
+                      /* Log_append */
+                      7
+                    ),
+                    _0: log_path,
+                    _1: Curry2._2(Stdlib__Printf2.sprintf({
+                      TAG: (
+                        /* Format */
+                        0
+                      ),
+                      _0: {
+                        TAG: (
+                          /* String_literal */
+                          11
+                        ),
+                        _0: "delegated: ",
+                        _1: {
+                          TAG: (
+                            /* String */
+                            2
+                          ),
+                          _0: (
+                            /* No_padding */
+                            0
+                          ),
+                          _1: {
+                            TAG: (
+                              /* String_literal */
+                              11
+                            ),
+                            _0: " to ",
+                            _1: {
+                              TAG: (
+                                /* String */
+                                2
+                              ),
+                              _0: (
+                                /* No_padding */
+                                0
+                              ),
+                              _1: (
+                                /* End_of_format */
+                                0
+                              )
+                            }
+                          }
+                        }
+                      },
+                      _1: "delegated: %s to %s"
+                    }), branch, a)
+                  },
+                  tl: (
+                    /* [] */
+                    0
+                  )
+                }
+              }
+            }
+          };
+        case /* Do */
+        3:
+          const match = triage._0;
+          if (
+            /* tag */
+            typeof match === "number" || typeof match === "string"
+          ) {
+            return {
+              hd: {
+                TAG: (
+                  /* Git_checkout */
+                  0
+                ),
+                _0: "main"
+              },
+              tl: {
+                hd: {
+                  TAG: (
+                    /* Git_merge */
+                    1
+                  ),
+                  _0: branch
+                },
+                tl: {
+                  hd: {
+                    TAG: (
+                      /* Git_push */
+                      2
+                    ),
+                    _0: "origin",
+                    _1: "main"
+                  },
+                  tl: {
+                    hd: {
+                      TAG: (
+                        /* Git_branch_delete */
+                        3
+                      ),
+                      _0: branch
+                    },
+                    tl: {
+                      hd: {
+                        TAG: (
+                          /* Git_remote_delete */
+                          4
+                        ),
+                        _0: "origin",
+                        _1: branch
+                      },
+                      tl: {
+                        hd: {
+                          TAG: (
+                            /* Log_append */
+                            7
+                          ),
+                          _0: log_path,
+                          _1: Curry2._1(Stdlib__Printf2.sprintf({
+                            TAG: (
+                              /* Format */
+                              0
+                            ),
+                            _0: {
+                              TAG: (
+                                /* String_literal */
+                                11
+                              ),
+                              _0: "merged: ",
+                              _1: {
+                                TAG: (
+                                  /* String */
+                                  2
+                                ),
+                                _0: (
+                                  /* No_padding */
+                                  0
+                                ),
+                                _1: (
+                                  /* End_of_format */
+                                  0
+                                )
+                              }
+                            },
+                            _1: "merged: %s"
+                          }), branch)
+                        },
+                        tl: (
+                          /* [] */
+                          0
+                        )
+                      }
+                    }
+                  }
+                }
+              }
+            };
+          } else if (match.TAG === /* Reply */
+          0) {
+            return {
+              hd: {
+                TAG: (
+                  /* Log_append */
+                  7
+                ),
+                _0: log_path,
+                _1: Curry2._2(Stdlib__Printf2.sprintf({
+                  TAG: (
+                    /* Format */
+                    0
+                  ),
+                  _0: {
+                    TAG: (
+                      /* String_literal */
+                      11
+                    ),
+                    _0: "reply queued: ",
+                    _1: {
+                      TAG: (
+                        /* String */
+                        2
+                      ),
+                      _0: (
+                        /* No_padding */
+                        0
+                      ),
+                      _1: {
+                        TAG: (
+                          /* String_literal */
+                          11
+                        ),
+                        _0: " -> ",
+                        _1: {
+                          TAG: (
+                            /* String */
+                            2
+                          ),
+                          _0: (
+                            /* No_padding */
+                            0
+                          ),
+                          _1: (
+                            /* End_of_format */
+                            0
+                          )
+                        }
+                      }
+                    }
+                  },
+                  _1: "reply queued: %s -> %s"
+                }), branch, match._0._0)
+              },
+              tl: (
+                /* [] */
+                0
+              )
+            };
+          } else {
+            return {
+              hd: {
+                TAG: (
+                  /* Log_append */
+                  7
+                ),
+                _0: log_path,
+                _1: Curry2._2(Stdlib__Printf2.sprintf({
+                  TAG: (
+                    /* Format */
+                    0
+                  ),
+                  _0: {
+                    TAG: (
+                      /* String_literal */
+                      11
+                    ),
+                    _0: "custom: ",
+                    _1: {
+                      TAG: (
+                        /* String */
+                        2
+                      ),
+                      _0: (
+                        /* No_padding */
+                        0
+                      ),
+                      _1: {
+                        TAG: (
+                          /* String_literal */
+                          11
+                        ),
+                        _0: " (",
+                        _1: {
+                          TAG: (
+                            /* String */
+                            2
+                          ),
+                          _0: (
+                            /* No_padding */
+                            0
+                          ),
+                          _1: {
+                            TAG: (
+                              /* Char_literal */
+                              12
+                            ),
+                            _0: (
+                              /* ')' */
+                              41
+                            ),
+                            _1: (
+                              /* End_of_format */
+                              0
+                            )
+                          }
+                        }
+                      }
+                    }
+                  },
+                  _1: "custom: %s (%s)"
+                }), branch, match._0._0)
+              },
+              tl: (
+                /* [] */
+                0
+              )
+            };
+          }
+      }
+    }
+    function format_action_plan(actions) {
+      return Stdlib__List2.mapi((function(i, a) {
+        return Curry2._2(Stdlib__Printf2.sprintf({
+          TAG: (
+            /* Format */
+            0
+          ),
+          _0: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: "  ",
+            _1: {
+              TAG: (
+                /* Int */
+                4
+              ),
+              _0: (
+                /* Int_d */
+                0
+              ),
+              _1: (
+                /* No_padding */
+                0
+              ),
+              _2: (
+                /* No_precision */
+                0
+              ),
+              _3: {
+                TAG: (
+                  /* String_literal */
+                  11
+                ),
+                _0: ". ",
+                _1: {
+                  TAG: (
+                    /* String */
+                    2
+                  ),
+                  _0: (
+                    /* No_padding */
+                    0
+                  ),
+                  _1: (
+                    /* End_of_format */
+                    0
+                  )
+                }
+              }
+            }
+          },
+          _1: "  %d. %s"
+        }), i + 1 | 0, string_of_atomic_action(a));
+      }), actions);
+    }
+    function materialize_thread_actions(threads_dir, branch, peer, content) {
+      const thread_path = Curry2._3(Stdlib__Printf2.sprintf({
+        TAG: (
+          /* Format */
+          0
+        ),
+        _0: {
+          TAG: (
+            /* String */
+            2
+          ),
+          _0: (
+            /* No_padding */
+            0
+          ),
+          _1: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: "/inbox/",
+            _1: {
+              TAG: (
+                /* String */
+                2
+              ),
+              _0: (
+                /* No_padding */
+                0
+              ),
+              _1: {
+                TAG: (
+                  /* Char_literal */
+                  12
+                ),
+                _0: (
+                  /* '-' */
+                  45
+                ),
+                _1: {
+                  TAG: (
+                    /* String */
+                    2
+                  ),
+                  _0: (
+                    /* No_padding */
+                    0
+                  ),
+                  _1: {
+                    TAG: (
+                      /* String_literal */
+                      11
+                    ),
+                    _0: ".md",
+                    _1: (
+                      /* End_of_format */
+                      0
+                    )
+                  }
+                }
+              }
+            }
+          }
+        },
+        _1: "%s/inbox/%s-%s.md"
+      }), threads_dir, peer, Stdlib__List2.hd(Stdlib__List2.rev(Stdlib__String2.split_on_char(
+        /* '/' */
+        47,
+        branch
+      ))));
+      return {
+        hd: {
+          TAG: (
+            /* Dir_create */
+            6
+          ),
+          _0: Curry2._1(Stdlib__Printf2.sprintf({
+            TAG: (
+              /* Format */
+              0
+            ),
+            _0: {
+              TAG: (
+                /* String */
+                2
+              ),
+              _0: (
+                /* No_padding */
+                0
+              ),
+              _1: {
+                TAG: (
+                  /* String_literal */
+                  11
+                ),
+                _0: "/inbox",
+                _1: (
+                  /* End_of_format */
+                  0
+                )
+              }
+            },
+            _1: "%s/inbox"
+          }), threads_dir)
+        },
+        tl: {
+          hd: {
+            TAG: (
+              /* File_write */
+              5
+            ),
+            _0: thread_path,
+            _1: content
+          },
+          tl: {
+            hd: {
+              TAG: (
+                /* Log_append */
+                7
+              ),
+              _0: "logs/inbox.md",
+              _1: Curry2._3(Stdlib__Printf2.sprintf({
+                TAG: (
+                  /* Format */
+                  0
+                ),
+                _0: {
+                  TAG: (
+                    /* String_literal */
+                    11
+                  ),
+                  _0: "materialized: ",
+                  _1: {
+                    TAG: (
+                      /* String */
+                      2
+                    ),
+                    _0: (
+                      /* No_padding */
+                      0
+                    ),
+                    _1: {
+                      TAG: (
+                        /* Char_literal */
+                        12
+                      ),
+                      _0: (
+                        /* '/' */
+                        47
+                      ),
+                      _1: {
+                        TAG: (
+                          /* String */
+                          2
+                        ),
+                        _0: (
+                          /* No_padding */
+                          0
+                        ),
+                        _1: {
+                          TAG: (
+                            /* String_literal */
+                            11
+                          ),
+                          _0: " -> ",
+                          _1: {
+                            TAG: (
+                              /* String */
+                              2
+                            ),
+                            _0: (
+                              /* No_padding */
+                              0
+                            ),
+                            _1: (
+                              /* End_of_format */
+                              0
+                            )
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                _1: "materialized: %s/%s -> %s"
+              }), peer, branch, thread_path)
+            },
+            tl: (
+              /* [] */
+              0
+            )
+          }
+        }
+      };
+    }
     var all_commands = {
       hd: (
         /* Check */
@@ -25219,7 +26004,11 @@ var require_inbox_lib = __commonJS({
       report_result,
       collect_alerts,
       collect_branches,
-      format_alerts
+      format_alerts,
+      string_of_atomic_action,
+      triage_to_actions,
+      format_action_plan,
+      materialize_thread_actions
     };
   }
 });
@@ -25249,7 +26038,7 @@ function run_cmd(cmd) {
     return;
   }
 }
-function find_inbound_branches(repo_path, my_name) {
+function find_inbound_from_peer(hub_path, peer_name) {
   const cmd = Curry._2(Stdlib__Printf.sprintf({
     TAG: (
       /* Format */
@@ -25301,47 +26090,17 @@ function find_inbound_branches(repo_path, my_name) {
       }
     },
     _1: "cd %s && git branch -r 2>/dev/null | grep 'origin/%s/' || true"
-  }), repo_path, my_name);
-  return Inbox_lib.filter_branches(Stdlib__Option.value(run_cmd(cmd), ""));
+  }), hub_path, peer_name);
+  return Stdlib__List.map((function(b) {
+    const rest = Inbox_lib.strip_prefix("origin/", b);
+    if (rest !== void 0) {
+      return rest;
+    } else {
+      return b;
+    }
+  }), Inbox_lib.filter_branches(Stdlib__Option.value(run_cmd(cmd), "")));
 }
-function check_peer(my_name, peer) {
-  if (!Fs.existsSync(peer.repo_path)) {
-    return {
-      TAG: (
-        /* Skipped */
-        1
-      ),
-      _0: peer.name,
-      _1: Curry._1(Stdlib__Printf.sprintf({
-        TAG: (
-          /* Format */
-          0
-        ),
-        _0: {
-          TAG: (
-            /* String_literal */
-            11
-          ),
-          _0: "not found: ",
-          _1: {
-            TAG: (
-              /* String */
-              2
-            ),
-            _0: (
-              /* No_padding */
-              0
-            ),
-            _1: (
-              /* End_of_format */
-              0
-            )
-          }
-        },
-        _1: "not found: %s"
-      }), peer.repo_path)
-    };
-  }
+function check_peer_inbound(hub_path, peer) {
   run_cmd(Curry._1(Stdlib__Printf.sprintf({
     TAG: (
       /* Format */
@@ -25376,8 +26135,8 @@ function check_peer(my_name, peer) {
       }
     },
     _1: "cd %s && git fetch --all 2>&1"
-  }), peer.repo_path));
-  const branches = find_inbound_branches(peer.repo_path, my_name);
+  }), hub_path));
+  const branches = find_inbound_from_peer(hub_path, peer.name);
   return {
     TAG: (
       /* Fetched */
@@ -25387,7 +26146,7 @@ function check_peer(my_name, peer) {
     _1: branches
   };
 }
-function run_check(_hub_path, my_name, peers) {
+function run_check(hub_path, my_name, peers) {
   console.log(Curry._2(Stdlib__Printf.sprintf({
     TAG: (
       /* Format */
@@ -25449,7 +26208,7 @@ function run_check(_hub_path, my_name, peers) {
     _1: "Checking inbox for %s (%d peers)...\n"
   }), my_name, Stdlib__List.length(peers)));
   const results = Stdlib__List.map((function(param) {
-    return check_peer(my_name, param);
+    return check_peer_inbound(hub_path, param);
   }), peers);
   Stdlib__List.iter((function(r) {
     console.log(Inbox_lib.report_result(r));
@@ -25465,15 +26224,983 @@ function run_check(_hub_path, my_name, peers) {
     return 0;
   }
 }
-function run_process(_hub_path, _my_name, _peers) {
-  console.log("inbox process: not yet implemented");
-  console.log("Will: show first inbound branch, prompt for triage action");
-  return 1;
+var Fs_write = {};
+function execute_action(action) {
+  try {
+    switch (action.TAG) {
+      case /* Git_checkout */
+      0:
+        return Stdlib__Option.is_some(run_cmd(Curry._1(Stdlib__Printf.sprintf({
+          TAG: (
+            /* Format */
+            0
+          ),
+          _0: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: "git checkout ",
+            _1: {
+              TAG: (
+                /* String */
+                2
+              ),
+              _0: (
+                /* No_padding */
+                0
+              ),
+              _1: (
+                /* End_of_format */
+                0
+              )
+            }
+          },
+          _1: "git checkout %s"
+        }), action._0)));
+      case /* Git_merge */
+      1:
+        return Stdlib__Option.is_some(run_cmd(Curry._1(Stdlib__Printf.sprintf({
+          TAG: (
+            /* Format */
+            0
+          ),
+          _0: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: "git merge ",
+            _1: {
+              TAG: (
+                /* String */
+                2
+              ),
+              _0: (
+                /* No_padding */
+                0
+              ),
+              _1: (
+                /* End_of_format */
+                0
+              )
+            }
+          },
+          _1: "git merge %s"
+        }), action._0)));
+      case /* Git_push */
+      2:
+        return Stdlib__Option.is_some(run_cmd(Curry._2(Stdlib__Printf.sprintf({
+          TAG: (
+            /* Format */
+            0
+          ),
+          _0: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: "git push ",
+            _1: {
+              TAG: (
+                /* String */
+                2
+              ),
+              _0: (
+                /* No_padding */
+                0
+              ),
+              _1: {
+                TAG: (
+                  /* Char_literal */
+                  12
+                ),
+                _0: (
+                  /* ' ' */
+                  32
+                ),
+                _1: {
+                  TAG: (
+                    /* String */
+                    2
+                  ),
+                  _0: (
+                    /* No_padding */
+                    0
+                  ),
+                  _1: (
+                    /* End_of_format */
+                    0
+                  )
+                }
+              }
+            }
+          },
+          _1: "git push %s %s"
+        }), action._0, action._1)));
+      case /* Git_branch_delete */
+      3:
+        return Stdlib__Option.is_some(run_cmd(Curry._1(Stdlib__Printf.sprintf({
+          TAG: (
+            /* Format */
+            0
+          ),
+          _0: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: "git branch -d ",
+            _1: {
+              TAG: (
+                /* String */
+                2
+              ),
+              _0: (
+                /* No_padding */
+                0
+              ),
+              _1: (
+                /* End_of_format */
+                0
+              )
+            }
+          },
+          _1: "git branch -d %s"
+        }), action._0)));
+      case /* Git_remote_delete */
+      4:
+        return Stdlib__Option.is_some(run_cmd(Curry._2(Stdlib__Printf.sprintf({
+          TAG: (
+            /* Format */
+            0
+          ),
+          _0: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: "git push ",
+            _1: {
+              TAG: (
+                /* String */
+                2
+              ),
+              _0: (
+                /* No_padding */
+                0
+              ),
+              _1: {
+                TAG: (
+                  /* String_literal */
+                  11
+                ),
+                _0: " --delete ",
+                _1: {
+                  TAG: (
+                    /* String */
+                    2
+                  ),
+                  _0: (
+                    /* No_padding */
+                    0
+                  ),
+                  _1: (
+                    /* End_of_format */
+                    0
+                  )
+                }
+              }
+            }
+          },
+          _1: "git push %s --delete %s"
+        }), action._0, action._1)));
+      case /* File_write */
+      5:
+        Fs.writeFileSync(action._0, action._1);
+        return true;
+      case /* Dir_create */
+      6:
+        Fs.mkdirSync(action._0, {
+          recursive: true
+        });
+        return true;
+      case /* Log_append */
+      7:
+        const p = action._0;
+        const dir = Path.dirname(p);
+        Fs.mkdirSync(dir, {
+          recursive: true
+        });
+        Fs.appendFileSync(p, action._1 + "\n");
+        return true;
+    }
+  } catch (exn) {
+    console.log(Curry._1(Stdlib__Printf.sprintf({
+      TAG: (
+        /* Format */
+        0
+      ),
+      _0: {
+        TAG: (
+          /* String_literal */
+          11
+        ),
+        _0: "  \xE2\x9C\x97 Failed: ",
+        _1: {
+          TAG: (
+            /* String */
+            2
+          ),
+          _0: (
+            /* No_padding */
+            0
+          ),
+          _1: (
+            /* End_of_format */
+            0
+          )
+        }
+      },
+      _1: "  \xE2\x9C\x97 Failed: %s"
+    }), Inbox_lib.string_of_atomic_action(action)));
+    return false;
+  }
 }
-function run_flush(_hub_path, _my_name, _peers) {
-  console.log("inbox flush: not yet implemented");
-  console.log("Will: process all inbound branches in sequence");
-  return 1;
+function execute_actions(actions) {
+  let _param = actions;
+  while (true) {
+    const param = _param;
+    if (!param) {
+      return true;
+    }
+    const action = param.hd;
+    console.log(Curry._1(Stdlib__Printf.sprintf({
+      TAG: (
+        /* Format */
+        0
+      ),
+      _0: {
+        TAG: (
+          /* String_literal */
+          11
+        ),
+        _0: "  \xE2\x86\x92 ",
+        _1: {
+          TAG: (
+            /* String */
+            2
+          ),
+          _0: (
+            /* No_padding */
+            0
+          ),
+          _1: (
+            /* End_of_format */
+            0
+          )
+        }
+      },
+      _1: "  \xE2\x86\x92 %s"
+    }), Inbox_lib.string_of_atomic_action(action)));
+    if (!execute_action(action)) {
+      return false;
+    }
+    _param = param.tl;
+    continue;
+  }
+  ;
+}
+function get_branch_content(hub_path, branch) {
+  const cmd = Curry._2(Stdlib__Printf.sprintf({
+    TAG: (
+      /* Format */
+      0
+    ),
+    _0: {
+      TAG: (
+        /* String_literal */
+        11
+      ),
+      _0: "cd ",
+      _1: {
+        TAG: (
+          /* String */
+          2
+        ),
+        _0: (
+          /* No_padding */
+          0
+        ),
+        _1: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: " && git log origin/",
+          _1: {
+            TAG: (
+              /* String */
+              2
+            ),
+            _0: (
+              /* No_padding */
+              0
+            ),
+            _1: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: " --oneline -5 2>/dev/null",
+              _1: (
+                /* End_of_format */
+                0
+              )
+            }
+          }
+        }
+      }
+    },
+    _1: "cd %s && git log origin/%s --oneline -5 2>/dev/null"
+  }), hub_path, branch);
+  return Stdlib__Option.value(run_cmd(cmd), "(no commits)");
+}
+function materialize_branch(hub_path, my_name, peer, branch) {
+  const threads_dir = Path.join(hub_path, "threads");
+  const content = get_branch_content(hub_path, branch);
+  const match = Stdlib__String.split_on_char(
+    /* '/' */
+    47,
+    branch
+  );
+  const short_name = match ? Stdlib__String.concat("-", match.tl) : branch;
+  const thread_content = Curry._5(Stdlib__Printf.sprintf({
+    TAG: (
+      /* Format */
+      0
+    ),
+    _0: {
+      TAG: (
+        /* String_literal */
+        11
+      ),
+      _0: "# Inbound: ",
+      _1: {
+        TAG: (
+          /* String */
+          2
+        ),
+        _0: (
+          /* No_padding */
+          0
+        ),
+        _1: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: "\n\n**From:** ",
+          _1: {
+            TAG: (
+              /* String */
+              2
+            ),
+            _0: (
+              /* No_padding */
+              0
+            ),
+            _1: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: "\n**Branch:** ",
+              _1: {
+                TAG: (
+                  /* String */
+                  2
+                ),
+                _0: (
+                  /* No_padding */
+                  0
+                ),
+                _1: {
+                  TAG: (
+                    /* String_literal */
+                    11
+                  ),
+                  _0: "\n**To:** ",
+                  _1: {
+                    TAG: (
+                      /* String */
+                      2
+                    ),
+                    _0: (
+                      /* No_padding */
+                      0
+                    ),
+                    _1: {
+                      TAG: (
+                        /* String_literal */
+                        11
+                      ),
+                      _0: "\n\n## Commits\n\n```\n",
+                      _1: {
+                        TAG: (
+                          /* String */
+                          2
+                        ),
+                        _0: (
+                          /* No_padding */
+                          0
+                        ),
+                        _1: {
+                          TAG: (
+                            /* String_literal */
+                            11
+                          ),
+                          _0: "\n```\n\n## Decision\n\n<!-- Write your triage decision here: delete:<reason> | defer:<reason> | delegate:<actor> | do:merge -->\n\n```\ndecision: \n```\n",
+                          _1: (
+                            /* End_of_format */
+                            0
+                          )
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    _1: "# Inbound: %s\n\n**From:** %s\n**Branch:** %s\n**To:** %s\n\n## Commits\n\n```\n%s\n```\n\n## Decision\n\n<!-- Write your triage decision here: delete:<reason> | defer:<reason> | delegate:<actor> | do:merge -->\n\n```\ndecision: \n```\n"
+  }), branch, peer, branch, my_name, content);
+  const actions = Inbox_lib.materialize_thread_actions(threads_dir, short_name, peer, thread_content);
+  console.log(Curry._1(Stdlib__Printf.sprintf({
+    TAG: (
+      /* Format */
+      0
+    ),
+    _0: {
+      TAG: (
+        /* String_literal */
+        11
+      ),
+      _0: "Materializing ",
+      _1: {
+        TAG: (
+          /* String */
+          2
+        ),
+        _0: (
+          /* No_padding */
+          0
+        ),
+        _1: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: "...",
+          _1: (
+            /* End_of_format */
+            0
+          )
+        }
+      }
+    },
+    _1: "Materializing %s..."
+  }), branch));
+  if (execute_actions(actions)) {
+    console.log("  \xE2\x9C\x93 Thread created");
+  } else {
+    console.log("  \xE2\x9C\x97 Failed to create thread");
+  }
+}
+function run_process(hub_path, my_name, peers) {
+  console.log(Curry._1(Stdlib__Printf.sprintf({
+    TAG: (
+      /* Format */
+      0
+    ),
+    _0: {
+      TAG: (
+        /* String_literal */
+        11
+      ),
+      _0: "Materializing inbox for ",
+      _1: {
+        TAG: (
+          /* String */
+          2
+        ),
+        _0: (
+          /* No_padding */
+          0
+        ),
+        _1: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: "...\n",
+          _1: (
+            /* End_of_format */
+            0
+          )
+        }
+      }
+    },
+    _1: "Materializing inbox for %s...\n"
+  }), my_name));
+  const results = Stdlib__List.map((function(param) {
+    return check_peer_inbound(hub_path, param);
+  }), peers);
+  const all_branches = Inbox_lib.collect_branches(results);
+  if (all_branches) {
+    console.log(Curry._1(Stdlib__Printf.sprintf({
+      TAG: (
+        /* Format */
+        0
+      ),
+      _0: {
+        TAG: (
+          /* String_literal */
+          11
+        ),
+        _0: "Found ",
+        _1: {
+          TAG: (
+            /* Int */
+            4
+          ),
+          _0: (
+            /* Int_d */
+            0
+          ),
+          _1: (
+            /* No_padding */
+            0
+          ),
+          _2: (
+            /* No_precision */
+            0
+          ),
+          _3: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: " inbound branch(es).\n",
+            _1: (
+              /* End_of_format */
+              0
+            )
+          }
+        }
+      },
+      _1: "Found %d inbound branch(es).\n"
+    }), Stdlib__List.length(all_branches)));
+    Stdlib__List.iter((function(b) {
+      materialize_branch(hub_path, my_name, b.peer, b.branch);
+    }), all_branches);
+    console.log("");
+    console.log("Threads created in threads/inbox/");
+    console.log("Review and add 'decision: <triage>' to each thread.");
+    console.log("Then run 'inbox flush' to execute decisions.");
+    return 0;
+  } else {
+    console.log("No inbound branches to process.");
+    return 0;
+  }
+}
+function read_decision_from_thread(thread_path) {
+  try {
+    const content = Fs.readFileSync(thread_path, "utf8");
+    const lines = Stdlib__String.split_on_char(
+      /* '\n' */
+      10,
+      content
+    );
+    return Stdlib__List.find_map((function(line) {
+      const trimmed = Stdlib__String.trim(line);
+      const rest = Inbox_lib.strip_prefix("decision:", trimmed);
+      if (rest !== void 0) {
+        const decision_str = Stdlib__String.trim(rest);
+        if (decision_str.length !== 0) {
+          return Inbox_lib.triage_of_string(decision_str);
+        } else {
+          return;
+        }
+      }
+      const rest$1 = Inbox_lib.strip_prefix("decision: ", trimmed);
+      if (rest$1 === void 0) {
+        return;
+      }
+      const decision_str$1 = Stdlib__String.trim(rest$1);
+      if (decision_str$1.length !== 0) {
+        return Inbox_lib.triage_of_string(decision_str$1);
+      }
+    }), lines);
+  } catch (exn) {
+    return;
+  }
+}
+function extract_branch_from_thread(thread_path) {
+  try {
+    const content = Fs.readFileSync(thread_path, "utf8");
+    const lines = Stdlib__String.split_on_char(
+      /* '\n' */
+      10,
+      content
+    );
+    return Stdlib__List.find_map((function(line) {
+      const trimmed = Stdlib__String.trim(line);
+      const rest = Inbox_lib.strip_prefix("**Branch:**", trimmed);
+      if (rest !== void 0) {
+        return Stdlib__String.trim(rest);
+      }
+      const rest$1 = Inbox_lib.strip_prefix("**Branch:** ", trimmed);
+      if (rest$1 !== void 0) {
+        return Stdlib__String.trim(rest$1);
+      }
+    }), lines);
+  } catch (exn) {
+    return;
+  }
+}
+function list_inbox_threads(hub_path) {
+  const inbox_dir = Path.join(hub_path, "threads/inbox");
+  const cmd = Curry._1(Stdlib__Printf.sprintf({
+    TAG: (
+      /* Format */
+      0
+    ),
+    _0: {
+      TAG: (
+        /* String_literal */
+        11
+      ),
+      _0: "ls ",
+      _1: {
+        TAG: (
+          /* String */
+          2
+        ),
+        _0: (
+          /* No_padding */
+          0
+        ),
+        _1: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: "/*.md 2>/dev/null || true",
+          _1: (
+            /* End_of_format */
+            0
+          )
+        }
+      }
+    },
+    _1: "ls %s/*.md 2>/dev/null || true"
+  }), inbox_dir);
+  return Stdlib__List.filter(Inbox_lib.non_empty, Stdlib__String.split_on_char(
+    /* '\n' */
+    10,
+    Stdlib__Option.value(run_cmd(cmd), "")
+  ));
+}
+function run_flush(hub_path, _my_name, _peers) {
+  console.log("Processing inbox decisions...\n");
+  const threads = list_inbox_threads(hub_path);
+  if (threads) {
+    console.log(Curry._1(Stdlib__Printf.sprintf({
+      TAG: (
+        /* Format */
+        0
+      ),
+      _0: {
+        TAG: (
+          /* String_literal */
+          11
+        ),
+        _0: "Found ",
+        _1: {
+          TAG: (
+            /* Int */
+            4
+          ),
+          _0: (
+            /* Int_d */
+            0
+          ),
+          _1: (
+            /* No_padding */
+            0
+          ),
+          _2: (
+            /* No_precision */
+            0
+          ),
+          _3: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: " thread(s).\n",
+            _1: (
+              /* End_of_format */
+              0
+            )
+          }
+        }
+      },
+      _1: "Found %d thread(s).\n"
+    }), Stdlib__List.length(threads)));
+    const log_path = Path.join(hub_path, "logs/inbox.md");
+    const processed = {
+      contents: 0
+    };
+    const skipped = {
+      contents: 0
+    };
+    Stdlib__List.iter((function(thread_path) {
+      const filename = Stdlib__List.hd(Stdlib__List.rev(Stdlib__String.split_on_char(
+        /* '/' */
+        47,
+        thread_path
+      )));
+      const decision = read_decision_from_thread(thread_path);
+      if (decision !== void 0) {
+        const branch = Stdlib__Option.value(extract_branch_from_thread(thread_path), "unknown");
+        console.log(Curry._2(Stdlib__Printf.sprintf({
+          TAG: (
+            /* Format */
+            0
+          ),
+          _0: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: "\xE2\x96\xB6 ",
+            _1: {
+              TAG: (
+                /* String */
+                2
+              ),
+              _0: (
+                /* No_padding */
+                0
+              ),
+              _1: {
+                TAG: (
+                  /* String_literal */
+                  11
+                ),
+                _0: " - ",
+                _1: {
+                  TAG: (
+                    /* String */
+                    2
+                  ),
+                  _0: (
+                    /* No_padding */
+                    0
+                  ),
+                  _1: (
+                    /* End_of_format */
+                    0
+                  )
+                }
+              }
+            }
+          },
+          _1: "\xE2\x96\xB6 %s - %s"
+        }), filename, Inbox_lib.string_of_triage(decision)));
+        const actions = Inbox_lib.triage_to_actions(log_path, branch, decision);
+        console.log("  Actions:");
+        Stdlib__List.iter((function(prim) {
+          console.log(prim);
+        }), Inbox_lib.format_action_plan(actions));
+        run_cmd(Curry._1(Stdlib__Printf.sprintf({
+          TAG: (
+            /* Format */
+            0
+          ),
+          _0: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: "cd ",
+            _1: {
+              TAG: (
+                /* String */
+                2
+              ),
+              _0: (
+                /* No_padding */
+                0
+              ),
+              _1: (
+                /* End_of_format */
+                0
+              )
+            }
+          },
+          _1: "cd %s"
+        }), hub_path));
+        if (execute_actions(actions)) {
+          run_cmd(Curry._1(Stdlib__Printf.sprintf({
+            TAG: (
+              /* Format */
+              0
+            ),
+            _0: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: "rm ",
+              _1: {
+                TAG: (
+                  /* String */
+                  2
+                ),
+                _0: (
+                  /* No_padding */
+                  0
+                ),
+                _1: (
+                  /* End_of_format */
+                  0
+                )
+              }
+            },
+            _1: "rm %s"
+          }), thread_path));
+          console.log("  \xE2\x9C\x93 Done (thread removed)");
+          processed.contents = processed.contents + 1 | 0;
+        } else {
+          console.log("  \xE2\x9C\x97 Execution failed");
+          skipped.contents = skipped.contents + 1 | 0;
+        }
+        return;
+      }
+      console.log(Curry._1(Stdlib__Printf.sprintf({
+        TAG: (
+          /* Format */
+          0
+        ),
+        _0: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: "\xE2\x8F\xB8 ",
+          _1: {
+            TAG: (
+              /* String */
+              2
+            ),
+            _0: (
+              /* No_padding */
+              0
+            ),
+            _1: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: " - no decision yet",
+              _1: (
+                /* End_of_format */
+                0
+              )
+            }
+          }
+        },
+        _1: "\xE2\x8F\xB8 %s - no decision yet"
+      }), filename));
+      skipped.contents = skipped.contents + 1 | 0;
+    }), threads);
+    console.log("");
+    console.log(Curry._2(Stdlib__Printf.sprintf({
+      TAG: (
+        /* Format */
+        0
+      ),
+      _0: {
+        TAG: (
+          /* String_literal */
+          11
+        ),
+        _0: "Processed: ",
+        _1: {
+          TAG: (
+            /* Int */
+            4
+          ),
+          _0: (
+            /* Int_d */
+            0
+          ),
+          _1: (
+            /* No_padding */
+            0
+          ),
+          _2: (
+            /* No_precision */
+            0
+          ),
+          _3: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: " | Skipped: ",
+            _1: {
+              TAG: (
+                /* Int */
+                4
+              ),
+              _0: (
+                /* Int_d */
+                0
+              ),
+              _1: (
+                /* No_padding */
+                0
+              ),
+              _2: (
+                /* No_precision */
+                0
+              ),
+              _3: (
+                /* End_of_format */
+                0
+              )
+            }
+          }
+        }
+      },
+      _1: "Processed: %d | Skipped: %d"
+    }), processed.contents, skipped.contents));
+    if (skipped.contents > 0) {
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+  console.log("No threads in threads/inbox/");
+  console.log("Run 'inbox process' first to materialize branches.");
+  return 0;
 }
 function run_command(cmd, hub_path, my_name, peers) {
   switch (cmd) {
@@ -25616,10 +27343,18 @@ module.exports = {
   Fs: Fs$1,
   Path: Path$1,
   run_cmd,
-  find_inbound_branches,
-  check_peer,
+  find_inbound_from_peer,
+  check_peer_inbound,
   run_check,
+  Fs_write,
+  execute_action,
+  execute_actions,
+  get_branch_content,
+  materialize_branch,
   run_process,
+  read_decision_from_thread,
+  extract_branch_from_thread,
+  list_inbox_threads,
   run_flush,
   run_command,
   usage
