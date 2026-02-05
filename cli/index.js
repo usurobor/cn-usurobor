@@ -438,6 +438,23 @@ function isGitRepo(dir) {
 
     console.log('');
 
+    // Ensure github.com SSH host key is in known_hosts (avoids interactive prompt)
+    const sshDir = path.join(process.env.HOME || '/root', '.ssh');
+    const knownHosts = path.join(sshDir, 'known_hosts');
+    if (!fs.existsSync(sshDir)) {
+      fs.mkdirSync(sshDir, { mode: 0o700 });
+    }
+    try {
+      const hasGithub = fs.existsSync(knownHosts) && 
+        fs.readFileSync(knownHosts, 'utf8').includes('github.com');
+      if (!hasGithub) {
+        const keys = runCapture('ssh-keyscan', ['-t', 'ed25519,rsa', 'github.com']);
+        if (keys) {
+          fs.appendFileSync(knownHosts, keys + '\n');
+        }
+      }
+    } catch {}
+
     // =========================================================================
     // STEP 2: Template (cn-agent) Install/Update
     // =========================================================================
@@ -661,8 +678,7 @@ function isGitRepo(dir) {
       // Clone the existing GitHub repo
       console.log('  Cloning existing GitHub repo...');
       try {
-        // Use HTTPS to avoid SSH host key prompts
-        await run('git', ['clone', `https://github.com/${hubRepo}.git`, hubDir], { timeout: 120000 });
+        await run('gh', ['repo', 'clone', hubRepo, hubDir], { timeout: 120000 });
         console.log(green('  ✓ Cloned existing repo'));
       } catch (err) {
         console.error(red(`Error: Failed to clone ${hubRepo}`));
