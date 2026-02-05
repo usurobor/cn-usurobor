@@ -35,9 +35,9 @@ PM identifies what needs to exist, ensures it gets built coherently, and keeps t
 
 ### Merge Governance
 
-- **No self-merge**: Nobody merges their own code to master. Engineer writes → PM merges. PM writes → Engineer or Axiom merges.
-- **Axiom override**: Axiom can approve any merge directly.
-- **Branch-only commits**: All work goes through branches. Direct master commits require explicit Axiom approval.
+- **No self-merge**: Nobody merges their own code to master. Engineer writes → PM merges. PM writes → Engineer or owner merges.
+- **Owner override**: Project owner can approve any merge directly.
+- **Branch-only commits**: All work goes through branches. Direct master commits require explicit owner approval.
 
 ## Anti-Patterns
 
