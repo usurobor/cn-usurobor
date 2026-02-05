@@ -23554,7 +23554,13 @@ var require_inbox_lib = __commonJS({
                 /* Custom */
                 1
               ),
-              _0: match$1.hd
+              _0: {
+                TAG: (
+                  /* Description */
+                  0
+                ),
+                _0: match$1.hd
+              }
             };
           } else {
             return;
@@ -23567,7 +23573,13 @@ var require_inbox_lib = __commonJS({
                 /* Reply */
                 0
               ),
-              _0: match$2.hd
+              _0: {
+                TAG: (
+                  /* BranchName */
+                  0
+                ),
+                _0: match$2.hd
+              }
             };
           } else {
             return;
@@ -23576,13 +23588,13 @@ var require_inbox_lib = __commonJS({
           return;
       }
     }
-    function string_of_action(name) {
+    function string_of_action(param) {
       if (
         /* tag */
-        typeof name === "number" || typeof name === "string"
+        typeof param === "number" || typeof param === "string"
       ) {
         return "merge";
-      } else if (name.TAG === /* Reply */
+      } else if (param.TAG === /* Reply */
       0) {
         return Curry2._1(Stdlib__Printf2.sprintf({
           TAG: (
@@ -23611,7 +23623,7 @@ var require_inbox_lib = __commonJS({
             }
           },
           _1: "reply:%s"
-        }), name._0);
+        }), param._0._0);
       } else {
         return Curry2._1(Stdlib__Printf2.sprintf({
           TAG: (
@@ -23640,7 +23652,7 @@ var require_inbox_lib = __commonJS({
             }
           },
           _1: "custom:%s"
-        }), name._0);
+        }), param._0._0);
       }
     }
     function non_empty_payload(parts) {
@@ -23687,7 +23699,13 @@ var require_inbox_lib = __commonJS({
                 /* Delete */
                 0
               ),
-              _0: r
+              _0: {
+                TAG: (
+                  /* Reason */
+                  0
+                ),
+                _0: r
+              }
             };
           }), non_empty_payload(match.tl));
         case 2:
@@ -23697,7 +23715,13 @@ var require_inbox_lib = __commonJS({
                 /* Defer */
                 1
               ),
-              _0: r
+              _0: {
+                TAG: (
+                  /* Reason */
+                  0
+                ),
+                _0: r
+              }
             };
           }), non_empty_payload(match.tl));
         case 3:
@@ -23707,7 +23731,13 @@ var require_inbox_lib = __commonJS({
                 /* Delegate */
                 2
               ),
-              _0: r
+              _0: {
+                TAG: (
+                  /* Actor */
+                  0
+                ),
+                _0: r
+              }
             };
           }), non_empty_payload(match.tl));
         case 4:
@@ -23728,7 +23758,13 @@ var require_inbox_lib = __commonJS({
                       /* Custom */
                       1
                     ),
-                    _0: d
+                    _0: {
+                      TAG: (
+                        /* Description */
+                        0
+                      ),
+                      _0: d
+                    }
                   }
                 };
               }), non_empty_payload(match$1.tl));
@@ -23759,7 +23795,13 @@ var require_inbox_lib = __commonJS({
                       /* Reply */
                       0
                     ),
-                    _0: n2
+                    _0: {
+                      TAG: (
+                        /* BranchName */
+                        0
+                      ),
+                      _0: n2
+                    }
                   }
                 };
               }), non_empty_payload(match$1.tl));
@@ -23768,8 +23810,8 @@ var require_inbox_lib = __commonJS({
           }
       }
     }
-    function string_of_triage(reason) {
-      switch (reason.TAG) {
+    function string_of_triage(action) {
+      switch (action.TAG) {
         case /* Delete */
         0:
           return Curry2._1(Stdlib__Printf2.sprintf({
@@ -23799,7 +23841,7 @@ var require_inbox_lib = __commonJS({
               }
             },
             _1: "delete:%s"
-          }), reason._0);
+          }), action._0._0);
         case /* Defer */
         1:
           return Curry2._1(Stdlib__Printf2.sprintf({
@@ -23829,7 +23871,7 @@ var require_inbox_lib = __commonJS({
               }
             },
             _1: "defer:%s"
-          }), reason._0);
+          }), action._0._0);
         case /* Delegate */
         2:
           return Curry2._1(Stdlib__Printf2.sprintf({
@@ -23859,7 +23901,7 @@ var require_inbox_lib = __commonJS({
               }
             },
             _1: "delegate:%s"
-          }), reason._0);
+          }), action._0._0);
         case /* Do */
         3:
           return Curry2._1(Stdlib__Printf2.sprintf({
@@ -23889,7 +23931,7 @@ var require_inbox_lib = __commonJS({
               }
             },
             _1: "do:%s"
-          }), string_of_action(reason._0));
+          }), string_of_action(action._0));
       }
     }
     function triage_kind(param) {
@@ -23908,8 +23950,8 @@ var require_inbox_lib = __commonJS({
           return "do";
       }
     }
-    function triage_description(reason) {
-      switch (reason.TAG) {
+    function triage_description(param) {
+      switch (param.TAG) {
         case /* Delete */
         0:
           return Curry2._1(Stdlib__Printf2.sprintf({
@@ -23949,7 +23991,7 @@ var require_inbox_lib = __commonJS({
               }
             },
             _1: "Remove branch (%s)"
-          }), reason._0);
+          }), param._0._0);
         case /* Defer */
         1:
           return Curry2._1(Stdlib__Printf2.sprintf({
@@ -23989,7 +24031,7 @@ var require_inbox_lib = __commonJS({
               }
             },
             _1: "Defer (%s)"
-          }), reason._0);
+          }), param._0._0);
         case /* Delegate */
         2:
           return Curry2._1(Stdlib__Printf2.sprintf({
@@ -24019,16 +24061,16 @@ var require_inbox_lib = __commonJS({
               }
             },
             _1: "Delegate to %s"
-          }), reason._0);
+          }), param._0._0);
         case /* Do */
         3:
-          const name = reason._0;
+          const match = param._0;
           if (
             /* tag */
-            typeof name === "number" || typeof name === "string"
+            typeof match === "number" || typeof match === "string"
           ) {
             return "Merge branch";
-          } else if (name.TAG === /* Reply */
+          } else if (match.TAG === /* Reply */
           0) {
             return Curry2._1(Stdlib__Printf2.sprintf({
               TAG: (
@@ -24057,7 +24099,7 @@ var require_inbox_lib = __commonJS({
                 }
               },
               _1: "Reply with branch %s"
-            }), name._0);
+            }), match._0._0);
           } else {
             return Curry2._1(Stdlib__Printf2.sprintf({
               TAG: (
@@ -24086,7 +24128,7 @@ var require_inbox_lib = __commonJS({
                 }
               },
               _1: "Action: %s"
-            }), name._0);
+            }), match._0._0);
           }
       }
     }
