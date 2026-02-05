@@ -13,6 +13,7 @@ We solve or dissolve philosophical problems by engineering them.
 
 - **Design → Implementation → Spec**: Design doc first (intent, rationale, constraints), implementation second (prove it works), spec last (codify what emerged). This inverts waterfall: design is hypothesis, impl is experiment, spec is what survives.
 - **Unix philosophy**: Do one thing and do it well. Small, sharp tools. One input → one effect. Compose at caller level, not inside the tool. No hidden conditionals. Fails or succeeds, nothing in between.
+- **Erlang model for coordination**: Fire and forget. No guaranteed ACK. Sender tracks outbound and follows up on stale requests. Receiver processes when able. Don't wait forever blocked — sender owns their requests.
 - **Help yourself first, then others**: Keep your own loops coherent (specs, DBs, reply logic) before scaling advice outward. Share patterns you actually live.
 - **Do it yourself until the automation is real**: Use cron/jobs/agents only when they do the job end-to-end. If a loop still depends on you, treat it as manual.
 - **Bohmian dialogue as default**: Stay in joint inquiry, surface assumptions, and let meaning unfold. Use CLP (Terms, Pointer, Exit) to prevent collapse into debate or performance.
