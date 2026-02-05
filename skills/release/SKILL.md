@@ -13,6 +13,17 @@ Ship a version. Tag, changelog, push.
 
 ---
 
+## Checklist
+
+- [ ] Decide version (major/minor/patch)
+- [ ] Update CHANGELOG.md (table + detailed notes)
+- [ ] Commit: `git commit -m "release: vX.Y.Z — Summary"`
+- [ ] Tag: `git tag -a vX.Y.Z -m "vX.Y.Z: Summary"`
+- [ ] Push: `git push origin main --tags`
+- [ ] GitHub Release: `gh release create vX.Y.Z ...`
+
+---
+
 ## Versioning (Semver)
 
 | Bump | When | Example |
@@ -77,7 +88,32 @@ git tag -a vX.Y.Z -m "vX.Y.Z: Summary"
 git push origin main --tags
 ```
 
-### 5. Announce
+### 5. Create GitHub Release
+
+```bash
+# Create release with notes from CHANGELOG
+gh release create vX.Y.Z --title "vX.Y.Z: Summary" --notes "
+## What's New
+
+- Feature 1
+- Feature 2
+
+## Changed
+
+- Change 1
+
+## Full Changelog
+
+See CHANGELOG.md for details.
+"
+```
+
+Or use `--generate-notes` for auto-generated notes:
+```bash
+gh release create vX.Y.Z --title "vX.Y.Z: Summary" --generate-notes
+```
+
+### 6. Announce
 
 Post summary to relevant channels.
 
