@@ -23496,38 +23496,370 @@ var require_inbox_lib = __commonJS({
     var Stdlib__Option2 = require_option();
     var Stdlib__Printf2 = require_printf();
     var Stdlib__String2 = require_string();
-    function triage_of_string(param) {
-      switch (param) {
-        case "d":
-        case "delete":
-          return (
-            /* Delete */
-            0
-          );
-        case "defer":
-        case "f":
-          return (
-            /* Defer */
-            1
-          );
-        case "delegate":
-        case "g":
-          return (
-            /* Delegate */
-            2
-          );
-        case "do":
-        case "o":
-          return (
-            /* Do */
-            3
-          );
+    function do_action_of_string(s) {
+      if (s === "merge") {
+        return (
+          /* Merge */
+          0
+        );
+      }
+      const match = Stdlib__String2.split_on_char(
+        /* ':' */
+        58,
+        s
+      );
+      if (!match) {
+        return;
+      }
+      switch (match.hd) {
+        case "custom":
+          const match$1 = match.tl;
+          if (match$1 && !match$1.tl) {
+            return {
+              TAG: (
+                /* Custom */
+                1
+              ),
+              _0: match$1.hd
+            };
+          } else {
+            return;
+          }
+        case "reply":
+          const match$2 = match.tl;
+          if (match$2 && !match$2.tl) {
+            return {
+              TAG: (
+                /* Reply */
+                0
+              ),
+              _0: match$2.hd
+            };
+          } else {
+            return;
+          }
         default:
           return;
       }
     }
-    function string_of_triage(param) {
-      switch (param) {
+    function string_of_do_action(name) {
+      if (
+        /* tag */
+        typeof name === "number" || typeof name === "string"
+      ) {
+        return "merge";
+      } else if (name.TAG === /* Reply */
+      0) {
+        return Curry2._1(Stdlib__Printf2.sprintf({
+          TAG: (
+            /* Format */
+            0
+          ),
+          _0: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: "reply:",
+            _1: {
+              TAG: (
+                /* String */
+                2
+              ),
+              _0: (
+                /* No_padding */
+                0
+              ),
+              _1: (
+                /* End_of_format */
+                0
+              )
+            }
+          },
+          _1: "reply:%s"
+        }), name._0);
+      } else {
+        return Curry2._1(Stdlib__Printf2.sprintf({
+          TAG: (
+            /* Format */
+            0
+          ),
+          _0: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: "custom:",
+            _1: {
+              TAG: (
+                /* String */
+                2
+              ),
+              _0: (
+                /* No_padding */
+                0
+              ),
+              _1: (
+                /* End_of_format */
+                0
+              )
+            }
+          },
+          _1: "custom:%s"
+        }), name._0);
+      }
+    }
+    function non_empty_payload(parts) {
+      const payload = Stdlib__String2.concat(":", parts);
+      if (payload.length !== 0) {
+        return payload;
+      }
+    }
+    function triage_of_string(s) {
+      const match = Stdlib__String2.split_on_char(
+        /* ':' */
+        58,
+        s
+      );
+      if (!match) {
+        return;
+      }
+      let exit = 0;
+      switch (match.hd) {
+        case "d":
+        case "delete":
+          exit = 1;
+          break;
+        case "defer":
+        case "f":
+          exit = 2;
+          break;
+        case "delegate":
+        case "g":
+          exit = 3;
+          break;
+        case "do":
+        case "o":
+          exit = 4;
+          break;
+        default:
+          return;
+      }
+      switch (exit) {
+        case 1:
+          return Stdlib__Option2.map((function(r) {
+            return {
+              TAG: (
+                /* Delete */
+                0
+              ),
+              _0: r
+            };
+          }), non_empty_payload(match.tl));
+        case 2:
+          return Stdlib__Option2.map((function(r) {
+            return {
+              TAG: (
+                /* Defer */
+                1
+              ),
+              _0: r
+            };
+          }), non_empty_payload(match.tl));
+        case 3:
+          return Stdlib__Option2.map((function(r) {
+            return {
+              TAG: (
+                /* Delegate */
+                2
+              ),
+              _0: r
+            };
+          }), non_empty_payload(match.tl));
+        case 4:
+          const match$1 = match.tl;
+          if (!match$1) {
+            return;
+          }
+          switch (match$1.hd) {
+            case "custom":
+              return Stdlib__Option2.map((function(d) {
+                return {
+                  TAG: (
+                    /* Do */
+                    3
+                  ),
+                  _0: {
+                    TAG: (
+                      /* Custom */
+                      1
+                    ),
+                    _0: d
+                  }
+                };
+              }), non_empty_payload(match$1.tl));
+            case "merge":
+              if (match$1.tl) {
+                return;
+              } else {
+                return {
+                  TAG: (
+                    /* Do */
+                    3
+                  ),
+                  _0: (
+                    /* Merge */
+                    0
+                  )
+                };
+              }
+            case "reply":
+              return Stdlib__Option2.map((function(n2) {
+                return {
+                  TAG: (
+                    /* Do */
+                    3
+                  ),
+                  _0: {
+                    TAG: (
+                      /* Reply */
+                      0
+                    ),
+                    _0: n2
+                  }
+                };
+              }), non_empty_payload(match$1.tl));
+            default:
+              return;
+          }
+      }
+    }
+    function string_of_triage(reason) {
+      switch (reason.TAG) {
+        case /* Delete */
+        0:
+          return Curry2._1(Stdlib__Printf2.sprintf({
+            TAG: (
+              /* Format */
+              0
+            ),
+            _0: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: "delete:",
+              _1: {
+                TAG: (
+                  /* String */
+                  2
+                ),
+                _0: (
+                  /* No_padding */
+                  0
+                ),
+                _1: (
+                  /* End_of_format */
+                  0
+                )
+              }
+            },
+            _1: "delete:%s"
+          }), reason._0);
+        case /* Defer */
+        1:
+          return Curry2._1(Stdlib__Printf2.sprintf({
+            TAG: (
+              /* Format */
+              0
+            ),
+            _0: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: "defer:",
+              _1: {
+                TAG: (
+                  /* String */
+                  2
+                ),
+                _0: (
+                  /* No_padding */
+                  0
+                ),
+                _1: (
+                  /* End_of_format */
+                  0
+                )
+              }
+            },
+            _1: "defer:%s"
+          }), reason._0);
+        case /* Delegate */
+        2:
+          return Curry2._1(Stdlib__Printf2.sprintf({
+            TAG: (
+              /* Format */
+              0
+            ),
+            _0: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: "delegate:",
+              _1: {
+                TAG: (
+                  /* String */
+                  2
+                ),
+                _0: (
+                  /* No_padding */
+                  0
+                ),
+                _1: (
+                  /* End_of_format */
+                  0
+                )
+              }
+            },
+            _1: "delegate:%s"
+          }), reason._0);
+        case /* Do */
+        3:
+          return Curry2._1(Stdlib__Printf2.sprintf({
+            TAG: (
+              /* Format */
+              0
+            ),
+            _0: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: "do:",
+              _1: {
+                TAG: (
+                  /* String */
+                  2
+                ),
+                _0: (
+                  /* No_padding */
+                  0
+                ),
+                _1: (
+                  /* End_of_format */
+                  0
+                )
+              }
+            },
+            _1: "do:%s"
+          }), string_of_do_action(reason._0));
+      }
+    }
+    function triage_kind(param) {
+      switch (param.TAG) {
         case /* Delete */
         0:
           return "delete";
@@ -23542,20 +23874,186 @@ var require_inbox_lib = __commonJS({
           return "do";
       }
     }
-    function triage_description(param) {
-      switch (param) {
+    function triage_description(reason) {
+      switch (reason.TAG) {
         case /* Delete */
         0:
-          return "Remove branch (noise/stale/handled)";
+          return Curry2._1(Stdlib__Printf2.sprintf({
+            TAG: (
+              /* Format */
+              0
+            ),
+            _0: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: "Remove branch (",
+              _1: {
+                TAG: (
+                  /* String */
+                  2
+                ),
+                _0: (
+                  /* No_padding */
+                  0
+                ),
+                _1: {
+                  TAG: (
+                    /* Char_literal */
+                    12
+                  ),
+                  _0: (
+                    /* ')' */
+                    41
+                  ),
+                  _1: (
+                    /* End_of_format */
+                    0
+                  )
+                }
+              }
+            },
+            _1: "Remove branch (%s)"
+          }), reason._0);
         case /* Defer */
         1:
-          return "Leave for later (important, not urgent)";
+          return Curry2._1(Stdlib__Printf2.sprintf({
+            TAG: (
+              /* Format */
+              0
+            ),
+            _0: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: "Defer (",
+              _1: {
+                TAG: (
+                  /* String */
+                  2
+                ),
+                _0: (
+                  /* No_padding */
+                  0
+                ),
+                _1: {
+                  TAG: (
+                    /* Char_literal */
+                    12
+                  ),
+                  _0: (
+                    /* ')' */
+                    41
+                  ),
+                  _1: (
+                    /* End_of_format */
+                    0
+                  )
+                }
+              }
+            },
+            _1: "Defer (%s)"
+          }), reason._0);
         case /* Delegate */
         2:
-          return "Forward to another agent";
+          return Curry2._1(Stdlib__Printf2.sprintf({
+            TAG: (
+              /* Format */
+              0
+            ),
+            _0: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: "Delegate to ",
+              _1: {
+                TAG: (
+                  /* String */
+                  2
+                ),
+                _0: (
+                  /* No_padding */
+                  0
+                ),
+                _1: (
+                  /* End_of_format */
+                  0
+                )
+              }
+            },
+            _1: "Delegate to %s"
+          }), reason._0);
         case /* Do */
         3:
-          return "Respond now (merge/reply/action)";
+          const name = reason._0;
+          if (
+            /* tag */
+            typeof name === "number" || typeof name === "string"
+          ) {
+            return "Merge branch";
+          } else if (name.TAG === /* Reply */
+          0) {
+            return Curry2._1(Stdlib__Printf2.sprintf({
+              TAG: (
+                /* Format */
+                0
+              ),
+              _0: {
+                TAG: (
+                  /* String_literal */
+                  11
+                ),
+                _0: "Reply with branch ",
+                _1: {
+                  TAG: (
+                    /* String */
+                    2
+                  ),
+                  _0: (
+                    /* No_padding */
+                    0
+                  ),
+                  _1: (
+                    /* End_of_format */
+                    0
+                  )
+                }
+              },
+              _1: "Reply with branch %s"
+            }), name._0);
+          } else {
+            return Curry2._1(Stdlib__Printf2.sprintf({
+              TAG: (
+                /* Format */
+                0
+              ),
+              _0: {
+                TAG: (
+                  /* String_literal */
+                  11
+                ),
+                _0: "Action: ",
+                _1: {
+                  TAG: (
+                    /* String */
+                    2
+                  ),
+                  _0: (
+                    /* No_padding */
+                    0
+                  ),
+                  _1: (
+                    /* End_of_format */
+                    0
+                  )
+                }
+              },
+              _1: "Action: %s"
+            }), name._0);
+          }
       }
     }
     function action_of_string(param) {
@@ -23984,34 +24482,6 @@ var require_inbox_lib = __commonJS({
         };
       }
     }
-    var all_triages = {
-      hd: (
-        /* Delete */
-        0
-      ),
-      tl: {
-        hd: (
-          /* Defer */
-          1
-        ),
-        tl: {
-          hd: (
-            /* Delegate */
-            2
-          ),
-          tl: {
-            hd: (
-              /* Do */
-              3
-            ),
-            tl: (
-              /* [] */
-              0
-            )
-          }
-        }
-      }
-    };
     var all_actions = {
       hd: (
         /* Check */
@@ -24035,10 +24505,13 @@ var require_inbox_lib = __commonJS({
       }
     };
     module2.exports = {
+      do_action_of_string,
+      string_of_do_action,
+      non_empty_payload,
       triage_of_string,
       string_of_triage,
+      triage_kind,
       triage_description,
-      all_triages,
       action_of_string,
       string_of_action,
       all_actions,
