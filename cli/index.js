@@ -23,13 +23,26 @@ const { buildHubConfig } = require('./hubConfig');
 const { normalizeGitHubUrl, ghRepoExists, getGitRemote } = require('./github');
 
 // NO_COLOR support (https://no-color.org)
+// Semantic color palette (6 colors max, each = one meaning)
 const useColor = !process.env.NO_COLOR;
-const cyan = (str) => useColor ? `\x1b[36m${str}\x1b[0m` : str;
-const bold = (str) => useColor ? `\x1b[1m${str}\x1b[0m` : str;
-const green = (str) => useColor ? `\x1b[32m${str}\x1b[0m` : str;
-const yellow = (str) => useColor ? `\x1b[33m${str}\x1b[0m` : str;
-const red = (str) => useColor ? `\x1b[31m${str}\x1b[0m` : str;
-const dim = (str) => useColor ? `\x1b[2m${str}\x1b[0m` : str;
+const c = {
+  reset: '\x1b[0m',
+  green: '\x1b[32m',    // success/ok
+  red: '\x1b[31m',      // error/blocking
+  yellow: '\x1b[33m',   // warning/attention
+  cyan: '\x1b[36m',     // info/headers
+  magenta: '\x1b[35m',  // user action/commands
+  gray: '\x1b[90m',     // inactive/skipped
+  bold: '\x1b[1m',
+};
+const green = (str) => useColor ? `${c.green}${str}${c.reset}` : str;
+const red = (str) => useColor ? `${c.red}${str}${c.reset}` : str;
+const yellow = (str) => useColor ? `${c.yellow}${str}${c.reset}` : str;
+const cyan = (str) => useColor ? `${c.cyan}${str}${c.reset}` : str;
+const magenta = (str) => useColor ? `${c.magenta}${str}${c.reset}` : str;
+const gray = (str) => useColor ? `${c.gray}${str}${c.reset}` : str;
+const bold = (str) => useColor ? `${c.bold}${str}${c.reset}` : str;
+const dim = gray; // alias
 
 // SSH command with timeout and batch mode to prevent hanging
 const SSH_COMMAND = 'ssh -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=accept-new';
@@ -148,17 +161,17 @@ function isGitRepo(dir) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
   const state = loadState();
 
-  // Helper for autoconf-style check output
+  // Helper for autoconf-style check output (color = semantics)
   function showCheck(label, status, detail) {
     const dots = '.'.repeat(Math.max(1, 20 - label.length));
     if (status === true) {
-      const info = detail ? ` ${dim(`(${detail})`)}` : '';
-      console.log(dim(`  ${label}${dots}`) + ` ${green('yes')}${info}`);
+      const info = detail ? ` ${gray(`(${detail})`)}` : '';
+      console.log(`  ${label}${dots} ${green('✓')}${info}`);
     } else if (status === false) {
-      console.log(dim(`  ${label}${dots}`) + ` ${red('no')}`);
+      console.log(`  ${label}${dots} ${red('✗')}`);
     } else {
       // skipped (dependency not met)
-      console.log(dim(`  ${label}${dots} --`));
+      console.log(`  ${label}${dots} ${gray('--')}`);
     }
   }
 
@@ -200,7 +213,7 @@ function isGitRepo(dir) {
 
   try {
     console.log(bold(cyan(`cn-agent-setup v${VERSION}`)));
-    console.log(bold('Checking prerequisites...'));
+    console.log(cyan('Checking prerequisites...'));
 
     // Collect all check results
     const checks = {};
@@ -271,19 +284,22 @@ function isGitRepo(dir) {
       .map(([name]) => name);
 
     if (failed.length > 0) {
-      // Show install instructions for each failure (compact)
-      console.log(bold(red(`Missing: ${failed.join(', ')}`)));
+      // Error block (high-clarity pattern per UX spec)
+      console.log('');
+      console.log(red(`✗ Missing: ${failed.join(', ')}`));
+      console.log('');
+      console.log('Fix with:');
       for (const name of failed) {
-        console.log(bold(`${name}:`));
         for (const line of installInstructions[name]) {
-          console.log(`  ${line}`);
+          console.log(magenta(`  ${line}`));
         }
       }
+      console.log('');
       process.exit(1);
     }
 
-    // All checks passed - continue
-    console.log(green('All checks passed.'));
+    // All checks passed
+    console.log(green('✓ All checks passed'));
 
     // Set git config if not already set (using inferred values)
     if (!runCapture('git', ['config', 'user.name'])) {
