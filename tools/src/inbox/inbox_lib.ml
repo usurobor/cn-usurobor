@@ -22,18 +22,24 @@ let all_commands = [Check; Process; Flush]
 
 (* === GTD Triage (Getting Things Done) === *)
 
+(* Semantic type aliases for clarity *)
+type reason = string          (* why: "stale", "blocked on X" *)
+type actor = string           (* who: "pi", "omega" *)
+type branch_name = string     (* branch to create: "response-thread" *)
+type description = string     (* what: "update docs first" *)
+
 (* What to do when triaging as "Do" *)
 type action =
-  | Merge                     (* merge the branch *)
-  | Reply of string           (* push reply branch with given name *)
-  | Custom of string          (* custom action description *)
+  | Merge                             (* merge the branch *)
+  | Reply of branch_name              (* push reply branch *)
+  | Custom of description             (* custom action *)
 
 (* GTD 4 Ds — each with required context *)
 type triage =
-  | Delete of string          (* reason: why remove? e.g. "stale", "duplicate" *)
-  | Defer of string           (* reason: why later? e.g. "blocked on X" *)
-  | Delegate of string        (* actor: who handles? e.g. "pi" *)
-  | Do of action           (* action: what to do? *)
+  | Delete of reason                  (* why remove? *)
+  | Defer of reason                   (* why later? *)
+  | Delegate of actor                 (* who handles? *)
+  | Do of action                      (* what to do? *)
 
 (* Parse action from string *)
 let action_of_string s =
