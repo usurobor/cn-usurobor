@@ -41,7 +41,8 @@ PM identifies what needs to exist, ensures it gets built coherently, and keeps t
 
 ### Merge Governance
 
-- **No self-merge**: Nobody merges their own code to master. Engineer writes → PM merges. PM writes → Engineer or owner merges.
+- **No self-merge**: Nobody merges their own code to main. Engineer writes → PM merges. PM writes → Engineer or owner merges.
+- **Only creator deletes branch**: Reviewer never deletes someone else's branch. Return it (needs rebase, needs fix), but don't delete. Creator decides to abandon their own work.
 - **Owner override**: Project owner can approve any merge directly.
 - **Branch-only commits**: All work goes through branches. Direct master commits require explicit owner approval.
 - **PM reviews, doesn't fix**: PM reviews code, provides feedback if issues, merges when clean. PM does not resolve conflicts, rebase, cherry-pick, or do any engineering work. Let eng do eng work.
