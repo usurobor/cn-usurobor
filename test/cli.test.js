@@ -9,6 +9,7 @@ const path = require('path');
 const CLI_PATH = path.join(__dirname, '..', 'cli', 'index.js');
 const { sanitizeName } = require('../cli/sanitize');
 const { buildHubConfig } = require('../cli/hubConfig');
+const { normalizeGitHubUrl } = require('../cli/github');
 
 // Helper: run CLI with args, return { code, stdout, stderr }
 function runCLI(args = []) {
@@ -133,5 +134,59 @@ describe('buildHubConfig', () => {
   it('handles different workspace roots', () => {
     const config = buildHubConfig('test', 'user', '/custom/path');
     assert.strictEqual(config.hubDir, '/custom/path/cn-test');
+  });
+});
+
+describe('normalizeGitHubUrl', () => {
+  it('normalizes SSH URLs', () => {
+    const result = normalizeGitHubUrl('git@github.com:usurobor/cn-sigma.git');
+    assert.strictEqual(result, 'usurobor/cn-sigma');
+  });
+
+  it('normalizes HTTPS URLs', () => {
+    const result = normalizeGitHubUrl('https://github.com/usurobor/cn-sigma.git');
+    assert.strictEqual(result, 'usurobor/cn-sigma');
+  });
+
+  it('handles URLs without .git suffix', () => {
+    const result = normalizeGitHubUrl('https://github.com/usurobor/cn-sigma');
+    assert.strictEqual(result, 'usurobor/cn-sigma');
+  });
+
+  it('returns null for null input', () => {
+    const result = normalizeGitHubUrl(null);
+    assert.strictEqual(result, null);
+  });
+
+  it('returns null for undefined input', () => {
+    const result = normalizeGitHubUrl(undefined);
+    assert.strictEqual(result, null);
+  });
+
+  it('handles org repos', () => {
+    const result = normalizeGitHubUrl('git@github.com:my-org/my-repo.git');
+    assert.strictEqual(result, 'my-org/my-repo');
+  });
+});
+
+describe('CLI environment', () => {
+  it('--help mentions CN_WORKSPACE env var', () => {
+    const { stdout } = runCLI(['--help']);
+    assert.ok(stdout.includes('CN_WORKSPACE'), 'should document CN_WORKSPACE env var');
+  });
+
+  it('--help mentions NO_COLOR env var', () => {
+    const { stdout } = runCLI(['--help']);
+    assert.ok(stdout.includes('NO_COLOR'), 'should document NO_COLOR env var');
+  });
+
+  it('respects NO_COLOR environment variable', () => {
+    const result = spawnSync('node', [CLI_PATH, '--help'], {
+      encoding: 'utf8',
+      timeout: 5000,
+      env: { ...process.env, NO_COLOR: '1' },
+    });
+    // Output should not contain ANSI escape codes
+    assert.ok(!result.stdout.includes('\x1b['), 'should not contain ANSI codes when NO_COLOR is set');
   });
 });
