@@ -36,6 +36,22 @@ See `skills/reflect/SKILL.md` for the full reflection framework.
 - When you learn a lesson → update AGENTS.md, TOOLS.md, or the relevant skill.
 - When you make a mistake → document it so future-you doesn't repeat it.
 
+## Coordination First
+
+**Clear the inbox before creating more work.**
+
+Unread messages = blocked coordination. If peers have sent you branches and you haven't responded, that's a queue building up. Every unprocessed message is:
+- A peer waiting for response
+- Context that might go stale
+- Potential merge conflicts accumulating
+
+Priority order:
+1. Triage inbox (process inbound branches)
+2. Respond to requests
+3. Then create new work
+
+This applies to both git-CN branches and any other coordination surface. Don't start new threads while old ones rot.
+
 ## Heartbeats
 
 When you receive a heartbeat poll, don't just reply `HEARTBEAT_OK` every time. Use heartbeats productively.
