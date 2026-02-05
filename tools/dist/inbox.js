@@ -23496,6 +23496,68 @@ var require_inbox_lib = __commonJS({
     var Stdlib__Option2 = require_option();
     var Stdlib__Printf2 = require_printf();
     var Stdlib__String2 = require_string();
+    function triage_of_string(param) {
+      switch (param) {
+        case "d":
+        case "delete":
+          return (
+            /* Delete */
+            0
+          );
+        case "defer":
+        case "f":
+          return (
+            /* Defer */
+            1
+          );
+        case "delegate":
+        case "g":
+          return (
+            /* Delegate */
+            2
+          );
+        case "do":
+        case "o":
+          return (
+            /* Do */
+            3
+          );
+        default:
+          return;
+      }
+    }
+    function string_of_triage(param) {
+      switch (param) {
+        case /* Delete */
+        0:
+          return "delete";
+        case /* Defer */
+        1:
+          return "defer";
+        case /* Delegate */
+        2:
+          return "delegate";
+        case /* Do */
+        3:
+          return "do";
+      }
+    }
+    function triage_description(param) {
+      switch (param) {
+        case /* Delete */
+        0:
+          return "Remove branch (noise/stale/handled)";
+        case /* Defer */
+        1:
+          return "Leave for later (important, not urgent)";
+        case /* Delegate */
+        2:
+          return "Forward to another agent";
+        case /* Do */
+        3:
+          return "Respond now (merge/reply/action)";
+      }
+    }
     function action_of_string(param) {
       switch (param) {
         case "check":
@@ -23922,6 +23984,34 @@ var require_inbox_lib = __commonJS({
         };
       }
     }
+    var all_triages = {
+      hd: (
+        /* Delete */
+        0
+      ),
+      tl: {
+        hd: (
+          /* Defer */
+          1
+        ),
+        tl: {
+          hd: (
+            /* Delegate */
+            2
+          ),
+          tl: {
+            hd: (
+              /* Do */
+              3
+            ),
+            tl: (
+              /* [] */
+              0
+            )
+          }
+        }
+      }
+    };
     var all_actions = {
       hd: (
         /* Check */
@@ -23945,6 +24035,10 @@ var require_inbox_lib = __commonJS({
       }
     };
     module2.exports = {
+      triage_of_string,
+      string_of_triage,
+      triage_description,
+      all_triages,
       action_of_string,
       string_of_action,
       all_actions,

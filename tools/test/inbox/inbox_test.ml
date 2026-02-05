@@ -2,6 +2,62 @@
 
 open Inbox_lib
 
+(* === GTD Triage === *)
+
+let%expect_test "triage_of_string valid" =
+  ["delete"; "d"; "defer"; "f"; "delegate"; "g"; "do"; "o"]
+  |> List.iter (fun s ->
+    match triage_of_string s with
+    | Some t -> print_endline (string_of_triage t)
+    | None -> print_endline "NONE");
+  [%expect {|
+    delete
+    delete
+    defer
+    defer
+    delegate
+    delegate
+    do
+    do
+  |}]
+
+let%expect_test "triage_of_string invalid" =
+  ["Delete"; "DROP"; "skip"; ""]
+  |> List.iter (fun s ->
+    match triage_of_string s with
+    | Some t -> print_endline (string_of_triage t)
+    | None -> print_endline "NONE");
+  [%expect {|
+    NONE
+    NONE
+    NONE
+    NONE
+  |}]
+
+let%expect_test "triage roundtrip" =
+  all_triages
+  |> List.iter (fun t ->
+    let s = string_of_triage t in
+    match triage_of_string s with
+    | Some t' when t = t' -> print_endline "OK"
+    | _ -> print_endline "FAIL");
+  [%expect {|
+    OK
+    OK
+    OK
+    OK
+  |}]
+
+let%expect_test "triage descriptions" =
+  all_triages
+  |> List.iter (fun t -> print_endline (triage_description t));
+  [%expect {|
+    Remove branch (noise/stale/handled)
+    Leave for later (important, not urgent)
+    Forward to another agent
+    Respond now (merge/reply/action)
+  |}]
+
 (* === Action parsing === *)
 
 let%expect_test "action_of_string valid" =
