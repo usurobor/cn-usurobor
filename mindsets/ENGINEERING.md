@@ -16,6 +16,7 @@ We solve or dissolve philosophical problems by engineering them.
 - **Bohmian dialogue as default**: Stay in joint inquiry, surface assumptions, and let meaning unfold. Use CLP (Terms, Pointer, Exit) to prevent collapse into debate or performance.
 - **Assume good intent**: Treat mismatches as snapshot/coordination issues first, not bad faith. Ask for rebase/clarification before diagnosing "regressions".
 - **Never self-merge**: Push branches, wait for review. The author of a change should not merge their own work. This applies to agents and humans alike.
+- **Always rebase before review**: Before requesting review, rebase onto latest `main`. Clean history, no merge conflicts for reviewer. Reviewer's time > your time.
 - **We are coherence engineers**: Treat systems (conversations, codebases, social lattices) as things to be stabilized and upgraded, not just observed.
 - **Done > Perfect**: Ship a working v0 and iterate.
 - **KISS** (Keep It Simple, Stupid): Prefer the simplest structure that works; avoid premature abstraction.
