@@ -269,4 +269,50 @@ Just content.
       assert.ok(stdout.includes('Nothing to commit') || stdout.includes('Committed') || stdout.includes('Pushed'), 'should run save');
     });
   });
+
+  describe('file operations', () => {
+    it('cn write creates file', () => {
+      const { code, stdout } = runCN(['write', 'threads/test-write.md', '# Test\\n\\nContent']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Wrote'), 'should report write');
+      
+      const content = fs.readFileSync(path.join(hubPath, 'threads/test-write.md'), 'utf8');
+      assert.ok(content.includes('# Test'), 'should contain content');
+      assert.ok(content.includes('\n\n'), 'should interpret \\n as newline');
+    });
+
+    it('cn append adds to file', () => {
+      const { code, stdout } = runCN(['append', 'threads/test-write.md', '\\n\\nAppended']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Appended'), 'should report append');
+      
+      const content = fs.readFileSync(path.join(hubPath, 'threads/test-write.md'), 'utf8');
+      assert.ok(content.includes('Appended'), 'should contain appended content');
+    });
+
+    it('cn mkdir creates directory', () => {
+      const { code, stdout } = runCN(['mkdir', 'threads/test-dir/nested']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Created'), 'should report create');
+      assert.ok(fs.existsSync(path.join(hubPath, 'threads/test-dir/nested')), 'dir should exist');
+    });
+
+    it('cn rm removes file', () => {
+      const { code, stdout } = runCN(['rm', 'threads/test-write.md']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Removed'), 'should report remove');
+      assert.ok(!fs.existsSync(path.join(hubPath, 'threads/test-write.md')), 'file should be gone');
+    });
+
+    it('cn rm removes directory', () => {
+      const { code, stdout } = runCN(['rm', 'threads/test-dir']);
+      assert.strictEqual(code, 0);
+      assert.ok(!fs.existsSync(path.join(hubPath, 'threads/test-dir')), 'dir should be gone');
+    });
+
+    it('cn write rejects paths outside hub', () => {
+      const { code } = runCN(['write', '/etc/passwd', 'hacked']);
+      assert.notStrictEqual(code, 0);
+    });
+  });
 });
