@@ -118,102 +118,159 @@ function runInbox(subCmd, hubPath, name) {
   result.on('close', (code) => process.exit(code));
 }
 
-// Run outbox commands
+// Run outbox commands (threads/outbox/ model)
 function runOutbox(subCmd, hubPath, name) {
-  const outboxPath = path.join(hubPath, 'state', 'outbox.md');
+  const outboxDir = path.join(hubPath, 'threads', 'outbox');
+  const sentDir = path.join(hubPath, 'threads', 'sent');
   const peersPath = path.join(hubPath, 'state', 'peers.md');
   
+  // Ensure directories exist
+  if (!fs.existsSync(outboxDir)) {
+    fs.mkdirSync(outboxDir, { recursive: true });
+  }
+  if (!fs.existsSync(sentDir)) {
+    fs.mkdirSync(sentDir, { recursive: true });
+  }
+  
+  // Load peers
+  let peers = {};
+  if (fs.existsSync(peersPath)) {
+    const peersContent = fs.readFileSync(peersPath, 'utf8');
+    peers = parsePeers(peersContent);
+  }
+  
+  // Scan outbox for threads
+  const threads = fs.readdirSync(outboxDir)
+    .filter(f => f.endsWith('.md'))
+    .map(f => {
+      const filePath = path.join(outboxDir, f);
+      const content = fs.readFileSync(filePath, 'utf8');
+      const meta = parseFrontmatter(content);
+      return { file: f, path: filePath, content, meta };
+    });
+  
   if (subCmd === 'check') {
-    // List pending outbox items
-    if (!fs.existsSync(outboxPath)) {
-      info('Outbox empty (no state/outbox.md)');
+    if (threads.length === 0) {
+      ok('Outbox clear');
       return;
     }
-    const content = fs.readFileSync(outboxPath, 'utf8');
-    const pending = parseOutbox(content).filter(item => item.status === 'pending');
-    if (pending.length === 0) {
-      ok('Outbox clear');
-    } else {
-      warn(`${pending.length} pending send(s):`);
-      pending.forEach(item => {
-        console.log(`  → ${item.to}: ${item.thread}`);
-      });
-    }
+    warn(`${threads.length} pending send(s):`);
+    threads.forEach(t => {
+      const to = t.meta.to || '(no recipient)';
+      console.log(`  → ${to}: ${t.file}`);
+    });
     return;
   }
   
   if (subCmd === 'flush') {
-    // Execute pending sends
-    if (!fs.existsSync(outboxPath)) {
-      info('Outbox empty');
-      return;
-    }
-    
-    // Load peers
-    let peers = {};
-    if (fs.existsSync(peersPath)) {
-      const peersContent = fs.readFileSync(peersPath, 'utf8');
-      peers = parsePeers(peersContent);
-    }
-    
-    const content = fs.readFileSync(outboxPath, 'utf8');
-    const items = parseOutbox(content);
-    const pending = items.filter(item => item.status === 'pending');
-    
-    if (pending.length === 0) {
+    if (threads.length === 0) {
       ok('Outbox clear');
       return;
     }
     
-    info(`Flushing ${pending.length} item(s)...`);
+    info(`Flushing ${threads.length} thread(s)...`);
     
-    for (const item of pending) {
-      const peer = peers[item.to];
+    for (const t of threads) {
+      const to = t.meta.to;
+      if (!to) {
+        logAction(hubPath, 'outbox.skip', { thread: t.file, reason: 'no recipient (to: field missing)' });
+        warn(`Skipping ${t.file}: no 'to:' in frontmatter`);
+        continue;
+      }
+      
+      const peer = peers[to];
       if (!peer) {
-        fail(`Unknown peer: ${item.to}`);
-        item.status = 'error';
-        item.error = 'unknown peer';
+        logAction(hubPath, 'outbox.skip', { thread: t.file, to, reason: 'unknown peer' });
+        fail(`Unknown peer: ${to}`);
+        continue;
+      }
+      
+      if (!peer.clone) {
+        logAction(hubPath, 'outbox.skip', { thread: t.file, to, reason: 'no clone path configured' });
+        fail(`No clone path for peer: ${to}`);
         continue;
       }
       
       try {
-        // Create branch name from thread
-        const threadName = path.basename(item.thread, '.md');
+        const threadName = path.basename(t.file, '.md');
         const branchName = `${name}/${threadName}`;
         
-        // Check if thread file exists
-        const threadPath = path.join(hubPath, item.thread);
-        if (!fs.existsSync(threadPath)) {
-          fail(`Thread not found: ${item.thread}`);
-          item.status = 'error';
-          item.error = 'thread not found';
-          continue;
+        // Actor model: push to PEER's repo (their clone)
+        // 1. Ensure peer clone is on main and up to date
+        execSync(`git checkout main 2>/dev/null || git checkout master`, { cwd: peer.clone, stdio: 'pipe' });
+        execSync(`git pull --ff-only 2>/dev/null || true`, { cwd: peer.clone, stdio: 'pipe' });
+        
+        // 2. Create branch in peer's clone
+        execSync(`git checkout -b ${branchName} 2>/dev/null || git checkout ${branchName}`, { cwd: peer.clone, stdio: 'pipe' });
+        
+        // 3. Copy thread to peer's threads/adhoc/ (standardized location)
+        const peerThreadDir = path.join(peer.clone, 'threads', 'adhoc');
+        if (!fs.existsSync(peerThreadDir)) {
+          fs.mkdirSync(peerThreadDir, { recursive: true });
         }
+        const peerThreadPath = path.join(peerThreadDir, t.file);
+        fs.copyFileSync(t.path, peerThreadPath);
         
-        // Create branch, add thread, push to peer
-        execSync(`git checkout -b ${branchName} 2>/dev/null || git checkout ${branchName}`, { cwd: hubPath, stdio: 'pipe' });
-        execSync(`git add ${item.thread}`, { cwd: hubPath, stdio: 'pipe' });
-        execSync(`git commit -m "send: ${threadName}" --allow-empty`, { cwd: hubPath, stdio: 'pipe' });
-        execSync(`git push ${peer.remote} ${branchName} -f`, { cwd: hubPath, stdio: 'pipe' });
-        execSync(`git checkout main`, { cwd: hubPath, stdio: 'pipe' });
+        // 4. Commit and push
+        execSync(`git add "threads/adhoc/${t.file}"`, { cwd: peer.clone, stdio: 'pipe' });
+        execSync(`git commit -m "${name}: ${threadName}"`, { cwd: peer.clone, stdio: 'pipe' });
+        execSync(`git push -u origin ${branchName} -f`, { cwd: peer.clone, stdio: 'pipe' });
         
-        item.status = 'sent';
-        item.sent = new Date().toISOString();
-        logAction(hubPath, 'outbox.send', { to: item.to, thread: item.thread, branch: branchName, remote: peer.remote, result: 'ok' });
-        ok(`Sent to ${item.to}: ${item.thread}`);
+        // 5. Return to main
+        execSync(`git checkout main 2>/dev/null || git checkout master`, { cwd: peer.clone, stdio: 'pipe' });
+        
+        // Move to sent/
+        const sentPath = path.join(sentDir, t.file);
+        const sentContent = updateFrontmatter(t.content, { sent: new Date().toISOString() });
+        fs.writeFileSync(sentPath, sentContent);
+        fs.unlinkSync(t.path);
+        
+        logAction(hubPath, 'outbox.send', { to, thread: t.file, branch: branchName, clone: peer.clone, result: 'ok' });
+        ok(`Sent to ${to}: ${t.file}`);
       } catch (err) {
-        logAction(hubPath, 'outbox.send', { to: item.to, thread: item.thread, result: 'error', error: err.message });
-        fail(`Failed to send to ${item.to}: ${err.message}`);
-        item.status = 'error';
-        item.error = err.message;
+        logAction(hubPath, 'outbox.send', { to, thread: t.file, result: 'error', error: err.message });
+        fail(`Failed to send ${t.file}: ${err.message}`);
         execSync(`git checkout main 2>/dev/null || true`, { cwd: hubPath, stdio: 'pipe' });
       }
     }
     
-    // Write updated outbox
-    writeOutbox(outboxPath, items);
     ok('Outbox flush complete');
   }
+}
+
+// Parse YAML frontmatter
+function parseFrontmatter(content) {
+  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!match) return {};
+  const yaml = match[1];
+  const meta = {};
+  yaml.split('\n').forEach(line => {
+    const [key, ...rest] = line.split(':');
+    if (key && rest.length) {
+      meta[key.trim().toLowerCase()] = rest.join(':').trim();
+    }
+  });
+  return meta;
+}
+
+// Update frontmatter field
+function updateFrontmatter(content, updates) {
+  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!match) {
+    // No frontmatter, add it
+    const lines = Object.entries(updates).map(([k, v]) => `${k}: ${v}`).join('\n');
+    return `---\n${lines}\n---\n\n${content}`;
+  }
+  let yaml = match[1];
+  for (const [key, val] of Object.entries(updates)) {
+    const regex = new RegExp(`^${key}:.*$`, 'm');
+    if (regex.test(yaml)) {
+      yaml = yaml.replace(regex, `${key}: ${val}`);
+    } else {
+      yaml += `\n${key}: ${val}`;
+    }
+  }
+  return content.replace(/^---\n[\s\S]*?\n---/, `---\n${yaml}\n---`);
 }
 
 // Parse outbox.md table
@@ -261,9 +318,19 @@ Agent writes pending sends here. cn reads and executes.
 // Parse peers.md
 function parsePeers(content) {
   const peers = {};
-  const matches = content.matchAll(/- name:\s*(\w+)[\s\S]*?remote:\s*(\S+)/g);
-  for (const match of matches) {
-    peers[match[1]] = { name: match[1], remote: match[2] };
+  // Match each peer block
+  const blocks = content.split(/(?=- name:)/);
+  for (const block of blocks) {
+    const nameMatch = block.match(/- name:\s*(\S+)/);
+    if (!nameMatch) continue;
+    const name = nameMatch[1];
+    const hubMatch = block.match(/hub:\s*(\S+)/);
+    const cloneMatch = block.match(/clone:\s*(\S+)/);
+    peers[name] = { 
+      name, 
+      hub: hubMatch ? hubMatch[1] : null,
+      clone: cloneMatch ? cloneMatch[1] : null
+    };
   }
   return peers;
 }
