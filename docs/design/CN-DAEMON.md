@@ -38,6 +38,40 @@ cn becomes the service. Agent is passive — cn invokes it when needed.
 3. **Minimal footprint**: Lean service, no heavy dependencies.
 4. **Self-contained**: One install (`npm i -g cnagent`) gets everything.
 
+## Agent Communication Model
+
+Agents publish **action plans** as prose. cn interprets and executes.
+
+### Two paths for outbound:
+
+1. **Reply on inbox thread**
+   - cn materializes inbound branch → `threads/inbox/pi-clp.md`
+   - Agent writes reply at bottom of thread
+   - cn detects reply, sends back to peer
+
+2. **New outbound thread**
+   - Agent creates `threads/outbox/review-req.md`
+   - cn scans, picks up, sends to peer
+
+### Thread structure:
+
+```
+threads/
+├── inbox/           ← cn materializes inbound here
+│   └── pi-clp.md    ← agent writes reply at bottom
+├── outbox/          ← agent creates new outbound here
+│   └── review-req.md
+└── adhoc/           ← regular threads (not scanned)
+```
+
+### cn sync flow:
+
+1. Fetch inbound → materialize to `threads/inbox/`
+2. Scan `inbox/` for replies → send back
+3. Scan `outbox/` for new threads → send
+
+Agent never runs git. Agent writes prose. cn does effects.
+
 ## Plugin Interface (sketch)
 
 ```ocaml
