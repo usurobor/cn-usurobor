@@ -162,64 +162,31 @@ function isGitRepo(dir) {
     }
   }
 
-  // Install instructions for each prerequisite
+  // Install instructions for each prerequisite (compact)
   const installInstructions = {
     git: [
-      '# macOS:',
-      'xcode-select --install',
-      '',
-      '# Debian/Ubuntu:',
-      'sudo apt update && sudo apt install git',
-      '',
-      '# Fedora:',
-      'sudo dnf install git',
-      '',
-      '# Windows:',
-      'winget install Git.Git',
-      '',
-      'More info: https://git-scm.com/downloads',
+      'apt install git      # Debian/Ubuntu',
+      'brew install git     # macOS',
+      'dnf install git      # Fedora',
     ],
     gh: [
-      '# macOS:',
-      'brew install gh',
-      '',
-      '# Debian/Ubuntu:',
-      'sudo apt install gh',
-      '',
-      '# Fedora:',
-      'sudo dnf install gh',
-      '',
-      '# Windows:',
-      'winget install GitHub.cli',
-      '',
-      'More info: https://cli.github.com/',
+      'apt install gh       # Debian/Ubuntu', 
+      'brew install gh      # macOS',
+      'dnf install gh       # Fedora',
+      'Then: gh auth login',
     ],
     'gh auth': [
       'gh auth login',
-      '',
-      'Follow the prompts to authenticate with GitHub.',
     ],
     'git identity': [
       'git config --global user.name "Your Name"',
       'git config --global user.email "you@example.com"',
-      '',
-      'Or update your GitHub profile (name + public email):',
-      'https://github.com/settings/profile',
     ],
     workspace: [
       `mkdir -p ${WORKSPACE_ROOT}`,
-      '',
-      'Or set CN_WORKSPACE to your preferred path:',
-      'CN_WORKSPACE=/your/path npx --yes @usurobor/cn-agent-setup',
     ],
     openclaw: [
-      '# Install OpenClaw:',
-      'npm install -g openclaw',
-      '',
-      '# Then configure it:',
-      'openclaw init',
-      '',
-      'More info: https://docs.openclaw.ai',
+      'curl -fsSL https://openclaw.ai/install.sh | bash',
     ],
   };
 
@@ -304,19 +271,17 @@ function isGitRepo(dir) {
       .map(([name]) => name);
 
     if (failed.length > 0) {
-      // Show install instructions for each failure
+      // Show install instructions for each failure (compact)
       console.log(red(`Missing: ${failed.join(', ')}`));
       console.log('');
       
       for (const name of failed) {
-        console.log(bold(`To install ${name}:`));
-        console.log('');
+        console.log(bold(`${name}:`));
         for (const line of installInstructions[name]) {
           console.log(`  ${line}`);
         }
-        console.log('');
       }
-      
+      console.log('');
       process.exit(1);
     }
 
