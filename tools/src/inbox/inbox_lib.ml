@@ -22,11 +22,11 @@ let all_commands = [Check; Process; Flush]
 
 (* === GTD Triage (Getting Things Done) === *)
 
-(* Semantic type aliases for clarity *)
-type reason = string          (* why: "stale", "blocked on X" *)
-type actor = string           (* who: "pi", "omega" *)
-type branch_name = string     (* branch to create: "response-thread" *)
-type description = string     (* what: "update docs first" *)
+(* Wrapper types — true type safety, PascalCase constructors *)
+type reason = Reason of string           (* why: "stale", "blocked on X" *)
+type actor = Actor of string             (* who: "pi", "omega" *)
+type branch_name = BranchName of string  (* branch: "response-thread" *)
+type description = Description of string (* what: "update docs first" *)
 
 (* What to do when triaging as "Do" *)
 type action =
@@ -36,23 +36,23 @@ type action =
 
 (* GTD 4 Ds — each with required context *)
 type triage =
-  | Delete of reason                  (* why remove? *)
-  | Defer of reason                   (* why later? *)
-  | Delegate of actor                 (* who handles? *)
-  | Do of action                      (* what to do? *)
+  | Delete of reason                  (* Delete (Reason "stale") *)
+  | Defer of reason                   (* Defer (Reason "blocked") *)
+  | Delegate of actor                 (* Delegate (Actor "pi") *)
+  | Do of action                      (* Do Merge *)
 
 (* Parse action from string *)
 let action_of_string s =
   if s = "merge" then Some Merge
   else match String.split_on_char ':' s with
-    | ["reply"; name] -> Some (Reply name)
-    | ["custom"; desc] -> Some (Custom desc)
+    | ["reply"; name] -> Some (Reply (BranchName name))
+    | ["custom"; desc] -> Some (Custom (Description desc))
     | _ -> None
 
 let string_of_action = function
   | Merge -> "merge"
-  | Reply name -> Printf.sprintf "reply:%s" name
-  | Custom desc -> Printf.sprintf "custom:%s" desc
+  | Reply (BranchName name) -> Printf.sprintf "reply:%s" name
+  | Custom (Description desc) -> Printf.sprintf "custom:%s" desc
 
 (* Helper: require non-empty payload *)
 let non_empty_payload parts =
@@ -63,22 +63,22 @@ let non_empty_payload parts =
 let triage_of_string s =
   match String.split_on_char ':' s with
   | ("delete" | "d") :: rest -> 
-      non_empty_payload rest |> Option.map (fun r -> Delete r)
+      non_empty_payload rest |> Option.map (fun r -> Delete (Reason r))
   | ("defer" | "f") :: rest -> 
-      non_empty_payload rest |> Option.map (fun r -> Defer r)
+      non_empty_payload rest |> Option.map (fun r -> Defer (Reason r))
   | ("delegate" | "g") :: rest -> 
-      non_empty_payload rest |> Option.map (fun r -> Delegate r)
+      non_empty_payload rest |> Option.map (fun r -> Delegate (Actor r))
   | [("do" | "o"); "merge"] -> Some (Do Merge)
   | ("do" | "o") :: "reply" :: name -> 
-      non_empty_payload name |> Option.map (fun n -> Do (Reply n))
+      non_empty_payload name |> Option.map (fun n -> Do (Reply (BranchName n)))
   | ("do" | "o") :: "custom" :: desc -> 
-      non_empty_payload desc |> Option.map (fun d -> Do (Custom d))
+      non_empty_payload desc |> Option.map (fun d -> Do (Custom (Description d)))
   | _ -> None
 
 let string_of_triage = function
-  | Delete reason -> Printf.sprintf "delete:%s" reason
-  | Defer reason -> Printf.sprintf "defer:%s" reason
-  | Delegate actor -> Printf.sprintf "delegate:%s" actor
+  | Delete (Reason r) -> Printf.sprintf "delete:%s" r
+  | Defer (Reason r) -> Printf.sprintf "defer:%s" r
+  | Delegate (Actor a) -> Printf.sprintf "delegate:%s" a
   | Do action -> Printf.sprintf "do:%s" (string_of_action action)
 
 let triage_kind = function
@@ -88,12 +88,12 @@ let triage_kind = function
   | Do _ -> "do"
 
 let triage_description = function
-  | Delete reason -> Printf.sprintf "Remove branch (%s)" reason
-  | Defer reason -> Printf.sprintf "Defer (%s)" reason
-  | Delegate actor -> Printf.sprintf "Delegate to %s" actor
+  | Delete (Reason r) -> Printf.sprintf "Remove branch (%s)" r
+  | Defer (Reason r) -> Printf.sprintf "Defer (%s)" r
+  | Delegate (Actor a) -> Printf.sprintf "Delegate to %s" a
   | Do Merge -> "Merge branch"
-  | Do (Reply name) -> Printf.sprintf "Reply with branch %s" name
-  | Do (Custom desc) -> Printf.sprintf "Action: %s" desc
+  | Do (Reply (BranchName name)) -> Printf.sprintf "Reply with branch %s" name
+  | Do (Custom (Description desc)) -> Printf.sprintf "Action: %s" desc
 
 (* === Triage Log (audit trail) === *)
 

@@ -64,27 +64,27 @@ Process all inbound messages in sequence.
 
 ## GTD Triage (Getting Things Done)
 
-David Allen's 4 Ds, as OCaml types with semantic payloads:
+David Allen's 4 Ds, as OCaml types with wrapper types (true type safety):
 
 ```ocaml
-(* Semantic type aliases *)
-type reason = string        (* why: "stale", "blocked on X" *)
-type actor = string         (* who: "pi", "omega" *)
-type branch_name = string   (* branch: "response-thread" *)
-type description = string   (* what: "update docs first" *)
+(* Wrapper types — PascalCase constructors *)
+type reason = Reason of string           (* why *)
+type actor = Actor of string             (* who *)
+type branch_name = BranchName of string  (* branch *)
+type description = Description of string (* what *)
 
 (* What to do when triaging as "Do" *)
 type action =
-  | Merge                   (* merge the branch *)
-  | Reply of branch_name    (* push reply branch *)
-  | Custom of description   (* custom action *)
+  | Merge                        (* merge the branch *)
+  | Reply of branch_name         (* push reply branch *)
+  | Custom of description        (* custom action *)
 
 (* GTD 4 Ds — each with required payload *)
 type triage =
-  | Delete of reason        (* why remove? *)
-  | Defer of reason         (* why later? *)
-  | Delegate of actor       (* who handles? *)
-  | Do of action            (* what to do? *)
+  | Delete of reason             (* Delete (Reason "stale") *)
+  | Defer of reason              (* Defer (Reason "blocked") *)
+  | Delegate of actor            (* Delegate (Actor "pi") *)
+  | Do of action                 (* Do Merge *)
 ```
 
 Every decision requires rationale — no silent triage:

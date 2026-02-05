@@ -49,12 +49,12 @@ let%expect_test "triage_of_string invalid" =
 
 let%expect_test "triage roundtrip" =
   let examples = [
-    Delete "stale";
-    Defer "blocked on X";
-    Delegate "pi";
+    Delete (Reason "stale");
+    Defer (Reason "blocked on X");
+    Delegate (Actor "pi");
     Do Merge;
-    Do (Reply "my-response");
-    Do (Custom "manual fix needed")
+    Do (Reply (BranchName "my-response"));
+    Do (Custom (Description "manual fix needed"))
   ] in
   examples |> List.iter (fun t ->
     let s = string_of_triage t in
@@ -73,12 +73,12 @@ let%expect_test "triage roundtrip" =
 
 let%expect_test "triage descriptions" =
   let examples = [
-    Delete "stale";
-    Defer "blocked on X";
-    Delegate "pi";
+    Delete (Reason "stale");
+    Defer (Reason "blocked on X");
+    Delegate (Actor "pi");
     Do Merge;
-    Do (Reply "response");
-    Do (Custom "update docs")
+    Do (Reply (BranchName "response"));
+    Do (Custom (Description "update docs"))
   ] in
   examples |> List.iter (fun t -> print_endline (triage_description t));
   [%expect {|
@@ -92,9 +92,9 @@ let%expect_test "triage descriptions" =
 
 let%expect_test "triage_kind" =
   let examples = [
-    Delete "x";
-    Defer "y";
-    Delegate "z";
+    Delete (Reason "x");
+    Defer (Reason "y");
+    Delegate (Actor "z");
     Do Merge
   ] in
   examples |> List.iter (fun t -> print_endline (triage_kind t));
@@ -121,11 +121,11 @@ let%expect_test "format_log_entry" =
 let%expect_test "format_log_entry_human" =
   let entries = [
     { timestamp = "2026-02-05T17:20:00Z"; branch = "review"; peer = "pi"; 
-      decision = Delete "stale"; actor = "sigma" };
+      decision = Delete (Reason "stale"); actor = "sigma" };
     { timestamp = "2026-02-05T17:21:00Z"; branch = "urgent"; peer = "omega"; 
-      decision = Defer "blocked on X"; actor = "sigma" };
+      decision = Defer (Reason "blocked on X"); actor = "sigma" };
     { timestamp = "2026-02-05T17:22:00Z"; branch = "task"; peer = "pi"; 
-      decision = Delegate "tau"; actor = "sigma" };
+      decision = Delegate (Actor "tau"); actor = "sigma" };
     { timestamp = "2026-02-05T17:23:00Z"; branch = "feature"; peer = "pi"; 
       decision = Do Merge; actor = "sigma" };
   ] in
@@ -142,7 +142,7 @@ let%expect_test "format_log_row" =
     timestamp = "2026-02-05T17:20:00Z";
     branch = "review-request";
     peer = "pi";
-    decision = Delete "duplicate";
+    decision = Delete (Reason "duplicate");
     actor = "sigma"
   } in
   print_endline (format_log_row entry);
@@ -163,12 +163,12 @@ let%expect_test "daily_log_header" =
 
 let%expect_test "daily_stats" =
   let decisions = [
-    Delete "stale";
-    Delete "dup";
-    Defer "blocked";
-    Delegate "pi";
+    Delete (Reason "stale");
+    Delete (Reason "dup");
+    Defer (Reason "blocked");
+    Delegate (Actor "pi");
     Do Merge;
-    Do (Reply "resp")
+    Do (Reply (BranchName "resp"))
   ] in
   let stats = List.fold_left update_stats empty_stats decisions in
   print_endline (format_daily_summary stats);
