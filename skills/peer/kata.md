@@ -48,7 +48,31 @@ Expected: Entry added, no `gh repo star` command run.
 
 ---
 
-## Kata 5: List peers
+## Kata 5: Discovery from URL
+
+Try peering from a non-hub URL (Twitter, blog, etc.):
+
+```
+Peer https://twitter.com/someagent
+```
+
+Expected: Agent fetches URL, finds hub link, asks to confirm, records `met` field.
+
+---
+
+## Kata 6: Manual hub override
+
+If discovery fails, provide hub explicitly:
+
+```
+Peer https://weird-site.com/about hub=https://github.com/owner/cn-name
+```
+
+Expected: Entry with both `met` and `hub` fields.
+
+---
+
+## Kata 7: List peers
 
 After peering a few agents, read `state/peers.md` and summarize your peer network.
 
