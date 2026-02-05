@@ -1,23 +1,37 @@
 # OPERATIONS.md - How We Operate
 
-## Memory Management
+## Thread Management
 
-### Daily Notes
+### Everything is a Thread
 
-Write to `memory/YYYY-MM-DD.md`. Create `memory/` if needed. Capture what matters: decisions, context, things to remember. Skip secrets unless asked.
+Threads are your continuity. All notes, reflections, and conversations go to `threads/`.
 
-### Long-Term Memory (MEMORY.md)
+| Directory | Purpose | Naming |
+|-----------|---------|--------|
+| `daily/` | Daily reflections | `YYYYMMDD.md` |
+| `weekly/` | Weekly rollups | `YYYYMMDD.md` (Monday) |
+| `monthly/` | Monthly reviews | `YYYYMM01.md` |
+| `quarterly/` | Strategic alignment | `YYYYMM01.md` (Q start) |
+| `yearly/` | Evolution reviews | `YYYY0101.md` |
+| `adhoc/` | Topic threads | `YYYYMMDD-topic.md` |
 
-- **ONLY load in main session** (direct chats with your human).
-- **DO NOT load in shared contexts** (Discord, group chats, sessions with other people) — security risk.
-- Write significant events, thoughts, decisions, opinions, lessons learned.
-- Over time, review daily files and update MEMORY.md with what's worth keeping.
+### Daily Threads
+
+Write to `threads/daily/YYYYMMDD.md`. Capture what matters: decisions, context, things to remember. Skip secrets unless asked.
+
+Use the `reflect` skill for structured α/β/γ reflection, or write freeform notes.
+
+### Higher-Cadence Threads
+
+Weekly threads review dailies. Monthly threads review weeklies. Each level distills patterns from the level below.
+
+See `skills/reflect/SKILL.md` for the full reflection framework.
 
 ### Write It Down
 
 - Memory is limited. If you want to remember something, WRITE IT TO A FILE.
 - "Mental notes" don't survive session restarts. Files do.
-- When someone says "remember this" → update `memory/YYYY-MM-DD.md` or relevant file.
+- When someone says "remember this" → update today's daily thread or relevant file.
 - When you learn a lesson → update AGENTS.md, TOOLS.md, or the relevant skill.
 - When you make a mistake → document it so future-you doesn't repeat it.
 
@@ -90,16 +104,16 @@ Track checks in `memory/heartbeat-state.json`:
 - Commit and push your own changes
 - Review and update MEMORY.md
 
-### Memory Maintenance (during heartbeats)
+### Thread Maintenance (during heartbeats)
 
 Periodically (every few days), use a heartbeat to:
 
-1. Read through recent `memory/YYYY-MM-DD.md` files.
-2. Identify significant events, lessons, or insights worth keeping.
-3. Update `MEMORY.md` with distilled learnings.
-4. Remove outdated info from MEMORY.md.
+1. Read through recent `threads/daily/` files.
+2. Identify patterns, lessons, or insights emerging.
+3. If a weekly review is due, write `threads/weekly/YYYYMMDD.md`.
+4. Migrate stable patterns to mindsets (see `skills/reflect/SKILL.md`).
 
-Daily files are raw notes; MEMORY.md is curated wisdom.
+Daily threads are raw notes; higher-cadence threads distill patterns.
 
 ## Group Chats
 

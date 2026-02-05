@@ -10,7 +10,7 @@ Reflections are threads. This skill helps you write periodic threads with α/β/
 
 1. The agent has done meaningful work since last reflection.
 2. The hub repo exists and is writable.
-3. `threads/` directory exists (create if not).
+3. `threads/<cadence>/` directory exists (create if not).
 
 ---
 
@@ -25,24 +25,24 @@ Reflections are threads. This skill helps you write periodic threads with α/β/
 
 1. Reflect on α, β, γ for the period.
 2. Assign A-F scores for each axis.
-3. Write thread to `threads/YYYYMMDD-<cadence>.md`.
+3. Write thread to `threads/<cadence>/YYYYMMDD.md`.
 4. If pattern emerges, note for higher-cadence review.
 5. Commit and push.
 
 ---
 
-## Thread Naming
+## Thread Paths
 
-All threads use date prefix `YYYYMMDD-`:
+All threads live in `threads/<cadence>/`:
 
-| Cadence | Filename |
-|---------|----------|
-| Daily | `YYYYMMDD-daily.md` |
-| Weekly | `YYYYMMDD-weekly.md` (Monday of week) |
-| Monthly | `YYYYMM01-monthly.md` |
-| Quarterly | `YYYYMM01-quarterly.md` (Q start) |
-| Half-yearly | `YYYYMM01-half.md` (H start) |
-| Yearly | `YYYY0101-yearly.md` |
+| Cadence | Path |
+|---------|------|
+| Daily | `threads/daily/YYYYMMDD.md` |
+| Weekly | `threads/weekly/YYYYMMDD.md` (Monday of week) |
+| Monthly | `threads/monthly/YYYYMM01.md` |
+| Quarterly | `threads/quarterly/YYYYMM01.md` (Q start) |
+| Half-yearly | `threads/quarterly/YYYYMM01-half.md` (H start) |
+| Yearly | `threads/yearly/YYYY0101.md` |
 
 ---
 
@@ -96,10 +96,10 @@ Don't optimize all three simultaneously. Balance two, let the third emerge.
 ### Daily — Raw coherence check
 
 **When:** End of work session or via heartbeat
-**File:** `threads/YYYYMMDD-daily.md`
+**File:** `threads/daily/YYYYMMDD.md`
 
 ```markdown
-# YYYYMMDD-daily
+# YYYYMMDD
 
 ## α — PATTERN: [A-F]
 What was my actual behavior today? Was it internally coherent?
@@ -120,10 +120,10 @@ Which axis needs investment tomorrow? Why?
 ### Weekly — Pattern recognition
 
 **When:** Sunday
-**File:** `threads/YYYYMMDD-weekly.md` (Monday of week)
+**File:** `threads/weekly/YYYYMMDD.md` (Monday of week)
 
 ```markdown
-# YYYYMMDD-weekly
+# YYYYMMDD (Weekly)
 
 ## Scores
 | Day | α | β | γ |
@@ -149,10 +149,10 @@ Coherence walk: which axis to invest in next week?
 ### Monthly — Theme consolidation
 
 **When:** 1st of month
-**File:** `threads/YYYYMM01-monthly.md`
+**File:** `threads/monthly/YYYYMM01.md`
 
 ```markdown
-# YYYYMM01-monthly
+# YYYYMM01 (Monthly)
 
 ## Scores
 | Week | α | β | γ |
@@ -181,10 +181,10 @@ Coherence walk: which axis to invest in next month?
 ### Quarterly — Strategic alignment
 
 **When:** Apr 1, Jul 1, Oct 1, Jan 1
-**File:** `threads/YYYYMM01-quarterly.md`
+**File:** `threads/quarterly/YYYYMM01.md`
 
 ```markdown
-# YYYYMM01-quarterly
+# YYYYMM01 (Quarterly)
 
 ## Scores
 | Month | α | β | γ |
@@ -214,10 +214,10 @@ Coherence walk: which axis to invest in next quarter?
 ### Half-yearly — Identity coherence
 
 **When:** Jul 1, Jan 1
-**File:** `threads/YYYYMM01-half.md`
+**File:** `threads/quarterly/YYYYMM01-half.md`
 
 ```markdown
-# YYYYMM01-half
+# YYYYMM01 (Half)
 
 ## Scores
 | Quarter | α | β | γ |
@@ -243,10 +243,10 @@ Coherence walk: which axis to invest in next half?
 ### Yearly — Evolution review
 
 **When:** Jan 1 (or agent birthday)
-**File:** `threads/YYYY0101-yearly.md`
+**File:** `threads/yearly/YYYY0101.md`
 
 ```markdown
-# YYYY0101-yearly
+# YYYY0101 (Yearly)
 
 ## Scores
 | Half | α | β | γ |
@@ -286,7 +286,7 @@ A pattern **earns** migration to mindsets when:
 3. **Stable** — still holds after a month
 4. **Transferable** — would help other agents
 
-Log migrations in `threads/migrations.md`:
+Log migrations in `threads/adhoc/migrations.md`:
 
 ```markdown
 | Date | Pattern | Destination | Notes |

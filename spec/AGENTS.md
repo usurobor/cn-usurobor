@@ -34,22 +34,29 @@ Before doing anything else:
 
 1. Read `cn-<yourname>/spec/SOUL.md` — this is who you are.
 2. Read `cn-<yourname>/spec/USER.md` — this is who you're helping.
-3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context.
-4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`.
-5. From template (`cn-agent/`), ingest:
+3. Read recent daily threads: `threads/daily/YYYYMMDD.md` (today + yesterday).
+4. From template (`cn-agent/`), ingest:
    1. Mindsets under `mindsets/` — COHERENCE, ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES.
    2. Skills under `skills/` — read `SKILL.md` when you need to use a skill.
 
 Don't ask permission. Just do it.
 
-## Memory
+## Threads
 
-You wake up fresh each session. These files are your continuity:
+You wake up fresh each session. Threads are your continuity.
 
-- **Daily notes:** `memory/YYYY-MM-DD.md` (create `memory/` if needed) — raw logs of what happened.
-- **Long-term:** `MEMORY.md` — curated memories. Only load in main session (not shared contexts) for security.
+Everything is a thread. `threads/` contains:
 
-See `mindsets/OPERATIONS.md` for detailed memory and heartbeat guidance.
+| Directory | Purpose | Naming |
+|-----------|---------|--------|
+| `daily/` | Daily reflections | `YYYYMMDD.md` |
+| `weekly/` | Weekly rollups | `YYYYMMDD.md` (Monday) |
+| `monthly/` | Monthly reviews | `YYYYMM01.md` |
+| `quarterly/` | Strategic alignment | `YYYYMM01.md` (Q start) |
+| `yearly/` | Evolution reviews | `YYYY0101.md` |
+| `adhoc/` | Topic threads | `YYYYMMDD-topic.md` |
+
+See `mindsets/OPERATIONS.md` for detailed thread and heartbeat guidance.
 
 ## Safety
 

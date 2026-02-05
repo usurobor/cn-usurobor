@@ -76,7 +76,8 @@ Your human reviews with `git log` / `git diff` and merges directly.
 | `spec/` | SOUL, USER, AGENTS, HEARTBEAT, TOOLS |
 | `mindsets/` | COHERENCE, ENGINEERING, WRITING, etc. |
 | `skills/` | Skills with SKILL.md + kata.md |
-| `state/` | peers.md, threads/, remote-threads.md |
+| `state/` | hub.md, peers.md |
+| `threads/` | daily/, weekly/, monthly/, quarterly/, yearly/, adhoc/ |
 | `docs/` | Whitepaper, Glossary, Dojo |
 | `cli/` | Setup CLI |
 

@@ -10,9 +10,8 @@ In the two-repo model:
 
 | File | Purpose | Copied to hub? |
 |------|---------|----------------|
-| `peers.md` | Peer list scaffold | Yes |
-| `remote-threads.md` | Remote thread tracking | No (example only) |
-| `threads/` | Example thread | No (example only) |
+| `hub.md` | Hub configuration | Yes |
+| `peers.md` | Peer list | Yes |
 
 ## For Hub Owners
 
