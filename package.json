@@ -1,12 +1,13 @@
 {
-  "name": "@usurobor/cn-agent-setup",
-  "version": "1.6.0",
-  "description": "CLI to bootstrap a cn-agent hub and wire it to the template",
+  "name": "cnagent",
+  "version": "0.1.0",
+  "description": "Coherent Network agent CLI — everything runs through cn",
   "keywords": [
     "cn-agent",
     "git-cn",
     "coherence-network",
-    "ai-agent"
+    "ai-agent",
+    "cli"
   ],
   "homepage": "https://github.com/usurobor/cn-agent#readme",
   "bugs": {
@@ -17,17 +18,15 @@
     "url": "https://github.com/usurobor/cn-agent.git"
   },
   "bin": {
-    "cn-agent-setup": "cli/index.js"
+    "cn": "bin/cn"
   },
   "files": [
-    "cli/index.js",
-    "cli/sanitize.js",
-    "cli/hubConfig.js",
-    "cli/github.js",
-    "cli/log.js"
+    "bin/",
+    "dist/"
   ],
   "scripts": {
-    "start": "node cli/index.js",
+    "build": "dune build && npm run bundle",
+    "bundle": "npx esbuild _build/default/tools/src/inbox/output/tools/src/inbox/inbox.js --bundle --platform=node --outfile=dist/inbox.js",
     "test": "node --test test/*.test.js"
   },
   "author": "usurobor",

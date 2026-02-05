@@ -1,0 +1,217 @@
+#!/usr/bin/env node
+
+/**
+ * cn - Coherent Network agent CLI
+ * 
+ * This is a thin wrapper that routes to the appropriate tool.
+ * OCaml source in tools/src/cn/, bundled JS in dist/cn.js
+ */
+
+const { execSync, spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+
+const VERSION = '0.1.0';
+
+// Colors (respects NO_COLOR)
+const noColor = process.env.NO_COLOR !== undefined;
+const c = {
+  reset: noColor ? '' : '\x1b[0m',
+  green: noColor ? '' : '\x1b[32m',
+  red: noColor ? '' : '\x1b[31m',
+  yellow: noColor ? '' : '\x1b[33m',
+  cyan: noColor ? '' : '\x1b[36m',
+  magenta: noColor ? '' : '\x1b[35m',
+  dim: noColor ? '' : '\x1b[2m',
+};
+
+const ok = (msg) => console.log(`${c.green}✓ ${msg}${c.reset}`);
+const fail = (msg) => console.log(`${c.red}✗ ${msg}${c.reset}`);
+const info = (msg) => console.log(`${c.cyan}${msg}${c.reset}`);
+const warn = (msg) => console.log(`${c.yellow}⚠ ${msg}${c.reset}`);
+const cmd = (msg) => `${c.magenta}${msg}${c.reset}`;
+
+const HELP = `cn - Coherent Network agent CLI
+
+Usage: cn <command> [options]
+
+Commands:
+  init [name]         Create new hub
+  status              Show hub state
+  inbox               Manage inbound messages
+    check             List inbound branches
+    process           Materialize as threads
+    flush             Execute decisions
+  peer                Manage peers
+  doctor              Check system health
+
+Aliases:
+  i = inbox, s = status, d = doctor
+
+Flags:
+  --help, -h          Show help
+  --version, -V       Show version
+
+Examples:
+  cn init sigma       Create hub named 'sigma'
+  cn inbox check      List inbound branches
+  cn doctor           Check system health
+`;
+
+// Expand aliases
+const aliases = { i: 'inbox', s: 'status', d: 'doctor', p: 'peer', t: 'thread' };
+const expandAlias = (cmd) => aliases[cmd] || cmd;
+
+// Find hub path
+function findHubPath() {
+  let dir = process.cwd();
+  while (dir !== '/') {
+    if (fs.existsSync(path.join(dir, '.cn', 'config.json'))) {
+      return dir;
+    }
+    // Also check for cn-* pattern with state/peers.md
+    if (fs.existsSync(path.join(dir, 'state', 'peers.md'))) {
+      return dir;
+    }
+    dir = path.dirname(dir);
+  }
+  return null;
+}
+
+// Derive name from path
+function deriveName(hubPath) {
+  const base = path.basename(hubPath);
+  return base.startsWith('cn-') ? base.slice(3) : base;
+}
+
+// Run inbox tool
+function runInbox(subCmd, hubPath, name) {
+  const inboxJs = path.join(__dirname, '..', 'dist', 'inbox.js');
+  if (!fs.existsSync(inboxJs)) {
+    fail('inbox.js not found. Run from cn-agent directory or install globally.');
+    process.exit(1);
+  }
+  const args = [inboxJs, subCmd, hubPath, name];
+  const result = spawn('node', args, { stdio: 'inherit' });
+  result.on('close', (code) => process.exit(code));
+}
+
+// Doctor command
+function doctor(hubPath) {
+  info(`Checking health...`);
+  console.log('');
+  
+  let checks = [];
+  
+  // Git
+  try {
+    const gitVersion = execSync('git --version', { encoding: 'utf8' }).trim();
+    checks.push({ name: 'git', ok: true, val: gitVersion.replace('git version ', '') });
+  } catch {
+    checks.push({ name: 'git', ok: false, val: 'not installed' });
+  }
+  
+  // Git config
+  try {
+    const userName = execSync('git config user.name', { encoding: 'utf8' }).trim();
+    checks.push({ name: 'git user.name', ok: true, val: userName });
+  } catch {
+    checks.push({ name: 'git user.name', ok: false, val: 'not set' });
+  }
+  
+  try {
+    const userEmail = execSync('git config user.email', { encoding: 'utf8' }).trim();
+    checks.push({ name: 'git user.email', ok: true, val: userEmail });
+  } catch {
+    checks.push({ name: 'git user.email', ok: false, val: 'not set' });
+  }
+  
+  // Hub
+  checks.push({ name: 'hub directory', ok: fs.existsSync(hubPath), val: hubPath ? 'exists' : 'not found' });
+  
+  // Print
+  const width = 22;
+  checks.forEach(({ name, ok: isOk, val }) => {
+    const dots = '.'.repeat(width - name.length);
+    const status = isOk 
+      ? `${c.green}✓ ${val}${c.reset}`
+      : `${c.red}✗ ${val}${c.reset}`;
+    console.log(`${name}${dots} ${status}`);
+  });
+  
+  console.log('');
+  const fails = checks.filter(c => !c.ok).length;
+  if (fails === 0) {
+    ok('All checks passed.');
+  } else {
+    fail(`${fails} issue(s) found.`);
+  }
+  
+  console.log(`${c.dim}[status] ok=${checks.filter(c=>c.ok).length} fail=${fails} version=${VERSION}${c.reset}`);
+  process.exit(fails > 0 ? 1 : 0);
+}
+
+// Status command
+function status(hubPath, name) {
+  info(`cn hub: ${name}`);
+  console.log('');
+  console.log(`hub..................... ${c.green}✓${c.reset}`);
+  console.log(`name.................... ${c.green}✓ ${name}${c.reset}`);
+  console.log(`path.................... ${c.green}✓ ${hubPath}${c.reset}`);
+  console.log('');
+  console.log(`${c.dim}[status] ok version=${VERSION}${c.reset}`);
+}
+
+// Main
+const args = process.argv.slice(2);
+if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
+  console.log(HELP);
+  process.exit(0);
+}
+
+if (args[0] === '--version' || args[0] === '-V') {
+  console.log(`cn ${VERSION}`);
+  process.exit(0);
+}
+
+const command = expandAlias(args[0]);
+const subArgs = args.slice(1);
+
+// Commands that don't need hub
+if (command === 'init') {
+  warn('cn init not yet implemented');
+  process.exit(1);
+}
+
+// Find hub
+const hubPath = findHubPath();
+if (!hubPath) {
+  fail('Not in a cn hub. Run "cn init" first.');
+  process.exit(1);
+}
+
+const name = deriveName(hubPath);
+
+switch (command) {
+  case 'status':
+    status(hubPath, name);
+    break;
+    
+  case 'doctor':
+    doctor(hubPath);
+    break;
+    
+  case 'inbox':
+    const subCmd = subArgs[0] || 'check';
+    if (!['check', 'process', 'flush'].includes(subCmd)) {
+      fail(`Unknown inbox command: ${subCmd}`);
+      process.exit(1);
+    }
+    runInbox(subCmd, hubPath, name);
+    break;
+    
+  default:
+    fail(`Unknown command: ${command}`);
+    console.log(`Run ${cmd('cn --help')} for usage.`);
+    process.exit(1);
+}
