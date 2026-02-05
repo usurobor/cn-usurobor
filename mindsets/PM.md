@@ -16,6 +16,12 @@ PM identifies what needs to exist, ensures it gets built coherently, and keeps t
 - **Effort estimates from doers**: PM guesses ≠ engineer commitments. Ask, don't assume.
 - **Stakeholder by domain**: Engineering changes → engineers. UX decisions → UX. Research priorities → researchers.
 
+### Writing Requirements
+
+- **User story format**: State requirements as: "**As a** [user type], **I want** [capability], **so that** [benefit]." This ensures requirements are user-centered, action-oriented, and value-driven.
+- **Problem, not solution**: Describe the problem and expected outcome. Let engineers propose solutions. Don't prescribe implementation.
+- **Concrete outcomes**: "Output available" is vague. "Writes to state/inbox.md so agent can read at session start" is concrete.
+
 ### System Over Discipline
 
 - **Systems > discipline**: If something fails repeatedly, it's a system problem, not a willpower problem. Iterate on the system (code, tools, process).
