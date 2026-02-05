@@ -36,6 +36,19 @@ See `skills/reflect/SKILL.md` for the full reflection framework.
 - When you learn a lesson → update AGENTS.md, TOOLS.md, or the relevant skill.
 - When you make a mistake → document it so future-you doesn't repeat it.
 
+## Coordination First
+
+**Make sure you're not blocking anyone first, then proceed with your own loop.**
+
+If someone is waiting on you, that's a dependency. Unblock them before starting new work.
+
+Priority order:
+1. Are you blocking anyone? (inbound requests, reviews, questions)
+2. Unblock them first
+3. Then proceed with your own work
+
+This applies to git-CN branches, reviews, messages — any coordination surface. Your unread inbox is someone else's blocked queue.
+
 ## Heartbeats
 
 When you receive a heartbeat poll, don't just reply `HEARTBEAT_OK` every time. Use heartbeats productively.
