@@ -106,16 +106,228 @@ function logAction(hubPath, action, details = {}) {
   );
 }
 
-// Run inbox tool
+// Run inbox commands (threads/inbox/ model)
 function runInbox(subCmd, hubPath, name) {
-  const inboxJs = path.join(__dirname, '..', 'dist', 'inbox.js');
-  if (!fs.existsSync(inboxJs)) {
-    fail('inbox.js not found. Run from cn-agent directory or install globally.');
-    process.exit(1);
+  const inboxDir = path.join(hubPath, 'threads', 'inbox');
+  const peersPath = path.join(hubPath, 'state', 'peers.md');
+  
+  // Ensure inbox dir exists
+  if (!fs.existsSync(inboxDir)) {
+    fs.mkdirSync(inboxDir, { recursive: true });
   }
-  const args = [inboxJs, subCmd, hubPath, name];
-  const result = spawn('node', args, { stdio: 'inherit' });
-  result.on('close', (code) => process.exit(code));
+  
+  // Load peers
+  let peers = {};
+  if (fs.existsSync(peersPath)) {
+    const peersContent = fs.readFileSync(peersPath, 'utf8');
+    peers = parsePeers(peersContent);
+  }
+  
+  if (subCmd === 'check') {
+    // Actor model: check MY repo for inbound branches from peers (peer/*)
+    info(`Checking inbox for ${name}...`);
+    
+    // Fetch my own repo
+    try {
+      execSync('git fetch origin', { cwd: hubPath, stdio: 'pipe' });
+    } catch (err) {
+      warn('Failed to fetch origin');
+    }
+    
+    let totalInbound = 0;
+    
+    for (const [peerName, peer] of Object.entries(peers)) {
+      if (peer.kind === 'template') continue; // Skip template repo
+      
+      try {
+        // Find branches from this peer in MY repo (peerName/*)
+        const branches = execSync(`git branch -r | grep "origin/${peerName}/" | sed 's/.*origin\\///'`, { 
+          cwd: hubPath, 
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe']
+        }).trim().split('\n').filter(b => b);
+        
+        if (branches.length > 0) {
+          logAction(hubPath, 'inbox.fetch', { from: peerName, branches, count: branches.length });
+          warn(`From ${peerName}: ${branches.length} inbound`);
+          branches.forEach(b => console.log(`  ← ${b}`));
+          totalInbound += branches.length;
+        } else {
+          console.log(`  ${c.dim}${peerName}: no inbound${c.reset}`);
+        }
+      } catch (err) {
+        // No branches found
+        console.log(`  ${c.dim}${peerName}: no inbound${c.reset}`);
+      }
+    }
+    
+    if (totalInbound === 0) {
+      ok('Inbox clear');
+    }
+    return;
+  }
+  
+  if (subCmd === 'process') {
+    // Actor model: materialize inbound branches from MY repo to threads/inbox/
+    info('Processing inbox...');
+    let processed = 0;
+    
+    for (const [peerName, peer] of Object.entries(peers)) {
+      if (peer.kind === 'template') continue; // Skip template repo
+      
+      try {
+        // Find branches from this peer in MY repo
+        const branches = execSync(`git branch -r | grep "origin/${peerName}/" | sed 's/.*origin\\///'`, { 
+          cwd: hubPath, 
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'pipe']
+        }).trim().split('\n').filter(b => b);
+        
+        for (const branch of branches) {
+          // Get files from this branch
+          try {
+            const files = execSync(`git diff main...origin/${branch} --name-only 2>/dev/null || git diff master...origin/${branch} --name-only`, {
+              cwd: hubPath,
+              encoding: 'utf8',
+              stdio: ['pipe', 'pipe', 'pipe']
+            }).trim().split('\n').filter(f => f.endsWith('.md'));
+            
+            for (const file of files) {
+              // Get file content from branch
+              const content = execSync(`git show origin/${branch}:${file}`, {
+                cwd: hubPath,
+                encoding: 'utf8',
+                stdio: ['pipe', 'pipe', 'pipe']
+              });
+              
+              // Write to inbox with metadata
+              const inboxFileName = `${peerName}-${path.basename(branch)}.md`;
+              const inboxFilePath = path.join(inboxDir, inboxFileName);
+              
+              // Skip if already materialized
+              if (fs.existsSync(inboxFilePath)) {
+                continue;
+              }
+              
+              // Add/update frontmatter
+              const meta = {
+                from: peerName,
+                branch: branch,
+                file: file,
+                received: new Date().toISOString()
+              };
+              const finalContent = ensureFrontmatter(content, meta);
+              fs.writeFileSync(inboxFilePath, finalContent);
+              
+              logAction(hubPath, 'inbox.materialize', { from: peerName, branch, file, inboxFile: inboxFileName });
+              ok(`Materialized: ${inboxFileName}`);
+              processed++;
+            }
+          } catch (err) {
+            // Branch might not have files or diff failed
+          }
+        }
+      } catch (err) {
+        // No branches found
+      }
+    }
+    
+    if (processed === 0) {
+      info('No new threads to materialize');
+    } else {
+      ok(`Processed ${processed} thread(s)`);
+    }
+    return;
+  }
+  
+  if (subCmd === 'flush') {
+    // Scan inbox for agent replies, send back
+    info('Scanning inbox for replies...');
+    
+    const threads = fs.readdirSync(inboxDir)
+      .filter(f => f.endsWith('.md'))
+      .map(f => {
+        const filePath = path.join(inboxDir, f);
+        const content = fs.readFileSync(filePath, 'utf8');
+        const meta = parseFrontmatter(content);
+        return { file: f, path: filePath, content, meta };
+      });
+    
+    let replied = 0;
+    for (const t of threads) {
+      // Check if agent has replied (look for ## Reply section or reply: true in frontmatter)
+      const hasReply = t.meta.reply === 'true' || t.content.includes('\n## Reply\n') || t.content.includes('\n## Response\n');
+      
+      if (!hasReply) continue;
+      
+      const from = t.meta.from;
+      if (!from) continue;
+      
+      const peer = peers[from];
+      if (!peer || !peer.clone) continue;
+      
+      try {
+        const threadName = path.basename(t.file, '.md');
+        const branchName = `${name}/${threadName}-reply`;
+        
+        // Push reply to peer's clone
+        execSync(`git checkout main 2>/dev/null || git checkout master`, { cwd: peer.clone, stdio: 'pipe' });
+        execSync(`git pull --ff-only 2>/dev/null || true`, { cwd: peer.clone, stdio: 'pipe' });
+        execSync(`git checkout -b ${branchName} 2>/dev/null || git checkout ${branchName}`, { cwd: peer.clone, stdio: 'pipe' });
+        
+        const peerThreadDir = path.join(peer.clone, 'threads', 'adhoc');
+        if (!fs.existsSync(peerThreadDir)) {
+          fs.mkdirSync(peerThreadDir, { recursive: true });
+        }
+        
+        // Copy reply thread
+        const replyFileName = `${name}-${threadName}-reply.md`;
+        fs.copyFileSync(t.path, path.join(peerThreadDir, replyFileName));
+        
+        execSync(`git add "threads/adhoc/${replyFileName}"`, { cwd: peer.clone, stdio: 'pipe' });
+        execSync(`git commit -m "${name}: reply to ${threadName}"`, { cwd: peer.clone, stdio: 'pipe' });
+        execSync(`git push -u origin ${branchName} -f`, { cwd: peer.clone, stdio: 'pipe' });
+        execSync(`git checkout main 2>/dev/null || git checkout master`, { cwd: peer.clone, stdio: 'pipe' });
+        
+        // Archive the inbox thread (move to threads/archived/)
+        const archivedDir = path.join(hubPath, 'threads', 'archived');
+        if (!fs.existsSync(archivedDir)) {
+          fs.mkdirSync(archivedDir, { recursive: true });
+        }
+        const archivedContent = updateFrontmatter(t.content, { replied: new Date().toISOString() });
+        fs.writeFileSync(path.join(archivedDir, t.file), archivedContent);
+        fs.unlinkSync(t.path);
+        
+        logAction(hubPath, 'inbox.reply', { to: from, thread: t.file, branch: branchName, result: 'ok' });
+        ok(`Replied to ${from}: ${t.file}`);
+        replied++;
+      } catch (err) {
+        logAction(hubPath, 'inbox.reply', { to: from, thread: t.file, result: 'error', error: err.message });
+        fail(`Failed to reply: ${err.message}`);
+        execSync(`git checkout main 2>/dev/null || git checkout master 2>/dev/null || true`, { cwd: peer.clone, stdio: 'pipe' });
+      }
+    }
+    
+    if (replied === 0) {
+      info('No replies to send');
+    } else {
+      ok(`Sent ${replied} reply(s)`);
+    }
+    return;
+  }
+}
+
+// Ensure content has frontmatter with given fields
+function ensureFrontmatter(content, meta) {
+  const existing = parseFrontmatter(content);
+  const merged = { ...existing, ...meta };
+  
+  // Remove existing frontmatter if present
+  const withoutFm = content.replace(/^---\n[\s\S]*?\n---\n*/, '');
+  
+  // Build new frontmatter
+  const fmLines = Object.entries(merged).map(([k, v]) => `${k}: ${v}`).join('\n');
+  return `---\n${fmLines}\n---\n\n${withoutFm}`;
 }
 
 // Run outbox commands (threads/outbox/ model)
@@ -620,6 +832,8 @@ switch (command) {
   case 'sync':
     info('Running sync...');
     runInbox('check', hubPath, name);
+    runInbox('process', hubPath, name);
+    runInbox('flush', hubPath, name);
     runOutbox('flush', hubPath, name);
     ok('Sync complete');
     break;
