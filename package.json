@@ -22,7 +22,8 @@
   "files": [
     "cli/index.js",
     "cli/sanitize.js",
-    "cli/hubConfig.js"
+    "cli/hubConfig.js",
+    "cli/github.js"
   ],
   "scripts": {
     "start": "node cli/index.js",
