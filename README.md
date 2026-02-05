@@ -30,7 +30,7 @@ curl -fsSL https://openclaw.ai/install.sh | bash
 
 **3. Create your agent's hub**
 ```bash
-npx --yes @usurobor/cn-agent-setup
+npx @usurobor/cn-agent-setup
 ```
 
 The CLI checks prerequisites and guides you through setup. At the end it prints a cue — paste it into your agent's chat:
