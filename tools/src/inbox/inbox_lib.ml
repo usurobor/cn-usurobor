@@ -293,6 +293,7 @@ type atomic_action =
   | Dir_create of string
   | Log_append of string * string  (* path, line *)
 
+(* Human-readable action description (for logging) *)
 let string_of_atomic_action = function
   | Git_checkout b -> "git checkout " ^ b
   | Git_merge b -> "git merge " ^ b
@@ -302,6 +303,21 @@ let string_of_atomic_action = function
   | File_write (p, _) -> "file write " ^ p
   | Dir_create p -> "mkdir -p " ^ p
   | Log_append (p, _) -> "log append " ^ p
+
+(* Actual shell command for git actions (testable, pure) *)
+let git_cmd_of_action ~hub_path = function
+  | Git_checkout b -> 
+      Some (Printf.sprintf "cd %s && git checkout %s" hub_path b)
+  | Git_merge b -> 
+      Some (Printf.sprintf "cd %s && git merge %s" hub_path b)
+  | Git_push (r, b) -> 
+      Some (Printf.sprintf "cd %s && git push %s %s" hub_path r b)
+  | Git_branch_delete b -> 
+      Some (Printf.sprintf "cd %s && git branch -d %s" hub_path b)
+  | Git_remote_delete (r, b) -> 
+      Some (Printf.sprintf "cd %s && git push %s --delete %s" hub_path r b)
+  | File_write _ | Dir_create _ | Log_append _ -> 
+      None  (* handled via Node.js fs, not shell *)
 
 (* Generate actions for a triage decision on an inbound branch.
    Inbound branches are always remote-only (pushed by peer). 
