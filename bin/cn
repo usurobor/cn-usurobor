@@ -11,7 +11,7 @@ const { execSync, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const VERSION = '2.0.3';
+const VERSION = '2.0.4';
 
 // Colors (respects NO_COLOR)
 const noColor = process.env.NO_COLOR !== undefined;
@@ -44,6 +44,7 @@ Commands:
     flush             Execute decisions
   peer                Manage peers
   doctor              Check system health
+  update              Update cn to latest version
 
 Aliases:
   i = inbox, s = status, d = doctor
@@ -239,6 +240,19 @@ const subArgs = args.slice(1);
 if (command === 'init') {
   warn('cn init not yet implemented');
   process.exit(1);
+}
+
+if (command === 'update') {
+  info('Updating cnagent...');
+  try {
+    execSync('npm install -g cnagent@latest', { stdio: 'inherit' });
+    ok('Updated to latest version.');
+    execSync('cn --version', { stdio: 'inherit' });
+  } catch (e) {
+    fail('Update failed. Try: npm install -g cnagent@latest');
+    process.exit(1);
+  }
+  process.exit(0);
 }
 
 // Find hub
