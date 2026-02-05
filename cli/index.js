@@ -162,17 +162,32 @@ function isGitRepo(dir) {
   const state = loadState();
 
   // Helper for autoconf-style check output (color = semantics)
-  function showCheck(label, status, detail) {
-    const dots = '.'.repeat(Math.max(1, 20 - label.length));
+  // indent: 0 = top-level, 1 = dependent
+  function showCheck(label, status, detail, indent = 0) {
+    const pad = indent ? '    ' : '  ';
+    const maxLen = indent ? 16 : 20;
+    const dots = '.'.repeat(Math.max(1, maxLen - label.length));
     if (status === true) {
       const info = detail ? ` ${gray(`(${detail})`)}` : '';
-      console.log(`  ${label}${dots} ${green('✓')}${info}`);
+      console.log(`${pad}${label}${dots} ${green('✓')}${info}`);
     } else if (status === false) {
-      console.log(`  ${label}${dots} ${red('✗')}`);
+      console.log(`${pad}${label}${dots} ${red('✗')}`);
+    } else if (status === 'blocked') {
+      const reason = detail ? ` ${gray(`(requires ${detail})`)}` : '';
+      console.log(`${pad}${label}${dots} ${yellow('⏸')}${reason}`);
     } else {
-      // skipped (dependency not met)
-      console.log(`  ${label}${dots} ${gray('--')}`);
+      console.log(`${pad}${label}${dots} ${gray('--')}`);
     }
+  }
+  
+  // Color only the command verb, not arguments
+  function colorCmd(line) {
+    const parts = line.match(/^(sudo\s+)?(\S+)(.*)$/);
+    if (parts) {
+      const [, sudo, cmd, rest] = parts;
+      return `${sudo ? magenta('sudo') + ' ' : ''}${magenta(cmd)}${rest || ''}`;
+    }
+    return line;
   }
 
   // Detect package manager
@@ -213,7 +228,7 @@ function isGitRepo(dir) {
 
   try {
     console.log(bold(cyan(`cn-agent-setup v${VERSION}`)));
-    console.log(cyan('Checking prerequisites...'));
+    console.log(cyan('Checking system prerequisites...'));
 
     // Collect all check results
     const checks = {};
@@ -270,10 +285,12 @@ function isGitRepo(dir) {
     const openclawDir = fs.existsSync(openclawHome);
     checks.openclaw = openclawCmd || openclawDir;
 
-    // Display all checks
+    // Display checks with dependency hierarchy
     showCheck('git', checks.git);
     showCheck('gh', checks.gh);
-    showCheck('gh auth', checks['gh auth'], details['gh auth']);
+    // gh auth is dependent on gh
+    const ghAuthStatus = checks.gh ? checks['gh auth'] : 'blocked';
+    showCheck('gh auth', ghAuthStatus, checks.gh ? details['gh auth'] : 'gh', 1);
     showCheck('git identity', checks['git identity'], details['git identity']);
     showCheck('workspace', checks.workspace, details.workspace);
     showCheck('openclaw', checks.openclaw);
@@ -284,16 +301,23 @@ function isGitRepo(dir) {
       .map(([name]) => name);
 
     if (failed.length > 0) {
-      // Error block (high-clarity pattern per UX spec)
+      // Error block with count, bullets, numbered steps
       console.log('');
-      console.log(red(`✗ Missing: ${failed.join(', ')}`));
+      console.log(red(`✗ Missing prerequisites (${failed.length}):`));
+      for (const name of failed) {
+        console.log(`  • ${name}`);
+      }
       console.log('');
-      console.log('Fix with:');
+      console.log('Fix by running these commands in order:');
+      let step = 1;
       for (const name of failed) {
         for (const line of installInstructions[name]) {
-          console.log(magenta(`  ${line}`));
+          console.log(`  ${step}) ${colorCmd(line)}`);
+          step++;
         }
       }
+      console.log('');
+      console.log(gray('Re-run to continue: npx @usurobor/cn-agent-setup'));
       console.log('');
       process.exit(1);
     }
