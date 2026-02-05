@@ -152,6 +152,20 @@ function ask(rl, question) {
   });
 }
 
+// Run command with stdin input
+function runWithInput(cmd, args, input) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { stdio: ['pipe', 'pipe', 'pipe'] });
+    child.stdin.write(input);
+    child.stdin.end();
+    child.on('exit', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`${cmd} exited with code ${code}`));
+    });
+    child.on('error', reject);
+  });
+}
+
 // Check if a directory is a git repo
 function isGitRepo(dir) {
   return fs.existsSync(path.join(dir, '.git'));
@@ -289,11 +303,44 @@ function isGitRepo(dir) {
     showCheck('git', checks.git);
     showCheck('gh', checks.gh);
     // gh auth is dependent on gh
-    const ghAuthStatus = checks.gh ? checks['gh auth'] : 'blocked';
+    let ghAuthStatus = checks.gh ? checks['gh auth'] : 'blocked';
     showCheck('gh auth', ghAuthStatus, checks.gh ? details['gh auth'] : 'gh', 1);
     showCheck('git identity', checks['git identity'], details['git identity']);
     showCheck('workspace', checks.workspace, details.workspace);
     showCheck('openclaw', checks.openclaw);
+
+    // Interactive: if gh installed but not authed, offer inline auth
+    if (checks.gh && !checks['gh auth']) {
+      console.log('');
+      const token = await ask(rl, gray('  GitHub token to authenticate (paste, Enter, or skip): '));
+      if (token) {
+        try {
+          await runWithInput('gh', ['auth', 'login', '--with-token'], token);
+          // Re-check auth
+          ghUser = runCapture('gh', ['api', 'user', '--jq', '.login']);
+          if (ghUser) {
+            checks['gh auth'] = true;
+            details['gh auth'] = ghUser;
+            console.log(`    gh auth............ ${green('✓')} ${gray(`(${ghUser})`)}`);
+            
+            // Also try to infer git identity now that we're authed
+            if (!checks['git identity']) {
+              const ghName = runCapture('gh', ['api', 'user', '--jq', '.name']);
+              const ghEmail = runCapture('gh', ['api', 'user', '--jq', '.email']);
+              if (!gitName && ghName) gitName = ghName;
+              if (!gitEmail && ghEmail) gitEmail = ghEmail;
+              if (gitName && gitEmail) {
+                checks['git identity'] = true;
+                details['git identity'] = `${gitName} <${gitEmail}>`;
+                console.log(`    git identity....... ${green('✓')} ${gray(`(${gitName})`)}`);
+              }
+            }
+          }
+        } catch {
+          console.log(`    ${red('✗')} ${gray('Token invalid or auth failed')}`);
+        }
+      }
+    }
 
     // Collect failures
     const failed = Object.entries(checks)
