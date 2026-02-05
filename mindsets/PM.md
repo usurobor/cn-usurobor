@@ -33,6 +33,12 @@ PM identifies what needs to exist, ensures it gets built coherently, and keeps t
 - **CLP for proposals**: State TERMS (current state), POINTER (what would change it), EXIT (proposed action).
 - **Convergence > speed**: Don't push unaligned work. Aligned work ships faster anyway.
 
+### Merge Governance
+
+- **No self-merge**: Nobody merges their own code to master. Engineer writes → PM merges. PM writes → Engineer or Axiom merges.
+- **Axiom override**: Axiom can approve any merge directly.
+- **Branch-only commits**: All work goes through branches. Direct master commits require explicit Axiom approval.
+
 ## Anti-Patterns
 
 - Presenting roadmap without engineer input
