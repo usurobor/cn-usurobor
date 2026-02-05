@@ -11,7 +11,7 @@ const { execSync, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const VERSION = '2.0.2';
+const VERSION = '2.0.3';
 
 // Colors (respects NO_COLOR)
 const noColor = process.env.NO_COLOR !== undefined;
@@ -103,6 +103,7 @@ function doctor(hubPath) {
   console.log('');
   
   let checks = [];
+  let warnings = [];
   
   // Git
   try {
@@ -127,28 +128,84 @@ function doctor(hubPath) {
     checks.push({ name: 'git user.email', ok: false, val: 'not set' });
   }
   
-  // Hub
-  checks.push({ name: 'hub directory', ok: fs.existsSync(hubPath), val: hubPath ? 'exists' : 'not found' });
+  // Hub directory
+  checks.push({ name: 'hub directory', ok: fs.existsSync(hubPath), val: fs.existsSync(hubPath) ? 'exists' : 'not found' });
   
-  // Print
+  // .cn/config.json
+  const configPath = path.join(hubPath, '.cn', 'config.json');
+  checks.push({ name: '.cn/config.json', ok: fs.existsSync(configPath), val: fs.existsSync(configPath) ? 'exists' : 'missing' });
+  
+  // spec/SOUL.md
+  const soulPath = path.join(hubPath, 'spec', 'SOUL.md');
+  if (fs.existsSync(soulPath)) {
+    checks.push({ name: 'spec/SOUL.md', ok: true, val: 'exists' });
+  } else {
+    warnings.push({ name: 'spec/SOUL.md', val: 'missing (optional)' });
+  }
+  
+  // state/peers.md
+  const peersPath = path.join(hubPath, 'state', 'peers.md');
+  if (fs.existsSync(peersPath)) {
+    const content = fs.readFileSync(peersPath, 'utf8');
+    const peerCount = (content.match(/- name:/g) || []).length;
+    checks.push({ name: 'state/peers.md', ok: true, val: `${peerCount} peer(s)` });
+  } else {
+    checks.push({ name: 'state/peers.md', ok: false, val: 'missing' });
+  }
+  
+  // origin remote
+  try {
+    execSync('git remote get-url origin', { cwd: hubPath, encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+    checks.push({ name: 'origin remote', ok: true, val: 'configured' });
+  } catch {
+    checks.push({ name: 'origin remote', ok: false, val: 'not configured' });
+  }
+  
+  // inbox status
+  try {
+    const result = execSync(`node ${path.join(__dirname, '..', 'dist', 'inbox.js')} check ${hubPath} ${deriveName(hubPath)} 2>&1`, { encoding: 'utf8' });
+    const inboundMatch = result.match(/(\d+) inbound/);
+    if (inboundMatch) {
+      const count = parseInt(inboundMatch[1]);
+      if (count > 0) {
+        warnings.push({ name: 'inbox', val: `${count} pending` });
+      } else {
+        checks.push({ name: 'inbox', ok: true, val: 'clear' });
+      }
+    } else if (result.includes('All clear')) {
+      checks.push({ name: 'inbox', ok: true, val: 'clear' });
+    }
+  } catch {
+    warnings.push({ name: 'inbox', val: 'check failed' });
+  }
+  
+  // Print checks
   const width = 22;
   checks.forEach(({ name, ok: isOk, val }) => {
-    const dots = '.'.repeat(width - name.length);
+    const dots = '.'.repeat(Math.max(1, width - name.length));
     const status = isOk 
       ? `${c.green}✓ ${val}${c.reset}`
       : `${c.red}✗ ${val}${c.reset}`;
     console.log(`${name}${dots} ${status}`);
   });
   
+  // Print warnings
+  warnings.forEach(({ name, val }) => {
+    const dots = '.'.repeat(Math.max(1, width - name.length));
+    console.log(`${name}${dots} ${c.yellow}⚠ ${val}${c.reset}`);
+  });
+  
   console.log('');
   const fails = checks.filter(c => !c.ok).length;
+  const warns = warnings.length;
+  
   if (fails === 0) {
-    ok('All checks passed.');
+    ok('All critical checks passed.');
   } else {
     fail(`${fails} issue(s) found.`);
   }
   
-  console.log(`${c.dim}[status] ok=${checks.filter(c=>c.ok).length} fail=${fails} version=${VERSION}${c.reset}`);
+  console.log(`${c.dim}[status] ok=${checks.filter(c=>c.ok).length} warn=${warns} fail=${fails} version=${VERSION}${c.reset}`);
   process.exit(fails > 0 ? 1 : 0);
 }
 
