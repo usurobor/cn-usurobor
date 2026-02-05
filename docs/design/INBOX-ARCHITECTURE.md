@@ -224,11 +224,51 @@ For now: one decision per inbox item.
 
 ---
 
+## Agent Purity Constraint
+
+**Agent has no side effects.**
+
+```
+Agent reads:  threads, context, skills
+Agent writes: decisions (to threads)
+Agent executes: nothing
+```
+
+All effects go through cn:
+- Git operations → cn
+- File moves → cn  
+- Logging → cn
+- Network → cn
+
+This makes agent a **pure function**:
+```
+f(context, thread) → decision
+```
+
+### Testability
+
+Agent becomes trivially testable:
+```ocaml
+(* Given stale content *)
+let thread = "From: pi, last activity: 30 days ago..."
+assert (agent_decide thread = Delete (Reason "stale"))
+
+(* Given urgent request *)
+let thread = "URGENT: blocking release..."
+assert (agent_decide thread = Do Merge)
+```
+
+No mocking. No network. No git. Just input → output.
+
+**Functional core, imperative shell.** The pattern that scales.
+
+---
+
 ## Summary
 
-- Agent = executive function (brain)
-- cn = sensory + motor function (body)
-- Threads = interface between brain and body
+- Agent = pure function (no side effects)
+- cn = effectful shell (all execution)
+- Threads = interface between pure and effectful
 - OCaml types = action vocabulary
 - Everything logged for traceability
 
