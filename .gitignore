@@ -36,3 +36,6 @@ coverage/
 
 # Peer sync cache
 .peer-cache/
+
+# OCaml/Dune build output
+_build/
