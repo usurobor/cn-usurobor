@@ -1,0 +1,6 @@
+; inbox tests (ppx_expect inline tests)
+(library
+ (name inbox_test)
+ (libraries inbox_lib)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
