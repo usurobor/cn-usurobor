@@ -173,7 +173,7 @@ function isGitRepo(dir) {
     } else if (status === false) {
       console.log(`${pad}${label}${dots} ${red('✗')}`);
     } else if (status === 'blocked') {
-      const reason = detail ? ` ${gray(`(requires ${detail})`)}` : '';
+      const reason = detail ? ` ${gray(`(blocked: ${detail} missing)`)}` : '';
       console.log(`${pad}${label}${dots} ${yellow('⏸')}${reason}`);
     } else {
       console.log(`${pad}${label}${dots} ${gray('--')}`);
@@ -303,21 +303,28 @@ function isGitRepo(dir) {
     if (failed.length > 0) {
       // Error block with count, bullets, numbered steps
       console.log('');
-      console.log(red(`✗ Missing prerequisites (${failed.length}):`));
+      console.log(red(`✗ Cannot continue — missing prerequisites (${failed.length}):`));
       for (const name of failed) {
         console.log(`  • ${name}`);
       }
       console.log('');
       console.log('Fix by running these commands in order:');
       let step = 1;
+      let lastCategory = null;
       for (const name of failed) {
+        // Group visually: blank line between different prereqs
+        if (lastCategory !== null && lastCategory !== name) {
+          console.log('');
+        }
+        lastCategory = name;
         for (const line of installInstructions[name]) {
           console.log(`  ${step}) ${colorCmd(line)}`);
           step++;
         }
       }
       console.log('');
-      console.log(gray('Re-run to continue: npx @usurobor/cn-agent-setup'));
+      console.log(gray('After completing the steps above, run:'));
+      console.log(gray('  npx @usurobor/cn-agent-setup'));
       
       // Machine-readable footer for automation/debugging
       const ok = Object.entries(checks).filter(([,s]) => s === true).map(([n]) => n.replace(' ', '_'));
