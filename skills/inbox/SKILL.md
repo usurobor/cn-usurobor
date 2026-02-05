@@ -178,9 +178,42 @@ From pi:
 
 ---
 
+## Triage Log (Audit Trail)
+
+Every triage decision is logged to `state/inbox-log.md`:
+
+```ocaml
+type triage_entry = {
+  timestamp: string;    (* ISO 8601 *)
+  branch: string;       (* what was triaged *)
+  peer: string;         (* where it came from *)
+  decision: triage;     (* what was decided *)
+  actor: string;        (* who decided *)
+}
+```
+
+Log format (markdown table):
+```markdown
+| Timestamp | Actor | Source | Decision |
+|-----------|-------|--------|----------|
+| 2026-02-05T17:20:00Z | sigma | pi/review-request | `do:merge` |
+| 2026-02-05T17:21:00Z | sigma | pi/stale-branch | `delete:superseded by v2` |
+```
+
+Human-readable format:
+```
+[2026-02-05T17:20:00Z] sigma triaged pi/review-request → Merge branch
+[2026-02-05T17:21:00Z] sigma triaged pi/stale-branch → Remove branch (superseded by v2)
+```
+
+Easy to audit: what happened to each inbox item, when, why.
+
+---
+
 ## NOTES
 
 - `inbox` replaces `peer-sync` (deprecated)
 - Actor model: push TO peer's repo, check YOUR repo
 - Branches are messages; merge = acknowledge
+- Every triage logged with timestamp + reason
 - For private peers, ensure git credentials have write access to their repo

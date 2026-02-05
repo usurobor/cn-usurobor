@@ -105,6 +105,49 @@ let%expect_test "triage_kind" =
     do
   |}]
 
+(* === Triage Log === *)
+
+let%expect_test "format_log_entry" =
+  let entry = {
+    timestamp = "2026-02-05T17:20:00Z";
+    branch = "review-request";
+    peer = "pi";
+    decision = Do Merge;
+    actor = "sigma"
+  } in
+  print_endline (format_log_entry entry);
+  [%expect {| - 2026-02-05T17:20:00Z | sigma | pi/review-request | do:merge |}]
+
+let%expect_test "format_log_entry_human" =
+  let entries = [
+    { timestamp = "2026-02-05T17:20:00Z"; branch = "review"; peer = "pi"; 
+      decision = Delete "stale"; actor = "sigma" };
+    { timestamp = "2026-02-05T17:21:00Z"; branch = "urgent"; peer = "omega"; 
+      decision = Defer "blocked on X"; actor = "sigma" };
+    { timestamp = "2026-02-05T17:22:00Z"; branch = "task"; peer = "pi"; 
+      decision = Delegate "tau"; actor = "sigma" };
+    { timestamp = "2026-02-05T17:23:00Z"; branch = "feature"; peer = "pi"; 
+      decision = Do Merge; actor = "sigma" };
+  ] in
+  entries |> List.iter (fun e -> print_endline (format_log_entry_human e));
+  [%expect {|
+    [2026-02-05T17:20:00Z] sigma triaged pi/review → Remove branch (stale)
+    [2026-02-05T17:21:00Z] sigma triaged omega/urgent → Defer (blocked on X)
+    [2026-02-05T17:22:00Z] sigma triaged pi/task → Delegate to tau
+    [2026-02-05T17:23:00Z] sigma triaged pi/feature → Merge branch
+  |}]
+
+let%expect_test "format_log_row" =
+  let entry = {
+    timestamp = "2026-02-05T17:20:00Z";
+    branch = "review-request";
+    peer = "pi";
+    decision = Delete "duplicate";
+    actor = "sigma"
+  } in
+  print_endline (format_log_row entry);
+  [%expect {| | 2026-02-05T17:20:00Z | sigma | pi/review-request | `delete:duplicate` | |}]
+
 (* === Action parsing === *)
 
 let%expect_test "action_of_string valid" =

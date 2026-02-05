@@ -24056,6 +24056,369 @@ var require_inbox_lib = __commonJS({
           }
       }
     }
+    function format_log_entry(entry) {
+      return Curry2._5(Stdlib__Printf2.sprintf({
+        TAG: (
+          /* Format */
+          0
+        ),
+        _0: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: "- ",
+          _1: {
+            TAG: (
+              /* String */
+              2
+            ),
+            _0: (
+              /* No_padding */
+              0
+            ),
+            _1: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: " | ",
+              _1: {
+                TAG: (
+                  /* String */
+                  2
+                ),
+                _0: (
+                  /* No_padding */
+                  0
+                ),
+                _1: {
+                  TAG: (
+                    /* String_literal */
+                    11
+                  ),
+                  _0: " | ",
+                  _1: {
+                    TAG: (
+                      /* String */
+                      2
+                    ),
+                    _0: (
+                      /* No_padding */
+                      0
+                    ),
+                    _1: {
+                      TAG: (
+                        /* Char_literal */
+                        12
+                      ),
+                      _0: (
+                        /* '/' */
+                        47
+                      ),
+                      _1: {
+                        TAG: (
+                          /* String */
+                          2
+                        ),
+                        _0: (
+                          /* No_padding */
+                          0
+                        ),
+                        _1: {
+                          TAG: (
+                            /* String_literal */
+                            11
+                          ),
+                          _0: " | ",
+                          _1: {
+                            TAG: (
+                              /* String */
+                              2
+                            ),
+                            _0: (
+                              /* No_padding */
+                              0
+                            ),
+                            _1: (
+                              /* End_of_format */
+                              0
+                            )
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        _1: "- %s | %s | %s/%s | %s"
+      }), entry.timestamp, entry.actor, entry.peer, entry.branch, string_of_triage(entry.decision));
+    }
+    function format_log_entry_human(entry) {
+      return Curry2._5(Stdlib__Printf2.sprintf({
+        TAG: (
+          /* Format */
+          0
+        ),
+        _0: {
+          TAG: (
+            /* Char_literal */
+            12
+          ),
+          _0: (
+            /* '[' */
+            91
+          ),
+          _1: {
+            TAG: (
+              /* String */
+              2
+            ),
+            _0: (
+              /* No_padding */
+              0
+            ),
+            _1: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: "] ",
+              _1: {
+                TAG: (
+                  /* String */
+                  2
+                ),
+                _0: (
+                  /* No_padding */
+                  0
+                ),
+                _1: {
+                  TAG: (
+                    /* String_literal */
+                    11
+                  ),
+                  _0: " triaged ",
+                  _1: {
+                    TAG: (
+                      /* String */
+                      2
+                    ),
+                    _0: (
+                      /* No_padding */
+                      0
+                    ),
+                    _1: {
+                      TAG: (
+                        /* Char_literal */
+                        12
+                      ),
+                      _0: (
+                        /* '/' */
+                        47
+                      ),
+                      _1: {
+                        TAG: (
+                          /* String */
+                          2
+                        ),
+                        _0: (
+                          /* No_padding */
+                          0
+                        ),
+                        _1: {
+                          TAG: (
+                            /* String_literal */
+                            11
+                          ),
+                          _0: " \xE2\x86\x92 ",
+                          _1: {
+                            TAG: (
+                              /* String */
+                              2
+                            ),
+                            _0: (
+                              /* No_padding */
+                              0
+                            ),
+                            _1: (
+                              /* End_of_format */
+                              0
+                            )
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        _1: "[%s] %s triaged %s/%s \xE2\x86\x92 %s"
+      }), entry.timestamp, entry.actor, entry.peer, entry.branch, triage_description(entry.decision));
+    }
+    function parse_log_entry(line) {
+      const match = Stdlib__String2.split_on_char(
+        /* '|' */
+        124,
+        line
+      );
+      if (!match) {
+        return;
+      }
+      const match$1 = match.tl;
+      if (!match$1) {
+        return;
+      }
+      const match$2 = match$1.tl;
+      if (!match$2) {
+        return;
+      }
+      const match$3 = match$2.tl;
+      if (!match$3) {
+        return;
+      }
+      if (match$3.tl) {
+        return;
+      }
+      const ts_trimmed = Stdlib__String2.trim(match.hd);
+      const timestamp = ts_trimmed.length > 2 && Stdlib__String2.sub(ts_trimmed, 0, 2) === "- " ? Stdlib__String2.sub(ts_trimmed, 2, ts_trimmed.length - 2 | 0) : ts_trimmed;
+      const actor = Stdlib__String2.trim(match$1.hd);
+      const match$4 = Stdlib__String2.split_on_char(
+        /* '/' */
+        47,
+        Stdlib__String2.trim(match$2.hd)
+      );
+      const match$5 = match$4 ? [
+        match$4.hd,
+        Stdlib__String2.concat("/", match$4.tl)
+      ] : [
+        "",
+        ""
+      ];
+      const decision = triage_of_string(Stdlib__String2.trim(match$3.hd));
+      if (decision !== void 0) {
+        return {
+          timestamp,
+          branch: match$5[1],
+          peer: match$5[0],
+          decision,
+          actor
+        };
+      }
+    }
+    function format_log_row(entry) {
+      return Curry2._5(Stdlib__Printf2.sprintf({
+        TAG: (
+          /* Format */
+          0
+        ),
+        _0: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: "| ",
+          _1: {
+            TAG: (
+              /* String */
+              2
+            ),
+            _0: (
+              /* No_padding */
+              0
+            ),
+            _1: {
+              TAG: (
+                /* String_literal */
+                11
+              ),
+              _0: " | ",
+              _1: {
+                TAG: (
+                  /* String */
+                  2
+                ),
+                _0: (
+                  /* No_padding */
+                  0
+                ),
+                _1: {
+                  TAG: (
+                    /* String_literal */
+                    11
+                  ),
+                  _0: " | ",
+                  _1: {
+                    TAG: (
+                      /* String */
+                      2
+                    ),
+                    _0: (
+                      /* No_padding */
+                      0
+                    ),
+                    _1: {
+                      TAG: (
+                        /* Char_literal */
+                        12
+                      ),
+                      _0: (
+                        /* '/' */
+                        47
+                      ),
+                      _1: {
+                        TAG: (
+                          /* String */
+                          2
+                        ),
+                        _0: (
+                          /* No_padding */
+                          0
+                        ),
+                        _1: {
+                          TAG: (
+                            /* String_literal */
+                            11
+                          ),
+                          _0: " | `",
+                          _1: {
+                            TAG: (
+                              /* String */
+                              2
+                            ),
+                            _0: (
+                              /* No_padding */
+                              0
+                            ),
+                            _1: {
+                              TAG: (
+                                /* String_literal */
+                                11
+                              ),
+                              _0: "` |",
+                              _1: (
+                                /* End_of_format */
+                                0
+                              )
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        _1: "| %s | %s | %s/%s | `%s` |"
+      }), entry.timestamp, entry.actor, entry.peer, entry.branch, string_of_triage(entry.decision));
+    }
     function action_of_string(param) {
       switch (param) {
         case "check":
@@ -24482,6 +24845,7 @@ var require_inbox_lib = __commonJS({
         };
       }
     }
+    var log_header = "# Inbox Triage Log\n\n| Timestamp | Actor | Source | Decision |\n|-----------|-------|--------|----------|";
     var all_actions = {
       hd: (
         /* Check */
@@ -24512,6 +24876,11 @@ var require_inbox_lib = __commonJS({
       string_of_triage,
       triage_kind,
       triage_description,
+      format_log_entry,
+      format_log_entry_human,
+      parse_log_entry,
+      log_header,
+      format_log_row,
       action_of_string,
       string_of_action,
       all_actions,

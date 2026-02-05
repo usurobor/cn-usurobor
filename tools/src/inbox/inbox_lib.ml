@@ -76,6 +76,64 @@ let triage_description = function
   | Do (Reply name) -> Printf.sprintf "Reply with branch %s" name
   | Do (Custom desc) -> Printf.sprintf "Action: %s" desc
 
+(* === Triage Log (audit trail) === *)
+
+type triage_entry = {
+  timestamp: string;    (* ISO 8601 *)
+  branch: string;       (* branch that was triaged *)
+  peer: string;         (* where it came from *)
+  decision: triage;     (* what was decided *)
+  actor: string;        (* who made the decision *)
+}
+
+let format_log_entry entry =
+  Printf.sprintf "- %s | %s | %s/%s | %s"
+    entry.timestamp
+    entry.actor
+    entry.peer
+    entry.branch
+    (string_of_triage entry.decision)
+
+let format_log_entry_human entry =
+  Printf.sprintf "[%s] %s triaged %s/%s → %s"
+    entry.timestamp
+    entry.actor
+    entry.peer
+    entry.branch
+    (triage_description entry.decision)
+
+(* Parse log entry from "- timestamp | actor | peer/branch | decision" *)
+let parse_log_entry line =
+  match String.split_on_char '|' line with
+  | [ts; actor_str; peer_branch; decision_str] ->
+      let ts_trimmed = String.trim ts in
+      let timestamp = 
+        if String.length ts_trimmed > 2 && String.sub ts_trimmed 0 2 = "- " 
+        then String.sub ts_trimmed 2 (String.length ts_trimmed - 2)
+        else ts_trimmed 
+      in
+      let actor = String.trim actor_str in
+      let peer, branch = match String.split_on_char '/' (String.trim peer_branch) with
+        | peer :: rest -> (peer, String.concat "/" rest)
+        | [] -> ("", "")
+      in
+      let decision = triage_of_string (String.trim decision_str) in
+      (match decision with
+       | Some d -> Some { timestamp; branch; peer; decision = d; actor }
+       | None -> None)
+  | _ -> None
+
+(* Format for appending to log file *)
+let log_header = "# Inbox Triage Log\n\n| Timestamp | Actor | Source | Decision |\n|-----------|-------|--------|----------|"
+
+let format_log_row entry =
+  Printf.sprintf "| %s | %s | %s/%s | `%s` |"
+    entry.timestamp
+    entry.actor
+    entry.peer
+    entry.branch
+    (string_of_triage entry.decision)
+
 let action_of_string = function
   | "check" -> Some Check
   | "process" -> Some Process
