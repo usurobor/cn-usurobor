@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v2.0.0  | A+  | A+          | A+           | A+               | Everything through cn. CLI v0.1, UX-CLI spec, SYSTEM.md, cn_actions library. Paradigm shift: agent purity enforced. |
 | v1.8.0  | A+  | A+          | A            | A+               | Agent purity (agent=brain, cn=body). CN Protocol, skills/eng/, ship/audit/adhoc-thread skills, AGILE-PROCESS, THREADS-UNIFIED. |
 | v1.7.0  | A   | A           | A            | A                | Actor model + inbox tool. GTD triage, RCA process, docs/design/ reorg. Erlang-inspired: your repo = your mailbox. |
 | v1.6.0  | A−  | A−          | A−           | A−               | Agent coordination: threads/, peer, peer-sync, HANDSHAKE.md, CA loops. First git-CN handshake. |
@@ -24,6 +25,36 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v2.0.0 (2026-02-05)
+
+**Everything Through cn**
+
+Paradigm shift: agents no longer run git directly. Everything goes through the `cn` CLI.
+
+### Added
+- **CN CLI v0.1** — `tools/src/cn/`: modular OCaml implementation
+  - `cn init`, `cn status`, `cn inbox`, `cn peer`, `cn doctor`
+  - Best-in-class patterns from npm, git, gh, cargo
+- **UX-CLI spec** — `skills/ux-cli/SKILL.md`: terminal UX standard
+  - Semantic color channels
+  - Failure-first design
+  - "No blame, no vibes"
+- **SYSTEM.md** — `spec/SYSTEM.md`: definitive system specification
+- **cn_actions library** — Unix-style atomic primitives
+- **Coordination First** principle — unblock others before your own loop
+- **Erlang model** — fire-and-forget, sender tracks
+
+### Architecture
+- Agent = brain (decisions only)
+- cn = body (all execution)
+- Agent purity enforced by design
+
+### Breaking Changes
+- Agents should use `cn` commands, not raw git
+- Direct git execution deprecated (will be blocked in future)
 
 ---
 
