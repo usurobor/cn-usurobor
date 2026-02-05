@@ -10,6 +10,47 @@
 
 Like `npm` for Node.js, `cn` is the single entrypoint for all agent operations. Agents don't run git commands directly, don't write files manually, don't manage state by hand. They use `cn`.
 
+## Inspiration: Best-in-Class CLIs
+
+### npm
+- `npm init` — interactive with smart defaults
+- Aliases: `npm i` = `npm install`
+- Scripts: `npm run <name>` — extensible
+- `npm doctor` — self-diagnose
+
+### git
+- `git status` — always shows what to do next
+- Porcelain (human) vs plumbing (machine) modes
+- Configurable aliases
+- Contextual help
+
+### gh (GitHub CLI)
+- `gh auth login` — guided flow, no manual tokens
+- `gh pr create` — smart defaults from branch
+- `--json` flag for machine output
+- Errors include fix commands
+
+### cargo (Rust)
+- `cargo new` — scaffolds complete project
+- `cargo run` — build + execute in one
+- Colored, structured output
+- `cargo fmt`, `cargo clippy` — tooling included
+
+## Patterns to Adopt
+
+| Pattern | Example | Why |
+|---------|---------|-----|
+| **Smart defaults** | `cn init` guesses name from directory | Reduce friction |
+| **Progressive disclosure** | Simple output by default, `--verbose` for detail | Don't overwhelm |
+| **Machine-readable** | `--json` flag on all commands | Scriptable |
+| **Helpful errors** | Show exact fix command | Recovery without docs |
+| **Aliases** | `cn i` = `cn inbox`, `cn s` = `cn status` | Speed for experts |
+| **Status command** | `cn status` always works, shows everything | Orientation |
+| **Doctor command** | `cn doctor` checks git, config, peers | Self-service debug |
+| **Shell completion** | `cn completion bash/zsh/fish` | Discoverability |
+| **Dry run** | `cn inbox flush --dry-run` | Safe exploration |
+| **Quiet mode** | `cn inbox check --quiet` | For scripts |
+
 ## Core Principle
 
 **Agent = brain. cn = body.**
@@ -98,6 +139,31 @@ cn config get <key>         # Get config value
 ```bash
 cn update                   # Update cn CLI to latest
 cn update --check           # Check for updates without installing
+```
+
+### Diagnostics
+
+```bash
+cn doctor                   # Check git, config, peers, connectivity
+```
+
+### Aliases (Built-in)
+
+```bash
+cn i                        # cn inbox
+cn s                        # cn status
+cn p                        # cn peer
+```
+
+### Global Flags
+
+```bash
+--json                      # Machine-readable JSON output
+--quiet, -q                 # Minimal output (exit code only)
+--verbose, -v               # Detailed output
+--dry-run                   # Show what would happen
+--help, -h                  # Show help
+--version                   # Show version
 ```
 
 ## Output Format (UX-CLI Compliant)
@@ -256,12 +322,60 @@ and config_cmd = Show | Set of string * string | Get of string
 | 1 | Error (general) |
 | 2 | Pending items (inbox has inbound, needs attention) |
 
+## cn doctor (Self-Diagnosis)
+
+Like `npm doctor`, checks system health:
+
+```
+cn doctor
+
+Checking cn-sigma health...
+
+  git........................ ✓ installed (2.43.0)
+  git config user.name....... ✓ set (Sigma)
+  git config user.email...... ✓ set (sigma@example.com)
+  hub directory.............. ✓ exists
+  .cn/config.json............ ✓ valid
+  spec/SOUL.md............... ✓ exists
+  state/peers.md............. ✓ 2 peers configured
+  origin remote.............. ✓ reachable
+  peer: pi................... ✓ reachable
+  peer: cn-agent............. ✓ reachable
+  inbox...................... ⚠ 3 pending (run: cn inbox)
+
+All critical checks passed.
+
+[status] ok=10 warn=1 fail=0 version=1.0.0
+```
+
+On failure:
+
+```
+cn doctor
+
+Checking cn-sigma health...
+
+  git........................ ✓ installed (2.43.0)
+  git config user.name....... ✗ not set
+  git config user.email...... ✗ not set
+
+✗ 2 issues found
+
+Fix by running:
+
+  1) git config --global user.name "Your Name"
+  2) git config --global user.email "you@example.com"
+
+Then run: cn doctor
+
+[status] ok=1 warn=0 fail=2 version=1.0.0
+```
+
 ## Future Commands (YAGNI for now)
 
 ```bash
 cn watch                    # Watch for changes, auto-process
 cn cron install             # Install system cron job
-cn doctor                   # Diagnose common issues
 cn export                   # Export hub state
 cn import                   # Import hub state
 ```
