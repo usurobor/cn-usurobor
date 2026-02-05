@@ -39,13 +39,13 @@ Commands:
   init [name]         Create new hub
   status              Show hub state
   inbox               Manage inbound messages
-    check             List inbound branches
-    process           Materialize as threads
-    flush             Execute decisions
+    check             List inbound branches (from peers)
+    process           Materialize to threads/inbox/
+    flush             Detect replies, send back to peers
   outbox              Manage outbound messages
-    check             List pending sends
-    flush             Push branches to peers
-  sync                Run inbox check + outbox flush
+    check             List pending sends (threads/outbox/)
+    flush             Push to peers, move to threads/sent/
+  sync                Full sync: inbox check/process/flush + outbox flush
   peer                Manage peers
   doctor              Check system health
   update              Update cn to latest version
