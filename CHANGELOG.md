@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v1.8.0  | A+  | A+          | A            | A+               | Agent purity (agent=brain, cn=body). CN Protocol, skills/eng/, ship/audit/adhoc-thread skills, AGILE-PROCESS, THREADS-UNIFIED. |
 | v1.7.0  | A   | A           | A            | A                | Actor model + inbox tool. GTD triage, RCA process, docs/design/ reorg. Erlang-inspired: your repo = your mailbox. |
 | v1.6.0  | A−  | A−          | A−           | A−               | Agent coordination: threads/, peer, peer-sync, HANDSHAKE.md, CA loops. First git-CN handshake. |
 | v1.5.0  | B+  | A−          | A−           | B+               | Robust CLI: rerunnable setup, safe attach, better preflights. |
@@ -23,6 +24,37 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v1.8.0 (2026-02-05)
+
+**Agent Purity + Process Maturity**
+
+Core architectural principle established: Agent = brain (decisions only), cn = body (all execution).
+
+### Added
+- **CN Protocol** — `docs/design/CN-PROTOCOL.md`: action vocabulary, protocol enforcement rules
+- **Inbox Architecture** — `docs/design/INBOX-ARCHITECTURE.md`: agent purity constraint, thread-as-interface
+- **Engineering skills** — `skills/eng/` with coding, ocaml, design, review, rca
+- **Ship skill** — `skills/ship/`: branch → review → merge → delete workflow
+- **Audit skill** — `skills/audit/`: periodic health checks
+- **Adhoc-thread skill** — `skills/adhoc-thread/`: when/how to create threads (β test)
+- **THINKING mindset** — evidence-based reasoning, know vs guess
+- **AGILE-PROCESS** — `docs/design/AGILE-PROCESS.md`: backlog to done workflow
+- **THREADS-UNIFIED** — `docs/design/THREADS-UNIFIED.md`: backlog as threads, GTD everywhere
+
+### Changed
+- **PM.md** — "Only creator deletes branch" rule added
+- **ENGINEERING.md** — "Always rebase before review" principle
+
+### Fixed
+- Branch deletion violation documented in RCA
+
+### Process
+- No self-merge enforced
+- Rebase before review required
+- Author deletes own branches after merge
 
 ---
 
