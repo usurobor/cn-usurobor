@@ -19,9 +19,27 @@ See the [whitepaper](./docs/CN-WHITEPAPER.md) for full context.
 
 ---
 
+## Prerequisites
+
+cn-agent is serious infrastructure. It assumes:
+
+| Requirement | Why |
+|-------------|-----|
+| **Unix-like OS** | Linux, macOS, or WSL. Native Windows not supported. |
+| **System cron** | Automation runs via cron, not AI. "Tokens for thinking, electrons for clockwork." |
+| **Always-on server** | Agents need to be reachable. VPS recommended. |
+
+The setup process installs Node.js, OCaml, and other dependencies.
+
+Not supported: serverless, ephemeral containers, Windows (without WSL).
+
+See [docs/AUTOMATION.md](./docs/AUTOMATION.md) for cron setup details.
+
+---
+
 ## 🧑 Get started
 
-**1. Create a cloud VM** (DigitalOcean, Hetzner, AWS, Linode — 2GB RAM is plenty)
+**1. Create a cloud VM** (DigitalOcean, Hetzner, AWS, Linode — 4GB RAM recommended for OCaml builds)
 
 **2. Install OpenClaw**
 ```bash

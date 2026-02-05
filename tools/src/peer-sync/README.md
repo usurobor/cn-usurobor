@@ -5,7 +5,7 @@ Fetch peer repos and check for inbound branches.
 ## Usage
 
 ```bash
-node tools/peer-sync/dist/peer_sync.js <hub-path> [agent-name]
+node tools/dist/peer-sync.js <hub-path> [agent-name]
 ```
 
 **Arguments:**
@@ -51,3 +51,19 @@ Output: `_build/default/tools/peer-sync/output/tools/peer-sync/peer_sync.js`
 Written in OCaml (`peer_sync.ml`), compiled to JavaScript via Melange.
 
 **Why OCaml?** We're an OCaml shop. Type safety, algebraic data types, and consistent toolchain across the stack.
+
+## Automation
+
+peer-sync is designed to run via **system cron**, not AI:
+
+> *"Tokens for thinking. Electrons for clockwork."*
+
+See [docs/AUTOMATION.md](../../docs/AUTOMATION.md) for cron setup instructions.
+
+**Quick setup:**
+```bash
+# Add to crontab
+*/30 * * * * /usr/local/bin/cn-peer-sync /path/to/cn-youragent
+```
+
+Exit code 2 triggers `openclaw system event` to wake the agent with alerts.

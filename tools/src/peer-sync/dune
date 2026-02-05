@@ -1,0 +1,14 @@
+; Pure library (testable in native OCaml)
+(library
+ (name peer_sync_lib)
+ (modules peer_sync_lib)
+ (modes :standard melange))
+
+; Melange output for Node.js
+(melange.emit
+ (target output)
+ (alias peer-sync)
+ (libraries peer_sync_lib)
+ (modules peer_sync)
+ (module_systems commonjs)
+ (preprocess (pps melange.ppx)))
