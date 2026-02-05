@@ -12,6 +12,7 @@ In the two-repo model:
 |------|---------|----------------|
 | `hub.md` | Hub configuration | Yes |
 | `peers.md` | Peer list | Yes |
+| `context.md` | Curated facts/preferences | Yes |
 
 ## For Hub Owners
 

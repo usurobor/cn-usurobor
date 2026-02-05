@@ -1,5 +1,16 @@
 # daily-routine – v1.2.0
 
+> **⚠️ DEPRECATED:** This skill is superseded by `reflect` + the unified threads model.
+> 
+> **Migration:**
+> - `memory/` → `threads/daily/` (raw notes go in daily threads)
+> - `state/practice/` → removed (track kata in daily threads or adhoc)
+> - Reflections → `reflect` skill with α/β/γ framework
+> 
+> This file is kept for reference during transition.
+
+---
+
 Ensures daily state files (memory, reflection thread, practice) are created, populated, and committed to the hub repo. Sets up EOD cron to catch incomplete days.
 
 ---

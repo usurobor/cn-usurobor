@@ -12,6 +12,7 @@ Threads are your continuity. All notes, reflections, and conversations go to `th
 | `weekly/` | Weekly rollups | `YYYYMMDD.md` (Monday) |
 | `monthly/` | Monthly reviews | `YYYYMM01.md` |
 | `quarterly/` | Strategic alignment | `YYYYMM01.md` (Q start) |
+| `half/` | Half-yearly reviews | `YYYYMM01.md` (H start) |
 | `yearly/` | Evolution reviews | `YYYY0101.md` |
 | `adhoc/` | Topic threads | `YYYYMMDD-topic.md` |
 

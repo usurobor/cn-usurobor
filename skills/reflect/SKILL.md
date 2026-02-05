@@ -41,7 +41,7 @@ All threads live in `threads/<cadence>/`:
 | Weekly | `threads/weekly/YYYYMMDD.md` (Monday of week) |
 | Monthly | `threads/monthly/YYYYMM01.md` |
 | Quarterly | `threads/quarterly/YYYYMM01.md` (Q start) |
-| Half-yearly | `threads/quarterly/YYYYMM01-half.md` (H start) |
+| Half-yearly | `threads/half/YYYYMM01.md` (H start) |
 | Yearly | `threads/yearly/YYYY0101.md` |
 
 ---
@@ -214,7 +214,7 @@ Coherence walk: which axis to invest in next quarter?
 ### Half-yearly — Identity coherence
 
 **When:** Jul 1, Jan 1
-**File:** `threads/quarterly/YYYYMM01-half.md`
+**File:** `threads/half/YYYYMM01.md`
 
 ```markdown
 # YYYYMM01 (Half)
