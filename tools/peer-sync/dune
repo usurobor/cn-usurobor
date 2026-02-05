@@ -1,5 +1,2 @@
-(melange.emit
- (target output)
- (alias peer-sync)
- (module_systems commonjs)
- (preprocess (pps melange.ppx)))
+; Peer-sync tool directory marker
+; See lib/, bin/, test/ subdirectories

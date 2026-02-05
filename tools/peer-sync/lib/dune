@@ -1,0 +1,3 @@
+(library
+ (name peer_sync_lib)
+ (modes :standard melange))

@@ -1,0 +1,6 @@
+(melange.emit
+ (target output)
+ (alias peer-sync)
+ (libraries peer_sync_lib)
+ (module_systems commonjs)
+ (preprocess (pps melange.ppx)))

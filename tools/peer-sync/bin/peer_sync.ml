@@ -4,6 +4,8 @@
    Example: node peer_sync.js ./cn-sigma sigma
 *)
 
+open Peer_sync_lib
+
 (* Node.js bindings *)
 module Process = struct
   external cwd : unit -> string = "cwd" [@@mel.module "process"]
@@ -28,60 +30,17 @@ module Path = struct
   external resolve : string -> string -> string = "resolve" [@@mel.module "path"]
 end
 
-(* Types *)
-type peer = { name : string; repo_path : string }
-type sync_result = 
-  | Fetched of string * string list  (* peer, inbound branches *)
-  | Skipped of string * string       (* peer, reason *)
-
 (* Shell execution *)
 let run_cmd cmd =
   try Some (Child_process.exec_sync cmd (Child_process.make_options ~encoding:"utf8"))
   with _ -> None
-
-(* String helpers *)
-let prefix ~pre s =
-  String.length s >= String.length pre &&
-  String.sub s 0 (String.length pre) = pre
-
-let strip_prefix ~pre s =
-  match prefix ~pre s with
-  | true -> Some (String.sub s (String.length pre) (String.length s - String.length pre))
-  | false -> None
-
-let non_empty s = String.length (String.trim s) > 0
-
-(* Parse "- name: X" lines from peers.md *)
-let parse_peers content =
-  content
-  |> String.split_on_char '\n'
-  |> List.filter_map (fun line -> strip_prefix ~pre:"- name: " (String.trim line))
-
-(* Derive agent name from hub path: /path/to/cn-sigma -> sigma *)
-let derive_name hub_path =
-  hub_path
-  |> String.split_on_char '/'
-  |> List.rev
-  |> function
-    | base :: _ -> strip_prefix ~pre:"cn-" base |> Option.value ~default:base
-    | [] -> "agent"
-
-(* Build peer record with repo path *)
-let make_peer workspace name =
-  let repo_path = match name with
-    | "cn-agent" -> Path.join workspace "cn-agent"
-    | _ -> Path.join workspace (Printf.sprintf "cn-%s-clone" name)
-  in
-  { name; repo_path }
 
 (* Check for inbound branches: origin/<my-name>/* *)
 let find_inbound_branches repo_path my_name =
   let cmd = Printf.sprintf "cd %s && git branch -r 2>/dev/null | grep 'origin/%s/' || true" repo_path my_name in
   run_cmd cmd
   |> Option.value ~default:""
-  |> String.split_on_char '\n'
-  |> List.map String.trim
-  |> List.filter non_empty
+  |> filter_branches
 
 (* Sync a single peer *)
 let sync_peer my_name peer =
@@ -92,31 +51,6 @@ let sync_peer my_name peer =
       let _ = run_cmd (Printf.sprintf "cd %s && git fetch --all 2>&1" peer.repo_path) in
       let branches = find_inbound_branches peer.repo_path my_name in
       Fetched (peer.name, branches)
-
-(* Report results *)
-let report_result = function
-  | Fetched (name, []) -> 
-      print_endline (Printf.sprintf "  ✓ %s (no inbound)" name)
-  | Fetched (name, branches) -> 
-      print_endline (Printf.sprintf "  ⚡ %s (%d inbound)" name (List.length branches))
-  | Skipped (name, reason) -> 
-      print_endline (Printf.sprintf "  · %s (%s)" name reason)
-
-let report_alerts results =
-  let alerts = results |> List.filter_map (function
-    | Fetched (name, (_::_ as branches)) -> Some (name, branches)
-    | _ -> None)
-  in
-  match alerts with
-  | [] -> 
-      print_endline "\nNo inbound branches. All clear.";
-      0
-  | _ ->
-      print_endline "\n=== INBOUND BRANCHES ===";
-      alerts |> List.iter (fun (peer, branches) ->
-        print_endline (Printf.sprintf "From %s:" peer);
-        branches |> List.iter (fun b -> print_endline (Printf.sprintf "  %s" b)));
-      2
 
 (* Main *)
 let () =
@@ -145,11 +79,15 @@ let () =
           let peers = 
             Fs.read_file_sync peers_file ~encoding:"utf8"
             |> parse_peers
-            |> List.map (make_peer workspace)
+            |> List.map (make_peer ~join:Path.join workspace)
           in
           print_endline (Printf.sprintf "Syncing %d peers as %s...\n" (List.length peers) my_name);
           
           let results = peers |> List.map (sync_peer my_name) in
-          results |> List.iter report_result;
+          results |> List.iter (fun r -> print_endline (report_result r));
           
-          Process.exit (report_alerts results)
+          let alerts = collect_alerts results in
+          print_endline "";
+          format_alerts alerts |> List.iter print_endline;
+          
+          Process.exit (match alerts with [] -> 0 | _ -> 2)
