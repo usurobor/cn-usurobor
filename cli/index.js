@@ -330,20 +330,29 @@ function isGitRepo(dir) {
             details['gh auth'] = ghUser;
             console.log(`    gh auth............ ${green('✓')} ${gray(`(${ghUser})`)}`);
             
-            // Also set git identity from GitHub profile
+            // Set git identity from GitHub profile (with defaults user can override)
             if (!checks['git identity']) {
               const ghName = runCapture('gh', ['api', 'user', '--jq', '.name']);
               const ghEmail = runCapture('gh', ['api', 'user', '--jq', '.email']);
-              if (ghName && ghEmail) {
-                // Actually set git config
-                await run('git', ['config', '--global', 'user.name', ghName], { quiet: true });
-                await run('git', ['config', '--global', 'user.email', ghEmail], { quiet: true });
-                gitName = ghName;
-                gitEmail = ghEmail;
-                checks['git identity'] = true;
-                details['git identity'] = `${gitName} <${gitEmail}>`;
-                console.log(`    git identity....... ${green('✓')} ${gray(`(${gitName})`)}`);
-              }
+              
+              // Defaults: use profile name/email, or fallback to username
+              const defaultName = ghName || ghUser;
+              const defaultEmail = ghEmail || `${ghUser}@users.noreply.github.com`;
+              
+              // Prompt with defaults (Enter accepts)
+              const nameInput = await ask(rl, gray(`    Name [${defaultName}]: `));
+              const emailInput = await ask(rl, gray(`    Email [${defaultEmail}]: `));
+              
+              gitName = nameInput || defaultName;
+              gitEmail = emailInput || defaultEmail;
+              
+              // Set git config
+              await run('git', ['config', '--global', 'user.name', gitName], { quiet: true });
+              await run('git', ['config', '--global', 'user.email', gitEmail], { quiet: true });
+              
+              checks['git identity'] = true;
+              details['git identity'] = `${gitName} <${gitEmail}>`;
+              console.log(`    git identity....... ${green('✓')} ${gray(`(${gitName})`)}`);
             }
           }
         } catch {
