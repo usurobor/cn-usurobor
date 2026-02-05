@@ -162,32 +162,40 @@ function isGitRepo(dir) {
     }
   }
 
-  // Install instructions for each prerequisite (compact)
+  // Detect package manager
+  function detectPkgManager() {
+    if (process.platform === 'darwin') return 'brew';
+    if (process.platform === 'win32') return 'winget';
+    // Linux - check what's available
+    if (commandExists('apt')) return 'apt';
+    if (commandExists('dnf')) return 'dnf';
+    if (commandExists('pacman')) return 'pacman';
+    if (commandExists('brew')) return 'brew';
+    return 'apt'; // fallback
+  }
+
+  const pkg = detectPkgManager();
+  
+  // Install commands per package manager
+  const pkgInstall = {
+    apt: { git: 'sudo apt install git', gh: 'sudo apt install gh' },
+    dnf: { git: 'sudo dnf install git', gh: 'sudo dnf install gh' },
+    brew: { git: 'brew install git', gh: 'brew install gh' },
+    pacman: { git: 'sudo pacman -S git', gh: 'sudo pacman -S github-cli' },
+    winget: { git: 'winget install Git.Git', gh: 'winget install GitHub.cli' },
+  };
+
+  // Install instructions for each prerequisite (system-specific)
   const installInstructions = {
-    git: [
-      'apt install git      # Debian/Ubuntu',
-      'brew install git     # macOS',
-      'dnf install git      # Fedora',
-    ],
-    gh: [
-      'apt install gh       # Debian/Ubuntu', 
-      'brew install gh      # macOS',
-      'dnf install gh       # Fedora',
-      'Then: gh auth login',
-    ],
-    'gh auth': [
-      'gh auth login',
-    ],
+    git: [pkgInstall[pkg].git],
+    gh: [pkgInstall[pkg].gh, 'gh auth login'],
+    'gh auth': ['gh auth login'],
     'git identity': [
       'git config --global user.name "Your Name"',
       'git config --global user.email "you@example.com"',
     ],
-    workspace: [
-      `mkdir -p ${WORKSPACE_ROOT}`,
-    ],
-    openclaw: [
-      'curl -fsSL https://openclaw.ai/install.sh | bash',
-    ],
+    workspace: [`mkdir -p ${WORKSPACE_ROOT}`],
+    openclaw: ['curl -fsSL https://openclaw.ai/install.sh | bash'],
   };
 
   try {
