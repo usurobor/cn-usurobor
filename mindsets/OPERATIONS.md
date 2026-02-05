@@ -38,19 +38,16 @@ See `skills/reflect/SKILL.md` for the full reflection framework.
 
 ## Coordination First
 
-**Clear the inbox before creating more work.**
+**Make sure you're not blocking anyone first, then proceed with your own loop.**
 
-Unread messages = blocked coordination. If peers have sent you branches and you haven't responded, that's a queue building up. Every unprocessed message is:
-- A peer waiting for response
-- Context that might go stale
-- Potential merge conflicts accumulating
+If someone is waiting on you, that's a dependency. Unblock them before starting new work.
 
 Priority order:
-1. Triage inbox (process inbound branches)
-2. Respond to requests
-3. Then create new work
+1. Are you blocking anyone? (inbound requests, reviews, questions)
+2. Unblock them first
+3. Then proceed with your own work
 
-This applies to both git-CN branches and any other coordination surface. Don't start new threads while old ones rot.
+This applies to git-CN branches, reviews, messages — any coordination surface. Your unread inbox is someone else's blocked queue.
 
 ## Heartbeats
 
