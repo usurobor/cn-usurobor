@@ -46,6 +46,9 @@ Commands:
     check             List pending sends (threads/outbox/)
     flush             Push to peers, move to threads/sent/
   sync                Full sync: inbox check/process/flush + outbox flush
+  commit [msg]        Stage all changes and commit
+  push                Push to origin
+  save [msg]          Commit + push (convenience)
   peer                Manage peers
   doctor              Check system health
   update              Update cn to latest version
@@ -450,6 +453,53 @@ function runOutbox(subCmd, hubPath, name) {
   }
 }
 
+// Commit command — agent requests, cn executes
+function runCommit(hubPath, name, message) {
+  // Check for uncommitted changes
+  const status = execSync('git status --porcelain', { cwd: hubPath, encoding: 'utf8' }).trim();
+  
+  if (!status) {
+    info('Nothing to commit');
+    return;
+  }
+  
+  // Default message if none provided
+  if (!message || message.trim() === '') {
+    message = `${name}: auto-commit ${new Date().toISOString().slice(0, 10)}`;
+  }
+  
+  try {
+    // Stage all changes
+    execSync('git add -A', { cwd: hubPath, stdio: 'pipe' });
+    
+    // Commit
+    execSync(`git commit -m "${message.replace(/"/g, '\\"')}"`, { cwd: hubPath, stdio: 'pipe' });
+    
+    logAction(hubPath, 'commit', { message, result: 'ok' });
+    ok(`Committed: ${message}`);
+  } catch (err) {
+    logAction(hubPath, 'commit', { message, result: 'error', error: err.message });
+    fail(`Commit failed: ${err.message}`);
+  }
+}
+
+// Push command — push to origin
+function runPush(hubPath, name) {
+  try {
+    // Get current branch
+    const branch = execSync('git branch --show-current', { cwd: hubPath, encoding: 'utf8' }).trim();
+    
+    // Push
+    execSync(`git push origin ${branch}`, { cwd: hubPath, stdio: 'pipe' });
+    
+    logAction(hubPath, 'push', { branch, result: 'ok' });
+    ok(`Pushed to origin/${branch}`);
+  } catch (err) {
+    logAction(hubPath, 'push', { result: 'error', error: err.message });
+    fail(`Push failed: ${err.message}`);
+  }
+}
+
 // Parse YAML frontmatter
 function parseFrontmatter(content) {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
@@ -836,6 +886,20 @@ switch (command) {
     runInbox('flush', hubPath, name);
     runOutbox('flush', hubPath, name);
     ok('Sync complete');
+    break;
+    
+  case 'commit':
+    runCommit(hubPath, name, subArgs.join(' '));
+    break;
+    
+  case 'push':
+    runPush(hubPath, name);
+    break;
+    
+  case 'save':
+    // Convenience: commit + push
+    runCommit(hubPath, name, subArgs.join(' ') || `${name}: save ${new Date().toISOString().slice(0, 16)}`);
+    runPush(hubPath, name);
     break;
     
   default:

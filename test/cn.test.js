@@ -230,4 +230,43 @@ Just content.
       // Test passes even if no log (no peers configured)
     });
   });
+
+  describe('commit', () => {
+    it('reports nothing to commit when clean', () => {
+      const { code, stdout } = runCN(['commit', 'test']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Nothing to commit'), 'should report clean state');
+    });
+
+    it('commits changes with message', () => {
+      // Create a file to commit
+      const testFile = path.join(hubPath, 'threads', 'adhoc', 'commit-test.md');
+      fs.mkdirSync(path.dirname(testFile), { recursive: true });
+      fs.writeFileSync(testFile, '# Test\n');
+      
+      const { code, stdout } = runCN(['commit', 'test commit']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Committed'), 'should report commit');
+      
+      // Verify commit was made
+      const log = execSync('git log -1 --oneline', { cwd: hubPath, encoding: 'utf8' });
+      assert.ok(log.includes('test commit'), 'commit message should be in log');
+    });
+  });
+
+  describe('push', () => {
+    it('attempts push (may fail without remote)', () => {
+      const { stdout, stderr } = runCN(['push']);
+      // In test env without remote, this will fail, but command should run
+      assert.ok(stdout.length > 0 || stderr.length > 0, 'should produce output');
+    });
+  });
+
+  describe('save', () => {
+    it('runs commit + push', () => {
+      const { stdout } = runCN(['save', 'save test']);
+      // Should attempt both operations
+      assert.ok(stdout.includes('Nothing to commit') || stdout.includes('Committed') || stdout.includes('Pushed'), 'should run save');
+    });
+  });
 });
