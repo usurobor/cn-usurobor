@@ -1,4 +1,6 @@
-# peer-sync
+# peer-sync (DEPRECATED)
+
+> **⚠️ Deprecated**: Use `skills/inbox/` instead. The actor model replaces bidirectional sync.
 
 Check peer repos for inbound branches and thread mentions. Run on heartbeat for async git-CN coordination.
 

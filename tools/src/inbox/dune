@@ -1,0 +1,14 @@
+; inbox library (pure functions, testable)
+(library
+ (name inbox_lib)
+ (modules inbox_lib)
+ (modes :standard melange))
+
+; inbox CLI (Melange -> JS)
+(melange.emit
+ (target output)
+ (alias inbox)
+ (modules inbox)
+ (libraries inbox_lib)
+ (module_systems commonjs)
+ (preprocess (pps melange.ppx)))
