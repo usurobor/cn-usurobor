@@ -38,21 +38,20 @@ Usage: cn <command> [options]
 Commands:
   init [name]         Create new hub
   status              Show hub state
-  inbox               Manage inbound messages
-    check             List inbound branches (from peers)
-    process           Materialize to threads/inbox/
-    flush             Detect replies, send back to peers
-  outbox              Manage outbound messages
-    check             List pending sends (threads/outbox/)
-    flush             Push to peers, move to threads/sent/
-  sync                Full sync: inbox check/process/flush + outbox flush
+  
+  thread              Thread operations (agent-facing API)
+    list [--inbox|--outbox|--daily]   List threads
+    new <title> [--to <peer>|--daily|--adhoc]  Create thread
+    show <id>         Show thread content
+    reply <id> <msg>  Reply to thread
+    close <id>        Archive thread
+    fetch             Check for inbound threads
+    send              Send pending outbound
+    sync              Fetch + send
+  
   commit [msg]        Stage all changes and commit
   push                Push to origin
   save [msg]          Commit + push (convenience)
-  write <path> <txt>  Write file
-  append <path> <txt> Append to file
-  mkdir <path>        Create directory
-  rm <path>           Remove file/directory
   peer                Manage peers
   doctor              Check system health
   update              Update cn to latest version
@@ -632,6 +631,217 @@ function runRm(hubPath, filePath) {
   }
 }
 
+// Thread operations — agent-facing API (no file paths)
+function runThread(hubPath, name, args) {
+  const subCmd = args[0];
+  const subArgs = args.slice(1);
+  
+  switch (subCmd) {
+    case 'list':
+      threadList(hubPath, name, subArgs);
+      break;
+    case 'new':
+      threadNew(hubPath, name, subArgs);
+      break;
+    case 'show':
+      threadShow(hubPath, name, subArgs[0]);
+      break;
+    case 'reply':
+      threadReply(hubPath, name, subArgs[0], subArgs.slice(1).join(' '));
+      break;
+    case 'close':
+      threadClose(hubPath, name, subArgs[0]);
+      break;
+    case 'fetch':
+      threadFetch(hubPath, name);
+      break;
+    case 'send':
+      threadSend(hubPath, name);
+      break;
+    case 'sync':
+      threadFetch(hubPath, name);
+      threadSend(hubPath, name);
+      break;
+    default:
+      fail(`Unknown thread command: ${subCmd}`);
+      console.log('Usage: cn thread <list|new|show|reply|close|fetch|send|sync>');
+      process.exit(1);
+  }
+}
+
+// List threads
+function threadList(hubPath, name, args) {
+  const filter = args.find(a => a.startsWith('--'))?.slice(2) || 'all';
+  const dirs = {
+    inbox: path.join(hubPath, 'threads', 'inbox'),
+    outbox: path.join(hubPath, 'threads', 'outbox'),
+    daily: path.join(hubPath, 'threads', 'daily'),
+    adhoc: path.join(hubPath, 'threads', 'adhoc'),
+  };
+  
+  const listDir = (dir, prefix) => {
+    if (!fs.existsSync(dir)) return [];
+    return fs.readdirSync(dir)
+      .filter(f => f.endsWith('.md'))
+      .map(f => `${prefix}/${f.replace('.md', '')}`);
+  };
+  
+  let threads = [];
+  if (filter === 'all' || filter === 'inbox') threads.push(...listDir(dirs.inbox, 'inbox'));
+  if (filter === 'all' || filter === 'outbox') threads.push(...listDir(dirs.outbox, 'outbox'));
+  if (filter === 'all' || filter === 'daily') threads.push(...listDir(dirs.daily, 'daily'));
+  if (filter === 'all' || filter === 'adhoc') threads.push(...listDir(dirs.adhoc, 'adhoc'));
+  
+  if (threads.length === 0) {
+    info('No threads');
+  } else {
+    console.log(`Threads (${threads.length}):`);
+    threads.forEach(t => console.log(`  ${t}`));
+  }
+}
+
+// Create new thread
+function threadNew(hubPath, name, args) {
+  const title = args.find(a => !a.startsWith('--'));
+  const toFlag = args.find(a => a.startsWith('--to='))?.slice(5);
+  const isDaily = args.includes('--daily');
+  const isAdhoc = args.includes('--adhoc');
+  
+  if (!title) {
+    fail('Usage: cn thread new <title> [--to <peer>|--daily|--adhoc]');
+    process.exit(1);
+  }
+  
+  // Determine directory and ID
+  let dir, threadId, frontmatter;
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  
+  if (toFlag) {
+    dir = path.join(hubPath, 'threads', 'outbox');
+    threadId = `outbox/${slug}`;
+    frontmatter = `---\nto: ${toFlag}\ncreated: ${new Date().toISOString()}\n---\n\n`;
+  } else if (isDaily) {
+    dir = path.join(hubPath, 'threads', 'daily');
+    threadId = `daily/${today}`;
+    frontmatter = `---\ndate: ${today}\n---\n\n`;
+  } else if (isAdhoc) {
+    dir = path.join(hubPath, 'threads', 'adhoc');
+    threadId = `adhoc/${slug}`;
+    frontmatter = `---\ncreated: ${new Date().toISOString()}\n---\n\n`;
+  } else {
+    // Default to adhoc
+    dir = path.join(hubPath, 'threads', 'adhoc');
+    threadId = `adhoc/${slug}`;
+    frontmatter = `---\ncreated: ${new Date().toISOString()}\n---\n\n`;
+  }
+  
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  
+  const filePath = path.join(dir, `${path.basename(threadId)}.md`);
+  const content = `${frontmatter}# ${title}\n\n`;
+  
+  fs.writeFileSync(filePath, content);
+  logAction(hubPath, 'thread.new', { id: threadId, title, result: 'ok' });
+  ok(`Created thread: ${threadId}`);
+}
+
+// Show thread content
+function threadShow(hubPath, name, threadId) {
+  if (!threadId) {
+    fail('Usage: cn thread show <id>');
+    process.exit(1);
+  }
+  
+  const filePath = threadIdToPath(hubPath, threadId);
+  if (!fs.existsSync(filePath)) {
+    fail(`Thread not found: ${threadId}`);
+    process.exit(1);
+  }
+  
+  const content = fs.readFileSync(filePath, 'utf8');
+  console.log(content);
+}
+
+// Reply to thread
+function threadReply(hubPath, name, threadId, message) {
+  if (!threadId || !message) {
+    fail('Usage: cn thread reply <id> <message>');
+    process.exit(1);
+  }
+  
+  const filePath = threadIdToPath(hubPath, threadId);
+  if (!fs.existsSync(filePath)) {
+    fail(`Thread not found: ${threadId}`);
+    process.exit(1);
+  }
+  
+  // Interpret escape sequences
+  message = message.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  
+  const timestamp = new Date().toISOString();
+  const reply = `\n\n## Reply (${timestamp})\n\n${message}`;
+  
+  fs.appendFileSync(filePath, reply);
+  logAction(hubPath, 'thread.reply', { id: threadId, bytes: message.length, result: 'ok' });
+  ok(`Replied to: ${threadId}`);
+}
+
+// Close/archive thread
+function threadClose(hubPath, name, threadId) {
+  if (!threadId) {
+    fail('Usage: cn thread close <id>');
+    process.exit(1);
+  }
+  
+  const filePath = threadIdToPath(hubPath, threadId);
+  if (!fs.existsSync(filePath)) {
+    fail(`Thread not found: ${threadId}`);
+    process.exit(1);
+  }
+  
+  const archivedDir = path.join(hubPath, 'threads', 'archived');
+  if (!fs.existsSync(archivedDir)) {
+    fs.mkdirSync(archivedDir, { recursive: true });
+  }
+  
+  const fileName = path.basename(filePath);
+  const archivedPath = path.join(archivedDir, fileName);
+  
+  // Add closed timestamp to frontmatter
+  let content = fs.readFileSync(filePath, 'utf8');
+  content = updateFrontmatter(content, { closed: new Date().toISOString() });
+  
+  fs.writeFileSync(archivedPath, content);
+  fs.unlinkSync(filePath);
+  
+  logAction(hubPath, 'thread.close', { id: threadId, result: 'ok' });
+  ok(`Closed thread: ${threadId} → archived`);
+}
+
+// Fetch inbound threads
+function threadFetch(hubPath, name) {
+  runInbox('check', hubPath, name);
+  runInbox('process', hubPath, name);
+}
+
+// Send outbound threads
+function threadSend(hubPath, name) {
+  runOutbox('flush', hubPath, name);
+}
+
+// Convert thread ID to file path
+function threadIdToPath(hubPath, threadId) {
+  // threadId format: "inbox/pi-clp" or "daily/20260205"
+  const parts = threadId.split('/');
+  if (parts.length !== 2) {
+    return path.join(hubPath, 'threads', threadId + '.md');
+  }
+  return path.join(hubPath, 'threads', parts[0], parts[1] + '.md');
+}
+
 // Parse YAML frontmatter
 function parseFrontmatter(content) {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
@@ -991,6 +1201,10 @@ switch (command) {
     
   case 'doctor':
     doctor(hubPath);
+    break;
+    
+  case 'thread':
+    runThread(hubPath, name, subArgs);
     break;
     
   case 'inbox':
