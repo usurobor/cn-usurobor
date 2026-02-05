@@ -270,6 +270,53 @@ Just content.
     });
   });
 
+  describe('thread commands', () => {
+    it('cn thread list shows threads', () => {
+      const { code, stdout } = runCN(['thread', 'list']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Threads') || stdout.includes('No threads'), 'should list or report empty');
+    });
+
+    it('cn thread new creates thread', () => {
+      const { code, stdout } = runCN(['thread', 'new', 'Test Thread', '--adhoc']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Created thread'), 'should create thread');
+    });
+
+    it('cn thread show displays content', () => {
+      const { code, stdout } = runCN(['thread', 'show', 'adhoc/test-thread']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('# Test Thread'), 'should show title');
+    });
+
+    it('cn thread reply appends to thread', () => {
+      const { code, stdout } = runCN(['thread', 'reply', 'adhoc/test-thread', 'Test reply']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Replied'), 'should reply');
+      
+      const { stdout: content } = runCN(['thread', 'show', 'adhoc/test-thread']);
+      assert.ok(content.includes('Test reply'), 'should contain reply');
+    });
+
+    it('cn thread close archives thread', () => {
+      const { code, stdout } = runCN(['thread', 'close', 'adhoc/test-thread']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Closed'), 'should close');
+      assert.ok(fs.existsSync(path.join(hubPath, 'threads', 'archived', 'test-thread.md')), 'should be archived');
+    });
+
+    it('cn thread fetch runs inbox check+process', () => {
+      const { code, stdout } = runCN(['thread', 'fetch']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('inbox') || stdout.includes('Checking'), 'should run fetch');
+    });
+
+    it('cn thread sync runs fetch+send', () => {
+      const { code, stdout } = runCN(['thread', 'sync']);
+      assert.strictEqual(code, 0);
+    });
+  });
+
   describe('file operations', () => {
     it('cn write creates file', () => {
       const { code, stdout } = runCN(['write', 'threads/test-write.md', '# Test\\n\\nContent']);
