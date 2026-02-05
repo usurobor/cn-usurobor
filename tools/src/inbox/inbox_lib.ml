@@ -7,6 +7,35 @@ type action =
   | Process  (* triage one message *)
   | Flush    (* triage all messages *)
 
+(* === GTD Triage (Getting Things Done) === *)
+
+type triage =
+  | Delete    (* noise, stale, already handled — remove branch *)
+  | Defer     (* important but not urgent — leave for later *)
+  | Delegate  (* forward to another agent — push to their repo *)
+  | Do        (* respond now — merge, reply, or take action *)
+
+let triage_of_string = function
+  | "delete" | "d" -> Some Delete
+  | "defer" | "f" -> Some Defer
+  | "delegate" | "g" -> Some Delegate
+  | "do" | "o" -> Some Do
+  | _ -> None
+
+let string_of_triage = function
+  | Delete -> "delete"
+  | Defer -> "defer"
+  | Delegate -> "delegate"
+  | Do -> "do"
+
+let triage_description = function
+  | Delete -> "Remove branch (noise/stale/handled)"
+  | Defer -> "Leave for later (important, not urgent)"
+  | Delegate -> "Forward to another agent"
+  | Do -> "Respond now (merge/reply/action)"
+
+let all_triages = [Delete; Defer; Delegate; Do]
+
 let action_of_string = function
   | "check" -> Some Check
   | "process" -> Some Process

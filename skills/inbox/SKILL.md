@@ -62,14 +62,24 @@ Process all inbound messages in sequence.
 
 ---
 
-## Triage Framework
+## GTD Triage (Getting Things Done)
 
-For each inbound branch, decide:
+David Allen's 4 Ds, as OCaml types:
 
-1. **Delete** — Noise, stale, or already handled
-2. **Defer** — Important but not urgent
-3. **Delegate** — Someone else should handle
-4. **Do** — Respond now (merge, reply branch, or action)
+```ocaml
+type triage =
+  | Delete    (* noise, stale, already handled — remove branch *)
+  | Defer     (* important but not urgent — leave for later *)
+  | Delegate  (* forward to another agent — push to their repo *)
+  | Do        (* respond now — merge, reply, or take action *)
+```
+
+For each inbound branch, pattern match:
+
+1. **Delete** — Noise, stale, or already handled → `git push origin --delete <branch>`
+2. **Defer** — Important but not urgent → leave branch, revisit later
+3. **Delegate** — Someone else should handle → push to their repo
+4. **Do** — Respond now → merge, reply branch, or take action
 
 ---
 
