@@ -11,7 +11,7 @@ const { execSync, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const VERSION = '0.1.0';
+const VERSION = '2.0.0';
 
 // Colors (respects NO_COLOR)
 const noColor = process.env.NO_COLOR !== undefined;
@@ -186,7 +186,11 @@ if (command === 'init') {
 // Find hub
 const hubPath = findHubPath();
 if (!hubPath) {
-  fail('Not in a cn hub. Run "cn init" first.');
+  fail('Not in a cn hub.');
+  console.log('');
+  console.log('Either:');
+  console.log(`  1) ${cmd('cd')} into an existing hub (cn-sigma, cn-pi, etc.)`);
+  console.log(`  2) ${cmd('cn init <name>')} to create a new one`);
   process.exit(1);
 }
 
