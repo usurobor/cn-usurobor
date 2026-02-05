@@ -49,6 +49,10 @@ Commands:
   commit [msg]        Stage all changes and commit
   push                Push to origin
   save [msg]          Commit + push (convenience)
+  write <path> <txt>  Write file
+  append <path> <txt> Append to file
+  mkdir <path>        Create directory
+  rm <path>           Remove file/directory
   peer                Manage peers
   doctor              Check system health
   update              Update cn to latest version
@@ -500,6 +504,134 @@ function runPush(hubPath, name) {
   }
 }
 
+// Write file — agent requests, cn executes
+function runWrite(hubPath, filePath, content) {
+  if (!filePath) {
+    fail('Usage: cn write <path> <content>');
+    fail('       echo "content" | cn write <path>');
+    process.exit(1);
+  }
+  
+  // Resolve path relative to hub
+  const fullPath = path.isAbsolute(filePath) ? filePath : path.join(hubPath, filePath);
+  
+  // Security: ensure path is within hub
+  if (!fullPath.startsWith(hubPath)) {
+    fail('Path must be within hub directory');
+    process.exit(1);
+  }
+  
+  // Interpret escape sequences in content
+  content = content.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  
+  try {
+    // Ensure parent directory exists
+    const dir = path.dirname(fullPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    fs.writeFileSync(fullPath, content);
+    logAction(hubPath, 'write', { path: filePath, bytes: content.length, result: 'ok' });
+    ok(`Wrote ${filePath} (${content.length} bytes)`);
+  } catch (err) {
+    logAction(hubPath, 'write', { path: filePath, result: 'error', error: err.message });
+    fail(`Write failed: ${err.message}`);
+  }
+}
+
+// Append to file
+function runAppend(hubPath, filePath, content) {
+  if (!filePath) {
+    fail('Usage: cn append <path> <content>');
+    process.exit(1);
+  }
+  
+  const fullPath = path.isAbsolute(filePath) ? filePath : path.join(hubPath, filePath);
+  
+  if (!fullPath.startsWith(hubPath)) {
+    fail('Path must be within hub directory');
+    process.exit(1);
+  }
+  
+  // Interpret escape sequences
+  content = content.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  
+  try {
+    fs.appendFileSync(fullPath, content);
+    logAction(hubPath, 'append', { path: filePath, bytes: content.length, result: 'ok' });
+    ok(`Appended to ${filePath} (${content.length} bytes)`);
+  } catch (err) {
+    logAction(hubPath, 'append', { path: filePath, result: 'error', error: err.message });
+    fail(`Append failed: ${err.message}`);
+  }
+}
+
+// Make directory
+function runMkdir(hubPath, dirPath) {
+  if (!dirPath) {
+    fail('Usage: cn mkdir <path>');
+    process.exit(1);
+  }
+  
+  const fullPath = path.isAbsolute(dirPath) ? dirPath : path.join(hubPath, dirPath);
+  
+  if (!fullPath.startsWith(hubPath)) {
+    fail('Path must be within hub directory');
+    process.exit(1);
+  }
+  
+  try {
+    fs.mkdirSync(fullPath, { recursive: true });
+    logAction(hubPath, 'mkdir', { path: dirPath, result: 'ok' });
+    ok(`Created ${dirPath}`);
+  } catch (err) {
+    logAction(hubPath, 'mkdir', { path: dirPath, result: 'error', error: err.message });
+    fail(`Mkdir failed: ${err.message}`);
+  }
+}
+
+// Remove file
+function runRm(hubPath, filePath) {
+  if (!filePath) {
+    fail('Usage: cn rm <path>');
+    process.exit(1);
+  }
+  
+  const fullPath = path.isAbsolute(filePath) ? filePath : path.join(hubPath, filePath);
+  
+  if (!fullPath.startsWith(hubPath)) {
+    fail('Path must be within hub directory');
+    process.exit(1);
+  }
+  
+  // Safety: don't allow deleting critical files
+  const critical = ['spec/SOUL.md', 'spec/USER.md', 'state/peers.md'];
+  const relPath = path.relative(hubPath, fullPath);
+  if (critical.includes(relPath)) {
+    fail(`Cannot delete critical file: ${relPath}`);
+    process.exit(1);
+  }
+  
+  try {
+    if (fs.existsSync(fullPath)) {
+      const stat = fs.statSync(fullPath);
+      if (stat.isDirectory()) {
+        fs.rmSync(fullPath, { recursive: true });
+      } else {
+        fs.unlinkSync(fullPath);
+      }
+      logAction(hubPath, 'rm', { path: filePath, result: 'ok' });
+      ok(`Removed ${filePath}`);
+    } else {
+      info(`${filePath} does not exist`);
+    }
+  } catch (err) {
+    logAction(hubPath, 'rm', { path: filePath, result: 'error', error: err.message });
+    fail(`Remove failed: ${err.message}`);
+  }
+}
+
 // Parse YAML frontmatter
 function parseFrontmatter(content) {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
@@ -900,6 +1032,22 @@ switch (command) {
     // Convenience: commit + push
     runCommit(hubPath, name, subArgs.join(' ') || `${name}: save ${new Date().toISOString().slice(0, 16)}`);
     runPush(hubPath, name);
+    break;
+    
+  case 'write':
+    runWrite(hubPath, subArgs[0], subArgs.slice(1).join(' '));
+    break;
+    
+  case 'append':
+    runAppend(hubPath, subArgs[0], subArgs.slice(1).join(' '));
+    break;
+    
+  case 'mkdir':
+    runMkdir(hubPath, subArgs[0]);
+    break;
+    
+  case 'rm':
+    runRm(hubPath, subArgs[0]);
     break;
     
   default:
