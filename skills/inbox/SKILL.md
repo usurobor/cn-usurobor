@@ -64,22 +64,48 @@ Process all inbound messages in sequence.
 
 ## GTD Triage (Getting Things Done)
 
-David Allen's 4 Ds, as OCaml types:
+David Allen's 4 Ds, as OCaml types with required context:
 
 ```ocaml
+type do_action =
+  | Merge                     (* merge the branch *)
+  | Reply of string           (* push reply branch *)
+  | Custom of string          (* custom action *)
+
 type triage =
-  | Delete    (* noise, stale, already handled — remove branch *)
-  | Defer     (* important but not urgent — leave for later *)
-  | Delegate  (* forward to another agent — push to their repo *)
-  | Do        (* respond now — merge, reply, or take action *)
+  | Delete of string          (* reason: why remove? *)
+  | Defer of string           (* reason: why later? *)
+  | Delegate of string        (* actor: who handles? *)
+  | Do of do_action           (* action: what to do? *)
+```
+
+Every decision requires rationale — no silent triage:
+
+```ocaml
+Delete "stale, superseded by pi/v2"
+Defer "blocked on cnagent CLI design"
+Delegate "pi"
+Do Merge
+Do (Reply "response-thread")
+Do (Custom "update docs before merge")
+```
+
+CLI format: `action:payload`
+```
+delete:stale branch
+defer:waiting on review
+delegate:pi
+do:merge
+do:reply:my-response
+do:custom:needs manual fix
 ```
 
 For each inbound branch, pattern match:
 
-1. **Delete** — Noise, stale, or already handled → `git push origin --delete <branch>`
-2. **Defer** — Important but not urgent → leave branch, revisit later
-3. **Delegate** — Someone else should handle → push to their repo
-4. **Do** — Respond now → merge, reply branch, or take action
+1. **Delete reason** — Noise, stale, or already handled → `git push origin --delete <branch>`
+2. **Defer reason** — Important but not urgent → leave branch, revisit later
+3. **Delegate actor** — Someone else should handle → push to their repo
+4. **Do action** — Respond now → merge, reply branch, or custom action
 
 ---
 

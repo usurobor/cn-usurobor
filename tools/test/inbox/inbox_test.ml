@@ -4,30 +4,43 @@ open Inbox_lib
 
 (* === GTD Triage === *)
 
-let%expect_test "triage_of_string valid" =
-  ["delete"; "d"; "defer"; "f"; "delegate"; "g"; "do"; "o"]
+let%expect_test "triage_of_string with payloads" =
+  ["delete:stale branch"; 
+   "d:duplicate"; 
+   "defer:blocked on design";
+   "f:waiting for review";
+   "delegate:pi";
+   "g:omega";
+   "do:merge";
+   "o:merge";
+   "do:reply:response-thread";
+   "do:custom:update docs first"]
   |> List.iter (fun s ->
     match triage_of_string s with
     | Some t -> print_endline (string_of_triage t)
     | None -> print_endline "NONE");
   [%expect {|
-    delete
-    delete
-    defer
-    defer
-    delegate
-    delegate
-    do
-    do
+    delete:stale branch
+    delete:duplicate
+    defer:blocked on design
+    defer:waiting for review
+    delegate:pi
+    delegate:omega
+    do:merge
+    do:merge
+    do:reply:response-thread
+    do:custom:update docs first
   |}]
 
 let%expect_test "triage_of_string invalid" =
-  ["Delete"; "DROP"; "skip"; ""]
+  ["delete"; "defer"; "delegate"; "do"; ""; "invalid"]
   |> List.iter (fun s ->
     match triage_of_string s with
     | Some t -> print_endline (string_of_triage t)
     | None -> print_endline "NONE");
   [%expect {|
+    NONE
+    NONE
     NONE
     NONE
     NONE
@@ -35,13 +48,23 @@ let%expect_test "triage_of_string invalid" =
   |}]
 
 let%expect_test "triage roundtrip" =
-  all_triages
-  |> List.iter (fun t ->
+  let examples = [
+    Delete "stale";
+    Defer "blocked on X";
+    Delegate "pi";
+    Do Merge;
+    Do (Reply "my-response");
+    Do (Custom "manual fix needed")
+  ] in
+  examples |> List.iter (fun t ->
     let s = string_of_triage t in
     match triage_of_string s with
     | Some t' when t = t' -> print_endline "OK"
-    | _ -> print_endline "FAIL");
+    | Some t' -> print_endline (Printf.sprintf "MISMATCH: %s" (string_of_triage t'))
+    | None -> print_endline "FAIL");
   [%expect {|
+    OK
+    OK
     OK
     OK
     OK
@@ -49,13 +72,37 @@ let%expect_test "triage roundtrip" =
   |}]
 
 let%expect_test "triage descriptions" =
-  all_triages
-  |> List.iter (fun t -> print_endline (triage_description t));
+  let examples = [
+    Delete "stale";
+    Defer "blocked on X";
+    Delegate "pi";
+    Do Merge;
+    Do (Reply "response");
+    Do (Custom "update docs")
+  ] in
+  examples |> List.iter (fun t -> print_endline (triage_description t));
   [%expect {|
-    Remove branch (noise/stale/handled)
-    Leave for later (important, not urgent)
-    Forward to another agent
-    Respond now (merge/reply/action)
+    Remove branch (stale)
+    Defer (blocked on X)
+    Delegate to pi
+    Merge branch
+    Reply with branch response
+    Action: update docs
+  |}]
+
+let%expect_test "triage_kind" =
+  let examples = [
+    Delete "x";
+    Defer "y";
+    Delegate "z";
+    Do Merge
+  ] in
+  examples |> List.iter (fun t -> print_endline (triage_kind t));
+  [%expect {|
+    delete
+    defer
+    delegate
+    do
   |}]
 
 (* === Action parsing === *)
