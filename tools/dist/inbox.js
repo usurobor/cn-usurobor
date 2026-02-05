@@ -23496,7 +23496,41 @@ var require_inbox_lib = __commonJS({
     var Stdlib__Option2 = require_option();
     var Stdlib__Printf2 = require_printf();
     var Stdlib__String2 = require_string();
-    function do_action_of_string(s) {
+    function command_of_string(param) {
+      switch (param) {
+        case "check":
+          return (
+            /* Check */
+            0
+          );
+        case "flush":
+          return (
+            /* Flush */
+            2
+          );
+        case "process":
+          return (
+            /* Process */
+            1
+          );
+        default:
+          return;
+      }
+    }
+    function string_of_command(param) {
+      switch (param) {
+        case /* Check */
+        0:
+          return "check";
+        case /* Process */
+        1:
+          return "process";
+        case /* Flush */
+        2:
+          return "flush";
+      }
+    }
+    function action_of_string(s) {
       if (s === "merge") {
         return (
           /* Merge */
@@ -23542,7 +23576,7 @@ var require_inbox_lib = __commonJS({
           return;
       }
     }
-    function string_of_do_action(name) {
+    function string_of_action(name) {
       if (
         /* tag */
         typeof name === "number" || typeof name === "string"
@@ -23855,7 +23889,7 @@ var require_inbox_lib = __commonJS({
               }
             },
             _1: "do:%s"
-          }), string_of_do_action(reason._0));
+          }), string_of_action(reason._0));
       }
     }
     function triage_kind(param) {
@@ -24691,40 +24725,6 @@ var require_inbox_lib = __commonJS({
         _1: "\n## Summary\n- Processed: %d\n- Delete: %d\n- Defer: %d\n- Delegate: %d\n- Do: %d"
       }), stats.total, stats.deleted, stats.deferred, stats.delegated, stats.done_count);
     }
-    function action_of_string(param) {
-      switch (param) {
-        case "check":
-          return (
-            /* Check */
-            0
-          );
-        case "flush":
-          return (
-            /* Flush */
-            2
-          );
-        case "process":
-          return (
-            /* Process */
-            1
-          );
-        default:
-          return;
-      }
-    }
-    function string_of_action(param) {
-      switch (param) {
-        case /* Check */
-        0:
-          return "check";
-        case /* Process */
-        1:
-          return "process";
-        case /* Flush */
-        2:
-          return "flush";
-      }
-    }
     function prefix(pre, s) {
       if (s.length >= pre.length) {
         return Stdlib__String2.sub(s, 0, pre.length) === pre;
@@ -25117,14 +25117,7 @@ var require_inbox_lib = __commonJS({
         };
       }
     }
-    var empty_stats = {
-      total: 0,
-      deleted: 0,
-      deferred: 0,
-      delegated: 0,
-      done_count: 0
-    };
-    var all_actions = {
+    var all_commands = {
       hd: (
         /* Check */
         0
@@ -25146,9 +25139,19 @@ var require_inbox_lib = __commonJS({
         }
       }
     };
+    var empty_stats = {
+      total: 0,
+      deleted: 0,
+      deferred: 0,
+      delegated: 0,
+      done_count: 0
+    };
     module2.exports = {
-      do_action_of_string,
-      string_of_do_action,
+      command_of_string,
+      string_of_command,
+      all_commands,
+      action_of_string,
+      string_of_action,
       non_empty_payload,
       triage_of_string,
       string_of_triage,
@@ -25164,9 +25167,6 @@ var require_inbox_lib = __commonJS({
       empty_stats,
       update_stats,
       format_daily_summary,
-      action_of_string,
-      string_of_action,
-      all_actions,
       prefix,
       strip_prefix,
       non_empty,
@@ -25433,8 +25433,8 @@ function run_flush(_hub_path, _my_name, _peers) {
   console.log("Will: process all inbound branches in sequence");
   return 1;
 }
-function run_action(action, hub_path, my_name, peers) {
-  switch (action) {
+function run_command(cmd, hub_path, my_name, peers) {
+  switch (cmd) {
     case /* Check */
     0:
       return run_check(hub_path, my_name, peers);
@@ -25463,8 +25463,8 @@ if (n < 4) {
   Process.exit(1);
 } else {
   const action_str = Caml_array.get(argv, 2);
-  const action = Inbox_lib.action_of_string(action_str);
-  if (action !== void 0) {
+  const cmd = Inbox_lib.command_of_string(action_str);
+  if (cmd !== void 0) {
     const hub_path = Path.resolve(Process.cwd(), Caml_array.get(argv, 3));
     const my_name = argv.length > 4 ? Caml_array.get(argv, 4) : Inbox_lib.derive_name(hub_path);
     const workspace = Path.dirname(hub_path);
@@ -25475,7 +25475,7 @@ if (n < 4) {
           return Path.join(prim0, prim1);
         }), workspace, param);
       }), Inbox_lib.parse_peers(Fs.readFileSync(peers_file, "utf8")));
-      const exit_code = run_action(action, hub_path, my_name, peers);
+      const exit_code = run_command(cmd, hub_path, my_name, peers);
       Process.exit(exit_code);
     } else {
       console.log(Curry._1(Stdlib__Printf.sprintf({
@@ -25564,7 +25564,7 @@ if (n < 4) {
         }
       },
       _1: "Valid actions: %s"
-    }), Stdlib__String.concat(", ", Stdlib__List.map(Inbox_lib.string_of_action, Inbox_lib.all_actions))));
+    }), Stdlib__String.concat(", ", Stdlib__List.map(Inbox_lib.string_of_command, Inbox_lib.all_commands))));
     Process.exit(1);
   }
 }
@@ -25579,6 +25579,6 @@ module.exports = {
   run_check,
   run_process,
   run_flush,
-  run_action,
+  run_command,
   usage
 };

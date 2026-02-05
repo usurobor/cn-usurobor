@@ -84,8 +84,8 @@ let run_flush _hub_path _my_name _peers =
   print_endline "Will: process all inbound branches in sequence";
   1
 
-let run_action action hub_path my_name peers =
-  match action with
+let run_command cmd hub_path my_name peers =
+  match cmd with
   | Check -> run_check hub_path my_name peers
   | Process -> run_process hub_path my_name peers
   | Flush -> run_flush hub_path my_name peers
@@ -113,13 +113,13 @@ let () =
       Process.exit 1
   | _ ->
       let action_str = argv.(2) in
-      match action_of_string action_str with
+      match command_of_string action_str with
       | None ->
           print_endline (Printf.sprintf "Unknown action: %s" action_str);
           print_endline (Printf.sprintf "Valid actions: %s" 
-            (all_actions |> List.map string_of_action |> String.concat ", "));
+            (all_commands |> List.map string_of_command |> String.concat ", "));
           Process.exit 1
-      | Some action ->
+      | Some cmd ->
           let hub_path = Path.resolve (Process.cwd ()) argv.(3) in
           let my_name = match Array.length argv > 4 with
             | true -> argv.(4)
@@ -138,5 +138,5 @@ let () =
                 |> parse_peers
                 |> List.map (make_peer ~join:Path.join workspace)
               in
-              let exit_code = run_action action hub_path my_name peers in
+              let exit_code = run_command cmd hub_path my_name peers in
               Process.exit exit_code

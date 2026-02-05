@@ -182,13 +182,13 @@ let%expect_test "daily_stats" =
     - Do: 2
   |}]
 
-(* === Action parsing === *)
+(* === Command parsing (CLI) === *)
 
-let%expect_test "action_of_string valid" =
+let%expect_test "command_of_string valid" =
   ["check"; "process"; "flush"]
   |> List.iter (fun s ->
-    match action_of_string s with
-    | Some a -> print_endline (string_of_action a)
+    match command_of_string s with
+    | Some c -> print_endline (string_of_command c)
     | None -> print_endline "NONE");
   [%expect {|
     check
@@ -196,11 +196,11 @@ let%expect_test "action_of_string valid" =
     flush
   |}]
 
-let%expect_test "action_of_string invalid" =
+let%expect_test "command_of_string invalid" =
   ["chekc"; "PROCESS"; "sync"; ""]
   |> List.iter (fun s ->
-    match action_of_string s with
-    | Some a -> print_endline (string_of_action a)
+    match command_of_string s with
+    | Some c -> print_endline (string_of_command c)
     | None -> print_endline "NONE");
   [%expect {|
     NONE
@@ -209,12 +209,12 @@ let%expect_test "action_of_string invalid" =
     NONE
   |}]
 
-let%expect_test "action roundtrip" =
-  all_actions
-  |> List.iter (fun a ->
-    let s = string_of_action a in
-    match action_of_string s with
-    | Some a' when a = a' -> print_endline "OK"
+let%expect_test "command roundtrip" =
+  all_commands
+  |> List.iter (fun c ->
+    let s = string_of_command c in
+    match command_of_string s with
+    | Some c' when c = c' -> print_endline "OK"
     | _ -> print_endline "FAIL");
   [%expect {|
     OK

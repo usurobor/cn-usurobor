@@ -27,10 +27,10 @@ Inspired by Erlang's actor model:
 
 ---
 
-## Actions
+## Commands
 
 ```ocaml
-type action =
+type command =
   | Check    (* list inbound branches *)
   | Process  (* triage one message *)
   | Flush    (* triage all messages *)
@@ -67,16 +67,18 @@ Process all inbound messages in sequence.
 David Allen's 4 Ds, as OCaml types with required context:
 
 ```ocaml
-type do_action =
+(* What to do when triaging as "Do" *)
+type action =
   | Merge                     (* merge the branch *)
   | Reply of string           (* push reply branch *)
   | Custom of string          (* custom action *)
 
+(* GTD 4 Ds — each with required payload *)
 type triage =
   | Delete of string          (* reason: why remove? *)
   | Defer of string           (* reason: why later? *)
   | Delegate of string        (* actor: who handles? *)
-  | Do of do_action           (* action: what to do? *)
+  | Do of action              (* action: what to do? *)
 ```
 
 Every decision requires rationale — no silent triage:

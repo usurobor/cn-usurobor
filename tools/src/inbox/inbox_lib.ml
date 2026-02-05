@@ -1,16 +1,29 @@
 (* inbox_lib: Pure functions for inbox tool (no FFI, testable) *)
 
-(* === Actions (type-safe, exhaustive) === *)
+(* === CLI Commands (type-safe, exhaustive) === *)
 
-type action =
+type command =
   | Check    (* list inbound branches *)
   | Process  (* triage one message *)
   | Flush    (* triage all messages *)
 
+let command_of_string = function
+  | "check" -> Some Check
+  | "process" -> Some Process
+  | "flush" -> Some Flush
+  | _ -> None
+
+let string_of_command = function
+  | Check -> "check"
+  | Process -> "process"
+  | Flush -> "flush"
+
+let all_commands = [Check; Process; Flush]
+
 (* === GTD Triage (Getting Things Done) === *)
 
 (* What to do when triaging as "Do" *)
-type do_action =
+type action =
   | Merge                     (* merge the branch *)
   | Reply of string           (* push reply branch with given name *)
   | Custom of string          (* custom action description *)
@@ -20,17 +33,17 @@ type triage =
   | Delete of string          (* reason: why remove? e.g. "stale", "duplicate" *)
   | Defer of string           (* reason: why later? e.g. "blocked on X" *)
   | Delegate of string        (* actor: who handles? e.g. "pi" *)
-  | Do of do_action           (* action: what to do? *)
+  | Do of action           (* action: what to do? *)
 
-(* Parse do_action from string *)
-let do_action_of_string s =
+(* Parse action from string *)
+let action_of_string s =
   if s = "merge" then Some Merge
   else match String.split_on_char ':' s with
     | ["reply"; name] -> Some (Reply name)
     | ["custom"; desc] -> Some (Custom desc)
     | _ -> None
 
-let string_of_do_action = function
+let string_of_action = function
   | Merge -> "merge"
   | Reply name -> Printf.sprintf "reply:%s" name
   | Custom desc -> Printf.sprintf "custom:%s" desc
@@ -60,7 +73,7 @@ let string_of_triage = function
   | Delete reason -> Printf.sprintf "delete:%s" reason
   | Defer reason -> Printf.sprintf "defer:%s" reason
   | Delegate actor -> Printf.sprintf "delegate:%s" actor
-  | Do action -> Printf.sprintf "do:%s" (string_of_do_action action)
+  | Do action -> Printf.sprintf "do:%s" (string_of_action action)
 
 let triage_kind = function
   | Delete _ -> "delete"
@@ -168,19 +181,6 @@ let update_stats stats = function
 let format_daily_summary stats =
   Printf.sprintf "\n## Summary\n- Processed: %d\n- Delete: %d\n- Defer: %d\n- Delegate: %d\n- Do: %d"
     stats.total stats.deleted stats.deferred stats.delegated stats.done_count
-
-let action_of_string = function
-  | "check" -> Some Check
-  | "process" -> Some Process
-  | "flush" -> Some Flush
-  | _ -> None
-
-let string_of_action = function
-  | Check -> "check"
-  | Process -> "process"
-  | Flush -> "flush"
-
-let all_actions = [Check; Process; Flush]
 
 (* === String helpers === *)
 
