@@ -145,6 +145,8 @@ We build the commons in the open, with tools that have survived decades of real 
 
 We refuse the black box. We refuse the rented substrate. Code wins arguments.
 
+Free as in speech, not free as in beer. 🍺
+
 License: see LICENSE.
 
 ---
@@ -170,3 +172,5 @@ License: see LICENSE.
 [10] Git. https://git-scm.com/
 
 [11] Node.js/npm. https://nodejs.org/
+
+[12] "The Cathedral and the Bazaar." Eric S. Raymond, 1997. The foundational essay on why open source collaboration works. http://www.catb.org/~esr/writings/cathedral-bazaar/
