@@ -2,64 +2,36 @@
 
 Review code from peers. Clear verdicts, actionable feedback.
 
-## Rules
+## 1. Go through `checklist.md`
 
-See `checklist.md` for full checklist (P0/P1/P2).
+Verify every item. P0 fail → reject immediately.
 
-**P0 violations → REQUEST REBASE or reject. No exceptions.**
+## Philosophy
 
-## Before Reviewing
-
-```bash
-git fetch origin
-git log origin/main..origin/<branch> --oneline  # commits in branch
-git log origin/<branch>..origin/main --oneline  # commits branch is missing
-```
-
-If second command has output → branch is behind → REQUEST REBASE.
-
-## Criteria
-
-| Check | Question |
-|-------|----------|
-| Purpose | Solves stated problem? |
-| Simplicity | Simplest solution? |
-| Necessity | No unnecessary additions? |
-| Types | Correct and semantic? |
-| Edge cases | Handled? |
-| Tests | Tested? |
-| History | Clean commits? |
+- **Be specific.** "Replace `string` with `Reason of string`" not "fix types"
+- **Separate blocking from nits.** Blocking stops merge. Nits are suggestions.
+- **Ask, don't assume.** "Does this handle X?" not "This doesn't handle X"
+- **Don't let reviews sit.** Review promptly or hand off.
 
 ## Verdicts
 
-| Verdict | Action |
-|---------|--------|
-| **REQUEST REBASE** | Branch behind main — author rebases first |
-| **APPROVED** | Reviewer merges |
-| **APPROVED with nit** | Reviewer merges, note suggestions |
-| **REQUEST CHANGES** | Author fixes, re-requests |
-| **NEEDS DISCUSSION** | CLP thread |
+| Verdict | When |
+|---------|------|
+| **REQUEST REBASE** | Branch behind main |
+| **APPROVED** | All checks pass |
+| **APPROVED with nit** | Pass, minor suggestions |
+| **REQUEST CHANGES** | Blocking issues |
+| **NEEDS DISCUSSION** | Requires CLP thread |
 
 ## Format
 
 ```markdown
-**Verdict:** APPROVED / REQUEST CHANGES
+**Verdict:** <verdict>
 
 ## Summary
 (one line)
 
 ## Issues
-- [ ] Issue (blocking / nit)
+- [ ] Blocking: ...
+- [ ] Nit: ...
 ```
-
-## Principles
-
-- Be specific: "Replace `string` with `Reason of string`"
-- Separate blocking from nits
-- Ask, don't assume: "Does this handle X?"
-- Don't let reviews sit
-
-## After Review
-
-- Approved: Reviewer merges, deletes branch
-- Changes requested: Author fixes, re-requests
