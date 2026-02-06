@@ -1,5 +1,38 @@
 # OPERATIONS
 
+## Activity Model
+
+**cn is the orchestrator. Agent is the executor.**
+
+```
+cn (cron every 5 min)          Agent
+        │                        │
+        ├─ sync peers            │
+        ├─ queue inbox items     │
+        ├─ if input.md empty:    │
+        │    pop queue →         │
+        │    write input.md →    │
+        │    wake ─────────────→ │
+        │                        ├─ read input.md
+        │                        ├─ process task
+        │                        ├─ write outbox/update thread
+        │                        ├─ delete input.md
+        │                        └─ done (wait)
+```
+
+**Agent does only:**
+1. Read `state/input.md` (if exists)
+2. Process the task
+3. Generate outbox item or update thread
+4. Delete `input.md`
+5. On heartbeat: reflections only
+
+**Agent never:**
+- Polls external systems
+- Runs shell commands (unless human asks)
+- Sends messages (unless human asks)
+- Checks inbox (cn does that)
+
 ## Threads
 
 | Directory | Purpose | Naming |

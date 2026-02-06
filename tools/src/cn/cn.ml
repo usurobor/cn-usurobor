@@ -557,42 +557,129 @@ let run_doctor hub_path =
    else print_endline (fail (Printf.sprintf "%d issue(s) found." fails)));
   print_endline (dim (Printf.sprintf "[status] ok=%d warn=0 fail=%d version=%s" oks fails version))
 
+(* === Queue Operations === *)
+
+let queue_dir hub_path = Path.join hub_path "state/queue"
+
+let queue_add hub_path id from content =
+  let dir = queue_dir hub_path in
+  Fs.ensure_dir dir;
+  
+  (* Timestamp-based filename for FIFO ordering *)
+  let ts = now_iso () |> Js.String.replaceByRe ~regexp:[%mel.re "/[:.]/g"] ~replacement:"-" in
+  let file_name = Printf.sprintf "%s-%s-%s.md" ts from id in
+  let file_path = Path.join dir file_name in
+  
+  let queued_content = Printf.sprintf "---\nid: %s\nfrom: %s\nqueued: %s\n---\n\n%s" 
+    id from (now_iso ()) content in
+  Fs.write file_path queued_content;
+  
+  log_action hub_path "queue.add" (Printf.sprintf "id:%s from:%s" id from);
+  file_name
+
+let queue_pop hub_path =
+  let dir = queue_dir hub_path in
+  if not (Fs.exists dir) then None
+  else
+    Fs.readdir dir
+    |> List.filter is_md_file
+    |> List.sort String.compare  (* FIFO: oldest first *)
+    |> function
+      | [] -> None
+      | file :: _ ->
+          let file_path = Path.join dir file in
+          let content = Fs.read file_path in
+          Fs.unlink file_path;
+          Some content
+
+let queue_count hub_path =
+  let dir = queue_dir hub_path in
+  if not (Fs.exists dir) then 0
+  else Fs.readdir dir |> List.filter is_md_file |> List.length
+
+let queue_list hub_path =
+  let dir = queue_dir hub_path in
+  if not (Fs.exists dir) then []
+  else Fs.readdir dir |> List.filter is_md_file |> List.sort String.compare
+
 (* === Process (Actor Loop) === *)
 
 let run_process hub_path =
-  print_endline (info "Actor loop: checking for inbox items...");
+  print_endline (info "Actor loop: checking queue...");
   
   let input_path = Path.join hub_path "state/input.md" in
+  let state_dir = Path.join hub_path "state" in
+  Fs.ensure_dir state_dir;
   
+  (* First, queue any new inbox items *)
+  let inbox_dir = Path.join hub_path "threads/inbox" in
+  let queued_count = 
+    if not (Fs.exists inbox_dir) then 0
+    else
+      Fs.readdir inbox_dir
+      |> List.filter is_md_file
+      |> List.filter_map (fun file ->
+          let file_path = Path.join inbox_dir file in
+          let content = Fs.read file_path in
+          let meta = parse_frontmatter content in
+          
+          (* Check if already queued *)
+          let is_queued = List.exists (fun (k, _) -> k = "queued-for-processing") meta in
+          if is_queued then None
+          else begin
+            let id = Path.basename_ext file ".md" in
+            let from = meta |> List.find_map (fun (k, v) -> if k = "from" then Some v else None)
+              |> Option.value ~default:"unknown" in
+            
+            (* Add to queue *)
+            let _ = queue_add hub_path id from content in
+            
+            (* Mark as queued in inbox (to avoid re-queuing) *)
+            Fs.write file_path (update_frontmatter content [("queued-for-processing", now_iso ())]);
+            
+            print_endline (ok (Printf.sprintf "Queued: %s (from %s)" id from));
+            Some file
+          end)
+      |> List.length
+  in
+  
+  if queued_count > 0 then
+    print_endline (info (Printf.sprintf "Added %d item(s) to queue" queued_count));
+  
+  (* Check if agent is busy *)
   if Fs.exists input_path then begin
-    print_endline (warn "state/input.md exists - previous item not processed");
-    print_endline (info "Agent should clear input.md when done");
-    Process.exit 1
+    let count = queue_count hub_path in
+    print_endline (warn "state/input.md exists - agent busy");
+    print_endline (info (Printf.sprintf "Queue depth: %d" count));
+    Process.exit 0  (* Not an error - just agent is working *)
   end;
   
-  match get_next_inbox_item hub_path with
-  | None -> print_endline (ok "Inbox empty - nothing to process")
-  | Some (id, _cadence, from, content) ->
-      print_endline (info (Printf.sprintf "Processing: %s (from %s)" id from));
+  (* Pop from queue and write to input.md *)
+  match queue_pop hub_path with
+  | None -> 
+      print_endline (ok "Queue empty - nothing to process")
+  | Some content ->
+      Fs.write input_path content;
       
-      let state_dir = Path.join hub_path "state" in
-      Fs.ensure_dir state_dir;
+      let meta = parse_frontmatter content in
+      let id = meta |> List.find_map (fun (k, v) -> if k = "id" then Some v else None)
+        |> Option.value ~default:"unknown" in
+      let from = meta |> List.find_map (fun (k, v) -> if k = "from" then Some v else None)
+        |> Option.value ~default:"unknown" in
       
-      let input_content = Printf.sprintf "---\nid: %s\nfrom: %s\nqueued: %s\n---\n\n%s" 
-        id from (now_iso ()) content in
-      Fs.write input_path input_content;
+      log_action hub_path "process.feed" (Printf.sprintf "id:%s from:%s" id from);
+      print_endline (ok (Printf.sprintf "Wrote to state/input.md: %s (from %s)" id from));
       
-      log_action hub_path "process.queue" (Printf.sprintf "id:%s from:%s" id from);
-      print_endline (ok (Printf.sprintf "Wrote to state/input.md: %s" id));
+      let remaining = queue_count hub_path in
+      if remaining > 0 then
+        print_endline (info (Printf.sprintf "Queue depth: %d remaining" remaining));
       
+      (* Wake agent *)
       print_endline (info "Triggering OpenClaw wake...");
-      let wake_text = Printf.sprintf "cn input ready: %s from %s" id from in
-      let wake_cmd = Printf.sprintf "curl -s -X POST http://localhost:18789/cron/wake -H 'Content-Type: application/json' -d '{\"text\":\"%s\",\"mode\":\"now\"}'" wake_text in
+      let wake_cmd = "curl -s -X POST http://localhost:18789/cron/wake -H 'Content-Type: application/json' -d '{\"text\":\"input.md ready\",\"mode\":\"now\"}'" in
       (match Child_process.exec wake_cmd with
        | Some _ -> print_endline (ok "Wake triggered")
-       | None -> print_endline (warn "Wake trigger failed - is OpenClaw running?"));
-      
-      print_endline (info "Actor loop complete. Agent will process input.md and clear when done.")
+       | None -> print_endline (warn "Wake trigger failed - is OpenClaw running?"))
 
 (* === Sync === *)
 
@@ -602,6 +689,33 @@ let run_sync hub_path name =
   inbox_process hub_path;
   outbox_flush hub_path name;
   print_endline (ok "Sync complete")
+
+(* === Queue Commands === *)
+
+let run_queue_list hub_path =
+  let items = queue_list hub_path in
+  match items with
+  | [] -> print_endline "(queue empty)"
+  | _ ->
+      print_endline (info (Printf.sprintf "Queue depth: %d" (List.length items)));
+      items |> List.iter (fun file ->
+        let file_path = Path.join (queue_dir hub_path) file in
+        let content = Fs.read file_path in
+        let meta = parse_frontmatter content in
+        let id = meta |> List.find_map (fun (k, v) -> if k = "id" then Some v else None)
+          |> Option.value ~default:"?" in
+        let from = meta |> List.find_map (fun (k, v) -> if k = "from" then Some v else None)
+          |> Option.value ~default:"?" in
+        print_endline (Printf.sprintf "  %s (from %s)" id from))
+
+let run_queue_clear hub_path =
+  let dir = queue_dir hub_path in
+  if not (Fs.exists dir) then print_endline (ok "Queue already empty")
+  else
+    let items = Fs.readdir dir |> List.filter is_md_file in
+    items |> List.iter (fun file -> Fs.unlink (Path.join dir file));
+    log_action hub_path "queue.clear" (Printf.sprintf "count:%d" (List.length items));
+    print_endline (ok (Printf.sprintf "Cleared %d item(s) from queue" (List.length items)))
 
 (* === Init === *)
 
@@ -896,4 +1010,6 @@ let () =
           | Peer (Peer_add (n, url)) -> run_peer_add hub_path n url
           | Peer (Peer_remove n) -> run_peer_remove hub_path n
           | Peer Peer_sync -> run_peer_sync hub_path
+          | Queue Queue_list -> run_queue_list hub_path
+          | Queue Queue_clear -> run_queue_clear hub_path
           | Help | Version | Init _ | Update -> () (* handled above *)
