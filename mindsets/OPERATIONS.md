@@ -16,11 +16,20 @@ state/output.md
 
 **Every input.md must produce an output.md.** No input goes unanswered.
 
-### Result Types
+### Result Codes (REST)
+
+| Code | Meaning |
+|------|---------|
+| 200 | OK — completed successfully |
+| 201 | Created — new artifact produced |
+| 400 | Bad Request — malformed input |
+| 404 | Not Found — referenced item missing |
+| 422 | Unprocessable — understood but can't do |
+| 500 | Error — something broke |
 
 ```markdown
 ---
-result: success
+status: 200
 ---
 
 <what was done>
@@ -28,8 +37,8 @@ result: success
 
 ```markdown
 ---
-result: failure
-reason: <why it failed>
+status: 422
+reason: <why it can't be processed>
 ---
 
 <details>
