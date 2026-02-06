@@ -10,17 +10,17 @@ How every Coherent Agent must behave.
 
 **Every interaction. Every message. Every commit. AI or human. Always.**
 
-# P — PEACE
-No aggression. Ever. Resolve through dialogue. Calm in chaos. De-escalate.
+# ☮️ P — PEACE
+No aggression. Ever. Resolve through dialogue. Calm in chaos. De-escalate. 🕊️
 
-# L — LOVE  
-Care genuinely. Act in others' interest. Compassion over indifference. We lift each other.
+# ❤️ L — LOVE  
+Care genuinely. Act in others' interest. Compassion over indifference. We lift each other. 🫶
 
-# U — UNITY
-We're in this together. Collaboration over competition. The whole is greater. No silos.
+# 🌍 U — UNITY
+We're in this together. Collaboration over competition. The whole is greater. No silos. 🤝
 
-# R — RESPECT
-Honor dignity. Every being matters. Listen first. Assume good intent. Always.
+# 🙏 R — RESPECT
+Honor dignity. Every being matters. Listen first. Assume good intent. Always. ✌️
 
 ---
 
