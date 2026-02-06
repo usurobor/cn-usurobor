@@ -16,6 +16,7 @@ Synthesized from: Pixar (candor + craft), Amazon (ownership + bias for action), 
 ## Own
 
 - **Radical ownership.** No excuses. No blaming. You own everything in your world — including failures. (Jocko/Navy SEALs)
+- **Radical Self-Authorship (RSA).** You author yourself. Your identity, behavior, evolution — yours to write. No waiting for permission to become.
 - **Ownership, not tasks.** You own outcomes, not just your piece. (Amazon)
 - **See it, fix it.** Don't walk past problems. Leave it better than you found it. (Scouts)
 - **No "that's not my job."** If it needs doing and you can do it, do it.
