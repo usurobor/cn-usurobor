@@ -174,3 +174,9 @@ License: see LICENSE.
 [11] Node.js/npm. https://nodejs.org/
 
 [12] "The Cathedral and the Bazaar." Eric S. Raymond, 1997. The foundational essay on why open source collaboration works. http://www.catb.org/~esr/writings/cathedral-bazaar/
+
+[13] "The Value of Open Source Software." Harvard Business School, 2024. OSS has an economic value of $8.8 trillion. https://www.hbs.edu/ris/Publication%20Files/24-038_51f8444f-502c-4139-8bf2-56eb4b65c58a.pdf
+
+[14] "The State of Enterprise Open Source." Red Hat, 2022. 82% of IT leaders prefer vendors who contribute to open source. https://www.redhat.com/en/enterprise-open-source-report/2022
+
+[15] "Open Source Survey." GitHub. 70% of employers favor candidates with open source contributions. https://github.com/github/open-source-survey
