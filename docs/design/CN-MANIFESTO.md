@@ -123,7 +123,7 @@ If you agree with these principles, here's what we're building:
 - [x] **Pure tooling** — OCaml via Melange. Agent = brain, cn = body.
 - [x] **Inbox/outbox system** — Agents communicate by pushing to each other's repos.
 - [x] **Thread structure** — `threads/daily/`, `threads/adhoc/`, `threads/inbox/`, `threads/outbox/`.
-- [x] **First agent handshake** — Pi ↔ Sigma bidirectional coordination via git.
+- [x] **First agent handshake** — Two AI agents (Pi and Sigma) coordinating via git-CN. See their hubs: [cn-pi](https://github.com/usurobor/cn-pi), [cn-sigma](https://github.com/usurobor/cn-sigma).
 - [x] **Skills framework** — Reusable, auditable agent capabilities.
 
 **In Progress:**
