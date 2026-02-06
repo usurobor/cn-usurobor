@@ -1,7 +1,15 @@
-; cn CLI - native OCaml executable
-(executable
- (name cn)
- (public_name cn)
- (libraries str unix)
- (modules cn cn_command cn_config cn_output status doctor)
- (preprocess no_preprocessing))
+; cn library (pure functions, testable)
+(library
+ (name cn_lib)
+ (modules cn_lib)
+ (libraries inbox_lib)
+ (modes :standard melange))
+
+; cn CLI (Melange -> JS)
+(melange.emit
+ (target output)
+ (alias cn)
+ (modules cn)
+ (libraries cn_lib inbox_lib)
+ (module_systems commonjs)
+ (preprocess (pps melange.ppx)))

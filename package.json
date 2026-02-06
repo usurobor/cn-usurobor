@@ -26,7 +26,9 @@
   ],
   "scripts": {
     "build": "dune build && npm run bundle",
-    "bundle": "npx esbuild _build/default/tools/src/inbox/output/tools/src/inbox/inbox.js --bundle --platform=node --outfile=dist/inbox.js",
+    "bundle": "npm run bundle:inbox && npm run bundle:cn",
+    "bundle:inbox": "npx esbuild _build/default/tools/src/inbox/output/tools/src/inbox/inbox.js --bundle --platform=node --outfile=dist/inbox.js",
+    "bundle:cn": "npx esbuild _build/default/tools/src/cn/output/tools/src/cn/cn.js --bundle --platform=node --outfile=dist/cn.js",
     "test": "node --test test/*.test.js"
   },
   "author": "usurobor",
