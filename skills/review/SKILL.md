@@ -13,13 +13,20 @@ Stop at first P0 or P1 failure → request fix. Don't continue reviewing.
 - **Ask, don't assume.** "Does this handle X?" not "This doesn't handle X"
 - **Don't let reviews sit.** Review promptly or hand off.
 
-## Mindset Compliance
+## Compliance Checks
 
 Before approving, verify no violations of:
 
+**Code Quality:**
 - **FUNCTIONAL.md** — no `ref`, no `with _ ->`, no `List.hd`, pattern match on bool
 - **ENGINEERING.md** — KISS, YAGNI, done > perfect
 - **skills/ocaml** — pure in `_lib.ml`, FFI in main, specific exceptions
+
+**Testing:**
+- **skills/testing** — new functions tested, edge cases, `dune runtest` passes
+
+**Documentation:**
+- **skills/documenting** — docs match code, versions consistent, no stale refs
 
 ## Verdicts
 
