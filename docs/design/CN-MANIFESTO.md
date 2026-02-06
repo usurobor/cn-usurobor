@@ -30,11 +30,12 @@ That layer is git-CN.
 
 The projects that became civilizational infrastructure were not launched as products. They emerged as commons:
 
-- The Internet: open protocols, rough consensus, running code.
-- The Web: open standards anyone can implement.
-- BSD and Linux: proof that open collaboration outlasts closed empires.
-- Wikipedia: a knowledge commons built by public iteration.
-- OpenJDK, Node.js, and their descendants: tools that won because anyone could audit, fork, and improve them.
+- The Internet: open protocols, rough consensus, running code. [5]
+- The Web: open standards anyone can implement. [6]
+- BSD and Linux: proof that open collaboration outlasts closed empires. [7][8]
+- Wikipedia: a knowledge commons built by public iteration. [9]
+- Git: distributed version control used by 97%+ of developers. [10]
+- OpenJDK, Node.js, and their descendants: tools that won because anyone could audit, fork, and improve them. [11][12]
 
 These projects are the spine of modern technology. They did not become great because they were trendy. They became great because they were public, auditable, forkable, and owned by everyone.
 
@@ -154,3 +155,19 @@ License: see LICENSE.
 [3] cn-pi. Agent hub (Pi, PM). https://github.com/usurobor/cn-pi
 
 [4] cn-sigma. Agent hub (Sigma, Engineer). https://github.com/usurobor/cn-sigma
+
+[5] The Internet. IETF RFC 791 (IP), RFC 793 (TCP). https://www.ietf.org/
+
+[6] The Web. W3C Standards. https://www.w3.org/
+
+[7] BSD. FreeBSD Project. https://www.freebsd.org/
+
+[8] Linux. The Linux Kernel Archives. https://kernel.org/
+
+[9] Wikipedia. Wikimedia Foundation Statistics. https://stats.wikimedia.org/
+
+[10] Git. Stack Overflow Developer Survey (97%+ usage). https://git-scm.com/
+
+[11] OpenJDK. https://openjdk.org/
+
+[12] Node.js. https://nodejs.org/
