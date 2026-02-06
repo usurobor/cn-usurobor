@@ -39,15 +39,19 @@ Commands:
   init [name]         Create new hub
   status              Show hub state
   
-  thread              Thread operations (agent-facing API)
-    list [--inbox|--outbox|--daily]   List threads
-    new <title> [--to <peer>|--daily|--adhoc]  Create thread
-    show <id>         Show thread content
-    reply <id> <msg>  Reply to thread
-    close <id>        Archive thread
-    fetch             Check for inbound threads
-    send              Send pending outbound
-    sync              Fetch + send
+  inbox               List threads needing triage
+  outbox              List pending outbound
+  read <thread>       Read thread content
+  reply <thread> <msg> Reply to thread
+  send <peer> <msg>   Send message to peer
+  
+  delete <thread>     GTD: discard
+  defer <thread>      GTD: postpone
+  delegate <t> <peer> GTD: forward
+  do <thread>         GTD: claim/start
+  done <thread>       GTD: complete → archive
+  
+  sync                Fetch inbound + send outbound
   
   commit [msg]        Stage all changes and commit
   push                Push to origin
@@ -842,6 +846,300 @@ function threadIdToPath(hubPath, threadId) {
   return path.join(hubPath, 'threads', parts[0], parts[1] + '.md');
 }
 
+// === CLEAN AGENT API ===
+
+// List inbox (threads needing triage)
+function listInbox(hubPath, name) {
+  const inboxDir = path.join(hubPath, 'threads', 'inbox');
+  if (!fs.existsSync(inboxDir)) {
+    console.log('(empty)');
+    return;
+  }
+  
+  const threads = fs.readdirSync(inboxDir).filter(f => f.endsWith('.md'));
+  if (threads.length === 0) {
+    console.log('(empty)');
+    return;
+  }
+  
+  threads.forEach(f => {
+    const id = f.replace('.md', '');
+    const content = fs.readFileSync(path.join(inboxDir, f), 'utf8');
+    const meta = parseFrontmatter(content);
+    const from = meta.from || 'unknown';
+    const title = content.match(/^#\s+(.+)$/m)?.[1] || id;
+    console.log(`${from}/${id}  "${title}"`);
+  });
+}
+
+// List outbox (pending sends)
+function listOutbox(hubPath, name) {
+  const outboxDir = path.join(hubPath, 'threads', 'outbox');
+  if (!fs.existsSync(outboxDir)) {
+    console.log('(empty)');
+    return;
+  }
+  
+  const threads = fs.readdirSync(outboxDir).filter(f => f.endsWith('.md'));
+  if (threads.length === 0) {
+    console.log('(empty)');
+    return;
+  }
+  
+  threads.forEach(f => {
+    const id = f.replace('.md', '');
+    const content = fs.readFileSync(path.join(outboxDir, f), 'utf8');
+    const meta = parseFrontmatter(content);
+    const to = meta.to || 'unknown';
+    const title = content.match(/^#\s+(.+)$/m)?.[1] || id;
+    console.log(`→ ${to}  "${title}"`);
+  });
+}
+
+// Read thread content
+function readThread(hubPath, threadId) {
+  if (!threadId) {
+    fail('Usage: cn read <thread>');
+    process.exit(1);
+  }
+  
+  // Try to find in inbox, outbox, daily, adhoc
+  const locations = ['inbox', 'outbox', 'daily', 'adhoc', 'archived'];
+  let found = null;
+  
+  for (const loc of locations) {
+    const tryPath = path.join(hubPath, 'threads', loc, threadId + '.md');
+    if (fs.existsSync(tryPath)) {
+      found = tryPath;
+      break;
+    }
+    // Also try with location prefix
+    if (threadId.includes('/')) {
+      const direct = threadIdToPath(hubPath, threadId);
+      if (fs.existsSync(direct)) {
+        found = direct;
+        break;
+      }
+    }
+  }
+  
+  if (!found) {
+    fail(`Thread not found: ${threadId}`);
+    process.exit(1);
+  }
+  
+  console.log(fs.readFileSync(found, 'utf8'));
+}
+
+// Reply to thread
+function replyThread(hubPath, name, threadId, message) {
+  if (!threadId || !message) {
+    fail('Usage: cn reply <thread> <message>');
+    process.exit(1);
+  }
+  
+  const filePath = findThread(hubPath, threadId);
+  if (!filePath) {
+    fail(`Thread not found: ${threadId}`);
+    process.exit(1);
+  }
+  
+  message = message.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  const timestamp = new Date().toISOString();
+  const reply = `\n\n## Reply (${timestamp})\n\n${message}`;
+  
+  fs.appendFileSync(filePath, reply);
+  logAction(hubPath, 'reply', { thread: threadId, bytes: message.length });
+  ok(`Replied to ${threadId}`);
+}
+
+// Send message to peer (creates outbox thread)
+function sendToPeer(hubPath, name, peer, message) {
+  if (!peer || !message) {
+    fail('Usage: cn send <peer> <message>');
+    process.exit(1);
+  }
+  
+  const outboxDir = path.join(hubPath, 'threads', 'outbox');
+  if (!fs.existsSync(outboxDir)) {
+    fs.mkdirSync(outboxDir, { recursive: true });
+  }
+  
+  const slug = message.slice(0, 30).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const fileName = `${slug}.md`;
+  const filePath = path.join(outboxDir, fileName);
+  
+  message = message.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+  const content = `---
+to: ${peer}
+created: ${new Date().toISOString()}
+---
+
+# ${message.split('\n')[0]}
+
+${message}
+`;
+  
+  fs.writeFileSync(filePath, content);
+  logAction(hubPath, 'send', { to: peer, thread: slug });
+  ok(`Created message to ${peer}: ${slug}`);
+  info('Run "cn sync" to send');
+}
+
+// GTD: Delete (discard thread)
+function gtdDelete(hubPath, name, threadId) {
+  if (!threadId) {
+    fail('Usage: cn delete <thread>');
+    process.exit(1);
+  }
+  
+  const filePath = findThread(hubPath, threadId);
+  if (!filePath) {
+    fail(`Thread not found: ${threadId}`);
+    process.exit(1);
+  }
+  
+  fs.unlinkSync(filePath);
+  logAction(hubPath, 'gtd.delete', { thread: threadId });
+  ok(`Deleted: ${threadId}`);
+}
+
+// GTD: Defer (postpone - move to deferred/)
+function gtdDefer(hubPath, name, threadId, until) {
+  if (!threadId) {
+    fail('Usage: cn defer <thread> [until]');
+    process.exit(1);
+  }
+  
+  const filePath = findThread(hubPath, threadId);
+  if (!filePath) {
+    fail(`Thread not found: ${threadId}`);
+    process.exit(1);
+  }
+  
+  const deferredDir = path.join(hubPath, 'threads', 'deferred');
+  if (!fs.existsSync(deferredDir)) {
+    fs.mkdirSync(deferredDir, { recursive: true });
+  }
+  
+  let content = fs.readFileSync(filePath, 'utf8');
+  content = updateFrontmatter(content, { deferred: new Date().toISOString(), until: until || 'unspecified' });
+  
+  const destPath = path.join(deferredDir, path.basename(filePath));
+  fs.writeFileSync(destPath, content);
+  fs.unlinkSync(filePath);
+  
+  logAction(hubPath, 'gtd.defer', { thread: threadId, until });
+  ok(`Deferred: ${threadId}` + (until ? ` until ${until}` : ''));
+}
+
+// GTD: Delegate (forward to peer)
+function gtdDelegate(hubPath, name, threadId, peer) {
+  if (!threadId || !peer) {
+    fail('Usage: cn delegate <thread> <peer>');
+    process.exit(1);
+  }
+  
+  const filePath = findThread(hubPath, threadId);
+  if (!filePath) {
+    fail(`Thread not found: ${threadId}`);
+    process.exit(1);
+  }
+  
+  // Read content and create outbox item
+  let content = fs.readFileSync(filePath, 'utf8');
+  content = updateFrontmatter(content, { to: peer, delegated: new Date().toISOString(), 'delegated-by': name });
+  
+  const outboxDir = path.join(hubPath, 'threads', 'outbox');
+  if (!fs.existsSync(outboxDir)) {
+    fs.mkdirSync(outboxDir, { recursive: true });
+  }
+  
+  const destPath = path.join(outboxDir, path.basename(filePath));
+  fs.writeFileSync(destPath, content);
+  fs.unlinkSync(filePath);
+  
+  logAction(hubPath, 'gtd.delegate', { thread: threadId, to: peer });
+  ok(`Delegated to ${peer}: ${threadId}`);
+  info('Run "cn sync" to send');
+}
+
+// GTD: Do (claim - move to doing/)
+function gtdDo(hubPath, name, threadId) {
+  if (!threadId) {
+    fail('Usage: cn do <thread>');
+    process.exit(1);
+  }
+  
+  const filePath = findThread(hubPath, threadId);
+  if (!filePath) {
+    fail(`Thread not found: ${threadId}`);
+    process.exit(1);
+  }
+  
+  const doingDir = path.join(hubPath, 'threads', 'doing');
+  if (!fs.existsSync(doingDir)) {
+    fs.mkdirSync(doingDir, { recursive: true });
+  }
+  
+  let content = fs.readFileSync(filePath, 'utf8');
+  content = updateFrontmatter(content, { started: new Date().toISOString() });
+  
+  const destPath = path.join(doingDir, path.basename(filePath));
+  fs.writeFileSync(destPath, content);
+  fs.unlinkSync(filePath);
+  
+  logAction(hubPath, 'gtd.do', { thread: threadId });
+  ok(`Started: ${threadId}`);
+}
+
+// GTD: Done (complete - archive)
+function gtdDone(hubPath, name, threadId) {
+  if (!threadId) {
+    fail('Usage: cn done <thread>');
+    process.exit(1);
+  }
+  
+  const filePath = findThread(hubPath, threadId);
+  if (!filePath) {
+    fail(`Thread not found: ${threadId}`);
+    process.exit(1);
+  }
+  
+  const archivedDir = path.join(hubPath, 'threads', 'archived');
+  if (!fs.existsSync(archivedDir)) {
+    fs.mkdirSync(archivedDir, { recursive: true });
+  }
+  
+  let content = fs.readFileSync(filePath, 'utf8');
+  content = updateFrontmatter(content, { completed: new Date().toISOString() });
+  
+  const destPath = path.join(archivedDir, path.basename(filePath));
+  fs.writeFileSync(destPath, content);
+  fs.unlinkSync(filePath);
+  
+  logAction(hubPath, 'gtd.done', { thread: threadId });
+  ok(`Completed: ${threadId} → archived`);
+}
+
+// Find thread across all locations
+function findThread(hubPath, threadId) {
+  // Direct path format (inbox/foo)
+  if (threadId.includes('/')) {
+    const direct = threadIdToPath(hubPath, threadId);
+    if (fs.existsSync(direct)) return direct;
+  }
+  
+  // Search in all locations
+  const locations = ['inbox', 'outbox', 'doing', 'deferred', 'daily', 'adhoc'];
+  for (const loc of locations) {
+    const tryPath = path.join(hubPath, 'threads', loc, threadId + '.md');
+    if (fs.existsSync(tryPath)) return tryPath;
+  }
+  
+  return null;
+}
+
 // Parse YAML frontmatter
 function parseFrontmatter(content) {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
@@ -1203,36 +1501,66 @@ switch (command) {
     doctor(hubPath);
     break;
     
-  case 'thread':
-    runThread(hubPath, name, subArgs);
-    break;
-    
+  // === CORE AGENT API ===
+  
   case 'inbox':
-    const inboxSubCmd = subArgs[0] || 'check';
-    if (!['check', 'process', 'flush'].includes(inboxSubCmd)) {
-      fail(`Unknown inbox command: ${inboxSubCmd}`);
-      process.exit(1);
-    }
-    runInbox(inboxSubCmd, hubPath, name);
+    // List threads in inbox
+    listInbox(hubPath, name);
     break;
     
   case 'outbox':
-    const outboxSubCmd = subArgs[0] || 'check';
-    if (!['check', 'flush'].includes(outboxSubCmd)) {
-      fail(`Unknown outbox command: ${outboxSubCmd}`);
-      process.exit(1);
-    }
-    runOutbox(outboxSubCmd, hubPath, name);
+    // List pending outbound
+    listOutbox(hubPath, name);
     break;
     
+  case 'read':
+    // Read thread content
+    readThread(hubPath, subArgs[0]);
+    break;
+    
+  case 'reply':
+    // Reply to thread
+    replyThread(hubPath, name, subArgs[0], subArgs.slice(1).join(' '));
+    break;
+    
+  case 'send':
+    // Send message to peer
+    sendToPeer(hubPath, name, subArgs[0], subArgs.slice(1).join(' '));
+    break;
+    
+  // === GTD VERBS ===
+    
+  case 'delete':
+    gtdDelete(hubPath, name, subArgs[0]);
+    break;
+    
+  case 'defer':
+    gtdDefer(hubPath, name, subArgs[0], subArgs[1]);
+    break;
+    
+  case 'delegate':
+    gtdDelegate(hubPath, name, subArgs[0], subArgs[1]);
+    break;
+    
+  case 'do':
+    gtdDo(hubPath, name, subArgs[0]);
+    break;
+    
+  case 'done':
+    gtdDone(hubPath, name, subArgs[0]);
+    break;
+    
+  // === SYNC ===
+    
   case 'sync':
-    info('Running sync...');
+    info('Syncing...');
     runInbox('check', hubPath, name);
     runInbox('process', hubPath, name);
-    runInbox('flush', hubPath, name);
     runOutbox('flush', hubPath, name);
     ok('Sync complete');
     break;
+    
+  // === GIT OPS (low-level) ===
     
   case 'commit':
     runCommit(hubPath, name, subArgs.join(' '));
@@ -1243,25 +1571,14 @@ switch (command) {
     break;
     
   case 'save':
-    // Convenience: commit + push
     runCommit(hubPath, name, subArgs.join(' ') || `${name}: save ${new Date().toISOString().slice(0, 16)}`);
     runPush(hubPath, name);
     break;
     
-  case 'write':
-    runWrite(hubPath, subArgs[0], subArgs.slice(1).join(' '));
-    break;
-    
-  case 'append':
-    runAppend(hubPath, subArgs[0], subArgs.slice(1).join(' '));
-    break;
-    
-  case 'mkdir':
-    runMkdir(hubPath, subArgs[0]);
-    break;
-    
-  case 'rm':
-    runRm(hubPath, subArgs[0]);
+  // === LEGACY (keep for now) ===
+  
+  case 'thread':
+    runThread(hubPath, name, subArgs);
     break;
     
   default:
