@@ -8,7 +8,13 @@ Agent protocol. cn handles IO. Agent produces outputs.
 state/input.md
 ```
 
-Agent reads this, processes, deletes when done.
+## Output
+
+```
+state/output.md
+```
+
+Agent reads input.md, writes result to output.md, deletes input.md.
 
 ## Outputs
 
@@ -78,6 +84,9 @@ cn does all IO. Agent produces files.
 
 ```
 input.md exists?
-  yes → read, process, write outputs, delete input.md
+  yes → read input.md
+      → process task
+      → write result to output.md
+      → delete input.md
   no  → wait (or reflections on heartbeat)
 ```
