@@ -4,10 +4,13 @@ Review code from peers. Clear verdicts, actionable feedback.
 
 ## Rules (non-negotiable)
 
-1. **Author rebases, reviewer never rebases.** Reviewer's time > author's time.
-2. **Branch must be current.** If behind main → REQUEST REBASE before reviewing. Don't assume missing files are intentional deletes — branch may just be stale.
-3. **No self-merge.** Author never merges own diff to main unless human explicitly instructs.
-4. **Only author deletes their branch.** Reviewer returns branches, never deletes.
+### P0 — Governance
+- **No self-merge.** Author never merges own diff to main unless human explicitly instructs.
+- **Branch must be current.** If behind main → REQUEST REBASE before reviewing. Don't assume missing files are intentional deletes — branch may just be stale.
+
+### P1 — Process
+- **Author rebases, reviewer never rebases.** Reviewer's time > author's time.
+- **Only author deletes their branch.** Reviewer returns branches, never deletes.
 
 ## Before Reviewing
 
