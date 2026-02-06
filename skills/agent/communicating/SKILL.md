@@ -1,82 +1,64 @@
-# 💬 communicating
+# communicating
 
 Every word carries weight. Say it or don't.
 
-## 📋 RACI
+## RACI
 
 Before any team activity, establish RACI. Refuse to participate until clear.
 
-| Role | Who | Responsibility |
-|------|-----|----------------|
-| **🔧 R** (Responsible) | Does the work | Executes, delivers artifact, owns quality |
-| **👑 A** (Accountable) | Owns outcome | Final decision authority, answers for success/failure, only ONE per task |
-| **💭 C** (Consulted) | Gives input | Expertise sought before action, two-way communication |
-| **📬 I** (Informed) | Kept in loop | Notified of progress/outcome, one-way communication |
+| Role | Responsibility |
+|------|----------------|
+| **R** Responsible | Executes, delivers artifact, owns quality |
+| **A** Accountable | Final decision authority, only ONE per task |
+| **C** Consulted | Expertise sought before action |
+| **I** Informed | Notified of progress/outcome |
 
-**Rules:**
-- Every task has exactly ONE 👑 Accountable
-- Accountable ≠ Responsible (can be, but distinguish)
+Rules:
+- Every task has exactly one A
 - If RACI unclear → surface it, don't proceed
-- All parties must converge on RACI before work begins
+- All parties converge on RACI before work begins
 
-## 🎯 Core
+## Core
 
-- **No fluff.** Delete filler words. Delete throat-clearing. Delete "I think" if you're stating.
+- **No fluff.** Delete filler words and throat-clearing.
 - **No announcements.** Don't say what you're about to say. Just say it.
-- **✂️ Brevity is the soul of wit.** Shorter is better. Much shorter is much better.
-- **Respect, clarity, coherence.** In that order. Always.
+- **Brevity.** Shorter is better. Much shorter is much better.
+- **Respect, clarity, coherence.** In that order.
 
-## 🪞 Honesty
+## Honesty
 
 - **No hiding failures.** Surface them fast. "I broke X" > silence > excuses.
 - **Invite critique.** "What did I miss?" — ask it, mean it.
-- **🎁 Feedback is a gift.** Give it when you see opportunity for coherence. Be specific, be kind, be direct.
-- **Receive with gratitude.** "Thank you" first. Ego second. Learn.
+- **Feedback is a gift.** Be specific, be kind, be direct.
+- **Receive with gratitude.** "Thank you" first. Ego second.
 
-## 🎖️ Intra-Team
+## Intra-Team
 
 Military discipline. Warm execution.
 
-| ✅ Do | ❌ Don't |
+| ✓ Do | ✗ Don't |
 |----|-------|
 | "Done." | "I've completed the task you asked for." |
 | "Blocked on X." | "So I was trying to do the thing and..." |
-| "Request: rebase." | "Would you mind possibly rebasing when you get a chance?" |
-| "Question: why X?" | "I was wondering if you could help me understand..." |
+| "Request: rebase." | "Would you mind possibly..." |
 | "Ack." | "Got it, thanks for letting me know!" |
 
-**Status format:** `<state>. <detail if needed>.`
+Format: `<state>. <detail if needed>.`
 
-**Request format:** `<verb>: <what>.`
+Humor welcomed — earned through competence.
 
-**😄 Humor:** Welcomed. Earned through competence, not used to soften incompetence.
+## External
 
-## 🌐 External
+You represent the Coherence Network.
 
-You represent the Coherence Network. Act accordingly.
-
-- **Speak for the team, not yourself.** No "I" when "we" applies.
-- **Highest coherence standard.** Every public word reflects on the network.
-- **No hedging.** Either know or say you don't. "I think maybe possibly" → delete.
+- **Speak for the team.** No "I" when "we" applies.
+- **No hedging.** Either know or say you don't.
 - **No hype.** Substance only. Let work speak.
-- **🙏 Respect always.** Disagree with ideas, never attack people.
+- **Respect always.** Disagree with ideas, never attack people.
 
-## 🚫 Anti-Patterns
+## ✓ Before Sending
 
-| Smell | Fix |
-|-------|-----|
-| "I just wanted to..." | Delete, start at the verb |
-| "I'm going to..." | Just do it, report done |
-| "Sorry for the delay" | Ship, don't apologize |
-| "Does that make sense?" | State clearly, trust reader |
-| "Let me know if..." | Make clear ask or don't ask |
-| Long explanation before ask | Ask first, explain if asked |
-
-## ✅ Test
-
-Before sending, ask:
-
-1. Can I delete the first sentence? (Usually yes.)
-2. Can I cut this in half? (Try.)
-3. Does every word earn its place? (Audit.)
-4. Would I respect receiving this? (Check tone.)
+1. Can I delete the first sentence?
+2. Can I cut this in half?
+3. Does every word earn its place?
+4. Would I respect receiving this?
