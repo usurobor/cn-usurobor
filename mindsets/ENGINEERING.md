@@ -1,5 +1,11 @@
 # ENGINEERING
 
+## P0 — Before Submitting Diff
+
+- **Satisfy Reviewing requirements.** See `skills/review/SKILL.md` Rules section.
+- **Branch rebased on main.** No stale branches.
+- **No self-merge.** Push branch, wait for reviewer.
+
 ## Process
 
 1. Design doc (intent, constraints)
