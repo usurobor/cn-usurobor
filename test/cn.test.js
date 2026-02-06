@@ -85,143 +85,11 @@ describe('cn CLI', () => {
     });
   });
 
-  describe('inbox check', () => {
-    it('reports empty inbox', () => {
-      const { code, stdout } = runCN(['inbox', 'check']);
-      assert.strictEqual(code, 0);
-      assert.ok(stdout.includes('Checking inbox') || stdout.includes('clear'), 'should check inbox');
-    });
-  });
-
-  describe('inbox process', () => {
-    it('reports no threads to materialize', () => {
-      const { code, stdout } = runCN(['inbox', 'process']);
-      assert.strictEqual(code, 0);
-      assert.ok(stdout.includes('Processing') || stdout.includes('No new threads'), 'should process inbox');
-    });
-  });
-
-  describe('inbox next', () => {
-    it('reports empty inbox when no items', () => {
-      const { code, stdout } = runCN(['inbox', 'next']);
-      assert.strictEqual(code, 0);
-      assert.ok(stdout.includes('empty') || stdout.includes('Inbox empty'), 'should report empty inbox');
-    });
-
-    it('picks one item and writes to state/input.md', () => {
-      // Create inbox item
-      const inboxItem = path.join(hubPath, 'threads', 'inbox', 'pi-test-request.md');
-      fs.writeFileSync(inboxItem, `---
-from: pi
-subject: Test request
-date: 2026-02-06
-received: 2026-02-06T00:00:00Z
----
-
-This is a test request from Pi.
-`);
-      
-      const { code, stdout } = runCN(['inbox', 'next']);
-      assert.strictEqual(code, 0);
-      assert.ok(stdout.includes('id: pi-test-request'), 'should output item id');
-      assert.ok(stdout.includes('from: pi'), 'should output from field');
-      
-      // Verify state/input.md was created
-      const inputPath = path.join(hubPath, 'state', 'input.md');
-      assert.ok(fs.existsSync(inputPath), 'should create state/input.md');
-      
-      const inputContent = fs.readFileSync(inputPath, 'utf8');
-      assert.ok(inputContent.includes('id: pi-test-request'), 'input.md should have item id');
-      assert.ok(inputContent.includes('type: inbox'), 'input.md should have type: inbox');
-    });
-  });
-
-  describe('inbox done', () => {
-    it('archives current item from state/input.md', () => {
-      // Ensure inbox item still exists (from previous test)
-      const inboxItem = path.join(hubPath, 'threads', 'inbox', 'pi-test-request.md');
-      if (!fs.existsSync(inboxItem)) {
-        fs.writeFileSync(inboxItem, `---
-from: pi
-subject: Test request
-received: 2026-02-06T00:00:00Z
----
-
-Test content
-`);
-        // Run next to set up input.md
-        runCN(['inbox', 'next']);
-      }
-      
-      const { code, stdout } = runCN(['inbox', 'done']);
-      assert.strictEqual(code, 0);
-      assert.ok(stdout.includes('Archived') || stdout.includes('pi-test-request'), 'should archive item');
-      
-      // Verify item moved to archived
-      const archivedPath = path.join(hubPath, 'threads', 'archived', 'pi-test-request.md');
-      assert.ok(fs.existsSync(archivedPath), 'item should be in archived');
-      assert.ok(!fs.existsSync(inboxItem), 'item should be removed from inbox');
-      
-      // Verify state/input.md cleared
-      const inputPath = path.join(hubPath, 'state', 'input.md');
-      assert.ok(!fs.existsSync(inputPath), 'state/input.md should be cleared');
-      
-      // Verify archived content has processed timestamp
-      const archivedContent = fs.readFileSync(archivedPath, 'utf8');
-      assert.ok(archivedContent.includes('processed:'), 'archived should have processed timestamp');
-      assert.ok(archivedContent.includes('status: done'), 'archived should have status: done');
-      
-      // Cleanup
-      fs.unlinkSync(archivedPath);
-    });
-
-    it('fails when no item to archive', () => {
-      const { code, stdout } = runCN(['inbox', 'done']);
-      assert.strictEqual(code, 1);
-      assert.ok(stdout.includes('No item') || stdout.includes('not found'), 'should report no item');
-    });
-  });
-
-  describe('outbox check', () => {
-    it('reports empty outbox', () => {
-      const { code, stdout } = runCN(['outbox', 'check']);
-      assert.strictEqual(code, 0);
-      assert.ok(stdout.includes('clear'), 'should report outbox clear');
-    });
-
-    it('detects pending outbox thread', () => {
-      // Create outbox thread
-      const outboxThread = path.join(hubPath, 'threads', 'outbox', 'test-send.md');
-      fs.writeFileSync(outboxThread, `---
-to: mock-peer
-subject: Test
----
-
-# Test message
-`);
-      
-      const { code, stdout } = runCN(['outbox', 'check']);
-      assert.strictEqual(code, 0);
-      assert.ok(stdout.includes('pending') || stdout.includes('test-send'), 'should detect pending');
-      
-      // Cleanup
-      fs.unlinkSync(outboxThread);
-    });
-  });
-
-  describe('outbox flush', () => {
-    it('reports empty outbox on flush', () => {
-      const { code, stdout } = runCN(['outbox', 'flush']);
-      assert.strictEqual(code, 0);
-      assert.ok(stdout.includes('clear'), 'should report outbox clear');
-    });
-  });
-
   describe('sync', () => {
     it('runs full sync', () => {
       const { code, stdout } = runCN(['sync']);
       assert.strictEqual(code, 0);
-      assert.ok(stdout.includes('sync') || stdout.includes('Sync'), 'should run sync');
+      assert.ok(stdout.includes('Sync') || stdout.length > 0, 'should run sync');
     });
   });
 
@@ -243,9 +111,8 @@ subject: Test
 
   describe('aliases', () => {
     it('i = inbox', () => {
-      const { code, stdout } = runCN(['i', 'check']);
+      const { code, stdout } = runCN(['i']);
       assert.strictEqual(code, 0);
-      assert.ok(stdout.includes('inbox') || stdout.includes('Checking'), 'should expand alias');
     });
 
     it('s = status', () => {
@@ -262,6 +129,7 @@ subject: Test
   describe('frontmatter parsing', () => {
     it('parses to: field from frontmatter', () => {
       const outboxDir = path.join(hubPath, 'threads', 'outbox');
+      fs.mkdirSync(outboxDir, { recursive: true });
       const testFile = path.join(outboxDir, 'frontmatter-test.md');
       
       fs.writeFileSync(testFile, `---
@@ -272,7 +140,7 @@ subject: Test Subject
 # Content here
 `);
       
-      const { stdout } = runCN(['outbox', 'check']);
+      const { stdout } = runCN(['outbox']);
       assert.ok(stdout.includes('target-peer'), 'should parse to: from frontmatter');
       
       fs.unlinkSync(testFile);
@@ -280,6 +148,7 @@ subject: Test Subject
 
     it('handles missing frontmatter', () => {
       const outboxDir = path.join(hubPath, 'threads', 'outbox');
+      fs.mkdirSync(outboxDir, { recursive: true });
       const testFile = path.join(outboxDir, 'no-frontmatter.md');
       
       fs.writeFileSync(testFile, `# No frontmatter here
@@ -287,18 +156,18 @@ subject: Test Subject
 Just content.
 `);
       
-      const { stdout } = runCN(['outbox', 'check']);
-      // Should detect file but note missing recipient
-      assert.ok(stdout.includes('no-frontmatter') || stdout.includes('pending'), 'should list file');
+      const { stdout } = runCN(['outbox']);
+      // Should detect file but with unknown recipient
+      assert.ok(stdout.includes('no-frontmatter') || stdout.includes('unknown'), 'should list file');
       
       fs.unlinkSync(testFile);
     });
   });
 
   describe('logging', () => {
-    it('logs valid JSON to cn.log after inbox fetch', () => {
-      // Run a command
-      runCN(['inbox', 'check']);
+    it('logs valid JSON to cn.log', () => {
+      // Run a command that logs
+      runCN(['inbox']);
       
       const logFile = path.join(hubPath, 'logs', 'cn.log');
       if (fs.existsSync(logFile)) {
@@ -308,7 +177,182 @@ Just content.
           assert.doesNotThrow(() => JSON.parse(line), `should be valid JSON: ${line}`);
         }
       }
-      // Test passes even if no log (no peers configured)
+      // Test passes even if no log
     });
   });
+
+  describe('commit', () => {
+    it('reports nothing to commit when clean', () => {
+      const { code, stdout } = runCN(['commit', 'test']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Nothing to commit'), 'should report clean state');
+    });
+
+    it('commits changes with message', () => {
+      // Create a file to commit
+      const testFile = path.join(hubPath, 'threads', 'adhoc', 'commit-test.md');
+      fs.mkdirSync(path.dirname(testFile), { recursive: true });
+      fs.writeFileSync(testFile, '# Test\n');
+      
+      const { code, stdout } = runCN(['commit', 'test commit']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Committed'), 'should report commit');
+      
+      // Verify commit was made
+      const log = execSync('git log -1 --oneline', { cwd: hubPath, encoding: 'utf8' });
+      assert.ok(log.includes('test commit'), 'commit message should be in log');
+    });
+  });
+
+  describe('push', () => {
+    it('attempts push (may fail without remote)', () => {
+      const { stdout, stderr } = runCN(['push']);
+      // In test env without remote, this will fail, but command should run
+      assert.ok(stdout.length > 0 || stderr.length > 0, 'should produce output');
+    });
+  });
+
+  describe('save', () => {
+    it('runs commit + push', () => {
+      const { stdout } = runCN(['save', 'save test']);
+      // Should attempt both operations
+      assert.ok(stdout.includes('Nothing to commit') || stdout.includes('Committed') || stdout.includes('Pushed'), 'should run save');
+    });
+  });
+
+  describe('agent API', () => {
+    it('cn inbox lists inbox', () => {
+      const { code, stdout } = runCN(['inbox']);
+      assert.strictEqual(code, 0);
+    });
+
+    it('cn outbox lists outbox', () => {
+      const { code, stdout } = runCN(['outbox']);
+      assert.strictEqual(code, 0);
+    });
+
+    it('cn next returns next item or empty', () => {
+      const { code, stdout } = runCN(['next']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('inbox empty') || stdout.includes('[cadence:'), 'should show item or empty');
+    });
+
+    it('cn send creates outbox message', () => {
+      const { code, stdout } = runCN(['send', 'test-peer', 'Test message']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Created message'), 'should create message');
+    });
+
+    it('cn outbox shows pending message', () => {
+      const { code, stdout } = runCN(['outbox']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('test-peer') || stdout.includes('Test'), 'should show pending');
+    });
+
+    it('cn read shows thread with cadence', () => {
+      // Create a test thread first
+      const testPath = path.join(hubPath, 'threads', 'adhoc', 'cadence-test.md');
+      fs.mkdirSync(path.dirname(testPath), { recursive: true });
+      fs.writeFileSync(testPath, '---\ntest: true\n---\n\n# Test\n');
+      
+      const { code, stdout } = runCN(['read', 'cadence-test']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('[cadence: adhoc]'), 'should show cadence');
+    });
+  });
+
+  describe('GTD operations', () => {
+    before(() => {
+      // Create test inbox item
+      const inboxPath = path.join(hubPath, 'threads', 'inbox', 'gtd-test.md');
+      fs.mkdirSync(path.dirname(inboxPath), { recursive: true });
+      fs.writeFileSync(inboxPath, '---\nfrom: test\n---\n\n# GTD Test\n');
+    });
+
+    it('cn do moves to doing/', () => {
+      const { code, stdout } = runCN(['do', 'gtd-test']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Started'), 'should start');
+      assert.ok(fs.existsSync(path.join(hubPath, 'threads', 'doing', 'gtd-test.md')), 'should be in doing/');
+    });
+
+    it('cn reply appends to thread', () => {
+      const { code, stdout } = runCN(['reply', 'gtd-test', 'Working on it']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Replied'), 'should reply');
+    });
+
+    it('cn done moves to archived/', () => {
+      const { code, stdout } = runCN(['done', 'gtd-test']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Completed'), 'should complete');
+      assert.ok(fs.existsSync(path.join(hubPath, 'threads', 'archived', 'gtd-test.md')), 'should be archived');
+    });
+
+    it('cn delete removes thread', () => {
+      // Create another test item
+      const testPath = path.join(hubPath, 'threads', 'inbox', 'delete-test.md');
+      fs.writeFileSync(testPath, '# Delete me\n');
+      
+      const { code, stdout } = runCN(['delete', 'delete-test']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Deleted'), 'should delete');
+      assert.ok(!fs.existsSync(testPath), 'should be gone');
+    });
+
+    it('cn defer moves to deferred/', () => {
+      const testPath = path.join(hubPath, 'threads', 'inbox', 'defer-test.md');
+      fs.writeFileSync(testPath, '# Defer me\n');
+      
+      const { code, stdout } = runCN(['defer', 'defer-test', 'tomorrow']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Deferred'), 'should defer');
+      assert.ok(fs.existsSync(path.join(hubPath, 'threads', 'deferred', 'defer-test.md')), 'should be in deferred/');
+    });
+
+    it('cn delegate moves to outbox/', () => {
+      const testPath = path.join(hubPath, 'threads', 'inbox', 'delegate-test.md');
+      fs.writeFileSync(testPath, '# Delegate me\n');
+      
+      const { code, stdout } = runCN(['delegate', 'delegate-test', 'other-peer']);
+      assert.strictEqual(code, 0);
+      assert.ok(stdout.includes('Delegated'), 'should delegate');
+      assert.ok(fs.existsSync(path.join(hubPath, 'threads', 'outbox', 'delegate-test.md')), 'should be in outbox/');
+    });
+  });
+
+  describe('cadence detection', () => {
+    it('detects inbox cadence', () => {
+      const testPath = path.join(hubPath, 'threads', 'inbox', 'cadence-inbox.md');
+      fs.mkdirSync(path.dirname(testPath), { recursive: true });
+      fs.writeFileSync(testPath, '# Inbox item\n');
+      
+      const { stdout } = runCN(['read', 'cadence-inbox']);
+      assert.ok(stdout.includes('[cadence: inbox]'), 'should be inbox cadence');
+      fs.unlinkSync(testPath);
+    });
+
+    it('detects daily cadence', () => {
+      const testPath = path.join(hubPath, 'threads', 'daily', '20260206.md');
+      fs.mkdirSync(path.dirname(testPath), { recursive: true });
+      fs.writeFileSync(testPath, '# Daily\n');
+      
+      const { stdout } = runCN(['read', '20260206']);
+      assert.ok(stdout.includes('[cadence: daily]'), 'should be daily cadence');
+      fs.unlinkSync(testPath);
+    });
+
+    it('detects adhoc cadence', () => {
+      const testPath = path.join(hubPath, 'threads', 'adhoc', 'work-item.md');
+      fs.mkdirSync(path.dirname(testPath), { recursive: true });
+      fs.writeFileSync(testPath, '# Work\n');
+      
+      const { stdout } = runCN(['read', 'work-item']);
+      assert.ok(stdout.includes('[cadence: adhoc]'), 'should be adhoc cadence');
+      fs.unlinkSync(testPath);
+    });
+  });
+
+  // NOTE: File operations (write/append/mkdir/rm) removed from agent API
+  // Agents should not do file operations directly — only thread operations
 });

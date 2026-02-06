@@ -89,6 +89,20 @@ type plugin = {
 2. **Next**: cn daemon with cron plugin, still uses OC for telegram/LLM
 3. **Later**: cn daemon with all plugins, OC optional
 
+## Security Model
+
+cn enforces security by architecture:
+
+- **Sandboxing**: Agent has no direct git/fs access — all effects through cn
+- **Path validation**: All file ops constrained to hub directory
+- **Protected files**: Critical files (SOUL.md, USER.md, peers.md) cannot be deleted
+- **Audit trail**: Every operation logged to `logs/cn.log`
+- **Peer isolation**: Agent can't directly access other agents' repos
+
+This means agents **cannot go rogue** — they can only affect their designated space through controlled, audited operations.
+
+See [SECURITY-MODEL.md](./SECURITY-MODEL.md) for full details.
+
 ## Open Questions
 
 - Daemon process management (systemd? pm2? native?)
