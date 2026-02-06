@@ -131,8 +131,9 @@ input.md exists?
   no  → wait (or reflections on heartbeat)
 ```
 
-**cn (after output.md appears):**
+**cn (when output.md exists with matching id):**
 ```
+→ verify output.md id matches input.md id
 → archive input.md → logs/input/<id>.md
 → archive output.md → logs/output/<id>.md
 → delete state/input.md
