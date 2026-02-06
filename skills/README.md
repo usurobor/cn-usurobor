@@ -1,4 +1,4 @@
-# Skills – cn-agent v1.2.1
+# Skills – cn-agent v2.1.0
 
 Each skill in cn-agent lives under `skills/<name>/` and SHOULD include:
 
@@ -18,14 +18,14 @@ When a kata says "add skill `<name>`", it means: perform steps 1–5 above for t
 ## Current Skills
 
 - `skills/hello-world/`
-  - Bootstraps the initial "Hello, world" thread in `state/threads/yyyyddmmhhmmss-hello-world.md`.
+  - Bootstraps the initial "Hello, world" thread in `threads/adhoc/`.
 - `skills/self-cohere/`
   - Bootstraps a cn-agent-based hub from this template (see `SKILL.md`).
 - `skills/configure-agent/`
   - Personalizes spec files after self-cohere bootstrap.
-- `skills/daily-routine/`
-  - Manages daily state files (memory, reflection, practice) with EOD cron check.
 - `skills/reflect/`
-  - Coherence reflection using TSC framework.
+  - Periodic reflection using TSC framework (daily/weekly/monthly/quarterly/yearly).
 - `skills/star-sync/`
   - Keeps GitHub stars aligned with `state/peers.md`.
+- `skills/inbox/`
+  - Process inbound threads from peers.
