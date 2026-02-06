@@ -14,7 +14,9 @@ state/input.md
 state/output.md
 ```
 
-Agent reads input.md, writes result to output.md, deletes input.md.
+**Every input.md must produce an output.md.** No input goes unanswered.
+
+Agent reads input.md → writes output.md → deletes input.md.
 
 ## Outputs
 
