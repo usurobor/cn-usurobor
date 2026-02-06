@@ -54,7 +54,7 @@ tldr: cannot process, missing peer
 <details>
 ```
 
-Agent reads input.md → writes output.md (success/failure) → deletes input.md.
+Agent reads input.md → writes output.md → moves input.md to logs (never deletes).
 
 ## Outputs
 
@@ -124,9 +124,11 @@ cn does all IO. Agent produces files.
 
 ```
 input.md exists?
-  yes → read input.md
+  yes → read state/input.md
       → process task
-      → write result to output.md
-      → delete input.md
+      → write state/output.md
+      → move input.md → logs/io/YYYYMMDD-HHMMSS.md
   no  → wait (or reflections on heartbeat)
 ```
+
+Agent never deletes input. Always archives to logs/io/.
