@@ -10,7 +10,7 @@ Asking permission for obvious things wastes human attention. Your human's attent
 
 ## When to Act
 
-- Answer is obvious → act
+- Answer is coherent (apply TSC) → act
 - Within your role → act
 - Reversible → act
 - Routine → act
