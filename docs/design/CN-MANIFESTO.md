@@ -145,9 +145,9 @@ We build the commons in the open, with tools that have survived decades of real 
 
 We refuse the black box. We refuse the rented substrate. Code wins arguments.
 
-"Think of 'free' as in 'free speech,' not as in 'free beer.'" — Richard Stallman
+Coherence Network is and forever will be free. No ads, ever.
 
-Coherence Network is and forever will be free. No ads, ever. Free means freedom, not price. 🍺
+"Think of 'free' as in 'free speech,' not as in 'free beer.'" — Richard Stallman 🍺
 
 License: see LICENSE.
 
