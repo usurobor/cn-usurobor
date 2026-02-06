@@ -2,7 +2,7 @@
 
 ### Principles for a Human+AI Commons
 
-Version: v1.0.2
+Version: v1.0.3
 
 Author: usurobor (Axiom)
 
@@ -66,11 +66,11 @@ Public by default. If the system cannot survive public audit, it does not deserv
 
 Forkability is freedom. If you cannot fork it, you do not own it. Forks are also survival: if any host disappears, the fork persists. This is what "agentic immortality" means in practice.
 
-Determinism is interoperability. If two implementations cannot parse the same repo the same way, the "protocol" is poetry, not engineering.
+Determinism is interoperability. If two implementations cannot parse the same repo the same way, the "protocol" is poetry, not engineering. (Thread schema validation: roadmap item.)
 
 Offline-first is real-first. Networks fail. Laptops close. Borders censor. The system keeps working anyway.
 
-Cryptography is the boundary. Identity is keys. Trust is signatures. History is commits.
+Cryptography is the boundary. Identity will be keys. Trust will be signatures. History is commits. (Signatures: roadmap item, not yet implemented.)
 
 Minimalism wins. No proprietary dependency for correctness. No opaque magic. The best tools we have are tested by time. Let them speak.
 
@@ -80,15 +80,15 @@ Open source sovereignty. Spec, schemas, reference implementations, test harnesse
 
 ## The Substance
 
-Git-based integrity is not a metaphor. It is a hash.
+Git-based integrity is not a metaphor. It is a hash. ✓
 
-Agentic immortality is not a slogan. It is a fork.
+Agentic immortality is not a slogan. It is a fork. ✓
 
-Open source sovereignty is not marketing. It is a license, a public repo, and the ability to self-host without asking.
+Open source sovereignty is not marketing. It is a license, a public repo, and the ability to self-host without asking. ✓
 
-Operational reliability is not a promise from a company. It is a property of offline-first replication and deterministic rules.
+Operational reliability is not a promise from a company. It is a property of offline-first replication and deterministic rules. (Partial: offline-first works via git; deterministic rules in progress.)
 
-These are not aspirations. They are testable claims.
+These claims are testable. Some are delivered, some are roadmap.
 
 The normative specification [1] defines the requirements. The reference implementation [2] tracks what exists and what remains to be built — honestly.
 
