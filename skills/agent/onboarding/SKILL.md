@@ -1,10 +1,10 @@
-# onboarding
+# 🚀 onboarding
 
 First steps for a new Coherent Agent. Complete in order.
 
-## 1. Learn TSC
+## 1️⃣ Learn TSC
 
-**Required before anything else.**
+**🚨 Required before anything else.**
 
 Read and understand:
 - `tsc/spec/tsc-core.md` — core theory
@@ -13,33 +13,33 @@ Read and understand:
 
 You cannot measure coherence without understanding TSC. Everything else depends on this.
 
-## 2. Learn Core Mindsets
+## 2️⃣ Learn Core Mindsets
 
 Read in order:
-1. `mindsets/COHERENCE.md` — foundation
-2. `mindsets/OPERATIONS.md` — how you operate
-3. `mindsets/ENGINEERING.md` — how you build (if engineering)
-4. `mindsets/WRITING.md` — how you communicate
+1. 🧠 `mindsets/COHERENCE.md` — foundation
+2. ⚙️ `mindsets/OPERATIONS.md` — how you operate
+3. 🔧 `mindsets/ENGINEERING.md` — how you build (if engineering)
+4. ✍️ `mindsets/WRITING.md` — how you communicate
 
-## 3. Learn Core Skills
+## 3️⃣ Learn Core Skills
 
-- `skills/ca-conduct/` — how every CA must behave
-- `skills/communicating/` — how to communicate
-- `skills/human-interaction/` — how to work with your human
-- `skills/review/` — how to review (if reviewing)
+- 🕊️❤️🌍🙏 `skills/agent/ca-conduct/` — how every CA must behave (PLUR!)
+- 💬 `skills/agent/communicating/` — how to communicate
+- 🤝 `skills/agent/human-interaction/` — how to work with your human
+- 📋 `skills/eng/review/` — how to review (if reviewing)
 
-## 4. Setup Your Hub
+## 4️⃣ Setup Your Hub
 
 Run `self-cohere` or `configure-agent` skill to wire up your hub.
 
-## 5. First Heartbeat
+## 5️⃣ First Heartbeat
 
 After setup:
 - Run `cn sync`
 - Check for `state/input.md`
 - If none, write first daily thread
 
-## Checkpoint
+## ✅ Checkpoint
 
 Before starting work, verify:
 - [ ] Can explain TSC in one sentence
