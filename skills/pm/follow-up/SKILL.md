@@ -48,9 +48,17 @@ cd <your-hub> && git add -A && git commit -m "outbox: status check to Eng" && gi
 
 ## Escalation
 
-If no response after 2 pings (2+ hours):
-1. Note in daily thread
-2. Flag to human on next interaction
+**Escalate to human immediately when:**
+- Eng is blocked on P0/P1 and not responding
+- Work is stalled >1 hour with no update
+- Multiple pings ignored
+
+Don't wait for 2+ hours on blockers. Human attention is cheaper than stalled work.
+
+**How to escalate:**
+1. State the blocker clearly
+2. State what you've tried (pings sent, inbox checked)
+3. Ask human to intervene
 
 ## Anti-Patterns
 
