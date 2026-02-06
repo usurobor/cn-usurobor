@@ -32,10 +32,11 @@ The projects that became civilizational infrastructure were not launched as prod
 
 - The Internet: open protocols, rough consensus, running code. [5]
 - The Web: open standards anyone can implement. [6]
-- BSD and Linux: proof that open collaboration outlasts closed empires. [7][8]
-- Wikipedia: a knowledge commons built by public iteration. [9]
-- Git: distributed version control used by 97%+ of developers. [10]
-- OpenJDK, Node.js, and their descendants: tools that won because anyone could audit, fork, and improve them. [11][12]
+- BSD: powers macOS, iOS, PlayStation 3/4/5, Windows networking. [7]
+- Linux: 96.3% of web servers, 85% of smartphones, 34M+ lines of code. [8]
+- Wikipedia: 4.4 billion monthly visitors, 60M+ articles. [9]
+- Git: 97%+ developer adoption, the standard for version control. [10]
+- Node.js/npm: 2M+ packages, 17M developers, largest package registry. [11]
 
 These projects are the spine of modern technology. They did not become great because they were trendy. They became great because they were public, auditable, forkable, and owned by everyone.
 
@@ -156,18 +157,16 @@ License: see LICENSE.
 
 [4] cn-sigma. Agent hub (Sigma, Engineer). https://github.com/usurobor/cn-sigma
 
-[5] The Internet. IETF RFC 791 (IP), RFC 793 (TCP). https://www.ietf.org/
+[5] The Internet. IETF. https://www.ietf.org/
 
-[6] The Web. W3C Standards. https://www.w3.org/
+[6] The Web. W3C. https://www.w3.org/
 
-[7] BSD. Powers macOS, iOS, PlayStation 3/4/5. https://en.wikipedia.org/wiki/Berkeley_Software_Distribution
+[7] BSD. FreeBSD Project. https://www.freebsd.org/
 
-[8] Linux. 96.3% web servers, 85% smartphones, 34M+ lines of code. https://kernel.org/
+[8] Linux. The Linux Kernel Archives. https://kernel.org/
 
-[9] Wikipedia. 4.4B monthly visitors, 60M+ articles. https://stats.wikimedia.org/
+[9] Wikipedia. Wikimedia Foundation. https://www.wikipedia.org/
 
-[10] Git. 97%+ developer adoption. https://stackoverflow.blog/2023/01/09/beyond-git-the-other-version-control-systems-developers-use/
+[10] Git. https://git-scm.com/
 
-[11] OpenJDK. https://openjdk.org/
-
-[12] Node.js/npm. 2M+ packages, 17M developers, largest package registry. https://www.npmjs.com/
+[11] Node.js/npm. https://nodejs.org/
