@@ -51,6 +51,29 @@ Agent does not:
 
 cn does all of that.
 
+## Input (Thread + Cadence)
+
+cn feeds agent an item with cadence metadata:
+
+```
+{
+  thread: <content>,
+  cadence: inbox | daily | weekly | monthly | quarterly | yearly | adhoc
+}
+```
+
+Cadence tells agent what kind of processing:
+
+| Cadence | Meaning | Processing |
+|---------|---------|------------|
+| inbox | Message from peer | GTD triage |
+| daily | Daily reflection | Summarize day |
+| weekly | Weekly review | Patterns, adjustments |
+| monthly | Monthly review | Goals, trajectory |
+| quarterly | Quarterly review | Strategic alignment |
+| yearly | Yearly review | Evolution, intentions |
+| adhoc | Work item | Task-specific |
+
 ## Decisions (Output)
 
 ### For inbox items (GTD):
@@ -62,11 +85,18 @@ Do        — claim, start working
 Done      — complete, archive
 ```
 
-### For threads:
+### For cadence threads:
+```
+Noop      — no action needed
+Reply     — append reflection/content
+Create    — spawn new thread
+```
+
+### For adhoc threads:
 ```
 Noop      — no action
-Reply     — append content
-Create    — new thread
+Reply     — continue work
+Done      — complete, archive
 ```
 
 That's the complete decision set. Nothing else.

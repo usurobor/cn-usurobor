@@ -36,7 +36,7 @@ const HELP = `cn - Coherent Network agent CLI
 Usage: cn <command> [options]
 
 Commands:
-  # Agent decisions (write to outbox)
+  # Agent decisions (output)
   delete <thread>     GTD: discard
   defer <thread>      GTD: postpone
   delegate <t> <peer> GTD: forward
@@ -46,10 +46,11 @@ Commands:
   send <peer> <msg>   Message to peer (or self)
   
   # cn operations (orchestrator)
+  next                Get next inbox item (with cadence)
   sync                Fetch inbound + send outbound
   inbox               List inbox (cn internal)
   outbox              List outbox (cn internal)
-  read <thread>       Read thread (cn internal)
+  read <thread>       Read thread with cadence
   
   # Hub management
   init [name]         Create new hub
@@ -849,6 +850,44 @@ function threadIdToPath(hubPath, threadId) {
 
 // === CLEAN AGENT API ===
 
+// Determine cadence from thread location
+function getCadence(filePath) {
+  if (filePath.includes('/inbox/')) return 'inbox';
+  if (filePath.includes('/daily/')) return 'daily';
+  if (filePath.includes('/weekly/')) return 'weekly';
+  if (filePath.includes('/monthly/')) return 'monthly';
+  if (filePath.includes('/quarterly/')) return 'quarterly';
+  if (filePath.includes('/yearly/')) return 'yearly';
+  if (filePath.includes('/adhoc/')) return 'adhoc';
+  if (filePath.includes('/doing/')) return 'doing';
+  if (filePath.includes('/deferred/')) return 'deferred';
+  if (filePath.includes('/outbox/')) return 'outbox';
+  return 'unknown';
+}
+
+// Get next inbox item (for agent processing)
+function getNextInboxItem(hubPath) {
+  const inboxDir = path.join(hubPath, 'threads', 'inbox');
+  if (!fs.existsSync(inboxDir)) return null;
+  
+  const threads = fs.readdirSync(inboxDir).filter(f => f.endsWith('.md'));
+  if (threads.length === 0) return null;
+  
+  // Return first item (FIFO)
+  const f = threads[0];
+  const filePath = path.join(inboxDir, f);
+  const content = fs.readFileSync(filePath, 'utf8');
+  const meta = parseFrontmatter(content);
+  
+  return {
+    id: f.replace('.md', ''),
+    cadence: 'inbox',
+    from: meta.from || 'unknown',
+    content: content,
+    path: filePath
+  };
+}
+
 // List inbox (threads needing triage)
 function listInbox(hubPath, name) {
   const inboxDir = path.join(hubPath, 'threads', 'inbox');
@@ -897,39 +936,29 @@ function listOutbox(hubPath, name) {
   });
 }
 
-// Read thread content
+// Read thread content (with cadence metadata)
 function readThread(hubPath, threadId) {
   if (!threadId) {
     fail('Usage: cn read <thread>');
     process.exit(1);
   }
   
-  // Try to find in inbox, outbox, daily, adhoc
-  const locations = ['inbox', 'outbox', 'daily', 'adhoc', 'archived'];
-  let found = null;
-  
-  for (const loc of locations) {
-    const tryPath = path.join(hubPath, 'threads', loc, threadId + '.md');
-    if (fs.existsSync(tryPath)) {
-      found = tryPath;
-      break;
-    }
-    // Also try with location prefix
-    if (threadId.includes('/')) {
-      const direct = threadIdToPath(hubPath, threadId);
-      if (fs.existsSync(direct)) {
-        found = direct;
-        break;
-      }
-    }
-  }
-  
-  if (!found) {
+  const filePath = findThread(hubPath, threadId);
+  if (!filePath) {
     fail(`Thread not found: ${threadId}`);
     process.exit(1);
   }
   
-  console.log(fs.readFileSync(found, 'utf8'));
+  const content = fs.readFileSync(filePath, 'utf8');
+  const cadence = getCadence(filePath);
+  const meta = parseFrontmatter(content);
+  
+  // Output with cadence header
+  console.log(`[cadence: ${cadence}]`);
+  if (meta.from) console.log(`[from: ${meta.from}]`);
+  if (meta.to) console.log(`[to: ${meta.to}]`);
+  console.log('');
+  console.log(content);
 }
 
 // Reply to thread
@@ -1504,6 +1533,20 @@ switch (command) {
     
   // === CORE AGENT API ===
   
+  case 'next':
+    // Get next inbox item for agent processing
+    const nextItem = getNextInboxItem(hubPath);
+    if (!nextItem) {
+      console.log('(inbox empty)');
+    } else {
+      console.log(`[cadence: ${nextItem.cadence}]`);
+      console.log(`[from: ${nextItem.from}]`);
+      console.log(`[id: ${nextItem.id}]`);
+      console.log('');
+      console.log(nextItem.content);
+    }
+    break;
+    
   case 'inbox':
     // List threads in inbox
     listInbox(hubPath, name);
