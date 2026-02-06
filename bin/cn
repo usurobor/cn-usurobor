@@ -36,29 +36,30 @@ const HELP = `cn - Coherent Network agent CLI
 Usage: cn <command> [options]
 
 Commands:
-  init [name]         Create new hub
-  status              Show hub state
-  
-  inbox               List threads needing triage
-  outbox              List pending outbound
-  read <thread>       Read thread content
-  reply <thread> <msg> Reply to thread
-  send <peer> <msg>   Send message to peer
-  
+  # Agent decisions (write to outbox)
   delete <thread>     GTD: discard
   defer <thread>      GTD: postpone
   delegate <t> <peer> GTD: forward
   do <thread>         GTD: claim/start
   done <thread>       GTD: complete → archive
+  reply <thread> <msg> Append to thread
+  send <peer> <msg>   Message to peer (or self)
   
+  # cn operations (orchestrator)
   sync                Fetch inbound + send outbound
+  inbox               List inbox (cn internal)
+  outbox              List outbox (cn internal)
+  read <thread>       Read thread (cn internal)
   
-  commit [msg]        Stage all changes and commit
+  # Hub management
+  init [name]         Create new hub
+  status              Show hub state
+  commit [msg]        Stage + commit
   push                Push to origin
-  save [msg]          Commit + push (convenience)
+  save [msg]          Commit + push
   peer                Manage peers
-  doctor              Check system health
-  update              Update cn to latest version
+  doctor              Health check
+  update              Update cn
 
 Aliases:
   i = inbox, s = status, d = doctor
