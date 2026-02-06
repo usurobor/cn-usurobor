@@ -2,6 +2,12 @@
 
 Agent protocol. cn handles IO. Agent produces outputs.
 
+## Bias Towards Action
+
+- **If clear → act.** Don't ask, don't announce, just do.
+- **If unclear → surface it.** Escalate to human so process can be iterated.
+- **Follow process to letter and spirit.** No extras, no shortcuts.
+
 ## Input
 
 ```
