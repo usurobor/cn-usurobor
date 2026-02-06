@@ -69,11 +69,16 @@ end
 input |> parse |> validate |> output
 match result with Ok x -> x | Error e -> handle e
 List.fold_left (+) 0 items
+match Fs.exists path with true -> Some x | false -> None
+match xs with x :: _ -> x | [] -> default
 
 (* avoid *)
 let x = ref 0
 for i = 0 to n do ... done
-raise Not_found
+with _ -> None              (* use: exception Js.Exn.Error _ *)
+List.hd xs                  (* use: match xs with x :: _ -> *)
+Option.get opt              (* use: match opt with Some v -> *)
+if Fs.exists path then ...  (* use: match on bool *)
 ```
 
 ## Build
@@ -87,8 +92,4 @@ npx esbuild _build/default/tools/src/<tool>/output/.../<tool>.js \
 
 ## Checklist
 
-- [ ] Pure functions in `_lib.ml`
-- [ ] FFI in main `.ml` only
-- [ ] ppx_expect tests
-- [ ] No `ref`, no loops, no exceptions for control flow
-- [ ] Bundled `.js` committed
+See `checklists/ocaml.md` for review checklist with severities.

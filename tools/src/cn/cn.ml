@@ -48,12 +48,14 @@ module Child_process = struct
   external exec_sync_simple : string -> < encoding : string > Js.t -> string = "execSync" [@@mel.module "child_process"]
   
   let exec_in ~cwd cmd =
-    try Some (exec_sync cmd [%mel.obj { cwd; encoding = "utf8"; stdio = [|"pipe"; "pipe"; "pipe"|] }])
-    with _ -> None
+    match exec_sync cmd [%mel.obj { cwd; encoding = "utf8"; stdio = [|"pipe"; "pipe"; "pipe"|] }] with
+    | result -> Some result
+    | exception Js.Exn.Error _ -> None
   
   let exec cmd =
-    try Some (exec_sync_simple cmd [%mel.obj { encoding = "utf8" }])
-    with _ -> None
+    match exec_sync_simple cmd [%mel.obj { encoding = "utf8" }] with
+    | result -> Some result
+    | exception Js.Exn.Error _ -> None
 end
 
 module Json = struct
@@ -88,8 +90,9 @@ let rec find_hub_path dir =
   | _ ->
       let has_config = Fs.exists (Path.join dir ".cn/config.json") in
       let has_peers = Fs.exists (Path.join dir "state/peers.md") in
-      if has_config || has_peers then Some dir
-      else find_hub_path (Path.dirname dir)
+      match has_config || has_peers with
+      | true -> Some dir
+      | false -> find_hub_path (Path.dirname dir)
 
 (* === Logging === *)
 
@@ -103,8 +106,9 @@ let log_action hub_path action details =
 
 let load_peers hub_path =
   let peers_path = Path.join hub_path "state/peers.md" in
-  if Fs.exists peers_path then parse_peers_md (Fs.read peers_path)
-  else []
+  match Fs.exists peers_path with
+  | true -> parse_peers_md (Fs.read peers_path)
+  | false -> []
 
 (* === Helpers === *)
 
@@ -156,16 +160,19 @@ let materialize_branch hub_path inbox_dir peer_name branch =
       match Child_process.exec_in ~cwd:hub_path show_cmd with
       | None -> None
       | Some content ->
-          let branch_slug = branch |> String.split_on_char '/' |> List.rev |> List.hd in
+          let branch_slug = match branch |> String.split_on_char '/' |> List.rev with
+            | x :: _ -> x
+            | [] -> branch
+          in
           let inbox_file = Printf.sprintf "%s-%s.md" peer_name branch_slug in
           let inbox_path = Path.join inbox_dir inbox_file in
-          if Fs.exists inbox_path then None
-          else begin
-            let meta = [("from", peer_name); ("branch", branch); ("file", file); ("received", now_iso ())] in
-            Fs.write inbox_path (update_frontmatter content meta);
-            log_action hub_path "inbox.materialize" inbox_file;
-            Some inbox_file
-          end)
+          match Fs.exists inbox_path with
+          | true -> None
+          | false ->
+              let meta = [("from", peer_name); ("branch", branch); ("file", file); ("received", now_iso ())] in
+              Fs.write inbox_path (update_frontmatter content meta);
+              log_action hub_path "inbox.materialize" inbox_file;
+              Some inbox_file)
 
 let inbox_process hub_path =
   print_endline (info "Processing inbox...");
@@ -193,19 +200,19 @@ let inbox_process hub_path =
 
 let outbox_check hub_path =
   let outbox_dir = Path.join hub_path "threads/outbox" in
-  if not (Fs.exists outbox_dir) then print_endline (ok "Outbox clear")
-  else
-    let threads = Fs.readdir outbox_dir |> List.filter is_md_file in
-    match threads with
-    | [] -> print_endline (ok "Outbox clear")
-    | ts ->
-        print_endline (warn (Printf.sprintf "%d pending send(s):" (List.length ts)));
-        ts |> List.iter (fun f ->
-          let content = Fs.read (Path.join outbox_dir f) in
-          let meta = parse_frontmatter content in
-          let to_peer = meta |> List.find_map (fun (k, v) -> if k = "to" then Some v else None)
-            |> Option.value ~default:"(no recipient)" in
-          print_endline (Printf.sprintf "  → %s: %s" to_peer f))
+  match Fs.exists outbox_dir with
+  | false -> print_endline (ok "Outbox clear")
+  | true ->
+      match Fs.readdir outbox_dir |> List.filter is_md_file with
+      | [] -> print_endline (ok "Outbox clear")
+      | ts ->
+          print_endline (warn (Printf.sprintf "%d pending send(s):" (List.length ts)));
+          ts |> List.iter (fun f ->
+            let content = Fs.read (Path.join outbox_dir f) in
+            let meta = parse_frontmatter content in
+            let to_peer = meta |> List.find_map (fun (k, v) -> if k = "to" then Some v else None)
+              |> Option.value ~default:"(no recipient)" in
+            print_endline (Printf.sprintf "  → %s: %s" to_peer f))
 
 let send_thread hub_path name peers outbox_dir sent_dir file =
   let file_path = Path.join outbox_dir file in
@@ -226,12 +233,11 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
           log_action hub_path "outbox.skip" (Printf.sprintf "thread:%s to:%s reason:unknown peer" file to_name);
           print_endline (fail (Printf.sprintf "Unknown peer: %s" to_name));
           None
-      | Some p when p.clone = None ->
+      | Some { clone = None; _ } ->
           log_action hub_path "outbox.skip" (Printf.sprintf "thread:%s to:%s reason:no clone path" file to_name);
           print_endline (fail (Printf.sprintf "No clone path for peer: %s" to_name));
           None
-      | Some p ->
-          let clone_path = Option.get p.clone in
+      | Some { clone = Some clone_path; _ } ->
           let thread_name = Path.basename_ext file ".md" in
           let branch_name = Printf.sprintf "%s/%s" name thread_name in
           
@@ -305,13 +311,14 @@ let run_next hub_path =
 
 let find_thread hub_path thread_id =
   let locations = ["inbox"; "outbox"; "doing"; "deferred"; "daily"; "adhoc"] in
-  if String.contains thread_id '/' then
-    let path = Path.join hub_path (Printf.sprintf "threads/%s.md" thread_id) in
-    if Fs.exists path then Some path else None
-  else
-    locations |> List.find_map (fun loc ->
-      let path = Path.join hub_path (Printf.sprintf "threads/%s/%s.md" loc thread_id) in
-      if Fs.exists path then Some path else None)
+  match String.contains thread_id '/' with
+  | true ->
+      let path = Path.join hub_path (Printf.sprintf "threads/%s.md" thread_id) in
+      (match Fs.exists path with true -> Some path | false -> None)
+  | false ->
+      locations |> List.find_map (fun loc ->
+        let path = Path.join hub_path (Printf.sprintf "threads/%s/%s.md" loc thread_id) in
+        match Fs.exists path with true -> Some path | false -> None)
 
 let gtd_delete hub_path thread_id =
   match find_thread hub_path thread_id with
@@ -468,7 +475,10 @@ let run_send hub_path peer message =
     |> Js.String.replaceByRe ~regexp:[%mel.re "/^-|-$/g"] ~replacement:""
   in
   let file_name = slug ^ ".md" in
-  let first_line = message |> String.split_on_char '\n' |> List.hd in
+  let first_line = match String.split_on_char '\n' message with
+    | x :: _ -> x
+    | [] -> message
+  in
   let content = Printf.sprintf "---\nto: %s\ncreated: %s\n---\n\n# %s\n\n%s\n" 
     peer (now_iso ()) first_line message in
   
@@ -1029,8 +1039,15 @@ let run_update () =
 
 (* === Main === *)
 
+let drop n lst =
+  let rec go n lst = match n, lst with
+    | 0, lst -> lst
+    | _, [] -> []
+    | n, _ :: rest -> go (n - 1) rest
+  in go n lst
+
 let () =
-  let args = Process.argv |> Array.to_list |> List.tl |> List.tl in
+  let args = Process.argv |> Array.to_list |> drop 2 in
   let flags, cmd_args = parse_flags args in
   let _ = flags in
   

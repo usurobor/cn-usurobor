@@ -10,6 +10,16 @@ if x = 0 then "zero" else if x > 0 then "positive" else "negative"
 match x with 0 -> "zero" | n when n > 0 -> "positive" | _ -> "negative"
 ```
 
+```ocaml
+(* avoid: if on bool *)
+if Fs.exists path then Some (read path) else None
+
+(* prefer: match on bool *)
+match Fs.exists path with
+| true -> Some (read path)
+| false -> None
+```
+
 ## Pipelines Over Sequences
 
 ```ocaml
@@ -37,11 +47,13 @@ items |> List.filter p
 ## Option Over Exceptions
 
 ```ocaml
-(* avoid *)
-try db_lookup id with Not_found -> null
+(* avoid: blanket catch *)
+try exec cmd with _ -> None
 
-(* prefer *)
-match db_lookup id with user -> Some user | exception Not_found -> None
+(* prefer: specific exception matching *)
+match exec cmd with
+| result -> Some result
+| exception Js.Exn.Error _ -> None
 ```
 
 ## Types That Prevent Invalid States
@@ -78,11 +90,16 @@ List.fold_left (+) 0 items
 ## Total Functions
 
 ```ocaml
-(* avoid *)
+(* avoid: partial functions that throw *)
 let head = function x :: _ -> x | [] -> failwith "empty"
+List.hd xs
+List.tl xs
+Option.get opt
 
-(* prefer *)
+(* prefer: pattern matching with all cases *)
 let head = function x :: _ -> Some x | [] -> None
+match xs with x :: _ -> x | [] -> default
+match opt with Some v -> v | None -> default
 ```
 
 ## Red Flags
@@ -91,6 +108,9 @@ let head = function x :: _ -> Some x | [] -> None
 |-------|-----|
 | `ref` | fold/recursion |
 | `for`/`while` | List.map/fold |
-| `if`/`else` chains | pattern match |
-| `try`/`with` control flow | Option/Result |
+| `if`/`else` chains | pattern match on bool |
+| `with _ ->` | specific exception: `exception Js.Exn.Error _` |
+| `List.hd`/`List.tl` | pattern match: `x :: rest` |
+| `Option.get` | pattern match: `Some v` |
+| `begin...end` | pipeline or let bindings |
 | deeply nested | pipeline |
