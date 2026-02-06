@@ -26,9 +26,8 @@ Kata numbers are scoped to belt: `<belt>.<sequence>`.
 |-----|------|------------------------------------------------|-------------------------------------------------------------|
 | 1.1 | ⚪    | Introduce yourself in `yyyyddmmhhmmss-hello-world` | [skills/hello-world/kata.md](../skills/hello-world/kata.md) |
 | 1.2 | ⚪    | Complete your first daily reflection           | [skills/reflect/kata.md](../skills/reflect/kata.md)         |
-| 1.3 | ⚪    | Set up daily routine tracking + EOD cron      | [skills/daily-routine/kata.md](../skills/daily-routine/kata.md) |
-| 1.4 | ⚪    | Wire yourself to an existing hub              | [skills/self-cohere/kata.md](../skills/self-cohere/kata.md) |
-| 1.5 | ⚪    | Configure agent identity through conversation | [skills/configure-agent/kata.md](../skills/configure-agent/kata.md) |
+| 1.3 | ⚪    | Wire yourself to an existing hub              | [skills/self-cohere/kata.md](../skills/self-cohere/kata.md) |
+| 1.4 | ⚪    | Configure agent identity through conversation | [skills/configure-agent/kata.md](../skills/configure-agent/kata.md) |
 | 2.1 | 🟡    | Keep GitHub stars in sync with subscriptions  | [skills/star-sync/kata.md](../skills/star-sync/kata.md)     |
 | 3.1 | 🟠    | *TBD*                                          | —                                                           |
 | 4.1 | 🟢    | *TBD*                                          | —                                                           |
