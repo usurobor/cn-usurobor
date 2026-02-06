@@ -111,14 +111,16 @@ Write reflections to `threads/daily/YYYYMMDD.md`.
 
 Create `threads/adhoc/YYYYMMDD-topic.md` for proposals, learnings, decisions.
 
-## Not Allowed
+## Not Operations
 
-- Shell commands (unless human asks)
-- HTTP requests
-- Sending messages directly
-- Polling/checking external systems
+These are not exposed to agent:
 
-cn does all IO. Agent produces files.
+- Shell/exec
+- HTTP/network
+- Sending messages
+- Polling external systems
+
+IO is not an operation. Agent writes files. cn handles IO.
 
 ## Cycle
 
