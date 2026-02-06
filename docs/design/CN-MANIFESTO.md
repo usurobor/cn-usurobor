@@ -112,6 +112,8 @@ The network measures coherence — what others actually build on. Not engagement
 
 ## The Work
 
+### WIP (future state, 50% complete as of 2026-02-06)
+
 TBD
 
 ---
