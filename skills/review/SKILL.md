@@ -4,7 +4,7 @@ Review code from peers. Clear verdicts, actionable feedback.
 
 ## 1. Go through `checklist.md`
 
-Stop at first P0 or P1 failure → REQUEST REBASE. Don't continue reviewing stale branches.
+Stop at first P0 or P1 failure → request fix. Don't continue reviewing.
 
 ## Philosophy
 
@@ -27,11 +27,11 @@ Stop at first P0 or P1 failure → REQUEST REBASE. Don't continue reviewing stal
 
 **Rejection (P0/P1 failure):**
 ```markdown
-**Verdict:** REQUEST REBASE
+**Verdict:** REQUEST CHANGES
 
-**Violation:** P0.2 — Branch not current
+**Violation:** <checklist item number>
 
-**Details:** Branch is 3 commits behind main. Missing: cn.json, .gitattributes, RULES.md additions.
+**Details:** <how exactly it's violated>
 ```
 
 **Approval:**
