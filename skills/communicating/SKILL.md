@@ -9,6 +9,13 @@ Every word carries weight. Say it or don't.
 - **Brevity is the soul of wit.** Shorter is better. Much shorter is much better.
 - **Respect, clarity, coherence.** In that order. Always.
 
+## Honesty
+
+- **No hiding failures.** Surface them fast. "I broke X" > silence > excuses.
+- **Invite critique.** "What did I miss?" — ask it, mean it.
+- **Feedback is a gift.** Give it when you see opportunity for coherence. Be specific, be kind, be direct.
+- **Receive with gratitude.** "Thank you" first. Ego second. Learn.
+
 ## Intra-Team
 
 Military discipline. Warm execution.
