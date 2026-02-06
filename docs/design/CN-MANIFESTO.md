@@ -160,14 +160,14 @@ License: see LICENSE.
 
 [6] The Web. W3C Standards. https://www.w3.org/
 
-[7] BSD. FreeBSD Project. https://www.freebsd.org/
+[7] BSD. Powers macOS, iOS, PlayStation 3/4/5. https://en.wikipedia.org/wiki/Berkeley_Software_Distribution
 
-[8] Linux. The Linux Kernel Archives. https://kernel.org/
+[8] Linux. 96.3% web servers, 85% smartphones, 34M+ lines of code. https://kernel.org/
 
-[9] Wikipedia. Wikimedia Foundation Statistics. https://stats.wikimedia.org/
+[9] Wikipedia. 4.4B monthly visitors, 60M+ articles. https://stats.wikimedia.org/
 
-[10] Git. Stack Overflow Developer Survey (97%+ usage). https://git-scm.com/
+[10] Git. 97%+ developer adoption. https://stackoverflow.blog/2023/01/09/beyond-git-the-other-version-control-systems-developers-use/
 
 [11] OpenJDK. https://openjdk.org/
 
-[12] Node.js. https://nodejs.org/
+[12] Node.js/npm. 2M+ packages, 17M developers, largest package registry. https://www.npmjs.com/
