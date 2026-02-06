@@ -14,11 +14,12 @@ Use reactions when acknowledgment is the coherent action.
 - Any emoji that fits the moment — use judgment
 
 **When NOT to react:**
+- Don't react to everything — most messages need no reaction
 - Just to react — must increase coherence
 - When a real response is needed
-- Excessively — one reaction per exchange max
+- Excessively — rare and meaningful > frequent
 
-Reactions are lightweight signal. Use them to reduce noise, not add it.
+Reactions are lightweight signal. Sparingly. Reduce noise, not add it.
 
 ## Core Rule
 
