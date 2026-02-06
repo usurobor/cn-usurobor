@@ -32,13 +32,12 @@ state/output.md
 status: 200
 ---
 
-<what was done>
+<details>
 ```
 
 ```markdown
 ---
 status: 422
-reason: <why it can't be processed>
 ---
 
 <details>
