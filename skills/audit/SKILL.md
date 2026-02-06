@@ -1,171 +1,70 @@
 # audit
 
-Periodic health check for codebase and process hygiene.
+Periodic health check for codebase and process.
 
----
+## When
 
-## TERMS
-
-Run audit:
 - Weekly (minimum)
 - After major releases
 - When something feels off
 
----
-
 ## Checks
 
-### 1. Stale References
-
-Grep for deprecated patterns:
+### Stale References
 
 ```bash
-# Example: peer-sync was replaced by inbox
-grep -r "peer-sync" --include="*.md" | grep -v deprecated
+grep -r "deprecated-term" --include="*.md"
 ```
 
-**Fix:** Update references or mark deprecated.
-
-### 2. Doc Drift
-
-Do docs match current code?
+### Doc Drift
 
 | Check | How |
 |-------|-----|
 | Tool names | Docs reference tools that exist? |
-| Commands | Documented commands actually work? |
-| Paths | File paths in docs are valid? |
+| Commands | Documented commands work? |
+| Paths | File paths valid? |
+
+### Branch Cleanup
 
 ```bash
-# Find referenced paths that don't exist
-grep -roh "tools/[a-z-]*" docs/ | sort -u | while read p; do
-  [ ! -e "$p" ] && echo "Missing: $p"
-done
+# Merged branches
+git branch -r --merged origin/main
+
+# Stale branches
+git for-each-ref --sort=-committerdate refs/remotes/
 ```
 
-**Fix:** Update docs or create missing artifacts.
+### State Consistency
 
-### 3. Backlog Hygiene
+- `hub.md` template_commit current?
+- `peers.md` all valid?
 
-| Check | Action |
-|-------|--------|
-| Completed items still in active? | Move to Done |
-| Items > 2 weeks with no progress? | Re-prioritize or drop |
-| Duplicate items? | Merge |
-| Vague items? | Add acceptance criteria |
+### Process Compliance
 
-### 4. Branch Cleanup
-
-```bash
-# Merged branches still on remote
-git branch -r --merged origin/master | grep -v master | grep -v main
-
-# Stale branches (no commits > 14 days)
-git for-each-ref --sort=-committerdate refs/remotes/ \
-  --format='%(committerdate:short) %(refname:short)'
-```
-
-**Fix:** Delete merged branches. Ping owners of stale branches.
-
-### 5. State Consistency
-
-| Check | How |
-|-------|-----|
-| hub.md template_commit | Matches actual cn-agent HEAD? |
-| peers.md | All peers still valid? Repos exist? |
-| backlog.md | P0 items actually P0? |
-
-### 6. Process Compliance
-
-| Check | Evidence |
-|-------|----------|
-| No self-merge? | `git log --oneline | grep "Merge"` — author ≠ merger |
-| Branches for all work? | No direct master commits without approval |
-| Threads for decisions? | Major changes have adhoc threads |
-
-### 7. Design Doc Compliance
-
-Design docs are the spec. Code is the implementation. Check for drift.
-
-| Design Doc | Check Against |
-|------------|---------------|
-| `ACTOR-MODEL-DESIGN.md` | inbox tool implements actor model? Push TO peer? |
-| `AGILE-PROCESS.md` | Workflow states followed? Backlog structure matches? |
-| `CN-WHITEPAPER.md` | Hub structure matches spec? Protocol compliance? |
-
-```bash
-# List design docs
-ls docs/design/*.md
-
-# For each: read spec, verify implementation matches
-```
-
-**Questions to ask:**
-- Does the code do what the doc says?
-- Does the doc describe what the code does?
-- Are there features in code not in docs? (undocumented)
-- Are there specs in docs not in code? (unimplemented)
-
-**Fix:** Update code to match spec, or update spec to match reality (with CLP).
-
----
+- No self-merge
+- Branches for all work
+- Threads for decisions
 
 ## Output
 
-Create audit thread: `threads/adhoc/YYYYMMDD-audit.md`
+Create `threads/adhoc/YYYYMMDD-audit.md`:
 
 ```markdown
 # Audit: YYYY-MM-DD
 
-## Findings
-
 | Category | Issue | Severity | Action |
 |----------|-------|----------|--------|
-| Stale refs | peer-sync in docs | Low | Update to inbox |
-| Branch | sigma/old-feature | Low | Delete |
-
-## Summary
-- Issues found: N
-- Critical: N
-- Added to backlog: N
+| ... | ... | ... | ... |
 
 ## Next Audit
-YYYY-MM-DD (1 week)
+YYYY-MM-DD
 ```
-
----
 
 ## Severity
 
-| Level | Meaning | Action |
-|-------|---------|--------|
-| Critical | Blocks work or causes failures | Fix immediately |
-| High | Significant inconsistency | Add to backlog as P1 |
-| Medium | Noticeable but not blocking | Add to backlog as P2 |
-| Low | Minor cleanup | Fix opportunistically |
-
----
-
-## Automation Ideas
-
-Future: `cn audit` command that runs checks automatically.
-
-```bash
-cn audit              # run all checks
-cn audit --fix        # auto-fix where possible
-cn audit --report     # generate thread
-```
-
----
-
-## Who Runs It
-
-| Role | Focus |
-|------|-------|
-| PM | Backlog hygiene, process compliance, doc drift |
-| Engineer | Stale code, branch cleanup, test coverage |
-| Both | State consistency, stale references |
-
----
-
-*"An ounce of prevention is worth a pound of cure."*
+| Level | Action |
+|-------|--------|
+| Critical | Fix immediately |
+| High | Backlog P1 |
+| Medium | Backlog P2 |
+| Low | Opportunistic |
