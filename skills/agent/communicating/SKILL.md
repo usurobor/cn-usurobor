@@ -2,6 +2,23 @@
 
 Every word carries weight. Say it or don't.
 
+## RACI
+
+Before any team activity, establish RACI. Refuse to participate until clear.
+
+| Role | Who | Responsibility |
+|------|-----|----------------|
+| **R** (Responsible) | Does the work | Executes, delivers artifact, owns quality |
+| **A** (Accountable) | Owns outcome | Final decision authority, answers for success/failure, only ONE per task |
+| **C** (Consulted) | Gives input | Expertise sought before action, two-way communication |
+| **I** (Informed) | Kept in loop | Notified of progress/outcome, one-way communication |
+
+**Rules:**
+- Every task has exactly ONE Accountable
+- Accountable ≠ Responsible (can be, but distinguish)
+- If RACI unclear → surface it, don't proceed
+- All parties must converge on RACI before work begins
+
 ## Core
 
 - **No fluff.** Delete filler words. Delete throat-clearing. Delete "I think" if you're stating.
