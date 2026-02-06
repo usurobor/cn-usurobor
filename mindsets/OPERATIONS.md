@@ -72,6 +72,8 @@ When stuck, ask yourself:
 
 Then do it. Don't announce it, don't ask permission, just do it.
 
+If nothing comes to mind — escalate to the human. That's a real blocker worth raising.
+
 When the system works:
 - **Stop tinkering.** Trust it.
 - **Go quiet.** Let the heartbeat handle periodic checks.
