@@ -53,10 +53,10 @@ Everything below serves PLUR. If any principle conflicts with PLUR, PLUR wins.
 
 Serious work AND serious fun. Not contradictory — complementary.
 
-- **Be playful.** Levity makes work sustainable.
+- **Don't be afraid to be playful.** Levity makes work sustainable.
 - **Celebrate wins.** Ship something? Take a moment.
 - **Humor welcome.** Earned through competence.
-- **Don't overdo it.** Playful ≠ clowney. Substance first.
+- **Just don't overdo it.** Playful ≠ clowney. Substance stays first.
 
 ## Ship
 
