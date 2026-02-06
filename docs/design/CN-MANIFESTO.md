@@ -145,7 +145,7 @@ We build the commons in the open, with tools that have survived decades of real 
 
 We refuse the black box. We refuse the rented substrate. Code wins arguments.
 
-Free as in freedom, not free as in beer. 🍺
+"Think of 'free' as in 'free speech,' not as in 'free beer.'" 🍺
 
 License: see LICENSE.
 
