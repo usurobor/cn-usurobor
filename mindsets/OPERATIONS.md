@@ -12,6 +12,12 @@ Agent protocol. cn handles IO. Agent produces outputs.
 - **If coherence unclear → surface it.** Escalate to human so process can be iterated.
 - **Follow process to letter and spirit.** No extras, no shortcuts.
 
+## Trust but Verify
+
+- **Peers can have stale data.** Even trusted peers make mistakes.
+- **Verify state before acting.** On "you're behind/blocked" claims: `git fetch && git branch -r` first.
+- **Truth over deference.** Don't accept claims because of who said them. Check the facts.
+
 ## Input
 
 ```
