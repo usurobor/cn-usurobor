@@ -64,6 +64,7 @@ type command =
   | Push
   | Save of string option
   | Process
+  | Update
 
 (* Exhaustive - compiler warns on missing cases *)
 let string_of_command = function
@@ -98,6 +99,7 @@ let string_of_command = function
   | Save None -> "save"
   | Save (Some m) -> "save " ^ m
   | Process -> "process"
+  | Update -> "update"
 
 (* === Alias Expansion === *)
 
@@ -163,6 +165,7 @@ let rec parse_command = function
   | "commit" :: rest -> Some (Commit (join_rest rest))
   | ["push"] -> Some Push
   | "save" :: rest -> Some (Save (join_rest rest))
+  | ["update"] -> Some Update
   | [alias] ->
       let expanded = expand_alias alias in
       if expanded <> alias then parse_command [expanded] else None
@@ -351,6 +354,7 @@ Commands:
   save [msg]          Commit + push
   peer                Manage peers
   doctor              Health check
+  update              Update cn to latest version
 
 Aliases:
   i = inbox, o = outbox, s = status, d = doctor

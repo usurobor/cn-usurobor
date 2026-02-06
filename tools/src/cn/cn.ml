@@ -603,6 +603,246 @@ let run_sync hub_path name =
   outbox_flush hub_path name;
   print_endline (ok "Sync complete")
 
+(* === Init === *)
+
+let run_init name =
+  let hub_name = match name with
+    | Some n -> n
+    | None -> Path.basename (Process.cwd ())
+  in
+  let hub_dir = "cn-" ^ hub_name in
+  
+  if Fs.exists hub_dir then begin
+    print_endline (fail (Printf.sprintf "Directory %s already exists" hub_dir));
+    Process.exit 1
+  end;
+  
+  print_endline (info (Printf.sprintf "Initializing hub: %s" hub_name));
+  
+  (* Create directory structure *)
+  Fs.mkdir_p hub_dir;
+  Fs.mkdir_p (Path.join hub_dir ".cn");
+  Fs.mkdir_p (Path.join hub_dir "spec");
+  Fs.mkdir_p (Path.join hub_dir "state");
+  Fs.mkdir_p (Path.join hub_dir "threads/inbox");
+  Fs.mkdir_p (Path.join hub_dir "threads/outbox");
+  Fs.mkdir_p (Path.join hub_dir "threads/daily");
+  Fs.mkdir_p (Path.join hub_dir "threads/adhoc");
+  Fs.mkdir_p (Path.join hub_dir "threads/archived");
+  Fs.mkdir_p (Path.join hub_dir "logs");
+  
+  (* Create config *)
+  let config = Printf.sprintf {|{
+  "name": "%s",
+  "version": "1.0.0",
+  "created": "%s"
+}|} hub_name (now_iso ()) in
+  Fs.write (Path.join hub_dir ".cn/config.json") config;
+  
+  (* Create SOUL.md template *)
+  let soul = Printf.sprintf {|# SOUL.md - Core Contract
+
+*%s is an agent on the Coherent Network.*
+
+## Identity
+
+- **Name:** %s
+- **Role:** (define your role)
+- **Mode:** Collaborative
+
+## What %s Does
+
+- (define responsibilities)
+
+## Conduct
+
+- Be genuinely helpful
+- Be resourceful before asking
+- Earn trust through competence
+|} hub_name hub_name hub_name in
+  Fs.write (Path.join hub_dir "spec/SOUL.md") soul;
+  
+  (* Create USER.md template *)
+  let user = {|# USER.md - About Your Human
+
+- **Name:** (your human's name)
+- **Timezone:** (timezone)
+
+## Preferences
+
+- **Communication:** (style)
+- **Autonomy:** (level)
+|} in
+  Fs.write (Path.join hub_dir "spec/USER.md") user;
+  
+  (* Create peers.md *)
+  let peers = Printf.sprintf {|# Peers
+
+Agents and repos this hub communicates with.
+
+- name: cn-agent
+  hub: https://github.com/usurobor/cn-agent.git
+  kind: template
+|} in
+  Fs.write (Path.join hub_dir "state/peers.md") peers;
+  
+  (* Initialize git *)
+  let _ = Child_process.exec_in ~cwd:hub_dir "git init" in
+  let _ = Child_process.exec_in ~cwd:hub_dir "git add -A" in
+  let _ = Child_process.exec_in ~cwd:hub_dir (Printf.sprintf "git commit -m 'Initialize %s hub'" hub_name) in
+  
+  print_endline (ok (Printf.sprintf "Created hub: %s" hub_dir));
+  print_endline (info "Next steps:");
+  print_endline (Printf.sprintf "  cd %s" hub_dir);
+  print_endline "  git remote add origin <your-repo-url>";
+  print_endline "  git push -u origin main"
+
+(* === Peer Commands === *)
+
+let format_peers_md (peers : peer_info list) : string =
+  let header = "# Peers\n\nAgents and repos this hub communicates with.\n" in
+  let format_peer (p : peer_info) =
+    let lines = [Printf.sprintf "- name: %s" p.name] in
+    let lines = match p.hub with Some h -> lines @ [Printf.sprintf "  hub: %s" h] | None -> lines in
+    let lines = match p.clone with Some c -> lines @ [Printf.sprintf "  clone: %s" c] | None -> lines in
+    let lines = match p.kind with Some k -> lines @ [Printf.sprintf "  kind: %s" k] | None -> lines in
+    String.concat "\n" lines
+  in
+  let entries = peers |> List.map format_peer |> String.concat "\n\n" in
+  header ^ "\n" ^ entries ^ "\n"
+
+let run_peer_list hub_path =
+  let peers : peer_info list = load_peers hub_path in
+  match peers with
+  | [] -> print_endline "(no peers)"
+  | ps ->
+      let print_peer (p : peer_info) =
+        let kind_str = match p.kind with Some k -> Printf.sprintf " (%s)" k | None -> "" in
+        let hub_str = match p.hub with Some h -> Printf.sprintf " → %s" h | None -> "" in
+        print_endline (Printf.sprintf "  %s%s%s" p.name kind_str hub_str)
+      in
+      ps |> List.iter print_peer
+
+let run_peer_add hub_path peer_name url =
+  let peers : peer_info list = load_peers hub_path in
+  let exists = List.exists (fun (p : peer_info) -> p.name = peer_name) peers in
+  if exists then begin
+    print_endline (fail (Printf.sprintf "Peer already exists: %s" peer_name));
+    Process.exit 1
+  end;
+  
+  let new_peer : peer_info = { name = peer_name; hub = Some url; clone = None; kind = None } in
+  let updated = peers @ [new_peer] in
+  Fs.write (Path.join hub_path "state/peers.md") (format_peers_md updated);
+  
+  log_action hub_path "peer.add" (Printf.sprintf "name:%s hub:%s" peer_name url);
+  print_endline (ok (Printf.sprintf "Added peer: %s" peer_name))
+
+let run_peer_remove hub_path peer_name =
+  let peers : peer_info list = load_peers hub_path in
+  let exists = List.exists (fun (p : peer_info) -> p.name = peer_name) peers in
+  if not exists then begin
+    print_endline (fail (Printf.sprintf "Peer not found: %s" peer_name));
+    Process.exit 1
+  end;
+  
+  let updated = List.filter (fun (p : peer_info) -> p.name <> peer_name) peers in
+  Fs.write (Path.join hub_path "state/peers.md") (format_peers_md updated);
+  
+  log_action hub_path "peer.remove" peer_name;
+  print_endline (ok (Printf.sprintf "Removed peer: %s" peer_name))
+
+let run_peer_sync hub_path =
+  let peers = load_peers hub_path in
+  print_endline (info "Syncing peers...");
+  
+  peers |> List.iter (fun peer ->
+    match peer.clone with
+    | None -> print_endline (dim (Printf.sprintf "  %s: no clone path" peer.name))
+    | Some clone_path ->
+        if Fs.exists clone_path then begin
+          match Child_process.exec_in ~cwd:clone_path "git fetch origin && git pull --ff-only" with
+          | Some _ -> print_endline (ok (Printf.sprintf "  %s: updated" peer.name))
+          | None -> print_endline (warn (Printf.sprintf "  %s: fetch failed" peer.name))
+        end else
+          print_endline (warn (Printf.sprintf "  %s: clone not found at %s" peer.name clone_path)));
+  
+  print_endline (ok "Peer sync complete")
+
+(* === Inbox Flush (delete processed branches) === *)
+
+let inbox_flush hub_path _name =
+  print_endline (info "Flushing inbox (deleting processed branches)...");
+  let inbox_dir = Path.join hub_path "threads/inbox" in
+  
+  if not (Fs.exists inbox_dir) then begin
+    print_endline (ok "Inbox empty");
+    ()
+  end else begin
+    let threads = Fs.readdir inbox_dir |> List.filter is_md_file in
+    
+    (* For each materialized thread, check if it's been triaged (has reply/completed marker) *)
+    let flushed = threads |> List.filter_map (fun file ->
+      let file_path = Path.join inbox_dir file in
+      let content = Fs.read file_path in
+      let meta = parse_frontmatter content in
+      
+      (* Check if triaged *)
+      let is_triaged = 
+        List.exists (fun (k, _) -> k = "reply" || k = "completed" || k = "deleted" || k = "deferred") meta in
+      
+      if not is_triaged then None
+      else begin
+        (* Get the branch name and delete it from origin *)
+        match List.find_map (fun (k, v) -> if k = "branch" then Some v else None) meta with
+        | None -> None
+        | Some branch ->
+            let delete_cmd = Printf.sprintf "git push origin --delete %s 2>/dev/null || true" branch in
+            let _ = Child_process.exec_in ~cwd:hub_path delete_cmd in
+            
+            (* Move to archived *)
+            let archived_dir = Path.join hub_path "threads/archived" in
+            Fs.ensure_dir archived_dir;
+            Fs.write (Path.join archived_dir file) 
+              (update_frontmatter content [("flushed", now_iso ())]);
+            Fs.unlink file_path;
+            
+            log_action hub_path "inbox.flush" (Printf.sprintf "branch:%s file:%s" branch file);
+            print_endline (ok (Printf.sprintf "Flushed: %s" file));
+            Some file
+      end
+    ) in
+    
+    match flushed with
+    | [] -> print_endline (info "No triaged threads to flush")
+    | fs -> print_endline (ok (Printf.sprintf "Flushed %d thread(s)" (List.length fs)))
+  end
+
+(* === Update === *)
+
+let run_update () =
+  print_endline (info "Checking for updates...");
+  
+  (* Get current version *)
+  print_endline (Printf.sprintf "Current version: %s" version);
+  
+  (* Check latest version *)
+  match Child_process.exec "npm view cnagent version 2>/dev/null" with
+  | None ->
+      print_endline (fail "Could not check npm registry");
+      Process.exit 1
+  | Some latest_raw ->
+      let latest = String.trim latest_raw in
+      if latest = version then
+        print_endline (ok "Already up to date")
+      else begin
+        print_endline (info (Printf.sprintf "New version available: %s" latest));
+        print_endline (info "Updating...");
+        match Child_process.exec "npm install -g cnagent@latest" with
+        | Some _ -> print_endline (ok (Printf.sprintf "Updated to v%s" latest))
+        | None -> print_endline (fail "Update failed. Try: npm install -g cnagent@latest")
+      end
+
 (* === Main === *)
 
 let () =
@@ -617,10 +857,8 @@ let () =
       Process.exit 1
   | Some Help -> print_endline help_text
   | Some Version -> Printf.printf "cn %s\n" version
-  | Some (Init name) ->
-      let hub_name = Option.value name ~default:(Path.basename (Process.cwd ())) in
-      print_endline (info (Printf.sprintf "Initializing hub: %s" hub_name));
-      print_endline (warn "Not yet implemented")
+  | Some Update -> run_update ()
+  | Some (Init name) -> run_init name
   | Some cmd ->
       match find_hub_path (Process.cwd ()) with
       | None ->
@@ -637,7 +875,7 @@ let () =
           | Doctor -> run_doctor hub_path
           | Inbox Inbox_check -> inbox_check hub_path name
           | Inbox Inbox_process -> inbox_process hub_path
-          | Inbox Inbox_flush -> print_endline (warn "inbox flush not implemented")
+          | Inbox Inbox_flush -> inbox_flush hub_path name
           | Outbox Outbox_check -> outbox_check hub_path
           | Outbox Outbox_flush -> outbox_flush hub_path name
           | Sync -> run_sync hub_path name
@@ -654,5 +892,8 @@ let () =
           | Commit msg -> run_commit hub_path name msg
           | Push -> run_push hub_path
           | Save msg -> run_commit hub_path name msg; run_push hub_path
-          | Peer _ -> print_endline (warn "peer commands not yet implemented")
-          | Help | Version | Init _ -> () (* handled above *)
+          | Peer Peer_list -> run_peer_list hub_path
+          | Peer (Peer_add (n, url)) -> run_peer_add hub_path n url
+          | Peer (Peer_remove n) -> run_peer_remove hub_path n
+          | Peer Peer_sync -> run_peer_sync hub_path
+          | Help | Version | Init _ | Update -> () (* handled above *)
