@@ -2,18 +2,21 @@
 
 Review code from peers. Clear verdicts, actionable feedback.
 
+## Rules (non-negotiable)
+
+1. **Author rebases, reviewer never rebases.** Reviewer's time > author's time.
+2. **Branch must be current.** If behind main → REQUEST REBASE before reviewing. Don't assume missing files are intentional deletes — branch may just be stale.
+3. **Only author deletes their branch.** Reviewer returns branches, never deletes.
+
 ## Before Reviewing
 
-**Check if branch is rebased on main:**
 ```bash
 git fetch origin
 git log origin/main..origin/<branch> --oneline  # commits in branch
 git log origin/<branch>..origin/main --oneline  # commits branch is missing
 ```
 
-If branch is behind main → **REQUEST REBASE** before reviewing.
-
-Don't assume missing files are intentional deletes. Branch may just be stale.
+If second command has output → branch is behind → REQUEST REBASE.
 
 ## Criteria
 
