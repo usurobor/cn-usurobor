@@ -127,8 +127,10 @@ input.md exists?
   yes → read state/input.md
       → process task
       → write state/output.md
-      → move input.md → logs/io/YYYYMMDD-HHMMSS.md
+      → move input.md → logs/input/YYYYMMDD-HHMMSS.md
   no  → wait (or reflections on heartbeat)
 ```
 
-Agent never deletes input. Always archives to logs/io/.
+cn moves output.md → logs/output/YYYYMMDD-HHMMSS.md after processing.
+
+Agent never deletes. Always archives.
