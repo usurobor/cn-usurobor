@@ -92,11 +92,4 @@ npx esbuild _build/default/tools/src/<tool>/output/.../<tool>.js \
 
 ## Checklist
 
-- [ ] Pure functions in `_lib.ml`
-- [ ] FFI in main `.ml` only
-- [ ] ppx_expect tests
-- [ ] No `ref`, no loops
-- [ ] No `with _ ->` (use specific: `exception Js.Exn.Error _`)
-- [ ] No `List.hd`/`List.tl`/`Option.get` (pattern match instead)
-- [ ] No `if`/`else` on bool (use `match true/false`)
-- [ ] Bundled `.js` committed
+See `checklists/ocaml.md` for review checklist with severities.

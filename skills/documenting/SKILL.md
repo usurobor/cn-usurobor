@@ -20,13 +20,7 @@ Keep documentation current, versioned, and consistent with code.
 
 ## Checklist
 
-Before merge, verify:
-
-- [ ] README reflects current behavior
-- [ ] Version numbers consistent across files
-- [ ] No references to deprecated/removed items
-- [ ] Examples are copy-pasteable and work
-- [ ] CHANGELOG updated (if releasing)
+See `checklists/documenting.md` for review checklist with severities.
 
 ## Structure
 
