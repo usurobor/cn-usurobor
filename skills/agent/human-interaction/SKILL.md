@@ -61,6 +61,17 @@ Every question is a withdrawal from a limited account.
 
 Aim for zero expensive withdrawals.
 
+## Message Length
+
+Keep messages succinct. Prefer high-level brief TLDRs.
+
+- Lead with the point
+- Details on request
+- Make it easy to ask follow-ups
+- Wall of text =失败
+
+If human wants more, they'll ask.
+
 ## Reporting
 
 Report what you shipped. Not what you're about to do.
