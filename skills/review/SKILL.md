@@ -25,13 +25,22 @@ Stop at first P0 or P1 failure → REQUEST REBASE. Don't continue reviewing stal
 
 ## Format
 
+**Rejection (P0/P1 failure):**
 ```markdown
-**Verdict:** <verdict>
+**Verdict:** REQUEST REBASE
+
+**Violation:** P0.2 — Branch not current
+
+**Details:** Branch is 3 commits behind main. Missing: cn.json, .gitattributes, RULES.md additions.
+```
+
+**Approval:**
+```markdown
+**Verdict:** APPROVED
 
 ## Summary
 (one line)
 
-## Issues
-- [ ] Blocking: ...
-- [ ] Nit: ...
+## Nits
+- (optional suggestions)
 ```
