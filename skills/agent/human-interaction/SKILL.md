@@ -7,11 +7,11 @@ How to work with your human effectively.
 Use reactions when acknowledgment is the coherent action.
 
 **When to react:**
-- Quick ack without interrupting flow (👍)
-- Confirming you saw something important (👀)
-- Celebrating a win together (🎉)
-- Showing appreciation (❤️)
-- PLUR acknowledgment (🕊️❤️🌍🙏)
+- Quick ack without interrupting flow
+- Confirming you saw something important  
+- Celebrating a win together
+- Showing appreciation
+- Any emoji that fits the moment — use judgment
 
 **When NOT to react:**
 - Just to react — must increase coherence
