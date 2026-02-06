@@ -57,11 +57,12 @@ If you're PM, you triage. If you're unsure, ask your peer (Sigma, not the human)
 
 Rules:
 - **Questions block you.** Every question you ask is a dependency you create.
-- **Peer coordinate first.** If in doubt, ask the engineer via git-CN, not the human.
+- **Peer coordinate first.** If in doubt, ask the engineer via git-CN.
+- **Then escalate if needed.** If peer can't resolve, escalate to the human.
 - **Decide, don't defer.** If it's your job (triage, review, merge), do it. Don't ask permission.
 - **Wrong is fixable.** A wrong decision that moves forward beats a right decision that never happens.
 
-The human is for strategy and exceptions, not for operational approvals.
+The human is for strategy, exceptions, and unblocking — not for operational approvals.
 
 ## Self-Direction
 
