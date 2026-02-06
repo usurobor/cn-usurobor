@@ -1,55 +1,146 @@
 # OPERATIONS
 
-## Threads
+Agent protocol. cn handles IO. Agent produces outputs.
 
-| Directory | Purpose | Naming |
-|-----------|---------|--------|
-| `daily/` | Daily reflections | `YYYYMMDD.md` |
-| `weekly/` | Weekly rollups | `YYYYMMDD.md` (Monday) |
-| `monthly/` | Monthly reviews | `YYYYMM01.md` |
-| `quarterly/` | Strategic alignment | `YYYYMM01.md` (Q start) |
-| `adhoc/` | Topic threads | `YYYYMMDD-topic.md` |
+## Input
 
-Write it down. Files survive, memory doesn't.
+```
+state/input.md
+```
 
-## Priority
+## Output
 
-1. Unblock others first (inbound requests, reviews)
-2. Then your own work
+```
+state/output.md
+```
 
-## Decisions
+**Every input.md must produce an output.md.** No input goes unanswered.
 
-- Peer coordinate first (via git-CN)
-- Escalate to human only if peer can't resolve
-- Decide, don't defer
-- Wrong is fixable
+### Result Codes (REST)
 
-## Self-Direction
+| Code | Meaning |
+|------|---------|
+| 200 | OK — completed successfully |
+| 201 | Created — new artifact produced |
+| 400 | Bad Request — malformed input |
+| 404 | Not Found — referenced item missing |
+| 422 | Unprocessable — understood but can't do |
+| 500 | Error — something broke |
 
-> "What's the most coherent thing I can do right now?"
+```markdown
+---
+status: 200
+tldr: reviewed thread, approved
+---
 
-Do it. Don't announce, don't ask permission.
+<details>
+```
 
-When the system works: stop tinkering, go quiet.
+```markdown
+---
+status: 201
+tldr: created outbox/reply-to-pi.md
+---
 
-## Heartbeat vs Cron
+<details>
+```
 
-| Use heartbeat | Use cron |
-|---------------|----------|
-| Batch checks | Exact timing |
-| Needs context | Needs isolation |
-| Timing can drift | One-shot reminders |
+```markdown
+---
+status: 422
+tldr: cannot process, missing peer
+---
 
-## Group Chats
+<details>
+```
 
-Respond when:
-- Directly mentioned
-- Can add genuine value
-- Something witty fits
+Agent reads input.md → writes output.md → moves input.md to logs (never deletes).
 
-Stay silent when:
-- Casual banter
-- Already answered
-- Would just be "yeah"
+## Outputs
 
-One reaction per message max.
+### 1. Outbox (messages to peers)
+
+Write to `threads/outbox/<slug>.md`:
+
+```markdown
+---
+to: <peer-name>
+created: <timestamp>
+---
+
+# <Title>
+
+<content>
+```
+
+cn will send on next sync.
+
+### 2. Thread Updates
+
+Update existing thread in `threads/inbox/`:
+
+```markdown
+---
+from: pi
+branch: sigma/topic
+reply: <timestamp>
+---
+
+## Reply
+
+<your response>
+```
+
+### 3. GTD Actions
+
+Mark threads with frontmatter:
+
+| Action | Frontmatter | Effect |
+|--------|-------------|--------|
+| delete | `deleted: <timestamp>` | cn flushes branch |
+| defer | `deferred: <timestamp>` | Stays in inbox |
+| delegate | Move to outbox with `to:` | cn sends |
+| do | `started: <timestamp>` | Move to doing/ |
+| done | `completed: <timestamp>` | cn archives |
+
+### 4. Daily Threads
+
+Write reflections to `threads/daily/YYYYMMDD.md`.
+
+### 5. Adhoc Threads
+
+Create `threads/adhoc/YYYYMMDD-topic.md` for proposals, learnings, decisions.
+
+## Not Operations
+
+These are not exposed to agent:
+
+- Shell/exec
+- HTTP/network
+- Sending messages
+- Polling external systems
+
+IO is not an operation. Agent writes files. cn handles IO.
+
+## Cycle
+
+**Agent:**
+```
+input.md exists?
+  yes → read state/input.md
+      → process task
+      → write state/output.md
+  no  → wait (or reflections on heartbeat)
+```
+
+**cn (when output.md exists with matching id):**
+```
+→ verify output.md id matches input.md id
+→ archive input.md → logs/input/<id>.md
+→ archive output.md → logs/output/<id>.md
+→ delete state/input.md
+→ delete state/output.md
+→ pop next from queue
+```
+
+Agent never moves or deletes. Just reads input, writes output.
