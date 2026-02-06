@@ -1,13 +1,13 @@
 #!/usr/bin/env sh
 # cn - Coherent Network agent CLI
 # OCaml source: tools/src/cn/
-# Bundled JS: dist/cn.js
+# Bundled JS: tools/dist/cn.js
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-DIST="$SCRIPT_DIR/../dist/cn.js"
+DIST="$SCRIPT_DIR/../tools/dist/cn.js"
 
 if [ ! -f "$DIST" ]; then
-  echo "Error: dist/cn.js not found."
+  echo "Error: tools/dist/cn.js not found."
   echo "Run 'npm run build' in the cn-agent directory first."
   exit 1
 fi

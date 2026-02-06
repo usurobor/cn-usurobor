@@ -1,6 +1,6 @@
 {
   "name": "cnagent",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Coherent Network agent CLI — everything runs through cn",
   "keywords": [
     "cn-agent",
@@ -22,13 +22,13 @@
   },
   "files": [
     "bin/",
-    "dist/"
+    "tools/dist/"
   ],
   "scripts": {
     "build": "dune build && npm run bundle",
     "bundle": "npm run bundle:inbox && npm run bundle:cn",
-    "bundle:inbox": "npx esbuild _build/default/tools/src/inbox/output/tools/src/inbox/inbox.js --bundle --platform=node --outfile=dist/inbox.js",
-    "bundle:cn": "npx esbuild _build/default/tools/src/cn/output/tools/src/cn/cn.js --bundle --platform=node --outfile=dist/cn.js",
+    "bundle:inbox": "npx esbuild _build/default/tools/src/inbox/output/tools/src/inbox/inbox.js --bundle --platform=node --outfile=tools/dist/inbox.js",
+    "bundle:cn": "npx esbuild _build/default/tools/src/cn/output/tools/src/cn/cn.js --bundle --platform=node --outfile=tools/dist/cn.js",
     "test": "dune runtest"
   },
   "author": "usurobor",
