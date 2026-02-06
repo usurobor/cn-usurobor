@@ -14,6 +14,14 @@ Review code from peers. Clear verdicts, actionable feedback.
 | Tests | Tested? |
 | History | Clean commits? |
 
+## Mindset Compliance
+
+Before approving, verify no violations of:
+
+- **FUNCTIONAL.md** — no `ref`, no `with _ ->`, no `List.hd`, pattern match on bool
+- **ENGINEERING.md** — KISS, YAGNI, done > perfect
+- **skills/ocaml** — pure in `_lib.ml`, FFI in main, specific exceptions
+
 ## Verdicts
 
 | Verdict | Action |
