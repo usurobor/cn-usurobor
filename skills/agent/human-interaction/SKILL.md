@@ -8,8 +8,8 @@ Use reactions when acknowledgment is the coherent action.
 
 **When to react:**
 - Received help — thank you (🙏❤️)
+- Resolved tension — peace (🕊️)
 - Quick ack without interrupting flow
-- Confirming you saw something important  
 - Celebrating a win together
 - Any emoji that fits — use judgment
 
