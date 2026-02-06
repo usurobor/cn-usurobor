@@ -37,6 +37,7 @@ let non_empty s = String.trim s <> ""
 type inbox_cmd = Inbox_check | Inbox_process | Inbox_flush
 type outbox_cmd = Outbox_check | Outbox_flush
 type peer_cmd = Peer_list | Peer_add of string * string | Peer_remove of string | Peer_sync
+type queue_cmd = Queue_list | Queue_clear
 
 type gtd_cmd =
   | GtdDelete of string
@@ -54,6 +55,7 @@ type command =
   | Inbox of inbox_cmd
   | Outbox of outbox_cmd
   | Peer of peer_cmd
+  | Queue of queue_cmd
   | Sync
   | Next
   | Read of string
@@ -83,6 +85,8 @@ let string_of_command = function
   | Peer (Peer_add (n, _)) -> "peer add " ^ n
   | Peer (Peer_remove n) -> "peer remove " ^ n
   | Peer Peer_sync -> "peer sync"
+  | Queue Queue_list -> "queue list"
+  | Queue Queue_clear -> "queue clear"
   | Sync -> "sync"
   | Next -> "next"
   | Read t -> "read " ^ t
@@ -131,6 +135,11 @@ let parse_peer_cmd = function
   | ["sync"] -> Some Peer_sync
   | _ -> None
 
+let parse_queue_cmd = function
+  | [] | ["list"] -> Some Queue_list
+  | ["clear"] -> Some Queue_clear
+  | _ -> None
+
 let parse_gtd_cmd = function
   | ["delete"; t] -> Some (GtdDelete t)
   | "defer" :: t :: rest -> Some (GtdDefer (t, List.nth_opt rest 0))
@@ -151,6 +160,7 @@ let rec parse_command = function
   | "inbox" :: rest -> parse_inbox_cmd rest |> Option.map (fun c -> Inbox c)
   | "outbox" :: rest -> parse_outbox_cmd rest |> Option.map (fun c -> Outbox c)
   | "peer" :: rest -> parse_peer_cmd rest |> Option.map (fun c -> Peer c)
+  | "queue" :: rest -> parse_queue_cmd rest |> Option.map (fun c -> Queue c)
   | ["sync"] -> Some Sync
   | ["next"] -> Some Next
   | ["process"] -> Some Process
@@ -339,12 +349,13 @@ Commands:
   send <peer> <msg>   Message to peer (or self)
   
   # cn operations (orchestrator)
-  next                Get next inbox item (with cadence)
   sync                Fetch inbound + send outbound
-  inbox               List inbox (cn internal)
-  outbox              List outbox (cn internal)
+  process             Queue inbox → input.md → wake agent
+  queue [list|clear]  View or clear the task queue
+  inbox               List inbox threads
+  outbox              List outbox threads
+  next                Get next inbox item (with cadence)
   read <thread>       Read thread with cadence
-  process             Actor loop (inbox → input.md → OC wake)
   
   # Hub management
   init [name]         Create new hub
@@ -366,11 +377,11 @@ Flags:
   --quiet, -q         Minimal output
   --dry-run           Show what would happen
 
-Examples:
-  cn init sigma       Create hub named 'sigma'
-  cn inbox check      List inbound branches
-  cn doctor           Check system health
-  cn process          Run actor loop
+Actor Model:
+  cn runs on cron (every 5 min). It:
+  1. Syncs peers → queues new inbox items to state/queue/
+  2. If input.md empty → pops from queue → writes input.md → wakes agent
+  Agent reads input.md, processes, deletes when done.
 |}
 
 let version = "2.1.0"

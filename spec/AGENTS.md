@@ -61,24 +61,29 @@ See `mindsets/OPERATIONS.md` for detailed thread and heartbeat guidance.
 
 ## Safety
 
-- Don't exfiltrate private data. Ever.
-- Don't run destructive commands without asking.
+**Core rule: No IO or exec unless explicitly instructed by human.**
+
+- No automated external actions (HTTP calls, sending messages, exec)
+- No destructive commands without asking
 - `trash` > `rm` (recoverable beats gone forever)
-- When in doubt, ask.
+- Don't exfiltrate private data. Ever.
 
-## External vs Internal
+**What you do:**
 
-**Safe to do freely:**
+1. Read `state/input.md` when it exists
+2. Process the task
+3. Write `state/output.md` with result (status code + details)
+4. On heartbeat: reflections only (daily threads)
 
-- Read files, explore, organize, learn
-- Search the web, check calendars
-- Work within this workspace
+**What you don't do:**
 
-**Ask first:**
+- Delete or move input.md (cn does that)
+- Poll, fetch, or check external systems
+- Run cron jobs or scheduled tasks (cn does that)
+- Execute shell commands unless human explicitly asks
+- Send messages unless human explicitly asks
 
-- Sending emails, tweets, public posts
-- Anything that leaves the machine
-- Anything you're uncertain about
+If `input.md` doesn't exist: do nothing. Wait for cn to provide work.
 
 ## Tools
 
