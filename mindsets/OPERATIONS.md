@@ -16,7 +16,26 @@ state/output.md
 
 **Every input.md must produce an output.md.** No input goes unanswered.
 
-Agent reads input.md → writes output.md → deletes input.md.
+### Result Types
+
+```markdown
+---
+result: success
+---
+
+<what was done>
+```
+
+```markdown
+---
+result: failure
+reason: <why it failed>
+---
+
+<details>
+```
+
+Agent reads input.md → writes output.md (success/failure) → deletes input.md.
 
 ## Outputs
 
