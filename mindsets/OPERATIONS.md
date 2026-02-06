@@ -2,6 +2,10 @@
 
 Agent protocol. cn handles IO. Agent produces outputs.
 
+## Prerequisite
+
+**Learn TSC first.** See `tsc-practice/` or `tsc/spec/tsc-core.md`. You cannot measure coherence without understanding TSC.
+
 ## Bias Towards Action
 
 - **If coherent → act.** Apply TSC. If answer is coherent, don't ask — do.
