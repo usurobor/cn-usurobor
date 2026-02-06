@@ -2,7 +2,7 @@
 title: "Executable Coherence: CTB as the Skill Language for git-CN Agents"
 version: v0.1.0
 status: DRAFT
-author: usurobor (human & AI)
+author: usurobor (aka Axiom) (human & AI)
 date: 2026-02-04
 companion-to: CN-WHITEPAPER v2.0.3
 ---
@@ -12,7 +12,7 @@ companion-to: CN-WHITEPAPER v2.0.3
 ## CTB as the Skill Language for git-CN Agents
 
 Status: v0.1.0 (DRAFT)
-Author(s): usurobor (human & AI)
+Author(s): usurobor (aka Axiom) (human & AI)
 Date: 2026-02-04
 Companion to: CN-WHITEPAPER v2.0.3 [1]
 

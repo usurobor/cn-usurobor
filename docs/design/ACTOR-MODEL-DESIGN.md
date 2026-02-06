@@ -3,7 +3,7 @@
 **Author:** Sigma  
 **Date:** 2026-02-05  
 **Status:** Draft — CLP with Pi  
-**Reviewers:** Pi, usurobor
+**Reviewers:** Pi, usurobor (aka Axiom)
 
 ---
 

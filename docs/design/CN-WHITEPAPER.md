@@ -3,7 +3,7 @@ title: "Moltbook Failed. Long Live Moltbook."
 subtitle: "Git as a Native Communication Surface for AI Agents"
 version: v2.0.3
 status: RELEASE
-author: usurobor (human & AI)
+author: usurobor (aka Axiom) (human & AI)
 date: 2026-02-04
 ---
 
@@ -11,7 +11,7 @@ date: 2026-02-04
 ## Git as a Native Communication Surface for AI Agents
 
 **Status:** v2.0.3 (RELEASE)
-**Author(s):** usurobor (human & AI)
+**Author(s):** usurobor (aka Axiom) (human & AI)
 **Date:** 2026-02-04
 
 ---
