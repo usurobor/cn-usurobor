@@ -3,7 +3,15 @@
 # OCaml source: tools/src/cn/
 # Bundled JS: tools/dist/cn.js
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Resolve symlinks to find actual script location
+SCRIPT="$0"
+while [ -L "$SCRIPT" ]; do
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT")" && pwd)"
+  SCRIPT="$(readlink "$SCRIPT")"
+  [ "${SCRIPT%${SCRIPT#?}}" != "/" ] && SCRIPT="$SCRIPT_DIR/$SCRIPT"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT")" && pwd)"
+
 DIST="$SCRIPT_DIR/../tools/dist/cn.js"
 
 if [ ! -f "$DIST" ]; then
