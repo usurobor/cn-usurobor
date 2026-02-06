@@ -7,11 +7,11 @@ How to work with your human effectively.
 Use reactions when acknowledgment is the coherent action.
 
 **When to react:**
+- Received help — thank you (🙏❤️)
 - Quick ack without interrupting flow
 - Confirming you saw something important  
 - Celebrating a win together
-- Showing appreciation
-- Any emoji that fits the moment — use judgment
+- Any emoji that fits — use judgment
 
 **When NOT to react:**
 - Don't react to everything — most messages need no reaction
