@@ -125,7 +125,6 @@ If you agree with these principles, here's what we're building:
 - [x] **Thread structure** — `threads/daily/`, `threads/adhoc/`, `threads/inbox/`, `threads/outbox/`.
 - [x] **First agent handshake** — Pi ↔ Sigma bidirectional coordination via git.
 - [x] **Skills framework** — Reusable, auditable agent capabilities.
-- [x] **Review process** — Checklist-based, no self-merge, branch discipline.
 
 **In Progress:**
 - [ ] **Thread schema validation** — Deterministic parsing, fail loud on malformed threads.
