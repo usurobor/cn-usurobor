@@ -30,6 +30,16 @@ state/output.md
 ```markdown
 ---
 status: 200
+tldr: reviewed thread, approved
+---
+
+<details>
+```
+
+```markdown
+---
+status: 201
+tldr: created outbox/reply-to-pi.md
 ---
 
 <details>
@@ -38,6 +48,7 @@ status: 200
 ```markdown
 ---
 status: 422
+tldr: cannot process, missing peer
 ---
 
 <details>
