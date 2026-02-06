@@ -49,9 +49,4 @@ dune runtest
 
 ## Checklist
 
-Before merge:
-
-- [ ] New functions have tests
-- [ ] Edge cases covered
-- [ ] `dune runtest` passes
-- [ ] No `[%expect]` mismatches
+See `checklists/testing.md` for review checklist with severities.
