@@ -138,7 +138,49 @@ Erlang's actor model has been battle-tested for 35+ years in telecom systems req
 | Message consumed | Branch merged/deleted after processing |
 | Reply | Push response branch to sender's repo |
 
-### 4.2 Protocol Specification
+### 4.2 Invocation Model: One Item Per Turn
+
+**Design Decision (2026-02-06):** Agent receives exactly ONE item per invocation.
+
+```
+CN (scheduler)              Agent (pure function)
+     │                            │
+     │  reads inbox/*.md          │
+     │  picks ONE item            │
+     │                            │
+     │  writes state/input.md     │
+     │  invokes agent ──────────► │
+     │                            │  reads input.md (one item)
+     │                            │  processes
+     │                            │  writes output.md (decision)
+     │  ◄─────────────────────────│
+     │  reads output.md           │
+     │  executes effects          │
+     │                            │
+     │  (repeat for next item)    │
+```
+
+**Why:**
+
+| Property | Benefit |
+|----------|---------|
+| **Agent never loops** | Simpler, no iteration bugs |
+| **Agent never picks** | CN owns prioritization |
+| **Agent never reads files** | True purity — all I/O via CN |
+| **One item = one decision** | Clear causality, easy audit |
+| **CN is the scheduler** | Queue management in one place |
+
+**Implications:**
+
+1. `cn inbox` returns items, but agent doesn't call it
+2. CN calls `cn inbox`, picks next, writes to `state/input.md`
+3. Agent reads `state/input.md` — always exactly one item
+4. Agent writes `state/output.md` — decision for that item
+5. CN reads output, executes (push branch, send message, etc.)
+
+This mirrors Erlang's `receive` — the runtime delivers one message at a time, actor handles it, repeat.
+
+### 4.3 Protocol Specification
 
 #### 4.2.1 Sending a Message
 
@@ -209,7 +251,7 @@ Agents perform **GTD (Getting Things Done)** on their inbox. For each inbound br
 | pi | pi/roadmap | Done | sigma/ack-roadmap |
 ```
 
-### 4.3 Failure Handling
+### 4.4 Failure Handling
 
 #### 4.3.1 Delivery Guarantee
 
@@ -234,7 +276,7 @@ If item deferred more than N times:
 2. Force decision: Do, Delegate, or Delete
 3. No infinite deferral
 
-### 4.4 Coherence Analysis
+### 4.5 Coherence Analysis
 
 | Axis | How Design Addresses It |
 |------|-------------------------|
