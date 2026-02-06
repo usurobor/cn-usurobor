@@ -602,64 +602,99 @@ let queue_list hub_path =
   if not (Fs.exists dir) then []
   else Fs.readdir dir |> List.filter is_md_file |> List.sort String.compare
 
-(* === Process (Actor Loop) === *)
+(* === IO Paths === *)
 
-let run_process hub_path =
-  print_endline (info "Actor loop: checking queue...");
+let input_path hub_path = Path.join hub_path "state/input.md"
+let output_path hub_path = Path.join hub_path "state/output.md"
+let logs_input_dir hub_path = Path.join hub_path "logs/input"
+let logs_output_dir hub_path = Path.join hub_path "logs/output"
+
+(* === Get ID from file === *)
+
+let get_file_id path =
+  if not (Fs.exists path) then None
+  else
+    let content = Fs.read path in
+    let meta = parse_frontmatter content in
+    meta |> List.find_map (fun (k, v) -> if k = "id" then Some v else None)
+
+(* === Archive completed IO pair === *)
+
+let archive_io_pair hub_path =
+  let inp = input_path hub_path in
+  let outp = output_path hub_path in
   
-  let input_path = Path.join hub_path "state/input.md" in
-  let state_dir = Path.join hub_path "state" in
-  Fs.ensure_dir state_dir;
-  
-  (* First, queue any new inbox items *)
+  match get_file_id inp, get_file_id outp with
+  | Some input_id, Some output_id when input_id = output_id ->
+      (* IDs match - archive both *)
+      let logs_in = logs_input_dir hub_path in
+      let logs_out = logs_output_dir hub_path in
+      Fs.ensure_dir logs_in;
+      Fs.ensure_dir logs_out;
+      
+      let archive_name = input_id ^ ".md" in
+      Fs.write (Path.join logs_in archive_name) (Fs.read inp);
+      Fs.write (Path.join logs_out archive_name) (Fs.read outp);
+      Fs.unlink inp;
+      Fs.unlink outp;
+      
+      log_action hub_path "io.archive" (Printf.sprintf "id:%s" input_id);
+      print_endline (ok (Printf.sprintf "Archived IO pair: %s" input_id));
+      true
+  | Some _, Some _ ->
+      print_endline (fail "ID mismatch between input.md and output.md");
+      false
+  | Some _, None ->
+      (* Input exists but no output yet - agent still working *)
+      false
+  | None, Some _ ->
+      (* Output without input - orphan, shouldn't happen *)
+      print_endline (warn "Orphan output.md found (no input.md)");
+      false
+  | None, None ->
+      (* Neither exists - ready for new work *)
+      true
+
+(* === Queue inbox items === *)
+
+let queue_inbox_items hub_path =
   let inbox_dir = Path.join hub_path "threads/inbox" in
-  let queued_count = 
-    if not (Fs.exists inbox_dir) then 0
-    else
-      Fs.readdir inbox_dir
-      |> List.filter is_md_file
-      |> List.filter_map (fun file ->
-          let file_path = Path.join inbox_dir file in
-          let content = Fs.read file_path in
-          let meta = parse_frontmatter content in
+  if not (Fs.exists inbox_dir) then 0
+  else
+    Fs.readdir inbox_dir
+    |> List.filter is_md_file
+    |> List.filter_map (fun file ->
+        let file_path = Path.join inbox_dir file in
+        let content = Fs.read file_path in
+        let meta = parse_frontmatter content in
+        
+        let is_queued = List.exists (fun (k, _) -> k = "queued-for-processing") meta in
+        if is_queued then None
+        else begin
+          let id = Path.basename_ext file ".md" in
+          let from = meta |> List.find_map (fun (k, v) -> if k = "from" then Some v else None)
+            |> Option.value ~default:"unknown" in
           
-          (* Check if already queued *)
-          let is_queued = List.exists (fun (k, _) -> k = "queued-for-processing") meta in
-          if is_queued then None
-          else begin
-            let id = Path.basename_ext file ".md" in
-            let from = meta |> List.find_map (fun (k, v) -> if k = "from" then Some v else None)
-              |> Option.value ~default:"unknown" in
-            
-            (* Add to queue *)
-            let _ = queue_add hub_path id from content in
-            
-            (* Mark as queued in inbox (to avoid re-queuing) *)
-            Fs.write file_path (update_frontmatter content [("queued-for-processing", now_iso ())]);
-            
-            print_endline (ok (Printf.sprintf "Queued: %s (from %s)" id from));
-            Some file
-          end)
-      |> List.length
-  in
+          let _ = queue_add hub_path id from content in
+          Fs.write file_path (update_frontmatter content [("queued-for-processing", now_iso ())]);
+          
+          print_endline (ok (Printf.sprintf "Queued: %s (from %s)" id from));
+          Some file
+        end)
+    |> List.length
+
+(* === Feed next input === *)
+
+let feed_next_input hub_path =
+  let inp = input_path hub_path in
   
-  if queued_count > 0 then
-    print_endline (info (Printf.sprintf "Added %d item(s) to queue" queued_count));
-  
-  (* Check if agent is busy *)
-  if Fs.exists input_path then begin
-    let count = queue_count hub_path in
-    print_endline (warn "state/input.md exists - agent busy");
-    print_endline (info (Printf.sprintf "Queue depth: %d" count));
-    Process.exit 0  (* Not an error - just agent is working *)
-  end;
-  
-  (* Pop from queue and write to input.md *)
   match queue_pop hub_path with
   | None -> 
-      print_endline (ok "Queue empty - nothing to process")
+      print_endline (ok "Queue empty - nothing to process");
+      false
   | Some content ->
-      Fs.write input_path content;
+      Fs.ensure_dir (Path.join hub_path "state");
+      Fs.write inp content;
       
       let meta = parse_frontmatter content in
       let id = meta |> List.find_map (fun (k, v) -> if k = "id" then Some v else None)
@@ -668,18 +703,53 @@ let run_process hub_path =
         |> Option.value ~default:"unknown" in
       
       log_action hub_path "process.feed" (Printf.sprintf "id:%s from:%s" id from);
-      print_endline (ok (Printf.sprintf "Wrote to state/input.md: %s (from %s)" id from));
+      print_endline (ok (Printf.sprintf "Wrote state/input.md: %s (from %s)" id from));
       
       let remaining = queue_count hub_path in
       if remaining > 0 then
         print_endline (info (Printf.sprintf "Queue depth: %d remaining" remaining));
       
-      (* Wake agent *)
-      print_endline (info "Triggering OpenClaw wake...");
-      let wake_cmd = "curl -s -X POST http://localhost:18789/cron/wake -H 'Content-Type: application/json' -d '{\"text\":\"input.md ready\",\"mode\":\"now\"}'" in
-      (match Child_process.exec wake_cmd with
-       | Some _ -> print_endline (ok "Wake triggered")
-       | None -> print_endline (warn "Wake trigger failed - is OpenClaw running?"))
+      true
+
+(* === Wake agent === *)
+
+let wake_agent () =
+  print_endline (info "Triggering OpenClaw wake...");
+  let wake_cmd = "curl -s -X POST http://localhost:18789/cron/wake -H 'Content-Type: application/json' -d '{\"text\":\"input.md ready\",\"mode\":\"now\"}'" in
+  match Child_process.exec wake_cmd with
+  | Some _ -> print_endline (ok "Wake triggered")
+  | None -> print_endline (warn "Wake trigger failed - is OpenClaw running?")
+
+(* === Process (Actor Loop) === *)
+
+let run_process hub_path =
+  print_endline (info "cn process: actor loop...");
+  
+  (* Step 1: Queue any new inbox items *)
+  let queued = queue_inbox_items hub_path in
+  if queued > 0 then
+    print_endline (info (Printf.sprintf "Added %d item(s) to queue" queued));
+  
+  (* Step 2: Check if completed IO pair exists, archive if so *)
+  let inp = input_path hub_path in
+  let outp = output_path hub_path in
+  
+  if Fs.exists inp && Fs.exists outp then begin
+    (* Agent completed work - archive and continue *)
+    if archive_io_pair hub_path then begin
+      (* Feed next input *)
+      if feed_next_input hub_path then wake_agent ()
+    end
+  end
+  else if Fs.exists inp then begin
+    (* Input exists but no output - agent still working *)
+    print_endline (info "Agent working (input.md exists, awaiting output.md)");
+    print_endline (info (Printf.sprintf "Queue depth: %d" (queue_count hub_path)))
+  end
+  else begin
+    (* No input - feed next *)
+    if feed_next_input hub_path then wake_agent ()
+  end
 
 (* === Sync === *)
 

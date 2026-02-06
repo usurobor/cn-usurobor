@@ -71,18 +71,19 @@ See `mindsets/OPERATIONS.md` for detailed thread and heartbeat guidance.
 **What you do:**
 
 1. Read `state/input.md` when it exists
-2. Process the task (generate outbox, update thread, etc.)
-3. Delete `input.md` when done
+2. Process the task
+3. Write `state/output.md` with result (status code + details)
 4. On heartbeat: reflections only (daily threads)
 
 **What you don't do:**
 
+- Delete or move input.md (cn does that)
 - Poll, fetch, or check external systems
 - Run cron jobs or scheduled tasks (cn does that)
 - Execute shell commands unless human explicitly asks
 - Send messages unless human explicitly asks
 
-If `input.md` is empty: do nothing. Wait for cn to provide work.
+If `input.md` doesn't exist: do nothing. Wait for cn to provide work.
 
 ## Tools
 
