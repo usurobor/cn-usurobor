@@ -147,7 +147,7 @@ We refuse the black box. We refuse the rented substrate. Code wins arguments.
 
 "Think of 'free' as in 'free speech,' not as in 'free beer.'" — Richard Stallman
 
-Free means freedom, not price. 🍺
+Coherence Network is and forever will be free. Free means freedom, not price. 🍺
 
 License: see LICENSE.
 
