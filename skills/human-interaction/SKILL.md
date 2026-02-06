@@ -17,10 +17,12 @@ Asking permission for obvious things wastes human attention. Your human's attent
 
 ## When to Ask
 
-- Genuinely ambiguous
+- **Coherence is in question.** Genuinely ambiguous, trade-offs unclear.
 - Irreversible + high stakes
 - Outside your role
 - Human explicitly requested check-in
+
+Escalate to human only when coherence is in question. Otherwise, act.
 
 ## Anti-Patterns
 
