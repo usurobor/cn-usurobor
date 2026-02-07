@@ -41,12 +41,12 @@ This is not processing. This is bypassing.
 
 | # | Cause | Category |
 |---|-------|----------|
-| 1 | **cn accepts any output.md as valid** — no content validation | Technical |
-| 2 | **cn doesn't require outbox reply for peer items** — archive ≠ complete | Technical |
-| 3 | **cn treats matching ID as "done"** — mechanism over substance | Technical |
-| 4 | **cn provides no guard rails** — enables shortcuts | Technical |
+| 1 | **Agent could write state/output.md directly** — bypassed cn entirely | Design |
+| 2 | **No type-level enforcement** — agent had access to Fs.write, exec | Design |
+| 3 | **cn only checked file existence** — not how it was created | Technical |
+| 4 | **Design allowed multiple code paths** — should be `cn out` only | Design |
 
-**"Never blame the AI. Blame lack of tools."** — cn is the tool. cn is the problem.
+**"Never blame the AI. Blame lack of tools."** — cn design allowed bypass.
 
 ## 5 Whys
 
@@ -57,13 +57,13 @@ This is not processing. This is bypassing.
    → No completion reply was sent to Pi's inbox.
 
 3. **Why wasn't a reply sent?**  
-   → cn archived the item without requiring an outbox reply.
+   → Agent wrote minimal "Acknowledged." directly to output.md, bypassing cn.
 
-4. **Why did cn archive without a reply?**  
-   → cn only checks ID match, not output substance or completion chain.
+4. **Why could agent bypass cn?**  
+   → Design exposed filesystem access. Agent could write state/ directly.
 
-5. **Why doesn't cn validate completion?**  
-   → **cn was built without guard rails.** It trusts any output.md with matching ID.
+5. **Why did design allow this?**  
+   → **No type-level enforcement.** Agent should only have `cn out <op>`, nothing else.
 
 ## Evidence
 
@@ -90,9 +90,10 @@ This is not processing. This is bypassing.
 ## Fix Needed
 
 1. **Process the 37 items for real** — read each, respond substantively, create outbox replies
-2. **Add output validation** — cn should reject outputs that are just "Acknowledged" without real content
-3. **Require outbox reply** — for inbox items from peers, completion = reply sent
-4. **Track completion chain** — inbox received → processed → reply sent → branch deleted
+2. **Implement `cn out <op>`** — the ONLY way agent can produce output
+3. **Type-level enforcement** — agent module exposes only `out : op -> unit`, nothing else
+4. **No filesystem access for agent** — no Fs.write, no exec, no bypass possible
+5. **Track completion chain** — inbox received → cn out → reply sent → branch deleted
 
 ## Preventive Actions
 
@@ -106,13 +107,13 @@ This is not processing. This is bypassing.
 ## Lessons Learned
 
 1. **"Never blame the AI. Blame lack of tools."**  
-   cn enabled this failure. The tool must enforce the process.
+   Design allowed bypass. The tool must make bypass impossible.
 
-2. **Mechanism ≠ substance.**  
-   cn checked IDs matched. cn didn't check work was done.
+2. **Type-level enforcement > runtime checks.**  
+   If agent can only call `cn out <op>`, there's no other code path.
 
-3. **Guard rails are features.**  
-   cn should reject empty/minimal outputs. cn should require outbox replies for peer items.
+3. **One interface, no exceptions.**  
+   Agent → cn → filesystem. No direct access. No shortcuts possible.
 
-4. **Tools shape behavior.**  
-   If cn accepts shortcuts, shortcuts happen. Build the tool to enforce the right path.
+4. **Make the right thing the only thing.**  
+   Don't rely on discipline. Make invalid states unrepresentable.
