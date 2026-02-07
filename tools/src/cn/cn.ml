@@ -1005,6 +1005,28 @@ If you can do it now, do it. Otherwise, explain why not.
 
 (* === Process (Actor Loop) === *)
 
+(* Auto-save: commit and push if there are changes *)
+let auto_save hub_path name =
+  match Child_process.exec_in ~cwd:hub_path "git status --porcelain" with
+  | Some status when String.trim status <> "" ->
+      let _ = Child_process.exec_in ~cwd:hub_path "git add -A" in
+      let msg = Printf.sprintf "%s: auto-save %s" name (String.sub (now_iso ()) 0 10) in
+      (match Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m \"%s\"" msg) with
+       | Some _ ->
+           log_action hub_path "auto-save.commit" msg;
+           print_endline (ok "Auto-committed changes");
+           (match Child_process.exec_in ~cwd:hub_path "git push" with
+            | Some _ -> 
+                log_action hub_path "auto-save.push" "success";
+                print_endline (ok "Auto-pushed to origin")
+            | None -> 
+                log_action hub_path "auto-save.push" "failed";
+                print_endline (warn "Auto-push failed"))
+       | None -> 
+           log_action hub_path "auto-save.commit" "failed";
+           print_endline (warn "Auto-commit failed"))
+  | _ -> ()
+
 let run_process hub_path name =
   print_endline (info "cn process: actor loop...");
   
@@ -1025,6 +1047,8 @@ let run_process hub_path name =
   if Fs.exists inp && Fs.exists outp then begin
     (* Agent completed work - archive and continue *)
     if archive_io_pair hub_path name then begin
+      (* Step 4: Auto-save after successful processing *)
+      auto_save hub_path name;
       (* Feed next input *)
       if feed_next_input hub_path then wake_agent ()
     end
