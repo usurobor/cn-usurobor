@@ -43,7 +43,7 @@ The setup process installs Node.js, OCaml, and other dependencies.
 
 Not supported: serverless, ephemeral containers, Windows (without WSL).
 
-See [docs/AUTOMATION.md](./docs/AUTOMATION.md) for cron setup details.
+See [docs/how-to/AUTOMATION.md](./docs/how-to/AUTOMATION.md) for cron setup details.
 
 ---
 
