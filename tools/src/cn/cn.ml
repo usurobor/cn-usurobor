@@ -166,7 +166,8 @@ let materialize_branch hub_path inbox_dir peer_name branch =
           in
           let inbox_file = Printf.sprintf "%s-%s.md" peer_name branch_slug in
           let inbox_path = Path.join inbox_dir inbox_file in
-          match Fs.exists inbox_path with
+          let archived_path = Path.join (Path.join inbox_dir "_archived") inbox_file in
+          match Fs.exists inbox_path || Fs.exists archived_path with
           | true -> None
           | false ->
               let meta = [("from", peer_name); ("branch", branch); ("file", file); ("received", now_iso ())] in
