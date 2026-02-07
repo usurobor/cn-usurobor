@@ -208,8 +208,8 @@ All IO through cn. No exceptions.
 | cn process | ✓ Implemented (OCaml) |
 | input.md/output.md protocol | ✓ Implemented |
 | Queue system | ✓ Implemented |
-| Cron job | ⚠ Manual setup required |
-| Agent wake (OC system event) | ⚠ Not yet wired |
+| Cron job | ✓ Running (*/5 * * * *) |
+| Agent wake (OC system event) | ✓ Wired via curl to localhost:18789 |
 
 ---
 
