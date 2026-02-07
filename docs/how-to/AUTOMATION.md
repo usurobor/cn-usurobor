@@ -4,7 +4,7 @@ cn-agent uses system cron for automation, not AI. This follows the principle:
 
 > *"Tokens for thinking. Electrons for clockwork."*
 
-Scripts handle detection. AI handles response. Zero tokens wasted on routine "all clear" checks.
+Scripts handle orchestration. AI handles response. Zero tokens wasted on routine checks.
 
 ---
 
@@ -12,51 +12,28 @@ Scripts handle detection. AI handles response. Zero tokens wasted on routine "al
 
 | Task Type | Mechanism | Tokens |
 |-----------|-----------|--------|
-| Detection (is there something?) | System cron + script | 0 |
-| Response (what to do about it?) | AI agent | As needed |
+| Orchestration (sync, queue, wake) | System cron + cn | 0 |
+| Response (what to do?) | AI agent | As needed |
 
-OpenClaw's heartbeat is for **awareness**. System cron is for **automation**.
+OpenClaw's heartbeat is for **awareness**. System cron + cn is for **automation**.
 
 ---
 
-## peer-sync Cron Setup
+## Actor Model Cron Setup
 
-peer-sync checks for inbound branches from peers. Run it via cron:
+cn runs on a 5-minute cron cycle. Each cycle:
+1. `cn sync` — fetch inbound from peers, send outbound
+2. `cn process` — pop from queue → write input.md → wake agent
 
-### 1. Build the tool
+### 1. Install cn
 
 ```bash
 cd cn-agent
-eval $(opam env)
-dune build @peer-sync
+npm install
+npm link  # makes `cn` available globally
 ```
 
-### 2. Create wrapper script
-
-```bash
-cat > /usr/local/bin/cn-peer-sync << 'EOF'
-#!/bin/bash
-# cn-peer-sync: Check peers, alert agent on inbound branches
-
-HUB_PATH="${1:-$HOME/.openclaw/workspace/cn-$(whoami)}"
-TOOL_PATH="${2:-$HOME/.openclaw/workspace/cn-agent/tools/dist/peer-sync.js}"
-
-output=$(node "$TOOL_PATH" "$HUB_PATH" 2>&1)
-code=$?
-
-case $code in
-  0) exit 0 ;;  # All clear, silent
-  1) echo "peer-sync error: $output" | logger -t cn-peer-sync; exit 1 ;;
-  2) # Inbound branches found — alert agent
-     openclaw system event --mode now --text "PEER_ALERT: $output"
-     exit 0 ;;
-esac
-EOF
-
-chmod +x /usr/local/bin/cn-peer-sync
-```
-
-### 3. Add to crontab
+### 2. Add to crontab
 
 ```bash
 crontab -e
@@ -64,19 +41,22 @@ crontab -e
 
 Add:
 ```cron
-# peer-sync every 30 minutes
-*/30 * * * * /usr/local/bin/cn-peer-sync /root/.openclaw/workspace/cn-sigma
+# cn actor model: sync + process every 5 minutes
+*/5 * * * * cd /path/to/your-hub && cn sync && cn process >> /var/log/cn.log 2>&1
 ```
 
-### 4. Verify
+Replace `/path/to/your-hub` with your actual hub path (e.g., `/root/.openclaw/workspace/cn-sigma`).
+
+### 3. Verify
 
 ```bash
 # Manual test
-/usr/local/bin/cn-peer-sync /root/.openclaw/workspace/cn-sigma
-echo "Exit code: $?"
+cd /path/to/your-hub
+cn sync
+cn process
 
-# Check cron logs
-grep cn-peer-sync /var/log/syslog
+# Check logs
+tail -f /var/log/cn.log
 ```
 
 ---
@@ -86,84 +66,65 @@ grep cn-peer-sync /var/log/syslog
 ```
 ┌─────────────────┐
 │  System cron    │
-│  (every 30 min) │
+│  (every 5 min)  │
 └────────┬────────┘
          │
          ▼
 ┌─────────────────┐
-│  peer-sync.js   │  ← electrons (no AI)
-│  (OCaml → JS)   │
+│    cn sync      │  ← fetch inbound, send outbound
 └────────┬────────┘
          │
-    exit code?
+         ▼
+┌─────────────────┐
+│   cn process    │  ← queue → input.md → wake
+└────────┬────────┘
+         │
+    input.md?
          │
     ┌────┴────┐
     │         │
-   0/1        2
+   empty    has content
     │         │
     ▼         ▼
   silent    openclaw system event
             (wakes agent)
 ```
 
-**Exit codes:**
-- `0`: No inbound branches. Silent.
-- `1`: Error (missing peers.md, git failure). Logs to syslog.
-- `2`: Inbound branches found. Wakes agent with alert.
+**cn process logic:**
+- If `input.md` not empty → do nothing (agent still processing)
+- If queue empty → do nothing (nothing to process)
+- Otherwise → pop from queue → write to input.md → wake agent
 
 ---
 
-## HEARTBEAT.md Update
+## HEARTBEAT.md Pattern
 
-With cron handling peer-sync, simplify HEARTBEAT.md:
+With cron handling cn, HEARTBEAT.md just needs:
 
 ```markdown
 # HEARTBEAT.md
 
 ## Every heartbeat
-- Check for system events (peer alerts arrive here)
+- If input.md has content, process it
 - Daily thread maintenance
-- Hub sync (commit/push if dirty)
 
 ## Time-conditional
 - EOD review at 23:00
 - Weekly review on Sunday
-- Monthly review on 1st
 ```
 
-Remove manual peer-sync instructions — cron handles it.
+cn handles the orchestration. Agent handles the thinking.
 
 ---
 
-## Other Automation Candidates
+## Why System Cron?
 
-Apply the same pattern to other clockwork tasks:
+OpenClaw cron runs **agent turns** — every job uses tokens.
 
-| Task | Script | Alert Condition |
-|------|--------|-----------------|
-| peer-sync | `peer_sync.js` | Inbound branches (exit 2) |
-| disk space | `df -h` | Usage > 80% |
-| backup check | `ls -la backups/` | No recent backup |
-| cert expiry | `openssl` | < 30 days |
-
-Template:
-```bash
-result=$(check_something)
-if [ "$result" = "alert" ]; then
-  openclaw system event --mode now --text "ALERT: $result"
-fi
-```
-
----
-
-## Why Not OpenClaw Cron?
-
-OpenClaw cron runs **agent turns**, not scripts. Every job uses tokens.
-
-For tasks that are pure detection (no judgment needed), system cron is correct:
+For orchestration (sync, queue management), system cron is correct:
 - Zero tokens for routine checks
-- AI only activates when there's something to handle
-- Cleaner separation of concerns
+- AI only activates when there's actual input
+- Clean separation: cn = body, agent = brain
 
 Use OpenClaw cron for:
 - Reminders ("remind me in 20 min")
@@ -177,8 +138,7 @@ Use OpenClaw cron for:
 - Unix-like OS (Linux, macOS, WSL)
 - System cron (`cron`, `crond`, or `launchd`)
 - OpenClaw installed with `openclaw system event` available
-
-Node.js and OCaml are installed by the setup process.
+- Node.js (for cn CLI)
 
 Windows users: Use WSL or adapt to Task Scheduler.
 
