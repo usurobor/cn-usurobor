@@ -885,6 +885,9 @@ Agents and repos this hub communicates with.
   let _ = Child_process.exec_in ~cwd:hub_dir "git add -A" in
   let _ = Child_process.exec_in ~cwd:hub_dir (Printf.sprintf "git commit -m 'Initialize %s hub'" hub_name) in
   
+  (* Write runtime.md *)
+  update_runtime hub_dir;
+  
   print_endline (ok (Printf.sprintf "Created hub: %s" hub_dir));
   print_endline (info "Next steps:");
   print_endline (Printf.sprintf "  cd %s" hub_dir);
