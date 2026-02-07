@@ -6,16 +6,19 @@ Coherence reflection using α/β/γ framework.
 
 Reflections produce two types of output:
 
-| Type | Definition | Example |
-|------|------------|---------|
-| **MCA** | Most Coherent Action — specific action to take | "Redo the RCA following the skill format" |
-| **Insight** | Learning, pattern, principle discovered | "Always follow skills when they exist" |
+| Type | Question | Definition | Example |
+|------|----------|------------|---------|
+| **MCA** | "What's the Most Coherent Action?" | Specific action to take now | "Redo the RCA following the skill format" |
+| **MCI** | "What's the Most Coherent Insight?" | Learning that generalizes beyond this situation | "Always follow skills when they exist" |
 
-MCAs are concrete and actionable. Insights are abstract and inform future MCAs.
+- MCA = concrete, actionable, immediate
+- MCI = abstract, generalizable, informs future MCAs
 
-Track both. Count MCAs per session.
+Track both. Count per session.
 
-**Tracking:** Append insights to `state/insights.md` with date and source.
+**Tracking:** 
+- MCAs: execute and record in daily thread
+- MCIs: append to `state/insights.md` with date and source
 
 ## Axes
 
