@@ -20,6 +20,13 @@ Track both. Count per session.
 - MCAs: execute and record in daily thread
 - MCIs: append to `state/insights.md` with date and source
 
+**Migration:** When an MCI is validated (repeated, survived consolidation), migrate it to the relevant skill:
+- Insight about reviews → `skills/eng/review/SKILL.md`
+- Insight about RCAs → `skills/eng/rca/SKILL.md`
+- Insight about agent conduct → `skills/agent/ca-conduct/SKILL.md`
+
+`state/insights.md` is staging. Skills are permanent home.
+
 ## Axes
 
 | Axis | Question |
