@@ -942,69 +942,122 @@ let run_mca_list hub_path =
 (* === Agent Output (cn out) === *)
 
 let run_out hub_path name gtd =
-  (* Get current input info for notification *)
+  let start_time = now_iso () in
   let inp = input_path hub_path in
-  let input_meta = 
-    if Fs.exists inp then Some (parse_frontmatter (Fs.read inp))
-    else None
-  in
-  let input_id = match input_meta with
-    | Some m -> m |> List.find_map (fun (k, v) -> if k = "id" then Some v else None)
-    | None -> None in
-  let input_from = match input_meta with
-    | Some m -> m |> List.find_map (fun (k, v) -> if k = "from" then Some v else None)
-    | None -> None in
-  
-  (* Write output.md with the GTD action *)
   let outp = output_path hub_path in
-  let id = input_id |> Option.value ~default:"unknown" in
   
-  let (gtd_type, op_details) = match gtd with
-    | Out.Do (Out.Reply { message }) -> ("do", Printf.sprintf "reply: %s" message)
-    | Out.Do (Out.Send { to_; message }) -> ("do", Printf.sprintf "send: %s|%s" to_ message)
-    | Out.Do (Out.Surface { desc }) -> ("do", Printf.sprintf "surface: %s" desc)
-    | Out.Do (Out.Noop { reason }) -> ("do", Printf.sprintf "noop: %s" reason)
-    | Out.Do (Out.Commit { artifact }) -> ("do", Printf.sprintf "commit: %s" artifact)
-    | Out.Defer { reason } -> ("defer", Printf.sprintf "reason: %s" reason)
-    | Out.Delegate { to_ } -> ("delegate", Printf.sprintf "to: %s" to_)
-    | Out.Delete { reason } -> ("delete", Printf.sprintf "reason: %s" reason)
+  (* 1. Read input context *)
+  let input_content = if Fs.exists inp then Fs.read inp else "" in
+  let input_meta = if input_content <> "" then Some (parse_frontmatter input_content) else None in
+  let get_meta key = match input_meta with
+    | Some m -> m |> List.find_map (fun (k, v) -> if k = key then Some v else None)
+    | None -> None in
+  let id = get_meta "id" |> Option.value ~default:"unknown" in
+  let from = get_meta "from" |> Option.value ~default:"unknown" in
+  
+  (* 2. Determine GTD type and op details *)
+  let (gtd_type, op_details, op_kind) = match gtd with
+    | Out.Do (Out.Reply { message }) -> ("do", Printf.sprintf "reply: %s" message, `Reply message)
+    | Out.Do (Out.Send { to_; message }) -> ("do", Printf.sprintf "send: %s|%s" to_ message, `Send (to_, message))
+    | Out.Do (Out.Surface { desc }) -> ("do", Printf.sprintf "surface: %s" desc, `Surface desc)
+    | Out.Do (Out.Noop { reason }) -> ("do", Printf.sprintf "noop: %s" reason, `Noop)
+    | Out.Do (Out.Commit { artifact }) -> ("do", Printf.sprintf "commit: %s" artifact, `Commit artifact)
+    | Out.Defer { reason } -> ("defer", Printf.sprintf "reason: %s" reason, `Defer)
+    | Out.Delegate { to_ } -> ("delegate", Printf.sprintf "to: %s" to_, `Delegate to_)
+    | Out.Delete { reason } -> ("delete", Printf.sprintf "reason: %s" reason, `Delete)
   in
   
-  let content = Printf.sprintf {|---
+  (* 3. Create run directory for archival *)
+  let run_ts = String.map (fun c -> if c = ':' then '-' else c) start_time in
+  let run_dir = Path.join hub_path (Printf.sprintf "logs/runs/%s-%s" run_ts id) in
+  Fs.mkdir_p run_dir;
+  
+  (* 4. Archive input.md *)
+  if input_content <> "" then begin
+    Fs.write (Path.join run_dir "input.md") input_content;
+    print_endline (dim (Printf.sprintf "Archived input → %s" run_dir))
+  end;
+  
+  (* 5. Execute the op *)
+  let outbox_dir = Path.join hub_path "threads/outbox" in
+  Fs.ensure_dir outbox_dir;
+  (match op_kind with
+   | `Reply message ->
+       (* Write reply to outbox addressed to sender *)
+       let reply_file = Printf.sprintf "%s-reply-%s.md" from id in
+       let reply_content = Printf.sprintf {|---
+to: %s
+in-reply-to: %s
+created: %s
+---
+
+%s
+|} from id (now_iso ()) message in
+       Fs.write (Path.join outbox_dir reply_file) reply_content;
+       print_endline (ok (Printf.sprintf "Reply → outbox/%s" reply_file))
+   | `Send (to_, message) ->
+       let send_file = Printf.sprintf "%s-%s.md" to_ id in
+       let send_content = Printf.sprintf {|---
+to: %s
+created: %s
+---
+
+%s
+|} to_ (now_iso ()) message in
+       Fs.write (Path.join outbox_dir send_file) send_content;
+       print_endline (ok (Printf.sprintf "Send → outbox/%s" send_file))
+   | `Surface desc ->
+       (* Add to MCA list *)
+       let mca_dir = Path.join hub_path "state/mca" in
+       Fs.mkdir_p mca_dir;
+       let mca_file = Printf.sprintf "%s.md" id in
+       Fs.write (Path.join mca_dir mca_file) desc;
+       print_endline (ok (Printf.sprintf "Surfaced MCA: %s" desc))
+   | `Noop -> print_endline (dim "Noop - no action taken")
+   | `Commit artifact -> print_endline (ok (Printf.sprintf "Commit recorded: %s" artifact))
+   | `Defer -> print_endline (dim "Deferred - will resurface later")
+   | `Delegate to_ -> print_endline (ok (Printf.sprintf "Delegated to %s" to_))
+   | `Delete -> print_endline (dim "Deleted - removed from queue"));
+  
+  (* 6. Write output.md *)
+  let output_content = Printf.sprintf {|---
 id: %s
 gtd: %s
 %s
 created: %s
 ---
 |} id gtd_type op_details (now_iso ()) in
+  Fs.write outp output_content;
   
-  Fs.write outp content;
-  log_action hub_path "out" (Printf.sprintf "id:%s gtd:%s" id gtd_type);
-  print_endline (ok (Printf.sprintf "Output: %s (%s)" gtd_type id));
+  (* 7. Archive output.md *)
+  Fs.write (Path.join run_dir "output.md") output_content;
   
-  (* Auto-notify input creator *)
-  (match input_from with
-   | Some from when from <> name && from <> "system" ->
-       let notify_msg = Printf.sprintf "[auto] %s: %s on %s" name gtd_type id in
-       let outbox_dir = Path.join hub_path "threads/outbox" in
-       Fs.ensure_dir outbox_dir;
-       let notify_file = Printf.sprintf "%s-auto-notify-%s.md" from id in
-       let notify_content = Printf.sprintf {|---
-to: %s
-created: %s
-auto: true
----
-
-%s
-|} from (now_iso ()) notify_msg in
-       Fs.write (Path.join outbox_dir notify_file) notify_content;
-       log_action hub_path "out.notify" (Printf.sprintf "to:%s id:%s" from id);
-       print_endline (ok (Printf.sprintf "Notified %s" from));
-       
-       (* Push to send notification *)
-       let _ = Child_process.exec_in ~cwd:hub_path "git add -A && git commit -m '[auto] notify' && git push" in
-       print_endline (ok "Pushed notification")
-   | _ -> ())
+  (* 8. Write run metadata *)
+  let end_time = now_iso () in
+  let meta_content = Printf.sprintf {|{
+  "id": "%s",
+  "from": "%s",
+  "gtd": "%s",
+  "start": "%s",
+  "end": "%s",
+  "agent": "%s"
+}
+|} id from gtd_type start_time end_time name in
+  Fs.write (Path.join run_dir "meta.json") meta_content;
+  
+  (* 9. Clear state files *)
+  Fs.write inp "";
+  Fs.write outp "";
+  print_endline (ok "State cleared");
+  
+  (* 10. Log and commit *)
+  log_action hub_path "out" (Printf.sprintf "id:%s gtd:%s run:%s" id gtd_type run_dir);
+  print_endline (ok (Printf.sprintf "Run complete: %s (%s)" gtd_type id));
+  
+  (* Auto-commit the run *)
+  let _ = Child_process.exec_in ~cwd:hub_path 
+    (Printf.sprintf "git add -A && git commit -m 'run: %s %s'" gtd_type id) in
+  print_endline (ok "Committed run")
 
 (* === MCA Review Injection === *)
 
@@ -1071,7 +1124,7 @@ If you can do it now, do it. Otherwise, explain why not.
   log_action hub_path "mca.review-queued" (Printf.sprintf "count:%d" (List.length mcas));
   print_endline (ok (Printf.sprintf "Queued MCA review (%d MCAs)" (List.length mcas)))
 
-(* === Process (Actor Loop) === *)
+(* === Inbound (Actor Loop) === *)
 
 (* Auto-save: commit and push if there are changes *)
 let auto_save hub_path name =
@@ -1095,8 +1148,8 @@ let auto_save hub_path name =
            print_endline (warn "Auto-commit failed"))
   | _ -> ()
 
-let run_process hub_path name =
-  print_endline (info "cn process: actor loop...");
+let run_inbound hub_path name =
+  print_endline (info "cn inbound: handling external input...");
   
   (* Step 1: Queue any new inbox items *)
   let queued = queue_inbox_items hub_path in
@@ -1501,7 +1554,7 @@ let () =
           | Outbox Outbox.Flush -> outbox_flush hub_path name
           | Sync -> run_sync hub_path name
           | Next -> run_next hub_path
-          | Process -> run_process hub_path name
+          | Inbound -> run_inbound hub_path name
           | Read t -> run_read hub_path t
           | Reply (t, m) -> run_reply hub_path t m
           | Send (p, m) -> run_send hub_path p m
