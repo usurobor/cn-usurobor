@@ -15,8 +15,8 @@
 
 ; cn library (pure functions, testable)
 (library
- (name cn_ops)
- (modules cn_ops)
+ (name cn_lib)
+ (modules cn_lib)
  (libraries inbox_lib)
  (modes :standard melange))
 
@@ -25,6 +25,6 @@
  (target output)
  (alias cn)
  (modules cn)
- (libraries cn_ops inbox_lib git cn_io)
+ (libraries cn_lib inbox_lib git cn_io)
  (module_systems commonjs)
  (preprocess (pps melange.ppx)))
