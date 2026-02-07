@@ -96,10 +96,13 @@ Written by agent. Must include matching id.
 id: pi-review-request
 status: 200
 tldr: reviewed, approved
+mca: credit original source, then do it
 ---
 
 [details]
 ```
+
+**MCA field:** Optional. Records the Most Coherent Action identified during processing. cn feeds MCAs back as future inputs for reinforcement learning.
 
 ### state/queue/
 

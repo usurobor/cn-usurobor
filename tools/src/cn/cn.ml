@@ -642,9 +642,38 @@ let archive_io_pair hub_path =
       Fs.ensure_dir logs_in;
       Fs.ensure_dir logs_out;
       
+      let output_content = Fs.read outp in
       let archive_name = input_id ^ ".md" in
       Fs.write (Path.join logs_in archive_name) (Fs.read inp);
-      Fs.write (Path.join logs_out archive_name) (Fs.read outp);
+      Fs.write (Path.join logs_out archive_name) output_content;
+      
+      (* Extract MCA for feedback loop *)
+      let output_meta = parse_frontmatter output_content in
+      (match List.find_opt (fun (k, _) -> k = "mca") output_meta with
+       | Some (_, mca_text) ->
+           let mca_id = Printf.sprintf "mca-%s" input_id in
+           let mca_content = Printf.sprintf {|---
+id: %s
+type: mca-feedback
+original: %s
+---
+
+# MCA Reinforcement
+
+You identified this MCA during processing of %s:
+
+> %s
+
+Apply this pattern next time.
+|} mca_id input_id input_id mca_text in
+           let qdir = queue_dir hub_path in
+           Fs.ensure_dir qdir;
+           let qfile = Path.join qdir (Printf.sprintf "%s-%s.md" (now_iso ()) mca_id) in
+           Fs.write qfile mca_content;
+           log_action hub_path "mca.queued" (Printf.sprintf "id:%s mca:%s" input_id mca_text);
+           print_endline (info (Printf.sprintf "MCA queued for feedback: %s" mca_text))
+       | None -> ());
+      
       Fs.unlink inp;
       Fs.unlink outp;
       
