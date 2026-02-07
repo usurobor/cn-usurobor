@@ -164,7 +164,17 @@ Erlang's actor model has been battle-tested for 35+ years in telecom systems req
 
 **Interface:**
 ```
-cn output <op>
+cn add <op> [params...]
+```
+
+Examples:
+```bash
+cn add done pi-thread-123
+cn add reply pi-thread-123 "message"
+cn add send pi "message"
+cn add defer pi-thread-123
+cn add delete pi-thread-123
+cn add surface "description"
 ```
 
 **Type-level encoding (OCaml):**
@@ -180,7 +190,7 @@ type op =
 
 (* Agent's ENTIRE interface — nothing else exposed *)
 module Agent : sig
-  val output : op -> unit
+  val add : op -> unit
   (* No Fs. No exec. No other cn commands. Nothing. *)
 end
 ```
@@ -189,8 +199,8 @@ end
 
 - No `Fs.write` exposed
 - No `exec` exposed  
-- No `cn done`, `cn send` directly
-- Just `output : op -> unit`
+- No direct filesystem access
+- Just `add : op -> unit`
 
 The type system makes bypass impossible. Not convention. Not runtime check. Compile-time enforcement.
 
