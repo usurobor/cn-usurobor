@@ -164,17 +164,17 @@ Erlang's actor model has been battle-tested for 35+ years in telecom systems req
 
 **Interface:**
 ```
-cn add <op> [params...]
+cn out <op> --param value
 ```
 
 Examples:
 ```bash
-cn add done --id pi-thread-123
-cn add reply --id pi-thread-123 --message "response text"
-cn add send --to pi --message "hello"
-cn add defer --id pi-thread-123
-cn add delete --id pi-thread-123
-cn add surface --desc "MCA description"
+cn out done --id pi-thread-123
+cn out reply --id pi-thread-123 --message "response text"
+cn out send --to pi --message "hello"
+cn out defer --id pi-thread-123
+cn out delete --id pi-thread-123
+cn out surface --desc "MCA description"
 ```
 
 Parameters via `--paramName value`. Explicit. Type-safe.
@@ -192,7 +192,7 @@ type op =
 
 (* Agent's ENTIRE interface — nothing else exposed *)
 module Agent : sig
-  val add : op -> unit
+  val out : op -> unit
   (* No Fs. No exec. No other cn commands. Nothing. *)
 end
 ```
@@ -202,7 +202,7 @@ end
 - No `Fs.write` exposed
 - No `exec` exposed  
 - No direct filesystem access
-- Just `add : op -> unit`
+- Just `out : op -> unit`
 
 The type system makes bypass impossible. Not convention. Not runtime check. Compile-time enforcement.
 
