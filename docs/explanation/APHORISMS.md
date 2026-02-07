@@ -54,6 +54,15 @@ Good engineers are productively lazy — they automate, delegate to machines, an
 
 ---
 
+## On Coherence
+
+**"Make Intelligence Coherent Again (MICA)"**
+— Axiom, 2026-02-07
+
+The mission.
+
+---
+
 ## On Verification
 
 **"Assumption is the mother of all fuck ups."**
