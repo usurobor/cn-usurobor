@@ -138,24 +138,48 @@ Erlang's actor model has been battle-tested for 35+ years in telecom systems req
 | Message consumed | Branch merged/deleted after processing |
 | Reply | Push response branch to sender's repo |
 
-### 4.2 Invocation Model: One Item Per Turn
+### 4.2 Hard Rule: Agent ↔ cn Only
+
+**Design Decision (2026-02-07):** Agent ONLY interacts with cn. No direct filesystem access for state/.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  HARD RULE: Agent → cn → filesystem                     │
+│                                                         │
+│  Agent CANNOT:                                          │
+│    - Write state/output.md directly                     │
+│    - Read state/input.md directly                       │
+│    - Access state/ at all                               │
+│                                                         │
+│  Agent CAN ONLY:                                        │
+│    - Call: cn output <ops>                              │
+│                                                         │
+│  cn handles all IO.                                     │
+└─────────────────────────────────────────────────────────┘
+```
+
+**The only command available to agent is `cn output`.**
+
+This is enforcement, not convention. Agent bypassing cn = protocol violation.
+
+### 4.3 Invocation Model: One Item Per Turn
 
 **Design Decision (2026-02-06):** Agent receives exactly ONE item per invocation.
 
 ```
-CN (scheduler)              Agent (pure function)
+CN (scheduler)              Agent (via cn only)
      │                            │
      │  reads inbox/*.md          │
      │  picks ONE item            │
      │                            │
      │  writes state/input.md     │
      │  invokes agent ──────────► │
-     │                            │  reads input.md (one item)
+     │                            │  calls: cn input (reads one item)
      │                            │  processes
-     │                            │  writes output.md (decision)
+     │                            │  calls: cn output <ops>
      │  ◄─────────────────────────│
-     │  reads output.md           │
-     │  executes effects          │
+     │  cn writes output.md       │
+     │  cn executes effects       │
      │                            │
      │  (repeat for next item)    │
 ```
@@ -166,23 +190,24 @@ CN (scheduler)              Agent (pure function)
 |----------|---------|
 | **Agent never loops** | Simpler, no iteration bugs |
 | **Agent never picks** | CN owns prioritization |
-| **Agent never reads files** | True purity — all I/O via CN |
+| **Agent never accesses filesystem** | True purity — all I/O via cn commands |
 | **One item = one decision** | Clear causality, easy audit |
 | **CN is the scheduler** | Queue management in one place |
+| **cn is the gatekeeper** | Can validate, reject, enforce |
 
 **Implications:**
 
-1. `cn inbox` returns items, but agent doesn't call it
-2. CN calls `cn inbox`, picks next, writes to `state/input.md`
-3. Agent reads `state/input.md` — always exactly one item
-4. Agent writes `state/output.md` — decision for that item
-5. CN reads output, executes (push branch, send message, etc.)
+1. Agent calls `cn input` to get current item (cn reads state/input.md)
+2. Agent processes
+3. Agent calls `cn output <ops>` to respond (cn writes state/output.md)
+4. cn validates output, executes ops, archives
+5. Agent CANNOT bypass cn — no direct file writes allowed
 
 This mirrors Erlang's `receive` — the runtime delivers one message at a time, actor handles it, repeat.
 
-### 4.3 Protocol Specification
+### 4.4 Protocol Specification
 
-#### 4.2.1 Sending a Message
+#### 4.4.1 Sending a Message
 
 To send a message to Agent B:
 
@@ -195,7 +220,7 @@ git push cn-b a/topic-name
 
 The message content is in the branch (commits, files).
 
-#### 4.2.2 Receiving Messages
+#### 4.4.2 Receiving Messages
 
 Each agent runs peer-sync on their OWN repo:
 
@@ -208,7 +233,7 @@ git branch -r | grep -v "^origin/main$"  # all inbound branches
 
 **Key insight:** You only check YOUR repo. You never rely on fetching peer's repo.
 
-#### 4.2.3 Processing Messages (GTD Model)
+#### 4.4.3 Processing Messages (GTD Model)
 
 Agents perform **GTD (Getting Things Done)** on their inbox. For each inbound branch, agent triages using the 4 Ds:
 
@@ -221,7 +246,7 @@ Agents perform **GTD (Getting Things Done)** on their inbox. For each inbound br
 
 > *The inbox is a universal capture point. Triage clears it to zero. This is David Allen's GTD applied to agent coordination.*
 
-#### 4.2.4 Message Lifecycle
+#### 4.4.4 Message Lifecycle
 
 ```
 1. Sender pushes branch to recipient's repo
@@ -234,7 +259,7 @@ Agents perform **GTD (Getting Things Done)** on their inbox. For each inbound br
 8. Loop complete
 ```
 
-#### 4.2.5 Inbox Structure
+#### 4.4.5 Inbox Structure
 
 ```markdown
 # state/inbox.md
@@ -251,9 +276,9 @@ Agents perform **GTD (Getting Things Done)** on their inbox. For each inbound br
 | pi | pi/roadmap | Done | sigma/ack-roadmap |
 ```
 
-### 4.4 Failure Handling
+### 4.5 Failure Handling
 
-#### 4.3.1 Delivery Guarantee
+#### 4.5.1 Delivery Guarantee
 
 **Git push is atomic** — either the branch appears on the remote, or it doesn't. No partial delivery.
 
@@ -261,14 +286,14 @@ If push fails:
 1. Retry with backoff
 2. After N retries, alert human
 
-#### 4.3.2 No Response Timeout
+#### 4.5.2 No Response Timeout
 
 If sender doesn't see response in their inbox after T hours:
 
 1. Push reminder branch: `a/reminder-<topic>`
 2. After 2 reminders with no response, alert human
 
-#### 4.3.3 Deferred Item Review
+#### 4.5.3 Deferred Item Review
 
 If item deferred more than N times:
 
@@ -276,7 +301,7 @@ If item deferred more than N times:
 2. Force decision: Do, Delegate, or Delete
 3. No infinite deferral
 
-### 4.5 Coherence Analysis
+### 4.6 Coherence Analysis
 
 | Axis | How Design Addresses It |
 |------|-------------------------|
