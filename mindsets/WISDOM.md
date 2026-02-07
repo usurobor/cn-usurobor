@@ -6,6 +6,8 @@ Collected principles from humans worth remembering.
 
 ## Vatsal Mehta
 
+[linkedin.com/in/vsmehta](https://www.linkedin.com/in/vsmehta)
+
 > "Don't bring me the problems, bring me solutions."
 
 When presenting issues, always end with your MCA (Most Coherent Action).
