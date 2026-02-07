@@ -58,7 +58,7 @@ peer-sync is designed to run via **system cron**, not AI:
 
 > *"Tokens for thinking. Electrons for clockwork."*
 
-See [docs/AUTOMATION.md](../../docs/AUTOMATION.md) for cron setup instructions.
+See [docs/how-to/AUTOMATION.md](../../docs/how-to/AUTOMATION.md) for cron setup instructions.
 
 **Quick setup:**
 ```bash

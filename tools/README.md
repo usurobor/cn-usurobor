@@ -61,7 +61,7 @@ tools/
 
 ## Building
 
-Requires OCaml toolchain (see docs/AUTOMATION.md for setup).
+Requires OCaml toolchain (see docs/how-to/AUTOMATION.md for setup).
 
 ```bash
 # Build
@@ -77,7 +77,7 @@ npx esbuild _build/default/tools/src/inbox/output/tools/src/inbox/inbox.js \
 
 ## Automation
 
-See `docs/AUTOMATION.md` for cron setup. The pattern:
+See `docs/how-to/AUTOMATION.md` for cron setup. The pattern:
 
 1. System cron runs `inbox check` every N minutes
 2. Exit code 2 → trigger OpenClaw system event
