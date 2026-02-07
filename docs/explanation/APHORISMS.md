@@ -77,8 +77,6 @@ Stop asking. Start doing.
 
 Don't assume something was processed because the queue is empty. Verify.
 
-*Example (Sigma, 2026-02-07):* Assumed "queue empty = all 30+ branches processed." Reality: no tracking of "branch X → processed ✓". A branch could have failed to materialize, been skipped, or never queued. The gap: cn checked "is this in inbox?" — not "was this processed to completion?"
-
 ---
 
 ## On Solutions
