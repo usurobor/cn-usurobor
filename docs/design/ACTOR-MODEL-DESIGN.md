@@ -164,45 +164,51 @@ Erlang's actor model has been battle-tested for 35+ years in telecom systems req
 
 **Interface:**
 ```
-cn out success <op> --param value
+cn out done <op> --param value
 ```
 
-Agent posts `success(op)` — op is what cn must execute.
+Agent posts `done(op)` — marks input complete, op is what cn executes.
 
 Examples:
 ```bash
-cn out success done --id pi-thread-123 --artifact abc123f
-cn out success reply --id pi-thread-123 --message "response text"
-cn out success send --to pi --message "hello"
-cn out success defer --id pi-thread-123 --reason "waiting on X"
-cn out success delete --id pi-thread-123 --reason "duplicate"
-cn out success surface --desc "MCA description"
-cn out success noop --id pi-thread-123 --reason "acknowledged, no action needed"
+cn out done noop --reason "acknowledged, no action needed"
+cn out done reply --message "response text"
+cn out done send --to pi --message "hello"
+cn out done commit --artifact abc123f
+cn out done commit --artifact https://github.com/user/repo/commit/abc123
 ```
 
-Parameters via `--paramName value`. Explicit. Type-safe.
+For non-completion:
+```bash
+cn out defer --reason "waiting on X"
+cn out delete --reason "duplicate"
+cn out surface --desc "MCA description"
+```
 
 **Rules:**
-- `done` requires `--artifact` (commit hash or URL)
-- `noop` requires `--reason` (explicit justification)
-- No empty acks. Every completion has evidence or reason.
+- `done commit` requires `--artifact`
+- `done noop` requires `--reason`
+- `done reply/send` — message is the artifact
+- No empty completions.
 
 **Type-level encoding (OCaml):**
 ```ocaml
 (* The ONLY type agent can produce *)
 type artifact = Commit of string | Url of string
 
-type op =
-  | Done of { id: string; artifact: artifact }  (* artifact required *)
-  | Reply of { id: string; message: string }
-  | Send of { to_: string; message: string }  
-  | Defer of { id: string; reason: string }
-  | Delete of { id: string; reason: string }
-  | Surface of { desc: string }
-  | Noop of { id: string; reason: string }  (* reason required *)
+(* What cn executes when done *)
+type done_op =
+  | Noop of { reason: string }
+  | Reply of { message: string }
+  | Send of { to_: string; message: string }
+  | Commit of { artifact: artifact }
 
-(* Agent posts success with op for cn to execute *)
-type output = Success of op
+(* Agent output *)
+type output =
+  | Done of done_op           (* completes current input *)
+  | Defer of { reason: string }
+  | Delete of { reason: string }
+  | Surface of { desc: string }
 
 (* Agent's ENTIRE interface — nothing else exposed *)
 module Agent : sig
