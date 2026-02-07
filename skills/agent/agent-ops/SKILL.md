@@ -121,13 +121,13 @@ The wake mechanism could use retry logic - surfacing as MCA.
 
 ```ocaml
 type agent_op =
-  | OpAck of string
-  | OpDone of string
-  | OpFail of string * string
-  | OpReply of string * string
-  | OpSend of string * string
-  | OpDelegate of string * string
-  | OpDefer of string * string option
-  | OpDelete of string
-  | OpSurface of string
+  | Ack of string
+  | Done of string
+  | Fail of string * string
+  | Reply of string * string
+  | Send of string * string
+  | Delegate of string * string
+  | Defer of string * string option
+  | Delete of string
+  | Surface of string
 ```

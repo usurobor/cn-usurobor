@@ -53,56 +53,56 @@ type gtd_cmd =
    cn parses output.md and executes matching operations. *)
 
 type agent_op =
-  | OpAck of string                      (* Acknowledge input, no further action *)
-  | OpDone of string                     (* Mark input/thread complete *)
-  | OpFail of string * string            (* Failed to process: id, reason *)
-  | OpReply of string * string           (* Reply to thread: id, message *)
-  | OpSend of string * string            (* Send to peer: peer, message *)
-  | OpDelegate of string * string        (* Forward to peer: id, peer *)
-  | OpDefer of string * string option    (* Postpone: id, until *)
-  | OpDelete of string                   (* Discard: id *)
-  | OpSurface of string                  (* Surface MCA for community *)
+  | Ack of string                      (* Acknowledge input, no further action *)
+  | Done of string                     (* Mark input/thread complete *)
+  | Fail of string * string            (* Failed to process: id, reason *)
+  | Reply of string * string           (* Reply to thread: id, message *)
+  | Send of string * string            (* Send to peer: peer, message *)
+  | Delegate of string * string        (* Forward to peer: id, peer *)
+  | Defer of string * string option    (* Postpone: id, until *)
+  | Delete of string                   (* Discard: id *)
+  | Surface of string                  (* Surface MCA for community *)
 
 let string_of_agent_op = function
-  | OpAck id -> "ack:" ^ id
-  | OpDone id -> "done:" ^ id
-  | OpFail (id, reason) -> "fail:" ^ id ^ " reason:" ^ reason
-  | OpReply (id, _) -> "reply:" ^ id
-  | OpSend (peer, _) -> "send:" ^ peer
-  | OpDelegate (id, peer) -> "delegate:" ^ id ^ " to:" ^ peer
-  | OpDefer (id, None) -> "defer:" ^ id
-  | OpDefer (id, Some until) -> "defer:" ^ id ^ " until:" ^ until
-  | OpDelete id -> "delete:" ^ id
-  | OpSurface desc -> "surface:" ^ desc
+  | Ack id -> "ack:" ^ id
+  | Done id -> "done:" ^ id
+  | Fail (id, reason) -> "fail:" ^ id ^ " reason:" ^ reason
+  | Reply (id, _) -> "reply:" ^ id
+  | Send (peer, _) -> "send:" ^ peer
+  | Delegate (id, peer) -> "delegate:" ^ id ^ " to:" ^ peer
+  | Defer (id, None) -> "defer:" ^ id
+  | Defer (id, Some until) -> "defer:" ^ id ^ " until:" ^ until
+  | Delete id -> "delete:" ^ id
+  | Surface desc -> "surface:" ^ desc
 
 (* Parse agent_op from frontmatter key-value pairs *)
 let parse_agent_op key value =
   match key with
-  | "ack" -> Some (OpAck value)
-  | "done" -> Some (OpDone value)
+  | "ack" -> Some (Ack value)
+  | "done" -> Some (Done value)
   | "fail" -> 
       (match String.index_opt value '|' with
-       | Some i -> Some (OpFail (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
-       | None -> Some (OpFail (value, "unspecified")))
+       | Some i -> Some (Fail (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
+       | None -> Some (Fail (value, "unspecified")))
   | "reply" ->
       (match String.index_opt value '|' with
-       | Some i -> Some (OpReply (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
+       | Some i -> Some (Reply (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
        | None -> None)
   | "send" ->
       (match String.index_opt value '|' with
-       | Some i -> Some (OpSend (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
+       | Some i -> Some (Send (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
        | None -> None)
   | "delegate" ->
       (match String.index_opt value '|' with
-       | Some i -> Some (OpDelegate (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
+       | Some i -> Some (Delegate (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
        | None -> None)
   | "defer" ->
       (match String.index_opt value '|' with
-       | Some i -> Some (OpDefer (String.sub value 0 i, Some (String.sub value (i+1) (String.length value - i - 1))))
-       | None -> Some (OpDefer (value, None)))
-  | "delete" -> Some (OpDelete value)
-  | "surface" -> Some (OpSurface value)
-  | "mca" -> Some (OpSurface value)  (* alias *)
+       | Some i -> Some (Defer (String.sub value 0 i, Some (String.sub value (i+1) (String.length value - i - 1))))
+       | None -> Some (Defer (value, None)))
+  | "delete" -> Some (Delete value)
+  | "surface" -> Some (Surface value)
+  | "mca" -> Some (Surface value)  (* alias *)
   | _ -> None
 
 (* Extract all agent_ops from frontmatter *)
@@ -457,4 +457,4 @@ Actor Model:
   Agent reads input.md, processes, deletes when done.
 |}
 
-let version = "2.1.15"
+let version = "2.1.16"
