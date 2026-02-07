@@ -179,31 +179,47 @@ let inbox_check hub_path name =
   
   if total = 0 then print_endline (ok "Inbox clear")
 
+(* Delete remote branch after processing *)
+let delete_remote_branch hub_path branch =
+  let cmd = Printf.sprintf "git push origin --delete %s 2>/dev/null" branch in
+  match Child_process.exec_in ~cwd:hub_path cmd with
+  | Some _ -> 
+      log_action hub_path "branch.delete" branch;
+      print_endline (dim (Printf.sprintf "  Deleted remote: %s" branch));
+      true
+  | None -> false
+
 let materialize_branch hub_path inbox_dir peer_name branch =
   let diff_cmd = Printf.sprintf "git diff main...origin/%s --name-only 2>/dev/null || git diff master...origin/%s --name-only" branch branch in
-  Child_process.exec_in ~cwd:hub_path diff_cmd
-  |> Option.map split_lines
-  |> Option.value ~default:[]
-  |> List.filter is_md_file
-  |> List.filter_map (fun file ->
+  let files = Child_process.exec_in ~cwd:hub_path diff_cmd
+    |> Option.map split_lines
+    |> Option.value ~default:[]
+    |> List.filter is_md_file in
+  
+  let branch_slug = match branch |> String.split_on_char '/' |> List.rev with
+    | x :: _ -> x
+    | [] -> branch in
+  let inbox_file = Printf.sprintf "%s-%s.md" peer_name branch_slug in
+  let inbox_path = Path.join inbox_dir inbox_file in
+  let archived_path = Path.join (Path.join inbox_dir "_archived") inbox_file in
+  
+  (* Already processed? Delete branch but don't re-materialize *)
+  if Fs.exists inbox_path || Fs.exists archived_path then begin
+    let _ = delete_remote_branch hub_path branch in
+    []
+  end
+  else
+    files |> List.filter_map (fun file ->
       let show_cmd = Printf.sprintf "git show origin/%s:%s" branch file in
       match Child_process.exec_in ~cwd:hub_path show_cmd with
       | None -> None
       | Some content ->
-          let branch_slug = match branch |> String.split_on_char '/' |> List.rev with
-            | x :: _ -> x
-            | [] -> branch
-          in
-          let inbox_file = Printf.sprintf "%s-%s.md" peer_name branch_slug in
-          let inbox_path = Path.join inbox_dir inbox_file in
-          let archived_path = Path.join (Path.join inbox_dir "_archived") inbox_file in
-          match Fs.exists inbox_path || Fs.exists archived_path with
-          | true -> None
-          | false ->
-              let meta = [("from", peer_name); ("branch", branch); ("file", file); ("received", now_iso ())] in
-              Fs.write inbox_path (update_frontmatter content meta);
-              log_action hub_path "inbox.materialize" inbox_file;
-              Some inbox_file)
+          let meta = [("from", peer_name); ("branch", branch); ("file", file); ("received", now_iso ())] in
+          Fs.write inbox_path (update_frontmatter content meta);
+          log_action hub_path "inbox.materialize" inbox_file;
+          (* Delete remote branch after successful materialization *)
+          let _ = delete_remote_branch hub_path branch in
+          Some inbox_file)
 
 let inbox_process hub_path =
   print_endline (info "Processing inbox...");
