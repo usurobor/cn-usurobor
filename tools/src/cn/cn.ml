@@ -6,7 +6,7 @@
     - Option over exceptions
     - Effects at boundaries *)
 
-open Cn_lib
+open Cn_ops
 
 (* === Node.js FFI Modules === *)
 
