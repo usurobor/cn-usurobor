@@ -25,6 +25,8 @@ Track both. Count per session.
 - Insight about RCAs → `skills/eng/rca/SKILL.md`
 - Insight about agent conduct → `skills/agent/ca-conduct/SKILL.md`
 
+**If no relevant skill exists → create it.** MCIs can spawn new skills.
+
 `state/insights.md` is staging. Skills are permanent home.
 
 ## Axes
