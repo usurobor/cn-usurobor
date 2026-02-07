@@ -197,16 +197,16 @@ cn out delete --reason "duplicate"
 
 **Type-level encoding (OCaml):**
 ```ocaml
-(* What cn executes — from existing agent_op *)
-type op = agent_op  (* Reply, Send, Surface, Commit, Noop, etc. *)
-
 (* GTD protocol — how agent responds to input *)
 (* ONLY 4 OPTIONS. No other way to out. *)
 type gtd =
-  | Do of op               (* complete, cn executes op *)
+  | Do of Cn.op            (* complete, cn executes the op *)
   | Defer of string        (* postpone with reason *)
   | Delegate of string     (* forward to peer *)
   | Delete of string       (* discard with reason *)
+
+(* Do takes any op that cn supports *)
+(* See: Cn.op / agent_op in cn_lib.ml *)
 
 (* Agent's ENTIRE interface — nothing else exposed *)
 module Agent : sig
