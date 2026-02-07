@@ -21,22 +21,27 @@ opam install dune melange melange.ppx ppx_expect
 
 ### Variant Naming
 
-When multiple types share constructor names, OCaml can't disambiguate. Rules:
+When multiple types share constructor names, use modules for scoping:
 
-1. **Agent-facing types**: Clean names, no prefix
-   ```ocaml
-   type agent_op = Ack | Done | Fail | Reply | Send | ...
-   ```
+```ocaml
+(* Clean: module-scoped variants *)
+module Inbox = struct
+  type cmd = Check | Process | Flush
+end
 
-2. **Internal/CLI types**: Minimal prefix for disambiguation
-   ```ocaml
-   type inbox_cmd = In_check | In_process | In_flush
-   type outbox_cmd = Out_check | Out_flush
-   type peer_cmd = P_list | P_add of ... | P_remove of ...
-   type gtd_cmd = G_delete of ... | G_defer of ...
-   ```
+module Outbox = struct
+  type cmd = Check | Flush
+end
 
-3. **Priority**: Keep user-facing/API types clean. Add prefixes to internal plumbing.
+(* Usage *)
+| Inbox Inbox.Check -> ...
+| Outbox Outbox.Flush -> ...
+```
+
+Rules:
+1. **Use modules** for related command groups
+2. **Clean constructor names** inside modules (no prefixes)
+3. **Qualify at use site**: `Module.Constructor`
 
 ## Structure
 

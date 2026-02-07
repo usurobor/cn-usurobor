@@ -1282,7 +1282,7 @@ let run_peer_sync hub_path =
   
   print_endline (ok "Peer sync complete")
 
-(* === Inbox In_flush (delete processed branches) === *)
+(* === Inbox Inbox.Flush (delete processed branches) === *)
 
 let inbox_flush hub_path _name =
   print_endline (info "Flushing inbox (deleting processed branches)...");
@@ -1408,31 +1408,31 @@ let () =
           match cmd with
           | Status -> run_status hub_path name
           | Doctor -> run_doctor hub_path
-          | Inbox In_check -> inbox_check hub_path name
-          | Inbox In_process -> inbox_process hub_path
-          | Inbox In_flush -> inbox_flush hub_path name
-          | Outbox Out_check -> outbox_check hub_path
-          | Outbox Out_flush -> outbox_flush hub_path name
+          | Inbox Inbox.Check -> inbox_check hub_path name
+          | Inbox Inbox.Process -> inbox_process hub_path
+          | Inbox Inbox.Flush -> inbox_flush hub_path name
+          | Outbox Outbox.Check -> outbox_check hub_path
+          | Outbox Outbox.Flush -> outbox_flush hub_path name
           | Sync -> run_sync hub_path name
           | Next -> run_next hub_path
           | Process -> run_process hub_path name
           | Read t -> run_read hub_path t
           | Reply (t, m) -> run_reply hub_path t m
           | Send (p, m) -> run_send hub_path p m
-          | Gtd (G_delete t) -> gtd_delete hub_path t
-          | Gtd (G_defer (t, u)) -> gtd_defer hub_path t u
-          | Gtd (G_delegate (t, p)) -> gtd_delegate hub_path name t p
-          | Gtd (G_do t) -> gtd_do hub_path t
-          | Gtd (G_done t) -> gtd_done hub_path t
+          | Gtd (Gtd.Delete t) -> gtd_delete hub_path t
+          | Gtd (Gtd.Defer (t, u)) -> gtd_defer hub_path t u
+          | Gtd (Gtd.Delegate (t, p)) -> gtd_delegate hub_path name t p
+          | Gtd (Gtd.Do t) -> gtd_do hub_path t
+          | Gtd (Gtd.Done t) -> gtd_done hub_path t
           | Commit msg -> run_commit hub_path name msg
           | Push -> run_push hub_path
           | Save msg -> run_commit hub_path name msg; run_push hub_path
-          | Peer P_list -> run_peer_list hub_path
-          | Peer (P_add (n, url)) -> run_peer_add hub_path n url
-          | Peer (P_remove n) -> run_peer_remove hub_path n
-          | Peer P_sync -> run_peer_sync hub_path
-          | Queue Q_list -> run_queue_list hub_path
-          | Queue Q_clear -> run_queue_clear hub_path
-          | Mca M_list -> run_mca_list hub_path
-          | Mca (M_add desc) -> run_mca_add hub_path name desc
+          | Peer Peer.List -> run_peer_list hub_path
+          | Peer (Peer.Add (n, url)) -> run_peer_add hub_path n url
+          | Peer (Peer.Remove n) -> run_peer_remove hub_path n
+          | Peer Peer.Sync -> run_peer_sync hub_path
+          | Queue Queue.List -> run_queue_list hub_path
+          | Queue Queue.Clear -> run_queue_clear hub_path
+          | Mca Mca.List -> run_mca_list hub_path
+          | Mca (Mca.Add desc) -> run_mca_add hub_path name desc
           | Help | Version | Init _ | Update -> () (* handled above *)

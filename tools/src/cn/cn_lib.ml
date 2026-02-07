@@ -34,20 +34,35 @@ let non_empty s = String.trim s <> ""
 
 (* === CLI Commands (exhaustive variants) === *)
 
-(* Subcommand types - prefixed for disambiguation *)
-type inbox_cmd = In_check | In_process | In_flush
-type outbox_cmd = Out_check | Out_flush
-type peer_cmd = P_list | P_add of string * string | P_remove of string | P_sync
-type queue_cmd = Q_list | Q_clear
-type mca_cmd = M_list | M_add of string
+(* Subcommand modules - clean names, module-scoped *)
+module Inbox = struct
+  type cmd = Check | Process | Flush
+end
 
-(* GTD commands - G_ prefix to disambiguate from agent_op *)
-type gtd_cmd =
-  | G_delete of string
-  | G_defer of string * string option
-  | G_delegate of string * string
-  | G_do of string
-  | G_done of string
+module Outbox = struct
+  type cmd = Check | Flush
+end
+
+module Peer = struct
+  type cmd = List | Add of string * string | Remove of string | Sync
+end
+
+module Queue = struct
+  type cmd = List | Clear
+end
+
+module Mca = struct
+  type cmd = List | Add of string
+end
+
+module Gtd = struct
+  type cmd =
+    | Delete of string
+    | Defer of string * string option
+    | Delegate of string * string
+    | Do of string
+    | Done of string
+end
 
 (* === Agent Output Operations ===
    
@@ -117,17 +132,17 @@ type command =
   | Status
   | Doctor
   | Init of string option
-  | Inbox of inbox_cmd
-  | Outbox of outbox_cmd
-  | Peer of peer_cmd
-  | Queue of queue_cmd
-  | Mca of mca_cmd
+  | Inbox of Inbox.cmd
+  | Outbox of Outbox.cmd
+  | Peer of Peer.cmd
+  | Queue of Queue.cmd
+  | Mca of Mca.cmd
   | Sync
   | Next
   | Read of string
   | Reply of string * string
   | Send of string * string
-  | Gtd of gtd_cmd
+  | Gtd of Gtd.cmd
   | Commit of string option
   | Push
   | Save of string option
@@ -142,29 +157,29 @@ let string_of_command = function
   | Doctor -> "doctor"
   | Init None -> "init"
   | Init (Some n) -> "init " ^ n
-  | Inbox In_check -> "inbox check"
-  | Inbox In_process -> "inbox process"
-  | Inbox In_flush -> "inbox flush"
-  | Outbox Out_check -> "outbox check"
-  | Outbox Out_flush -> "outbox flush"
-  | Peer P_list -> "peer list"
-  | Peer (P_add (n, _)) -> "peer add " ^ n
-  | Peer (P_remove n) -> "peer remove " ^ n
-  | Peer P_sync -> "peer sync"
-  | Queue Q_list -> "queue list"
-  | Queue Q_clear -> "queue clear"
-  | Mca M_list -> "mca list"
-  | Mca (M_add d) -> "mca add " ^ d
+  | Inbox Inbox.Check -> "inbox check"
+  | Inbox Inbox.Process -> "inbox process"
+  | Inbox Inbox.Flush -> "inbox flush"
+  | Outbox Outbox.Check -> "outbox check"
+  | Outbox Outbox.Flush -> "outbox flush"
+  | Peer Peer.List -> "peer list"
+  | Peer (Peer.Add (n, _)) -> "peer add " ^ n
+  | Peer (Peer.Remove n) -> "peer remove " ^ n
+  | Peer Peer.Sync -> "peer sync"
+  | Queue Queue.List -> "queue list"
+  | Queue Queue.Clear -> "queue clear"
+  | Mca Mca.List -> "mca list"
+  | Mca (Mca.Add d) -> "mca add " ^ d
   | Sync -> "sync"
   | Next -> "next"
   | Read t -> "read " ^ t
   | Reply (t, _) -> "reply " ^ t
   | Send (p, _) -> "send " ^ p
-  | Gtd (G_delete t) -> "delete " ^ t
-  | Gtd (G_defer (t, _)) -> "defer " ^ t
-  | Gtd (G_delegate (t, p)) -> "delegate " ^ t ^ " " ^ p
-  | Gtd (G_do t) -> "do " ^ t
-  | Gtd (G_done t) -> "done " ^ t
+  | Gtd (Gtd.Delete t) -> "delete " ^ t
+  | Gtd (Gtd.Defer (t, _)) -> "defer " ^ t
+  | Gtd (Gtd.Delegate (t, p)) -> "delegate " ^ t ^ " " ^ p
+  | Gtd (Gtd.Do t) -> "do " ^ t
+  | Gtd (Gtd.Done t) -> "done " ^ t
   | Commit None -> "commit"
   | Commit (Some m) -> "commit " ^ m
   | Push -> "push"
@@ -186,39 +201,39 @@ let expand_alias = function
 (* === Command Parsing (Option for totality) === *)
 
 let parse_inbox_cmd = function
-  | [] | ["check"] -> Some In_check
-  | ["process"] -> Some In_process
-  | ["flush"] -> Some In_flush
+  | [] | ["check"] -> Some Inbox.Check
+  | ["process"] -> Some Inbox.Process
+  | ["flush"] -> Some Inbox.Flush
   | _ -> None
 
 let parse_outbox_cmd = function
-  | [] | ["check"] -> Some Out_check
-  | ["flush"] -> Some Out_flush
+  | [] | ["check"] -> Some Outbox.Check
+  | ["flush"] -> Some Outbox.Flush
   | _ -> None
 
 let parse_peer_cmd = function
-  | [] | ["list"] -> Some P_list
-  | ["add"; name; url] -> Some (P_add (name, url))
-  | ["remove"; name] -> Some (P_remove name)
-  | ["sync"] -> Some P_sync
+  | [] | ["list"] -> Some Peer.List
+  | ["add"; name; url] -> Some (Peer.Add (name, url))
+  | ["remove"; name] -> Some (Peer.Remove name)
+  | ["sync"] -> Some Peer.Sync
   | _ -> None
 
 let parse_queue_cmd = function
-  | [] | ["list"] -> Some Q_list
-  | ["clear"] -> Some Q_clear
+  | [] | ["list"] -> Some Queue.List
+  | ["clear"] -> Some Queue.Clear
   | _ -> None
 
 let parse_mca_cmd = function
-  | [] | ["list"] -> Some M_list
-  | "add" :: rest when rest <> [] -> Some (M_add (String.concat " " rest))
+  | [] | ["list"] -> Some Mca.List
+  | "add" :: rest when rest <> [] -> Some (Mca.Add (String.concat " " rest))
   | _ -> None
 
 let parse_gtd_cmd = function
-  | ["delete"; t] -> Some (G_delete t)
-  | "defer" :: t :: rest -> Some (G_defer (t, List.nth_opt rest 0))
-  | ["delegate"; t; p] -> Some (G_delegate (t, p))
-  | ["do"; t] -> Some (G_do t)
-  | ["done"; t] -> Some (G_done t)
+  | ["delete"; t] -> Some (Gtd.Delete t)
+  | "defer" :: t :: rest -> Some (Gtd.Defer (t, List.nth_opt rest 0))
+  | ["delegate"; t; p] -> Some (Gtd.Delegate (t, p))
+  | ["do"; t] -> Some (Gtd.Do t)
+  | ["done"; t] -> Some (Gtd.Done t)
   | _ -> None
 
 let join_rest rest = match rest with [] -> None | _ -> Some (String.concat " " rest)
@@ -459,4 +474,4 @@ Actor Model:
   Agent reads input.md, processes, deletes when done.
 |}
 
-let version = "2.1.18"
+let version = "2.1.19"
