@@ -628,9 +628,106 @@ let get_file_id path =
     let meta = parse_frontmatter content in
     meta |> List.find_map (fun (k, v) -> if k = "id" then Some v else None)
 
+(* === MCA Directory === *)
+
+let mca_dir hub_path = Path.join hub_path "state/mca"
+
+(* === Execute Agent Operations === *)
+
+let execute_op hub_path name input_id op =
+  match op with
+  | OpAck _ -> 
+      log_action hub_path "op.ack" input_id;
+      print_endline (ok (Printf.sprintf "Ack: %s" input_id))
+  | OpDone id ->
+      log_action hub_path "op.done" id;
+      print_endline (ok (Printf.sprintf "Done: %s" id))
+  | OpFail (id, reason) ->
+      log_action hub_path "op.fail" (Printf.sprintf "id:%s reason:%s" id reason);
+      print_endline (warn (Printf.sprintf "Failed: %s - %s" id reason))
+  | OpReply (id, msg) ->
+      (* Append reply to thread if it exists *)
+      (match find_thread hub_path id with
+       | Some path ->
+           let reply = Printf.sprintf "\n\n## Reply (%s)\n\n%s" (now_iso ()) msg in
+           Fs.append path reply;
+           log_action hub_path "op.reply" (Printf.sprintf "thread:%s" id);
+           print_endline (ok (Printf.sprintf "Replied to %s" id))
+       | None ->
+           log_action hub_path "op.reply" (Printf.sprintf "thread:%s (not found)" id);
+           print_endline (warn (Printf.sprintf "Thread not found for reply: %s" id)))
+  | OpSend (peer, msg) ->
+      let outbox_dir = Path.join hub_path "threads/outbox" in
+      Fs.ensure_dir outbox_dir;
+      let slug = 
+        msg |> Js.String.slice ~start:0 ~end_:30 
+        |> Js.String.toLowerCase 
+        |> Js.String.replaceByRe ~regexp:[%mel.re "/[^a-z0-9]+/g"] ~replacement:"-"
+        |> Js.String.replaceByRe ~regexp:[%mel.re "/^-|-$/g"] ~replacement:""
+      in
+      let file_name = slug ^ ".md" in
+      let first_line = match String.split_on_char '\n' msg with x :: _ -> x | [] -> msg in
+      let content = Printf.sprintf "---\nto: %s\ncreated: %s\nfrom: %s\n---\n\n# %s\n\n%s\n" 
+        peer (now_iso ()) name first_line msg in
+      Fs.write (Path.join outbox_dir file_name) content;
+      log_action hub_path "op.send" (Printf.sprintf "to:%s thread:%s" peer slug);
+      print_endline (ok (Printf.sprintf "Queued message to %s" peer))
+  | OpDelegate (id, peer) ->
+      (match find_thread hub_path id with
+       | Some path ->
+           let outbox_dir = Path.join hub_path "threads/outbox" in
+           Fs.ensure_dir outbox_dir;
+           let content = Fs.read path in
+           Fs.write (Path.join outbox_dir (Path.basename path))
+             (update_frontmatter content [("to", peer); ("delegated", now_iso ()); ("delegated-by", name)]);
+           Fs.unlink path;
+           log_action hub_path "op.delegate" (Printf.sprintf "%s to:%s" id peer);
+           print_endline (ok (Printf.sprintf "Delegated %s to %s" id peer))
+       | None ->
+           print_endline (warn (Printf.sprintf "Thread not found for delegate: %s" id)))
+  | OpDefer (id, until) ->
+      (match find_thread hub_path id with
+       | Some path ->
+           let deferred_dir = Path.join hub_path "threads/deferred" in
+           Fs.ensure_dir deferred_dir;
+           let content = Fs.read path in
+           let until_str = Option.value until ~default:"unspecified" in
+           Fs.write (Path.join deferred_dir (Path.basename path))
+             (update_frontmatter content [("deferred", now_iso ()); ("until", until_str)]);
+           Fs.unlink path;
+           log_action hub_path "op.defer" (Printf.sprintf "%s until:%s" id until_str);
+           print_endline (ok (Printf.sprintf "Deferred %s" id))
+       | None ->
+           print_endline (warn (Printf.sprintf "Thread not found for defer: %s" id)))
+  | OpDelete id ->
+      (match find_thread hub_path id with
+       | Some path ->
+           Fs.unlink path;
+           log_action hub_path "op.delete" id;
+           print_endline (ok (Printf.sprintf "Deleted %s" id))
+       | None ->
+           log_action hub_path "op.delete" (Printf.sprintf "%s (not found)" id);
+           print_endline (info (Printf.sprintf "Thread already gone: %s" id)))
+  | OpSurface desc ->
+      let dir = mca_dir hub_path in
+      Fs.ensure_dir dir;
+      let ts = now_iso () |> Js.String.replaceByRe ~regexp:[%mel.re "/[:.]/g"] ~replacement:"-" in
+      let slug = 
+        desc |> Js.String.slice ~start:0 ~end_:40
+        |> Js.String.toLowerCase 
+        |> Js.String.replaceByRe ~regexp:[%mel.re "/[^a-z0-9]+/g"] ~replacement:"-"
+        |> Js.String.replaceByRe ~regexp:[%mel.re "/^-|-$/g"] ~replacement:""
+      in
+      let file_name = Printf.sprintf "%s-%s.md" ts slug in
+      let content = Printf.sprintf "---\nid: %s\nsurfaced-by: %s\ncreated: %s\nstatus: open\n---\n\n# MCA\n\n%s\n" 
+        slug name (now_iso ()) desc in
+      Fs.write (Path.join dir file_name) content;
+      log_action hub_path "op.surface" (Printf.sprintf "id:%s desc:%s" slug desc);
+      print_endline (ok (Printf.sprintf "Surfaced MCA: %s" desc))
+
 (* === Archive completed IO pair === *)
 
-let archive_io_pair hub_path =
+let archive_io_pair hub_path name =
   let inp = input_path hub_path in
   let outp = output_path hub_path in
   
@@ -647,38 +744,18 @@ let archive_io_pair hub_path =
       Fs.write (Path.join logs_in archive_name) (Fs.read inp);
       Fs.write (Path.join logs_out archive_name) output_content;
       
-      (* Extract MCA for feedback loop *)
+      (* Extract and execute agent operations from output *)
       let output_meta = parse_frontmatter output_content in
-      (match List.find_opt (fun (k, _) -> k = "mca") output_meta with
-       | Some (_, mca_text) ->
-           let mca_id = Printf.sprintf "mca-%s" input_id in
-           let mca_content = Printf.sprintf {|---
-id: %s
-type: mca-feedback
-original: %s
----
-
-# MCA Reinforcement
-
-You identified this MCA during processing of %s:
-
-> %s
-
-Apply this pattern next time.
-|} mca_id input_id input_id mca_text in
-           let qdir = queue_dir hub_path in
-           Fs.ensure_dir qdir;
-           let qfile = Path.join qdir (Printf.sprintf "%s-%s.md" (now_iso ()) mca_id) in
-           Fs.write qfile mca_content;
-           log_action hub_path "mca.queued" (Printf.sprintf "id:%s mca:%s" input_id mca_text);
-           print_endline (info (Printf.sprintf "MCA queued for feedback: %s" mca_text))
-       | None -> ());
+      let ops = extract_ops output_meta in
+      ops |> List.iter (fun op ->
+        print_endline (info (Printf.sprintf "Executing: %s" (string_of_agent_op op)));
+        execute_op hub_path name input_id op);
       
       Fs.unlink inp;
       Fs.unlink outp;
       
-      log_action hub_path "io.archive" (Printf.sprintf "id:%s" input_id);
-      print_endline (ok (Printf.sprintf "Archived IO pair: %s" input_id));
+      log_action hub_path "io.archive" (Printf.sprintf "id:%s ops:%d" input_id (List.length ops));
+      print_endline (ok (Printf.sprintf "Archived IO pair: %s (%d ops)" input_id (List.length ops)));
       true
   | Some _, Some _ ->
       print_endline (fail "ID mismatch between input.md and output.md");
@@ -796,8 +873,6 @@ let run_queue_clear hub_path =
     print_endline (ok (Printf.sprintf "Cleared %d item(s) from queue" (List.length items)))
 
 (* === MCA Operations === *)
-
-let mca_dir hub_path = Path.join hub_path "state/mca"
 
 let run_mca_add hub_path name description =
   let dir = mca_dir hub_path in
@@ -930,7 +1005,7 @@ If you can do it now, do it. Otherwise, explain why not.
 
 (* === Process (Actor Loop) === *)
 
-let run_process hub_path =
+let run_process hub_path name =
   print_endline (info "cn process: actor loop...");
   
   (* Step 1: Queue any new inbox items *)
@@ -949,7 +1024,7 @@ let run_process hub_path =
   
   if Fs.exists inp && Fs.exists outp then begin
     (* Agent completed work - archive and continue *)
-    if archive_io_pair hub_path then begin
+    if archive_io_pair hub_path name then begin
       (* Feed next input *)
       if feed_next_input hub_path then wake_agent ()
     end
@@ -1316,7 +1391,7 @@ let () =
           | Outbox Outbox_flush -> outbox_flush hub_path name
           | Sync -> run_sync hub_path name
           | Next -> run_next hub_path
-          | Process -> run_process hub_path
+          | Process -> run_process hub_path name
           | Read t -> run_read hub_path t
           | Reply (t, m) -> run_reply hub_path t m
           | Send (p, m) -> run_send hub_path p m
