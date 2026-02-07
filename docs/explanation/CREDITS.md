@@ -30,7 +30,7 @@ Ideas borrowed, adapted, and built upon. Attribution matters.
 ### RBI — Productive Laziness
 **What we took:** "Why do something when you can do nothing?" — The best code is no code. Don't add complexity unless forced.
 
-**Source:** Company culture, via Axiom
+**Source:** RBI
 
 ---
 
