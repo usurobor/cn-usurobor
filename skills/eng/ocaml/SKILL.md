@@ -109,6 +109,101 @@ npx esbuild _build/default/tools/src/<tool>/output/.../<tool>.js \
   --bundle --platform=node --outfile=dist/<tool>.js
 ```
 
+## Comments
+
+### Module-level docs
+
+Every `.ml` file starts with `(** ... *)` (double-star = ocamldoc):
+
+```ocaml
+(** cn_lib.ml — Core CN library (pure, no I/O)
+    
+    DESIGN: This is the "lib" in Unix convention — the core library
+    that everything else depends on.
+    
+    Layering (deliberate):
+      cn.ml     → CLI wiring
+      cn_io.ml  → Protocol I/O (side effects)
+      cn_lib.ml → Types, parsing (THIS FILE - pure)
+      git.ml    → Raw git operations
+    
+    Why pure?
+    - Fully testable with ppx_expect
+    - No mocking needed
+*)
+```
+
+Include:
+- **File name** — first line
+- **DESIGN** — why this module exists, architectural role
+- **Layering** — where it fits in the stack
+- **Why** — rationale for key decisions
+
+### Function docs
+
+Document non-obvious functions:
+
+```ocaml
+(** [parse_command args] converts CLI args to a command.
+    Returns [None] if args don't match any known command.
+    
+    Examples:
+    - ["sync"] → Some Sync
+    - ["inbox"; "check"] → Some (Inbox Check)
+    - ["garbage"] → None *)
+val parse_command : string list -> command option
+```
+
+### When NOT to comment
+
+```ocaml
+(* Bad: comments that repeat the code *)
+let add x y = x + y  (* adds x and y *)
+
+(* Bad: obvious from types *)
+let is_empty lst = lst = []
+
+(* Good: non-obvious behavior *)
+let normalize path =
+  (* Strip trailing slash to match git behavior *)
+  if String.ends_with ~suffix:"/" path
+  then String.sub path 0 (String.length path - 1)
+  else path
+```
+
+### Inline comments
+
+Use `(* ... *)` sparingly for:
+- Non-obvious logic
+- Workarounds with context
+- TODOs with tickets
+
+```ocaml
+let run_sync hub_path name =
+  (* Fetch before checking inbox — order matters *)
+  let _ = Git.fetch ~cwd:hub_path in
+  inbox_check hub_path name;
+  (* TODO: batch outbox flush for efficiency *)
+  outbox_flush hub_path name
+```
+
+### Design decisions
+
+Document architectural choices in module headers, not inline:
+
+```ocaml
+(** git.ml — Pure git operations
+    
+    DESIGN: This module contains ONLY raw git operations.
+    No CN protocol knowledge. No business logic.
+    
+    Why separate?
+    - Testable: can mock git.ml for cn_io tests
+    - Portable: git.ml works for any git workflow
+    - Clear: CN protocol lives in cn_io, not here
+*)
+```
+
 ## Checklist
 
 - [ ] Pure functions in `_lib.ml`
@@ -116,3 +211,5 @@ npx esbuild _build/default/tools/src/<tool>/output/.../<tool>.js \
 - [ ] ppx_expect tests
 - [ ] No `ref`, no loops, no exceptions for control flow
 - [ ] Bundled `.js` committed
+- [ ] Module-level `(** ... *)` with DESIGN rationale
+- [ ] Non-obvious functions documented
