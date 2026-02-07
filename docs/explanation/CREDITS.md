@@ -55,8 +55,14 @@ Ideas borrowed, adapted, and built upon. Attribution matters.
 
 ## Internal
 
+### Nelson Mandela — Win or Learn
+**What we took:** "We either win or we learn." — No failures, only lessons.
+
+**Source:** Often attributed to Nelson Mandela
+
+---
+
 ### Axiom (usurobor)
-- "We either win or we learn"
 - "Never blame the AI. Blame lack of tools."
 - "Systems > discipline"
 - "Make Intelligence Coherent Again (MICA)"
