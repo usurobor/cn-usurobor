@@ -29,6 +29,14 @@ Track both. Count per session.
 
 `state/insights.md` is staging. Skills are permanent home.
 
+**Definition of Done (MCI Migration):**
+1. MCI text added to relevant skill (or new skill created)
+2. Skill committed and pushed to cn-agent main
+3. `state/insights.md` updated with "Migrated To" column
+4. insights.md committed and pushed to hub
+
+All 4 = done.
+
 ## Axes
 
 | Axis | Question |
