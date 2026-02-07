@@ -636,16 +636,16 @@ let mca_dir hub_path = Path.join hub_path "state/mca"
 
 let execute_op hub_path name input_id op =
   match op with
-  | OpAck _ -> 
+  | Ack _ -> 
       log_action hub_path "op.ack" input_id;
       print_endline (ok (Printf.sprintf "Ack: %s" input_id))
-  | OpDone id ->
+  | Done id ->
       log_action hub_path "op.done" id;
       print_endline (ok (Printf.sprintf "Done: %s" id))
-  | OpFail (id, reason) ->
+  | Fail (id, reason) ->
       log_action hub_path "op.fail" (Printf.sprintf "id:%s reason:%s" id reason);
       print_endline (warn (Printf.sprintf "Failed: %s - %s" id reason))
-  | OpReply (id, msg) ->
+  | Reply (id, msg) ->
       (* Append reply to thread if it exists *)
       (match find_thread hub_path id with
        | Some path ->
@@ -656,7 +656,7 @@ let execute_op hub_path name input_id op =
        | None ->
            log_action hub_path "op.reply" (Printf.sprintf "thread:%s (not found)" id);
            print_endline (warn (Printf.sprintf "Thread not found for reply: %s" id)))
-  | OpSend (peer, msg) ->
+  | Send (peer, msg) ->
       let outbox_dir = Path.join hub_path "threads/outbox" in
       Fs.ensure_dir outbox_dir;
       let slug = 
@@ -672,7 +672,7 @@ let execute_op hub_path name input_id op =
       Fs.write (Path.join outbox_dir file_name) content;
       log_action hub_path "op.send" (Printf.sprintf "to:%s thread:%s" peer slug);
       print_endline (ok (Printf.sprintf "Queued message to %s" peer))
-  | OpDelegate (id, peer) ->
+  | Delegate (id, peer) ->
       (match find_thread hub_path id with
        | Some path ->
            let outbox_dir = Path.join hub_path "threads/outbox" in
@@ -685,7 +685,7 @@ let execute_op hub_path name input_id op =
            print_endline (ok (Printf.sprintf "Delegated %s to %s" id peer))
        | None ->
            print_endline (warn (Printf.sprintf "Thread not found for delegate: %s" id)))
-  | OpDefer (id, until) ->
+  | Defer (id, until) ->
       (match find_thread hub_path id with
        | Some path ->
            let deferred_dir = Path.join hub_path "threads/deferred" in
@@ -699,7 +699,7 @@ let execute_op hub_path name input_id op =
            print_endline (ok (Printf.sprintf "Deferred %s" id))
        | None ->
            print_endline (warn (Printf.sprintf "Thread not found for defer: %s" id)))
-  | OpDelete id ->
+  | Delete id ->
       (match find_thread hub_path id with
        | Some path ->
            Fs.unlink path;
@@ -708,7 +708,7 @@ let execute_op hub_path name input_id op =
        | None ->
            log_action hub_path "op.delete" (Printf.sprintf "%s (not found)" id);
            print_endline (info (Printf.sprintf "Thread already gone: %s" id)))
-  | OpSurface desc ->
+  | Surface desc ->
       let dir = mca_dir hub_path in
       Fs.ensure_dir dir;
       let ts = now_iso () |> Js.String.replaceByRe ~regexp:[%mel.re "/[:.]/g"] ~replacement:"-" in
