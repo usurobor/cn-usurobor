@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "cn-peers-v1",
+  "title": "CN Peers",
+  "description": "Known peers for a CN hub",
+  "type": "object",
+  "required": ["$schema", "peers"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "const": "cn-peers-v1"
+    },
+    "peers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "hub", "kind"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Short identifier for the peer"
+          },
+          "hub": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL of the peer's hub repo"
+          },
+          "clone": {
+            "type": "string",
+            "description": "Local path to cloned repo (optional)"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["agent", "template", "human"],
+            "description": "Type of peer"
+          },
+          "note": {
+            "type": "string",
+            "description": "Human-readable note about this peer"
+          },
+          "peered": {
+            "type": "string",
+            "format": "date",
+            "description": "Date peering was established (YYYY-MM-DD)"
+          },
+          "public_key": {
+            "type": "string",
+            "description": "SSH public key for signature verification"
+          }
+        }
+      }
+    }
+  }
+}
