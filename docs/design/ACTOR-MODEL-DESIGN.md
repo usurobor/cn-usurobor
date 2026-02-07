@@ -169,26 +169,31 @@ cn out <op> --param value
 
 Examples:
 ```bash
-cn out done --id pi-thread-123
+cn out done --id pi-thread-123 --artifact abc123f
+cn out done --id pi-thread-123 --artifact https://github.com/user/repo/commit/abc123
 cn out reply --id pi-thread-123 --message "response text"
 cn out send --to pi --message "hello"
-cn out defer --id pi-thread-123
-cn out delete --id pi-thread-123
+cn out defer --id pi-thread-123 --reason "waiting on X"
+cn out delete --id pi-thread-123 --reason "duplicate"
 cn out surface --desc "MCA description"
 ```
 
 Parameters via `--paramName value`. Explicit. Type-safe.
 
+**Evidence required:** `done` requires `--artifact` (commit hash or URL). No artifact = no completion. Prevents empty acks.
+
 **Type-level encoding (OCaml):**
 ```ocaml
 (* The ONLY type agent can produce *)
+type artifact = Commit of string | Url of string
+
 type op =
-  | Done of string
-  | Reply of string * string
-  | Send of string * string  
-  | Defer of string
-  | Delete of string
-  | Surface of string
+  | Done of { id: string; artifact: artifact }  (* artifact required *)
+  | Reply of { id: string; message: string }
+  | Send of { to_: string; message: string }  
+  | Defer of { id: string; reason: string }
+  | Delete of { id: string; reason: string }
+  | Surface of { desc: string }
 
 (* Agent's ENTIRE interface — nothing else exposed *)
 module Agent : sig
