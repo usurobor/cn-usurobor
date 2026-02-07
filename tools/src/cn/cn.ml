@@ -963,7 +963,7 @@ let run_out hub_path name gtd =
     | Out.Do (Out.Reply { message }) -> ("do", Printf.sprintf "reply: %s" message)
     | Out.Do (Out.Send { to_; message }) -> ("do", Printf.sprintf "send: %s|%s" to_ message)
     | Out.Do (Out.Surface { desc }) -> ("do", Printf.sprintf "surface: %s" desc)
-    | Out.Do (Out.Ack { reason }) -> ("do", Printf.sprintf "ack: %s" reason)
+    | Out.Do (Out.Noop { reason }) -> ("do", Printf.sprintf "noop: %s" reason)
     | Out.Do (Out.Commit { artifact }) -> ("do", Printf.sprintf "commit: %s" artifact)
     | Out.Defer { reason } -> ("defer", Printf.sprintf "reason: %s" reason)
     | Out.Delegate { to_ } -> ("delegate", Printf.sprintf "to: %s" to_)

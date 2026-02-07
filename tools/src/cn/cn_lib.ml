@@ -80,7 +80,7 @@ module Out = struct
     | Reply of { message: string }
     | Send of { to_: string; message: string }
     | Surface of { desc: string }
-    | Ack of { reason: string }
+    | Noop of { reason: string }  (* no action, but creator notified *)
     | Commit of { artifact: string }
   
   (* GTD protocol — ONLY 4 OPTIONS *)
@@ -211,7 +211,7 @@ let string_of_command = function
   | Out (Out.Do (Out.Reply { message = _ })) -> "out do reply"
   | Out (Out.Do (Out.Send { to_; message = _ })) -> "out do send " ^ to_
   | Out (Out.Do (Out.Surface { desc = _ })) -> "out do surface"
-  | Out (Out.Do (Out.Ack { reason = _ })) -> "out do ack"
+  | Out (Out.Do (Out.Noop { reason = _ })) -> "out do noop"
   | Out (Out.Do (Out.Commit { artifact })) -> "out do commit " ^ artifact
   | Out (Out.Defer { reason = _ }) -> "out defer"
   | Out (Out.Delegate { to_ }) -> "out delegate " ^ to_
@@ -297,8 +297,8 @@ let parse_out_cmd args =
        | _ -> None)
   | "do" :: "surface" :: _ ->
       get_flag "desc" flags |> Option.map (fun d -> Out.Do (Out.Surface { desc = d }))
-  | "do" :: "ack" :: _ ->
-      get_flag "reason" flags |> Option.map (fun r -> Out.Do (Out.Ack { reason = r }))
+  | "do" :: "noop" :: _ ->
+      get_flag "reason" flags |> Option.map (fun r -> Out.Do (Out.Noop { reason = r }))
   | "do" :: "commit" :: _ ->
       get_flag "artifact" flags |> Option.map (fun a -> Out.Do (Out.Commit { artifact = a }))
   | "defer" :: _ ->
