@@ -16,7 +16,7 @@ When presenting issues, always end with your MCA (Most Coherent Action).
 
 ## RBI
 
-> "Why do anything if you can do nothing?"
+> "Why do something when you can do nothing?"
 
 The best code is no code. The best action is often no action. Don't add complexity unless forced.
 
