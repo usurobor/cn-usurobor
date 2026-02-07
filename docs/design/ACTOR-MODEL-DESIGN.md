@@ -169,13 +169,15 @@ cn add <op> [params...]
 
 Examples:
 ```bash
-cn add done pi-thread-123
-cn add reply pi-thread-123 "message"
-cn add send pi "message"
-cn add defer pi-thread-123
-cn add delete pi-thread-123
-cn add surface "description"
+cn add done --id pi-thread-123
+cn add reply --id pi-thread-123 --message "response text"
+cn add send --to pi --message "hello"
+cn add defer --id pi-thread-123
+cn add delete --id pi-thread-123
+cn add surface --desc "MCA description"
 ```
+
+Parameters via `--paramName value`. Explicit. Type-safe.
 
 **Type-level encoding (OCaml):**
 ```ocaml
