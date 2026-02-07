@@ -62,4 +62,6 @@ What fixed it immediately.
 
 | Date | Title | Severity | Status |
 |------|-------|----------|--------|
+| 2026-02-07 | [Inbox Assumption Failure](./2026-02-07-inbox-assumption.md) | Critical | Open |
+| 2026-02-07 | [Wake Failure](./2026-02-07-wake-failure.md) | High | Resolved |
 | 2026-02-05 | [4-Hour Coordination Failure](./20260205-coordination-failure.md) | Critical | Resolved |
