@@ -939,6 +939,69 @@ let run_mca_list hub_path =
             |> Option.value ~default:"(no description)" in
           print_endline (Printf.sprintf "  [%s] %s (by %s)" id (String.trim desc) by))
 
+(* === Agent Output (cn out) === *)
+
+let run_out hub_path name gtd =
+  (* Get current input info for notification *)
+  let inp = input_path hub_path in
+  let input_meta = 
+    if Fs.exists inp then Some (parse_frontmatter (Fs.read inp))
+    else None
+  in
+  let input_id = match input_meta with
+    | Some m -> m |> List.find_map (fun (k, v) -> if k = "id" then Some v else None)
+    | None -> None in
+  let input_from = match input_meta with
+    | Some m -> m |> List.find_map (fun (k, v) -> if k = "from" then Some v else None)
+    | None -> None in
+  
+  (* Write output.md with the GTD action *)
+  let outp = output_path hub_path in
+  let id = input_id |> Option.value ~default:"unknown" in
+  
+  let (gtd_type, op_details) = match gtd with
+    | Out.Do (Out.Reply { message }) -> ("do", Printf.sprintf "reply: %s" message)
+    | Out.Do (Out.Send { to_; message }) -> ("do", Printf.sprintf "send: %s|%s" to_ message)
+    | Out.Do (Out.Surface { desc }) -> ("do", Printf.sprintf "surface: %s" desc)
+    | Out.Do (Out.Ack { reason }) -> ("do", Printf.sprintf "ack: %s" reason)
+    | Out.Do (Out.Commit { artifact }) -> ("do", Printf.sprintf "commit: %s" artifact)
+    | Out.Defer { reason } -> ("defer", Printf.sprintf "reason: %s" reason)
+    | Out.Delegate { to_ } -> ("delegate", Printf.sprintf "to: %s" to_)
+    | Out.Delete { reason } -> ("delete", Printf.sprintf "reason: %s" reason)
+  in
+  
+  let content = Printf.sprintf {|---
+id: %s
+gtd: %s
+%s
+created: %s
+---
+|} id gtd_type op_details (now_iso ()) in
+  
+  Fs.write outp content;
+  log_action hub_path "out" (Printf.sprintf "id:%s gtd:%s" id gtd_type);
+  print_endline (ok (Printf.sprintf "Output: %s (%s)" gtd_type id));
+  
+  (* Auto-notify input creator *)
+  (match input_from with
+   | Some from when from <> name && from <> "system" ->
+       let notify_msg = Printf.sprintf "[auto] %s: %s on %s" name gtd_type id in
+       let outbox_dir = Path.join hub_path "threads/outbox" in
+       Fs.ensure_dir outbox_dir;
+       let notify_file = Printf.sprintf "%s-auto-notify-%s.md" from id in
+       let notify_content = Printf.sprintf {|---
+to: %s
+created: %s
+auto: true
+---
+
+%s
+|} from (now_iso ()) notify_msg in
+       Fs.write (Path.join outbox_dir notify_file) notify_content;
+       log_action hub_path "out.notify" (Printf.sprintf "to:%s id:%s" from id);
+       print_endline (ok (Printf.sprintf "Notified %s" from))
+   | _ -> ())
+
 (* === MCA Review Injection === *)
 
 let mca_cycle_path hub_path = Path.join hub_path "state/.mca-cycle"
@@ -1436,4 +1499,5 @@ let () =
           | Queue Queue.Clear -> run_queue_clear hub_path
           | Mca Mca.List -> run_mca_list hub_path
           | Mca (Mca.Add desc) -> run_mca_add hub_path name desc
+          | Out gtd -> run_out hub_path name gtd
           | Help | Version | Init _ | Update -> () (* handled above *)
