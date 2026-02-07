@@ -298,12 +298,14 @@ let parse_out_cmd args =
   | "do" :: "surface" :: _ ->
       get_flag "desc" flags |> Option.map (fun d -> Out.Do (Out.Surface { desc = d }))
   | "do" :: "noop" :: _ ->
-      get_flag "reason" flags |> Option.bind (fun r ->
-        (* Reason must be coherent - reject trivial *)
-        let trivial = ["ack"; "ok"; "done"; "yes"; "no"; "acknowledged"; "noted"] in
-        let r_lower = String.lowercase_ascii r in
-        if List.mem r_lower trivial || String.length r < 10 then None
-        else Some (Out.Do (Out.Noop { reason = r })))
+      (match get_flag "reason" flags with
+       | None -> None
+       | Some r ->
+           (* Reason must be coherent - reject trivial *)
+           let trivial = ["ack"; "ok"; "done"; "yes"; "no"; "acknowledged"; "noted"] in
+           let r_lower = String.lowercase_ascii r in
+           if List.mem r_lower trivial || String.length r < 10 then None
+           else Some (Out.Do (Out.Noop { reason = r })))
   | "do" :: "commit" :: _ ->
       get_flag "artifact" flags |> Option.map (fun a -> Out.Do (Out.Commit { artifact = a }))
   | "defer" :: _ ->
@@ -553,4 +555,4 @@ Actor Model:
   Agent reads input.md, processes, deletes when done.
 |}
 
-let version = "2.1.21"
+let version = "2.1.22"

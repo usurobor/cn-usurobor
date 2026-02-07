@@ -1266,11 +1266,13 @@ Agents and repos this hub communicates with.
   
   (* Initialize git *)
   let _ = Child_process.exec_in ~cwd:hub_dir "git init" in
+  
+  (* Write runtime.md before initial commit *)
+  update_runtime hub_dir;
+  
+  (* Commit everything including runtime.md *)
   let _ = Child_process.exec_in ~cwd:hub_dir "git add -A" in
   let _ = Child_process.exec_in ~cwd:hub_dir (Printf.sprintf "git commit -m 'Initialize %s hub'" hub_name) in
-  
-  (* Write runtime.md *)
-  update_runtime hub_dir;
   
   print_endline (ok (Printf.sprintf "Created hub: %s" hub_dir));
   print_endline (info "Next steps:");
@@ -1434,7 +1436,23 @@ let run_update () =
 let run_update_with_cron hub_path =
   run_update ();
   update_cron hub_path;
-  update_runtime hub_path
+  update_runtime hub_path;
+  (* Auto-commit runtime changes *)
+  print_endline (info "Auto-committing runtime changes...");
+  let _ = Child_process.exec_in ~cwd:hub_path "git add state/runtime.md" in
+  let commit_result = Child_process.exec_in ~cwd:hub_path "git commit -m 'chore: cn update runtime'" in
+  match commit_result with
+  | Some _ ->
+      print_endline (ok "Committed runtime changes");
+      (* Push if origin exists *)
+      (match Child_process.exec_in ~cwd:hub_path "git remote get-url origin 2>/dev/null" with
+       | Some _ ->
+           print_endline (info "Pushing to origin...");
+           (match Child_process.exec_in ~cwd:hub_path "git push origin HEAD 2>&1" with
+            | Some _ -> print_endline (ok "Pushed to origin")
+            | None -> print_endline (warn "Push failed - push manually"))
+       | None -> print_endline (dim "No origin remote - skipping push"))
+  | None -> print_endline (dim "No runtime changes to commit")
 
 (* === Main === *)
 
