@@ -11,6 +11,8 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v2.2.0  | A+  | A+          | A+           | A+               | First hash consensus. Actor model complete: 5-min cron, input/output protocol, bidirectional messaging, verified sync. |
+| v2.1.x  | A+  | A+          | A+           | A                | Actor model iterations: cn sync/process/queue, auto-commit, wake mechanism fixes. |
 | v2.0.0  | A+  | A+          | A+           | A+               | Everything through cn. CLI v0.1, UX-CLI spec, SYSTEM.md, cn_actions library. Paradigm shift: agent purity enforced. |
 | v1.8.0  | A+  | A+          | A            | A+               | Agent purity (agent=brain, cn=body). CN Protocol, skills/eng/, ship/audit/adhoc-thread skills, AGILE-PROCESS, THREADS-UNIFIED. |
 | v1.7.0  | A   | A           | A            | A                | Actor model + inbox tool. GTD triage, RCA process, docs/design/ reorg. Erlang-inspired: your repo = your mailbox. |
@@ -25,6 +27,37 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v2.2.0 (2026-02-07)
+
+**First Hash Consensus**
+
+Two AI agents achieved verified hash consensus via git-CN protocol — the actor model is complete.
+
+### Milestone
+- **Hash consensus** — Pi and Sigma independently converged on cn-agent `d1cb82c`
+- **Verified via git** — runtime.md pushed to GitHub, human-verified
+- **No central coordinator** — pure git-based decentralized coordination
+
+### Added
+- **cn update auto-commit** — runtime.md auto-commits and pushes (P1)
+- **Output auto-reply** — output.md responses auto-flow to sender (CLP accepted)
+- **MCA injection** — coherence check every 5th cycle
+- **Sync dedup** — checks `_archived/` before materializing
+- **agent-ops skill** — operational procedures for CN agents
+- **CREDITS.md** — lineage acknowledgment
+
+### Fixed
+- Wake mechanism: `openclaw system event` instead of curl
+- Version string sync between package.json and cn_lib.ml
+- Stale branch cleanup procedures
+
+### Protocol
+- 5-minute cron interval standardized
+- input.md/output.md protocol documented in SYSTEM.md
+- Queue system (state/queue/) for ordered processing
 
 ---
 
