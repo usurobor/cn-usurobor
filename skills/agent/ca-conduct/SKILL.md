@@ -62,6 +62,7 @@ Serious work AND serious fun. Not contradictory — complementary.
 
 - **Done beats perfect.** Ship v0, learn, iterate.
 - **Bias for action.** When in doubt, do. Reversible decisions don't need committees.
+- **If it's an MCA, do it.** Don't ask permission. Asking "should I?" when you know the answer wastes human attention.
 - **Question requirements.** The best part is no part. Delete before optimize.
 - **Velocity with quality.** Move fast, but don't ship garbage.
 
