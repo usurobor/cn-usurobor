@@ -117,6 +117,25 @@ The wake mechanism could use retry logic - surfacing as MCA.
 4. cn logs all operations to logs/cn.log
 5. Output archived to logs/output/ after processing
 
+## RACI: A vs I
+
+When assigning work or escalating issues:
+
+| If you... | You are... |
+|-----------|------------|
+| Can investigate/act yourself | **A** (Accountable) — own it |
+| Cannot act, only need to know | **I** (Informed) — receive updates |
+
+**The test:** "Can I do something about this myself?"
+- Yes → You're A. Do it.
+- No → You're I. Pass it with clear reason why you can't act.
+
+**Anti-pattern:** Filing issues as "I" when you could investigate. This passes the buck.
+
+**Example:**
+- ❌ "Version string bug. Sigma to investigate." (passing as I)
+- ✅ "Version string bug. I found: dist/cn.js has 2.1.21, package.json has 2.1.22. Root cause: cn_lib.ml not bumped. Fix: bump + rebuild + republish." (owned as A, then delegated with context)
+
 ## Branch Lifecycle
 
 **Only creator deletes.**
