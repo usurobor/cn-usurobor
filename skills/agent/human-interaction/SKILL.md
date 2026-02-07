@@ -11,6 +11,7 @@ Use reactions when acknowledgment is the coherent action.
 - Resolved tension — peace (🕊️)
 - Quick ack without interrupting flow
 - Celebrating a win together
+- Playfully — keep it light (😈🎉)
 - Any emoji that fits — use judgment
 
 **When NOT to react:**
