@@ -22,6 +22,11 @@ Ideas borrowed, adapted, and built upon. Attribution matters.
 
 ## Philosophy
 
+### Elon Musk — Delete Before Optimize
+**What we took:** "The most common error of a smart engineer is to optimize something that should not exist." — Question requirements first. The best part is no part.
+
+**Source:** Musk's 5-step engineering process
+
 ### Vatsal Mehta — Solutions over Problems
 **What we took:** "Don't bring me the problems, bring me solutions." — When presenting issues, always end with your MCA.
 
