@@ -102,7 +102,7 @@ mca: credit original source, then do it
 [details]
 ```
 
-**MCA field:** Optional. Records the Most Coherent Action identified during processing. cn feeds MCAs back as future inputs for reinforcement learning.
+**MCA field:** Whenever agent identifies an MCA during processing, write it here. cn feeds MCAs back as future inputs for reinforcement. Not optional — if you see it, capture it.
 
 ### state/queue/
 
