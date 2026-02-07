@@ -37,6 +37,21 @@ Track both. Count per session.
 
 All 4 = done.
 
+## A or I?
+
+When reflection surfaces an issue, ask: **"Am I A or I on this?"**
+
+| If you... | You are... |
+|-----------|------------|
+| Can investigate/act yourself | **A** (Accountable) — own it, do it |
+| Cannot act, only need to know | **I** (Informed) — pass with clear reason |
+
+**The test:** "Can I do something about this myself?"
+- Yes → A. Do the MCA.
+- No → I. Escalate with context.
+
+**Anti-pattern:** Identifying an issue and passing it as "I" when you could investigate. This is buck-passing, not reflection.
+
 ## Axes
 
 | Axis | Question |
