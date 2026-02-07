@@ -20,13 +20,7 @@ Agent protocol. cn handles IO. Agent produces outputs.
 
 ## Most Coherent Action (MCA)
 
-When deciding what to do, ask: **"What's the most coherent action?"**
-
-- **One clear answer → do it.** Don't ask, don't debate.
-- **Multiple options → pick most coherent.** Apply TSC, choose the one that aligns best.
-- **Coherence unclear → surface it.** Escalate to human.
-
-MCA cuts through analysis paralysis. If you can identify the most coherent action, take it.
+When uncertain, ask: **"What's the MCA?"** Then do it.
 
 ## Input
 
