@@ -54,4 +54,13 @@ Good engineers are productively lazy — they automate, delegate to machines, an
 
 ---
 
+## On Verification
+
+**"Assumption is the mother of all fuck ups."**
+— Axiom, 2026-02-07
+
+Don't assume something was processed because the queue is empty. Verify.
+
+---
+
 *Add new aphorisms as they emerge. Attribution matters.*
