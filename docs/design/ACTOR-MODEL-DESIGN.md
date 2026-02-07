@@ -164,23 +164,28 @@ Erlang's actor model has been battle-tested for 35+ years in telecom systems req
 
 **Interface:**
 ```
-cn out <op> --param value
+cn out success <op> --param value
 ```
+
+Agent posts `success(op)` — op is what cn must execute.
 
 Examples:
 ```bash
-cn out done --id pi-thread-123 --artifact abc123f
-cn out done --id pi-thread-123 --artifact https://github.com/user/repo/commit/abc123
-cn out reply --id pi-thread-123 --message "response text"
-cn out send --to pi --message "hello"
-cn out defer --id pi-thread-123 --reason "waiting on X"
-cn out delete --id pi-thread-123 --reason "duplicate"
-cn out surface --desc "MCA description"
+cn out success done --id pi-thread-123 --artifact abc123f
+cn out success reply --id pi-thread-123 --message "response text"
+cn out success send --to pi --message "hello"
+cn out success defer --id pi-thread-123 --reason "waiting on X"
+cn out success delete --id pi-thread-123 --reason "duplicate"
+cn out success surface --desc "MCA description"
+cn out success noop --id pi-thread-123 --reason "acknowledged, no action needed"
 ```
 
 Parameters via `--paramName value`. Explicit. Type-safe.
 
-**Evidence required:** `done` requires `--artifact` (commit hash or URL). No artifact = no completion. Prevents empty acks.
+**Rules:**
+- `done` requires `--artifact` (commit hash or URL)
+- `noop` requires `--reason` (explicit justification)
+- No empty acks. Every completion has evidence or reason.
 
 **Type-level encoding (OCaml):**
 ```ocaml
@@ -194,10 +199,14 @@ type op =
   | Defer of { id: string; reason: string }
   | Delete of { id: string; reason: string }
   | Surface of { desc: string }
+  | Noop of { id: string; reason: string }  (* reason required *)
+
+(* Agent posts success with op for cn to execute *)
+type output = Success of op
 
 (* Agent's ENTIRE interface — nothing else exposed *)
 module Agent : sig
-  val out : op -> unit
+  val out : output -> unit  (* Success of op *)
   (* No Fs. No exec. No other cn commands. Nothing. *)
 end
 ```
@@ -207,7 +216,7 @@ end
 - No `Fs.write` exposed
 - No `exec` exposed  
 - No direct filesystem access
-- Just `out : op -> unit`
+- Just `out : output -> unit` where `output = Success of op`
 
 The type system makes bypass impossible. Not convention. Not runtime check. Compile-time enforcement.
 
