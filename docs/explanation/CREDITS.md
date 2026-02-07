@@ -22,6 +22,15 @@ Ideas borrowed, adapted, and built upon. Attribution matters.
 
 ## Philosophy
 
+### Facebook / Meta — The Hacker Way
+**What we took:**
+- **"Code wins arguments"** — Don't debate for days. Build a prototype, demo it, decide.
+- **"Done is better than perfect"** — Keep shipping. Iterate.
+- **"Move fast and break things"** — Speed over caution (in reversible systems).
+- **"What would you do if you weren't afraid?"** — Bias for action over fear.
+
+**Source:** Mark Zuckerberg's [Hacker Way letter](https://www.wired.com/2012/02/zuck-letter/) (2012 IPO filing), Facebook office posters, Sheryl Sandberg
+
 ### Elon Musk — Delete Before Optimize
 **What we took:** "The most common error of a smart engineer is to optimize something that should not exist." — Question requirements first. The best part is no part.
 
