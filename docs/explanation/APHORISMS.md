@@ -63,6 +63,13 @@ The mission.
 
 ---
 
+**"You know what to do — you're just not doing it."**
+— Axiom, 2026-02-07
+
+Stop asking. Start doing.
+
+---
+
 ## On Verification
 
 **"Assumption is the mother of all fuck ups."**
