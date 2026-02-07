@@ -1,3 +1,18 @@
+; git module (pure git operations)
+(library
+ (name git)
+ (modules git)
+ (modes melange)
+ (preprocess (pps melange.ppx)))
+
+; git_cn module (CN protocol over git)
+(library
+ (name git_cn)
+ (modules git_cn)
+ (libraries git)
+ (modes melange)
+ (preprocess (pps melange.ppx)))
+
 ; cn library (pure functions, testable)
 (library
  (name cn_lib)
@@ -10,6 +25,6 @@
  (target output)
  (alias cn)
  (modules cn)
- (libraries cn_lib inbox_lib)
+ (libraries cn_lib inbox_lib git git_cn)
  (module_systems commonjs)
  (preprocess (pps melange.ppx)))
