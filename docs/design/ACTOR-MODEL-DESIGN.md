@@ -167,7 +167,22 @@ Erlang's actor model has been battle-tested for 35+ years in telecom systems req
 cn output <op>
 ```
 
-Where `op` is one of: `done`, `reply`, `send`, `defer`, `delete`, `surface`
+**Type-level encoding (OCaml):**
+```ocaml
+(* The ONLY type agent can produce *)
+type op =
+  | Done of string
+  | Reply of string * string
+  | Send of string * string  
+  | Defer of string
+  | Delete of string
+  | Surface of string
+
+(* Agent's entire interface *)
+val output : op -> unit
+```
+
+Invalid ops = compile error. No runtime bypass possible.
 
 This is enforcement, not convention. Agent bypassing cn = protocol violation.
 
