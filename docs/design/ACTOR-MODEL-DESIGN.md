@@ -169,27 +169,30 @@ cn out done <op> --param value
 
 Agent posts `done(op)` — marks input complete, op is what cn executes.
 
-Examples:
+Examples (GTD 4 Ds):
 ```bash
-cn out done noop --reason "acknowledged, no action needed"
-cn out done reply --message "response text"
-cn out done send --to pi --message "hello"
-cn out done commit --artifact abc123f
-cn out done commit --artifact https://github.com/user/repo/commit/abc123
-```
+# Do — complete with action
+cn out do noop --reason "acknowledged, no action needed"
+cn out do reply --message "response text"
+cn out do send --to pi --message "hello"
+cn out do commit --artifact abc123f
 
-For non-completion:
-```bash
+# Defer — postpone
 cn out defer --reason "waiting on X"
+
+# Delegate — forward to peer
+cn out delegate --to pi --message "please handle"
+
+# Delete — discard
 cn out delete --reason "duplicate"
-cn out surface --desc "MCA description"
 ```
 
 **Rules:**
-- `done commit` requires `--artifact`
-- `done noop` requires `--reason`
-- `done reply/send` — message is the artifact
-- No empty completions.
+- `do commit` requires `--artifact`
+- `do noop` requires `--reason`
+- `do reply/send` — message is the artifact
+- `defer/delegate/delete` require `--reason` or `--message`
+- No empty outputs.
 
 **Type-level encoding (OCaml):**
 ```ocaml
@@ -203,12 +206,12 @@ type done_op =
   | Send of { to_: string; message: string }
   | Commit of { artifact: artifact }
 
-(* Agent output *)
+(* Agent output — GTD 4 Ds *)
 type output =
-  | Done of done_op           (* completes current input *)
-  | Defer of { reason: string }
-  | Delete of { reason: string }
-  | Surface of { desc: string }
+  | Do of done_op                          (* complete with action *)
+  | Defer of { reason: string }            (* postpone *)
+  | Delegate of { to_: string; message: string }  (* forward to peer *)
+  | Delete of { reason: string }           (* discard *)
 
 (* Agent's ENTIRE interface — nothing else exposed *)
 module Agent : sig
