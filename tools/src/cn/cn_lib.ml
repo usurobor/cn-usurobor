@@ -64,6 +64,33 @@ module Gtd = struct
     | Done of string
 end
 
+(* === Agent Output — the ONLY way agent can respond ===
+   
+   GTD protocol for handling input:
+   - Do: complete with an op for cn to execute
+   - Defer: postpone with reason
+   - Delegate: forward to peer
+   - Delete: discard with reason
+   
+   cn auto-notifies input creator of action taken. *)
+
+module Out = struct
+  (* What cn executes when agent does Do *)
+  type op =
+    | Reply of { message: string }
+    | Send of { to_: string; message: string }
+    | Surface of { desc: string }
+    | Ack of { reason: string }
+    | Commit of { artifact: string }
+  
+  (* GTD protocol — ONLY 4 OPTIONS *)
+  type gtd =
+    | Do of op
+    | Defer of { reason: string }
+    | Delegate of { to_: string }
+    | Delete of { reason: string }
+end
+
 (* === Agent Output Operations ===
    
    These are operations an agent can write to output.md.
@@ -143,6 +170,7 @@ type command =
   | Reply of string * string
   | Send of string * string
   | Gtd of Gtd.cmd
+  | Out of Out.gtd  (* Agent output — ONLY way to respond *)
   | Commit of string option
   | Push
   | Save of string option
@@ -180,6 +208,14 @@ let string_of_command = function
   | Gtd (Gtd.Delegate (t, p)) -> "delegate " ^ t ^ " " ^ p
   | Gtd (Gtd.Do t) -> "do " ^ t
   | Gtd (Gtd.Done t) -> "done " ^ t
+  | Out (Out.Do (Out.Reply { message = _ })) -> "out do reply"
+  | Out (Out.Do (Out.Send { to_; message = _ })) -> "out do send " ^ to_
+  | Out (Out.Do (Out.Surface { desc = _ })) -> "out do surface"
+  | Out (Out.Do (Out.Ack { reason = _ })) -> "out do ack"
+  | Out (Out.Do (Out.Commit { artifact })) -> "out do commit " ^ artifact
+  | Out (Out.Defer { reason = _ }) -> "out defer"
+  | Out (Out.Delegate { to_ }) -> "out delegate " ^ to_
+  | Out (Out.Delete { reason = _ }) -> "out delete"
   | Commit None -> "commit"
   | Commit (Some m) -> "commit " ^ m
   | Push -> "push"
@@ -236,6 +272,43 @@ let parse_gtd_cmd = function
   | ["done"; t] -> Some (Gtd.Done t)
   | _ -> None
 
+(* Parse --key value pairs from args *)
+let rec parse_flags_from_args acc = function
+  | [] -> acc
+  | "--message" :: v :: rest -> parse_flags_from_args (("message", v) :: acc) rest
+  | "--to" :: v :: rest -> parse_flags_from_args (("to", v) :: acc) rest
+  | "--reason" :: v :: rest -> parse_flags_from_args (("reason", v) :: acc) rest
+  | "--desc" :: v :: rest -> parse_flags_from_args (("desc", v) :: acc) rest
+  | "--artifact" :: v :: rest -> parse_flags_from_args (("artifact", v) :: acc) rest
+  | "--id" :: v :: rest -> parse_flags_from_args (("id", v) :: acc) rest
+  | _ :: rest -> parse_flags_from_args acc rest
+
+let get_flag key flags = List.find_map (fun (k, v) -> if k = key then Some v else None) flags
+
+(* Parse cn out commands *)
+let parse_out_cmd args =
+  let flags = parse_flags_from_args [] args in
+  match args with
+  | "do" :: "reply" :: _ ->
+      get_flag "message" flags |> Option.map (fun m -> Out.Do (Out.Reply { message = m }))
+  | "do" :: "send" :: _ ->
+      (match get_flag "to" flags, get_flag "message" flags with
+       | Some t, Some m -> Some (Out.Do (Out.Send { to_ = t; message = m }))
+       | _ -> None)
+  | "do" :: "surface" :: _ ->
+      get_flag "desc" flags |> Option.map (fun d -> Out.Do (Out.Surface { desc = d }))
+  | "do" :: "ack" :: _ ->
+      get_flag "reason" flags |> Option.map (fun r -> Out.Do (Out.Ack { reason = r }))
+  | "do" :: "commit" :: _ ->
+      get_flag "artifact" flags |> Option.map (fun a -> Out.Do (Out.Commit { artifact = a }))
+  | "defer" :: _ ->
+      get_flag "reason" flags |> Option.map (fun r -> Out.Defer { reason = r })
+  | "delegate" :: _ ->
+      get_flag "to" flags |> Option.map (fun t -> Out.Delegate { to_ = t })
+  | "delete" :: _ ->
+      get_flag "reason" flags |> Option.map (fun r -> Out.Delete { reason = r })
+  | _ -> None
+
 let join_rest rest = match rest with [] -> None | _ -> Some (String.concat " " rest)
 
 let rec parse_command = function
@@ -265,6 +338,7 @@ let rec parse_command = function
   | ["push"] -> Some Push
   | "save" :: rest -> Some (Save (join_rest rest))
   | ["update"] -> Some Update
+  | "out" :: rest -> parse_out_cmd rest |> Option.map (fun c -> Out c)
   | [alias] ->
       let expanded = expand_alias alias in
       if expanded <> alias then parse_command [expanded] else None
