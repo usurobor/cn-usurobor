@@ -1,0 +1,91 @@
+(* git.ml — Pure git operations. No CN semantics. *)
+
+module Child_process = struct
+  external exec_sync : string -> < cwd : string ; encoding : string ; stdio : string array > Js.t -> string = "execSync" [@@mel.module "child_process"]
+  
+  let exec_in ~cwd cmd =
+    try Some (exec_sync cmd [%mel.obj { cwd = cwd; encoding = "utf8"; stdio = [|"pipe"; "pipe"; "pipe"|] }])
+    with _ -> None
+end
+
+let split_lines s =
+  s |> String.trim |> String.split_on_char '\n' |> List.filter (fun s -> String.length s > 0)
+
+(* === Core Operations === *)
+
+let fetch ~cwd =
+  Child_process.exec_in ~cwd "git fetch origin" |> Option.is_some
+
+let add_all ~cwd =
+  Child_process.exec_in ~cwd "git add -A" |> Option.is_some
+
+let commit ~cwd ~msg =
+  let escaped = String.map (fun c -> if c = '"' then '\'' else c) msg in
+  Child_process.exec_in ~cwd (Printf.sprintf "git commit -m \"%s\"" escaped) |> Option.is_some
+
+let push ~cwd =
+  Child_process.exec_in ~cwd "git push origin HEAD" |> Option.is_some
+
+let push_branch ~cwd ~branch ~force =
+  let force_flag = if force then "-f " else "" in
+  Child_process.exec_in ~cwd (Printf.sprintf "git push %s-u origin %s" force_flag branch) |> Option.is_some
+
+let pull_ff ~cwd =
+  Child_process.exec_in ~cwd "git pull --ff-only" |> Option.is_some
+
+(* === Branch Operations === *)
+
+let current_branch ~cwd =
+  Child_process.exec_in ~cwd "git branch --show-current"
+  |> Option.map String.trim
+
+let remote_branches ~cwd ~prefix =
+  let cmd = Printf.sprintf "git branch -r | grep 'origin/%s/' | sed 's/.*origin\\///'" prefix in
+  Child_process.exec_in ~cwd cmd
+  |> Option.map split_lines
+  |> Option.value ~default:[]
+
+let checkout ~cwd ~branch =
+  Child_process.exec_in ~cwd (Printf.sprintf "git checkout %s" branch) |> Option.is_some
+
+let checkout_create ~cwd ~branch =
+  Child_process.exec_in ~cwd (Printf.sprintf "git checkout -b %s 2>/dev/null || git checkout %s" branch branch) |> Option.is_some
+
+let checkout_main ~cwd =
+  Child_process.exec_in ~cwd "git checkout main 2>/dev/null || git checkout master" |> Option.is_some
+
+(* === Query Operations === *)
+
+let status_porcelain ~cwd =
+  Child_process.exec_in ~cwd "git status --porcelain"
+  |> Option.map String.trim
+  |> Option.value ~default:""
+
+let is_dirty ~cwd =
+  status_porcelain ~cwd <> ""
+
+let show ~cwd ~ref ~path =
+  Child_process.exec_in ~cwd (Printf.sprintf "git show %s:%s" ref path)
+
+let diff_files ~cwd ~base ~head =
+  let cmd = Printf.sprintf "git diff %s...%s --name-only 2>/dev/null" base head in
+  Child_process.exec_in ~cwd cmd
+  |> Option.map split_lines
+  |> Option.value ~default:[]
+
+let rev_parse ~cwd ~ref =
+  Child_process.exec_in ~cwd (Printf.sprintf "git rev-parse --short %s 2>/dev/null" ref)
+  |> Option.map String.trim
+
+let log_oneline ~cwd ~count =
+  Child_process.exec_in ~cwd (Printf.sprintf "git log --oneline -%d" count)
+  |> Option.map split_lines
+  |> Option.value ~default:[]
+
+(* === Repo Setup === *)
+
+let init ~cwd =
+  Child_process.exec_in ~cwd "git init" |> Option.is_some
+
+let clone ~url ~dest =
+  Child_process.exec_in ~cwd:"." (Printf.sprintf "git clone %s %s" url dest) |> Option.is_some
