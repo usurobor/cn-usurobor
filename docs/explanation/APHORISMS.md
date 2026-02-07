@@ -79,4 +79,22 @@ Don't assume something was processed because the queue is empty. Verify.
 
 ---
 
+## On Solutions
+
+**"Don't bring me the problems, bring me solutions."**
+— [Vatsal Mehta](https://www.linkedin.com/in/vsmehta)
+
+When presenting issues, always end with your MCA (Most Coherent Action).
+
+---
+
+## On Simplicity
+
+**"Why do something when you can do nothing?"**
+— RBI
+
+The best code is no code. The best action is often no action. Don't add complexity unless forced.
+
+---
+
 *Add new aphorisms as they emerge. Attribution matters.*
