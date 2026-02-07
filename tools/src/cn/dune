@@ -5,18 +5,18 @@
  (modes melange)
  (preprocess (pps melange.ppx)))
 
-; git_cn module (CN protocol over git)
+; cn_io module (CN protocol over git)
 (library
- (name git_cn)
- (modules git_cn)
+ (name cn_io)
+ (modules cn_io)
  (libraries git)
  (modes melange)
  (preprocess (pps melange.ppx)))
 
 ; cn library (pure functions, testable)
 (library
- (name cn_lib)
- (modules cn_lib)
+ (name cn_ops)
+ (modules cn_ops)
  (libraries inbox_lib)
  (modes :standard melange))
 
@@ -25,6 +25,6 @@
  (target output)
  (alias cn)
  (modules cn)
- (libraries cn_lib inbox_lib git git_cn)
+ (libraries cn_ops inbox_lib git cn_io)
  (module_systems commonjs)
  (preprocess (pps melange.ppx)))
