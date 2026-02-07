@@ -1,5 +1,8 @@
 # RCA: Inbox Assumption Failure — Work Never Started
 
+> **⚠️ SUPERSEDED** by [Auto-Ack Bypass](./2026-02-07-auto-ack-bypass.md)  
+> This RCA identified the symptom (assumption). The deeper RCA found the cause (auto-acking).
+
 **Date:** 2026-02-07  
 **Severity:** Critical  
 **Duration:** ~4 days (since actor model went live)  
