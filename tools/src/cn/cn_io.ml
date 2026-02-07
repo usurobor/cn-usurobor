@@ -1,4 +1,29 @@
-(* git_cn.ml — CN protocol semantics over Git. *)
+(** cn_io.ml — CN protocol I/O operations
+    
+    DESIGN: This module implements CN protocol semantics over Git.
+    All I/O (git operations, file writes) lives here.
+    
+    Layering (deliberate):
+      cn.ml     → CLI commands, user interaction
+      cn_io.ml  → Protocol execution (THIS FILE)
+      cn_lib.ml → Pure types, parsing (no I/O)
+      git.ml    → Raw git operations
+    
+    Why separate from cn_lib?
+    - cn_lib.ml is PURE (no I/O) — fully testable with ppx_expect
+    - cn_io.ml has SIDE EFFECTS — needs integration tests
+    - Clear boundary: types vs execution
+    
+    Key operations:
+    - sync_inbox: fetch peer branches → materialize to threads/inbox/
+    - flush_outbox: threads/outbox/ → push to peer repos
+    - auto_commit/auto_push: hub state management
+    
+    CN Protocol:
+    - Peers push branches to each other's repos
+    - Branch name = {sender}/{topic}
+    - Materialization = branch content → local .md file
+*)
 
 module Path = struct
   let join a b = a ^ "/" ^ b

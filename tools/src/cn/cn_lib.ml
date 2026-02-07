@@ -1,10 +1,35 @@
-(** cn_lib: Pure functions for cn CLI.
+(** cn_lib.ml — Core CN library (pure, no I/O)
     
-    No FFI, fully testable. Follows FUNCTIONAL.md:
+    DESIGN: This is the "lib" in Unix convention — the core library
+    that everything else depends on. Like libc for C programs.
+    
+    Layering (deliberate):
+      cn.ml     → CLI wiring, calls cn_io and cn_lib
+      cn_io.ml  → Protocol I/O (side effects)
+      cn_lib.ml → Types, parsing, help (THIS FILE - pure)
+      git.ml    → Raw git operations
+    
+    Why pure?
+    - Fully testable with ppx_expect (57+ tests)
+    - No mocking needed — pure functions, deterministic
+    - Can run tests in CI without git repos
+    
+    What lives here:
+    - Command types (type command = Help | Sync | ...)
+    - Parsing (string list → command option)
+    - Help text
+    - Utility functions (frontmatter parsing, etc.)
+    
+    What does NOT live here:
+    - File I/O (→ cn_io.ml)
+    - Git operations (→ git.ml via cn_io.ml)
+    - CLI wiring (→ cn.ml)
+    
+    Follows FUNCTIONAL.md:
     - Pattern matching over conditionals
     - Pipelines over sequences
-    - Total functions (no exceptions)
-    - Semantic types *)
+    - Total functions (Option, not exceptions)
+    - Semantic types (Inbox.cmd, Gtd.cmd, etc.) *)
 
 (* Re-export inbox types for convenience *)
 type triage = Inbox_lib.triage =
@@ -555,4 +580,4 @@ Actor Model:
   Agent reads input.md, processes, deletes when done.
 |}
 
-let version = "2.2.4"
+let version = "2.2.5"
