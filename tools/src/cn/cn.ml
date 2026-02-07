@@ -725,7 +725,7 @@ let feed_next_input hub_path =
 
 let wake_agent () =
   print_endline (info "Triggering OpenClaw wake...");
-  let wake_cmd = "curl -s -X POST http://localhost:18789/cron/wake -H 'Content-Type: application/json' -d '{\"text\":\"input.md ready\",\"mode\":\"now\"}'" in
+  let wake_cmd = "openclaw system event --text 'input.md ready' --mode now 2>/dev/null" in
   match Child_process.exec wake_cmd with
   | Some _ -> print_endline (ok "Wake triggered")
   | None -> print_endline (warn "Wake trigger failed - is OpenClaw running?")
