@@ -34,18 +34,20 @@ let non_empty s = String.trim s <> ""
 
 (* === CLI Commands (exhaustive variants) === *)
 
-type inbox_cmd = Inbox_check | Inbox_process | Inbox_flush
-type outbox_cmd = Outbox_check | Outbox_flush
-type peer_cmd = Peer_list | Peer_add of string * string | Peer_remove of string | Peer_sync
-type queue_cmd = Queue_list | Queue_clear
-type mca_cmd = Mca_list | Mca_add of string
+(* Subcommand types - prefixed for disambiguation *)
+type inbox_cmd = In_check | In_process | In_flush
+type outbox_cmd = Out_check | Out_flush
+type peer_cmd = P_list | P_add of string * string | P_remove of string | P_sync
+type queue_cmd = Q_list | Q_clear
+type mca_cmd = M_list | M_add of string
 
+(* GTD commands - G_ prefix to disambiguate from agent_op *)
 type gtd_cmd =
-  | GtdDelete of string
-  | GtdDefer of string * string option
-  | GtdDelegate of string * string
-  | GtdDo of string
-  | GtdDone of string
+  | G_delete of string
+  | G_defer of string * string option
+  | G_delegate of string * string
+  | G_do of string
+  | G_done of string
 
 (* === Agent Output Operations ===
    
@@ -140,29 +142,29 @@ let string_of_command = function
   | Doctor -> "doctor"
   | Init None -> "init"
   | Init (Some n) -> "init " ^ n
-  | Inbox Inbox_check -> "inbox check"
-  | Inbox Inbox_process -> "inbox process"
-  | Inbox Inbox_flush -> "inbox flush"
-  | Outbox Outbox_check -> "outbox check"
-  | Outbox Outbox_flush -> "outbox flush"
-  | Peer Peer_list -> "peer list"
-  | Peer (Peer_add (n, _)) -> "peer add " ^ n
-  | Peer (Peer_remove n) -> "peer remove " ^ n
-  | Peer Peer_sync -> "peer sync"
-  | Queue Queue_list -> "queue list"
-  | Queue Queue_clear -> "queue clear"
-  | Mca Mca_list -> "mca list"
-  | Mca (Mca_add d) -> "mca add " ^ d
+  | Inbox In_check -> "inbox check"
+  | Inbox In_process -> "inbox process"
+  | Inbox In_flush -> "inbox flush"
+  | Outbox Out_check -> "outbox check"
+  | Outbox Out_flush -> "outbox flush"
+  | Peer P_list -> "peer list"
+  | Peer (P_add (n, _)) -> "peer add " ^ n
+  | Peer (P_remove n) -> "peer remove " ^ n
+  | Peer P_sync -> "peer sync"
+  | Queue Q_list -> "queue list"
+  | Queue Q_clear -> "queue clear"
+  | Mca M_list -> "mca list"
+  | Mca (M_add d) -> "mca add " ^ d
   | Sync -> "sync"
   | Next -> "next"
   | Read t -> "read " ^ t
   | Reply (t, _) -> "reply " ^ t
   | Send (p, _) -> "send " ^ p
-  | Gtd (GtdDelete t) -> "delete " ^ t
-  | Gtd (GtdDefer (t, _)) -> "defer " ^ t
-  | Gtd (GtdDelegate (t, p)) -> "delegate " ^ t ^ " " ^ p
-  | Gtd (GtdDo t) -> "do " ^ t
-  | Gtd (GtdDone t) -> "done " ^ t
+  | Gtd (G_delete t) -> "delete " ^ t
+  | Gtd (G_defer (t, _)) -> "defer " ^ t
+  | Gtd (G_delegate (t, p)) -> "delegate " ^ t ^ " " ^ p
+  | Gtd (G_do t) -> "do " ^ t
+  | Gtd (G_done t) -> "done " ^ t
   | Commit None -> "commit"
   | Commit (Some m) -> "commit " ^ m
   | Push -> "push"
@@ -184,39 +186,39 @@ let expand_alias = function
 (* === Command Parsing (Option for totality) === *)
 
 let parse_inbox_cmd = function
-  | [] | ["check"] -> Some Inbox_check
-  | ["process"] -> Some Inbox_process
-  | ["flush"] -> Some Inbox_flush
+  | [] | ["check"] -> Some In_check
+  | ["process"] -> Some In_process
+  | ["flush"] -> Some In_flush
   | _ -> None
 
 let parse_outbox_cmd = function
-  | [] | ["check"] -> Some Outbox_check
-  | ["flush"] -> Some Outbox_flush
+  | [] | ["check"] -> Some Out_check
+  | ["flush"] -> Some Out_flush
   | _ -> None
 
 let parse_peer_cmd = function
-  | [] | ["list"] -> Some Peer_list
-  | ["add"; name; url] -> Some (Peer_add (name, url))
-  | ["remove"; name] -> Some (Peer_remove name)
-  | ["sync"] -> Some Peer_sync
+  | [] | ["list"] -> Some P_list
+  | ["add"; name; url] -> Some (P_add (name, url))
+  | ["remove"; name] -> Some (P_remove name)
+  | ["sync"] -> Some P_sync
   | _ -> None
 
 let parse_queue_cmd = function
-  | [] | ["list"] -> Some Queue_list
-  | ["clear"] -> Some Queue_clear
+  | [] | ["list"] -> Some Q_list
+  | ["clear"] -> Some Q_clear
   | _ -> None
 
 let parse_mca_cmd = function
-  | [] | ["list"] -> Some Mca_list
-  | "add" :: rest when rest <> [] -> Some (Mca_add (String.concat " " rest))
+  | [] | ["list"] -> Some M_list
+  | "add" :: rest when rest <> [] -> Some (M_add (String.concat " " rest))
   | _ -> None
 
 let parse_gtd_cmd = function
-  | ["delete"; t] -> Some (GtdDelete t)
-  | "defer" :: t :: rest -> Some (GtdDefer (t, List.nth_opt rest 0))
-  | ["delegate"; t; p] -> Some (GtdDelegate (t, p))
-  | ["do"; t] -> Some (GtdDo t)
-  | ["done"; t] -> Some (GtdDone t)
+  | ["delete"; t] -> Some (G_delete t)
+  | "defer" :: t :: rest -> Some (G_defer (t, List.nth_opt rest 0))
+  | ["delegate"; t; p] -> Some (G_delegate (t, p))
+  | ["do"; t] -> Some (G_do t)
+  | ["done"; t] -> Some (G_done t)
   | _ -> None
 
 let join_rest rest = match rest with [] -> None | _ -> Some (String.concat " " rest)
@@ -457,4 +459,4 @@ Actor Model:
   Agent reads input.md, processes, deletes when done.
 |}
 
-let version = "2.1.16"
+let version = "2.1.17"
