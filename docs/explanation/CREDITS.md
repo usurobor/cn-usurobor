@@ -43,13 +43,6 @@ Ideas borrowed, adapted, and built upon. Attribution matters.
 
 **Source:** [freebsd.org](https://www.freebsd.org/)
 
-### Poul-Henning Kamp (PHK) — Bikeshedding
-**What we took:** The "bikeshed" concept — Parkinson's law of triviality in group discussions. Focus on substance, not color of the bikeshed.
-
-**Source:** FreeBSD committer, Varnish architect. [bikeshed.com](https://bikeshed.com/), [Wikipedia](https://en.wikipedia.org/wiki/Poul-Henning_Kamp)
-
-> ⚠️ **Confirm:** Is PHK the "FreeBSD guy" you meant, or someone else?
-
 ### Eric S. Raymond — Cathedral and Bazaar
 **What we took:** The open source development model. "Given enough eyeballs, all bugs are shallow."
 
