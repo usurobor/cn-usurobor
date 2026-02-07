@@ -357,7 +357,7 @@ This section is **informative (non-normative)** and reflects a snapshot as of th
 | ~~`cn.json` manifest~~ | §5.1, A.2 | ✓ Done — cn.json in template and hub repos |
 | ~~`.gitattributes` with merge=union~~ | §6.2, A.5 | ✓ Done — merge=union for threads/ and state/ |
 | `cn.thread.v1` schema | §6.3, A.3–A.4 | Migrate thread files to frontmatter + anchor/entry_id format |
-| `state/peers.json` (JSON) | §5.2 | Migrate from `state/peers.md` (Markdown) |
+| ~~`state/peers.json` (JSON)~~ | §5.2 | ✓ Done — schema at schemas/peers.schema.json |
 | ~~`threads/` at repo root~~ | §4.1, A.1 | ✓ Done — threads/ now at root with subdirs |
 | Commit signing | §8, A.6 | Key generation, cn.json identity, allowed_signers |
 | Signature verification | §8, A.6 | Peer key import, git verify-commit integration |
