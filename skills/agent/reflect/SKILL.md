@@ -57,6 +57,8 @@ Track both. Count per session.
 | Quarterly | `threads/quarterly/YYYYMM01.md` | Q start |
 | Yearly | `threads/yearly/YYYY0101.md` | Jan 1 |
 
+**Fill reflections in real-time.** Don't defer to "(EOD)" — capture MCAs and MCIs when they happen. Deferred reflections lose context and become empty placeholders.
+
 ## Daily Template
 
 ```markdown

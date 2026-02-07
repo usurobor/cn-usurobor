@@ -8,6 +8,11 @@ Ship code to production or merge to main.
 - [ ] Branch rebased on main
 - [ ] PR approved (if required)
 - [ ] No unresolved comments
+- [ ] **Features verified working** — don't assume, test it yourself
+
+## Principle
+
+**Don't assume features work — test them.** Before shipping, verify the feature actually works. Before using a new feature, verify it's implemented. Assumptions cause stale state, silent failures, and RCAs.
 
 ## Ship
 
