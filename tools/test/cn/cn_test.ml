@@ -1,6 +1,6 @@
-(** cn_test: ppx_expect tests for cn_ops pure functions *)
+(** cn_test: ppx_expect tests for cn_lib pure functions *)
 
-open Cn_ops
+open Cn_lib
 
 (* === Command Parsing === *)
 
