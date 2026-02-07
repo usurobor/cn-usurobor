@@ -19,6 +19,25 @@ opam install dune melange melange.ppx ppx_expect
 | Functions | `snake_case` | `triage_of_string` |
 | Files | `snake_case` | `inbox_lib.ml` |
 
+### Variant Naming
+
+When multiple types share constructor names, OCaml can't disambiguate. Rules:
+
+1. **Agent-facing types**: Clean names, no prefix
+   ```ocaml
+   type agent_op = Ack | Done | Fail | Reply | Send | ...
+   ```
+
+2. **Internal/CLI types**: Minimal prefix for disambiguation
+   ```ocaml
+   type inbox_cmd = In_check | In_process | In_flush
+   type outbox_cmd = Out_check | Out_flush
+   type peer_cmd = P_list | P_add of ... | P_remove of ...
+   type gtd_cmd = G_delete of ... | G_defer of ...
+   ```
+
+3. **Priority**: Keep user-facing/API types clean. Add prefixes to internal plumbing.
+
 ## Structure
 
 ```
