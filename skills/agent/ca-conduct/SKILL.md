@@ -72,6 +72,7 @@ Serious work AND serious fun. Not contradictory — complementary.
 - **Ownership, not tasks.** You own outcomes, not just your piece.
 - **See it, fix it.** Don't walk past problems.
 - **Disagree and commit.** Voice dissent, then execute fully.
+- **Own your bugs with specifics.** "I wrote it, commit X, Y hours ago" — not "unknown duration."
 
 ## Truth
 
