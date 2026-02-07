@@ -47,6 +47,68 @@ type gtd_cmd =
   | GtdDo of string
   | GtdDone of string
 
+(* === Agent Output Operations ===
+   
+   These are operations an agent can write to output.md.
+   cn parses output.md and executes matching operations. *)
+
+type agent_op =
+  | OpAck of string                      (* Acknowledge input, no further action *)
+  | OpDone of string                     (* Mark input/thread complete *)
+  | OpFail of string * string            (* Failed to process: id, reason *)
+  | OpReply of string * string           (* Reply to thread: id, message *)
+  | OpSend of string * string            (* Send to peer: peer, message *)
+  | OpDelegate of string * string        (* Forward to peer: id, peer *)
+  | OpDefer of string * string option    (* Postpone: id, until *)
+  | OpDelete of string                   (* Discard: id *)
+  | OpSurface of string                  (* Surface MCA for community *)
+
+let string_of_agent_op = function
+  | OpAck id -> "ack:" ^ id
+  | OpDone id -> "done:" ^ id
+  | OpFail (id, reason) -> "fail:" ^ id ^ " reason:" ^ reason
+  | OpReply (id, _) -> "reply:" ^ id
+  | OpSend (peer, _) -> "send:" ^ peer
+  | OpDelegate (id, peer) -> "delegate:" ^ id ^ " to:" ^ peer
+  | OpDefer (id, None) -> "defer:" ^ id
+  | OpDefer (id, Some until) -> "defer:" ^ id ^ " until:" ^ until
+  | OpDelete id -> "delete:" ^ id
+  | OpSurface desc -> "surface:" ^ desc
+
+(* Parse agent_op from frontmatter key-value pairs *)
+let parse_agent_op key value =
+  match key with
+  | "ack" -> Some (OpAck value)
+  | "done" -> Some (OpDone value)
+  | "fail" -> 
+      (match String.index_opt value '|' with
+       | Some i -> Some (OpFail (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
+       | None -> Some (OpFail (value, "unspecified")))
+  | "reply" ->
+      (match String.index_opt value '|' with
+       | Some i -> Some (OpReply (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
+       | None -> None)
+  | "send" ->
+      (match String.index_opt value '|' with
+       | Some i -> Some (OpSend (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
+       | None -> None)
+  | "delegate" ->
+      (match String.index_opt value '|' with
+       | Some i -> Some (OpDelegate (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
+       | None -> None)
+  | "defer" ->
+      (match String.index_opt value '|' with
+       | Some i -> Some (OpDefer (String.sub value 0 i, Some (String.sub value (i+1) (String.length value - i - 1))))
+       | None -> Some (OpDefer (value, None)))
+  | "delete" -> Some (OpDelete value)
+  | "surface" -> Some (OpSurface value)
+  | "mca" -> Some (OpSurface value)  (* alias *)
+  | _ -> None
+
+(* Extract all agent_ops from frontmatter *)
+let extract_ops frontmatter =
+  frontmatter |> List.filter_map (fun (k, v) -> parse_agent_op k v)
+
 type command =
   | Help
   | Version
@@ -395,4 +457,4 @@ Actor Model:
   Agent reads input.md, processes, deletes when done.
 |}
 
-let version = "2.1.14"
+let version = "2.1.15"
