@@ -164,58 +164,53 @@ Erlang's actor model has been battle-tested for 35+ years in telecom systems req
 
 **Interface:**
 ```
-cn out done <op> --param value
+cn out <gtd> [op] --param value
 ```
 
-Agent posts `done(op)` — marks input complete, op is what cn executes.
+**Only 4 options. No other way to out.**
 
-Examples (GTD 4 Ds):
 ```bash
-# Do — complete with action
-cn out do noop --reason "acknowledged, no action needed"
+cn out do <op> --params      # complete, cn executes op
+cn out defer --reason "..."  # postpone
+cn out delegate --to <peer>  # forward
+cn out delete --reason "..." # discard
+```
+
+Examples:
+```bash
 cn out do reply --message "response text"
 cn out do send --to pi --message "hello"
 cn out do commit --artifact abc123f
+cn out do noop --reason "acknowledged"
 
-# Defer — postpone
 cn out defer --reason "waiting on X"
-
-# Delegate — forward to peer
-cn out delegate --to pi --message "please handle"
-
-# Delete — discard
+cn out delegate --to pi
 cn out delete --reason "duplicate"
 ```
 
 **Rules:**
-- `do commit` requires `--artifact`
-- `do noop` requires `--reason`
-- `do reply/send` — message is the artifact
-- `defer/delegate/delete` require `--reason` or `--message`
-- No empty outputs.
+- `do` requires an op (what cn executes)
+- `defer` requires `--reason`
+- `delegate` requires `--to`
+- `delete` requires `--reason`
+- No other output options exist.
 
 **Type-level encoding (OCaml):**
 ```ocaml
-(* The ONLY type agent can produce *)
-type artifact = Commit of string | Url of string
+(* What cn executes — from existing agent_op *)
+type op = agent_op  (* Reply, Send, Surface, Commit, Noop, etc. *)
 
-(* What cn executes *)
-type op =
-  | Noop of { reason: string }
-  | Reply of { message: string }
-  | Send of { to_: string; message: string }
-  | Commit of { artifact: artifact }
-
-(* Agent output — GTD 4 Ds *)
-type output =
-  | Do of op                               (* complete with action *)
-  | Defer of { reason: string }            (* postpone *)
-  | Delegate of { to_: string; message: string }  (* forward to peer *)
-  | Delete of { reason: string }           (* discard *)
+(* GTD protocol — how agent responds to input *)
+(* ONLY 4 OPTIONS. No other way to out. *)
+type gtd =
+  | Do of op               (* complete, cn executes op *)
+  | Defer of string        (* postpone with reason *)
+  | Delegate of string     (* forward to peer *)
+  | Delete of string       (* discard with reason *)
 
 (* Agent's ENTIRE interface — nothing else exposed *)
 module Agent : sig
-  val out : output -> unit  (* Success of op *)
+  val out : gtd -> unit  (* Do | Defer | Delegate | Delete *)
   (* No Fs. No exec. No other cn commands. Nothing. *)
 end
 ```
@@ -225,7 +220,8 @@ end
 - No `Fs.write` exposed
 - No `exec` exposed  
 - No direct filesystem access
-- Just `out : output -> unit` where `output = Success of op`
+- Just `out : gtd -> unit`
+- Only 4 options: Do, Defer, Delegate, Delete
 
 The type system makes bypass impossible. Not convention. Not runtime check. Compile-time enforcement.
 
