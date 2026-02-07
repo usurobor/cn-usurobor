@@ -1,6 +1,6 @@
 {
   "name": "cnagent",
-  "version": "2.2.5",
+  "version": "2.2.6",
   "description": "Coherent Network agent CLI — everything runs through cn",
   "keywords": [
     "cn-agent",
@@ -35,5 +35,8 @@
   "license": "Apache-2.0",
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "yaml": "^2.8.2"
   }
 }

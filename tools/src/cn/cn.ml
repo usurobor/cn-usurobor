@@ -67,6 +67,11 @@ module Path = struct
   external basename_ext : string -> string -> string = "basename" [@@mel.module "path"]
 end
 
+module Yaml = struct
+  external parse : string -> Js.Json.t = "parse" [@@mel.module "yaml"]
+  external stringify : Js.Json.t -> string = "stringify" [@@mel.module "yaml"]
+end
+
 module Child_process = struct
   external exec_sync : string -> < cwd : string ; encoding : string ; stdio : string array > Js.t -> string = "execSync" [@@mel.module "child_process"]
   external exec_sync_simple : string -> < encoding : string > Js.t -> string = "execSync" [@@mel.module "child_process"]
@@ -112,9 +117,10 @@ let rec find_hub_path dir =
   match dir with
   | "/" -> None
   | _ ->
-      let has_config = Fs.exists (Path.join dir ".cn/config.json") in
+      let has_yaml = Fs.exists (Path.join dir ".cn/config.yaml") in
+      let has_json = Fs.exists (Path.join dir ".cn/config.json") in
       let has_peers = Fs.exists (Path.join dir "state/peers.md") in
-      match has_config || has_peers with
+      match has_yaml || has_json || has_peers with
       | true -> Some dir
       | false -> find_hub_path (Path.dirname dir)
 
@@ -559,9 +565,14 @@ let run_doctor hub_path =
     { name = "hub directory"; passed = Fs.exists hub_path; 
       value = if Fs.exists hub_path then "exists" else "not found" };
     
-    (let p = Path.join hub_path ".cn/config.json" in
-     { name = ".cn/config.json"; passed = Fs.exists p; 
-       value = if Fs.exists p then "exists" else "missing" });
+    (let yaml_path = Path.join hub_path ".cn/config.yaml" in
+     let json_path = Path.join hub_path ".cn/config.json" in
+     let has_yaml = Fs.exists yaml_path in
+     let has_json = Fs.exists json_path in
+     { name = ".cn/config"; passed = has_yaml || has_json; 
+       value = if has_yaml then "config.yaml" 
+               else if has_json then "config.json (migrate to .yaml)" 
+               else "missing" });
     
     (let p = Path.join hub_path "spec/SOUL.md" in
      { name = "spec/SOUL.md"; passed = Fs.exists p; 
@@ -1286,13 +1297,12 @@ let run_init name =
   Fs.mkdir_p (Path.join hub_dir "threads/archived");
   Fs.mkdir_p (Path.join hub_dir "logs");
   
-  (* Create config *)
-  let config = Printf.sprintf {|{
-  "name": "%s",
-  "version": "1.0.0",
-  "created": "%s"
-}|} hub_name (now_iso ()) in
-  Fs.write (Path.join hub_dir ".cn/config.json") config;
+  (* Create config (YAML format) *)
+  let config = Printf.sprintf {|name: %s
+version: 1.0.0
+created: %s
+|} hub_name (now_iso ()) in
+  Fs.write (Path.join hub_dir ".cn/config.yaml") config;
   
   (* Create SOUL.md template *)
   let soul = Printf.sprintf {|# SOUL.md - Core Contract
