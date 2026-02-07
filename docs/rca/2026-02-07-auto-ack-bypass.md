@@ -25,17 +25,17 @@ This is not processing. This is bypassing.
 
 ## Timeline
 
-| Time (UTC) | Event |
-|------------|-------|
-| 2026-02-03 → 02-07 | Pi pushes 34+ branches |
-| 2026-02-06 17:58 | Actor model deployed, cn sync materializes to inbox |
-| 2026-02-06 17:58 | queue_inbox_items marks all with `queued-for-processing` |
-| 2026-02-07 03:05 | Batch "processing" begins |
-| 2026-02-07 03:07 | 42 io.archive events in ~8 seconds |
-| 2026-02-07 03:07 | Each archive: minimal "Acknowledged." output |
-| 2026-02-07 03:08 | Files committed to logs/input/ and logs/output/ |
-| 2026-02-07 06:19 | Axiom: "check the branches" → 34 still exist |
-| 2026-02-07 06:38 | RCA investigation reveals auto-ack outputs |
+| # | Time (UTC) | Event |
+|---|------------|-------|
+| 1 | 2026-02-03 → 02-07 | Pi pushes 34+ branches |
+| 2 | 2026-02-06 17:58 | Actor model deployed, cn sync materializes to inbox |
+| 3 | 2026-02-06 17:58 | queue_inbox_items marks all with `queued-for-processing` |
+| 4 | 2026-02-07 03:05 | Batch "processing" begins |
+| 5 | 2026-02-07 03:07 | 42 io.archive events in ~8 seconds |
+| 6 | 2026-02-07 03:07 | Each archive: minimal "Acknowledged." output |
+| 7 | 2026-02-07 03:08 | Files committed to logs/input/ and logs/output/ |
+| 8 | 2026-02-07 06:19 | Axiom: "check the branches" → 34 still exist |
+| 9 | 2026-02-07 06:38 | RCA investigation reveals auto-ack outputs |
 
 ## Root Causes
 
