@@ -23,7 +23,7 @@ Knowledge that stays in context dies with the session. Ship artifacts or it wasn
 ## On Learning
 
 **"We either win or we learn."**
-— Axiom
+— Nelson Mandela
 
 No failures, only lessons. But lessons must ship as artifacts.
 
@@ -76,6 +76,8 @@ Stop asking. Start doing.
 — *Under Siege 2* (1995), via Axiom
 
 Don't assume something was processed because the queue is empty. Verify.
+
+*Example (Sigma, 2026-02-07):* Assumed "queue empty = all 30+ branches processed." Reality: no tracking of "branch X → processed ✓". A branch could have failed to materialize, been skipped, or never queued. The gap: cn checked "is this in inbox?" — not "was this processed to completion?"
 
 ---
 
