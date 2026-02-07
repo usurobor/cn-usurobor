@@ -1,10 +1,34 @@
-(** cn: Main CLI entrypoint (Melange -> Node.js).
+(** cn.ml — CLI entrypoint (Melange → Node.js)
+    
+    DESIGN: This is the CLI wiring layer. It connects user input
+    to cn_lib (parsing) and cn_io (execution).
+    
+    Layering (deliberate):
+      cn.ml     → CLI wiring (THIS FILE)
+      cn_io.ml  → Protocol I/O (sync, flush, archive)
+      cn_lib.ml → Types, parsing (pure)
+      git.ml    → Raw git operations
+    
+    What lives here:
+    - Node.js FFI bindings (Process, Fs, Child_process, Path)
+    - CLI argument parsing
+    - Command dispatch (command → run_* function)
+    - User-facing output (colors, formatting)
+    
+    Why Melange?
+    - OCaml type safety + Node.js runtime
+    - No separate compile step for users (just npm install)
+    - Access to npm ecosystem
+    
+    TODO: Migrate inline git operations to use cn_io.ml
+    Currently cn.ml still has some direct git calls that
+    should go through the cn_io layer.
     
     Follows FUNCTIONAL.md:
     - Pipelines over sequences
     - Fold over mutation
     - Option over exceptions
-    - Effects at boundaries *)
+    - Effects at boundaries (here, at the edge) *)
 
 open Cn_lib
 

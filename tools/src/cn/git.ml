@@ -1,4 +1,22 @@
-(* git.ml — Pure git operations. No CN semantics. *)
+(** git.ml — Pure git operations
+    
+    DESIGN: This module contains ONLY raw git operations.
+    No CN protocol knowledge. No business logic.
+    
+    Layering (deliberate):
+      cn.ml → cn_io.ml → git.ml
+              ↑           ↑
+              CN semantics │
+                          raw git
+    
+    Why separate?
+    - Testable: can mock git.ml for cn_io tests
+    - Portable: git.ml works for any git workflow
+    - Clear: CN protocol lives in cn_io, not here
+    
+    All functions are thin wrappers over git CLI.
+    Returns Option for operations that can fail.
+*)
 
 module Child_process = struct
   external exec_sync : string -> < cwd : string ; encoding : string ; stdio : string array > Js.t -> string = "execSync" [@@mel.module "child_process"]
