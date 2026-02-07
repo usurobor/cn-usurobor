@@ -24,8 +24,13 @@ Create `threads/rca/YYYYMMDD-title.md`:
 ## Summary
 
 ## Timeline (UTC)
-HH:MM — Event
+| # | Time | Event |
+|---|------|-------|
+| 1 | HH:MM | Event |
+| 2 | HH:MM | Event |
 ```
+
+**Number each step.** Makes discussion easier ("issue started at step 3").
 
 ### 2. Five Whys
 
