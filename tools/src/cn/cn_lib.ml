@@ -221,7 +221,7 @@ let string_of_command = function
   | Push -> "push"
   | Save None -> "save"
   | Save (Some m) -> "save " ^ m
-  | Inbound -> "inbound"
+  | Inbound -> "in"
   | Update -> "update"
 
 (* === Alias Expansion === *)
@@ -332,7 +332,7 @@ let rec parse_command = function
   | "mca" :: rest -> parse_mca_cmd rest |> Option.map (fun c -> Mca c)
   | ["sync"] -> Some Sync
   | ["next"] -> Some Next
-  | ["inbound"] | ["process"] -> Some Inbound  (* process is alias for backward compat *)
+  | ["in"] | ["inbound"] | ["process"] -> Some Inbound  (* inbound/process are aliases *)
   | ["read"; t] -> Some (Read t)
   | "reply" :: t :: rest -> Some (Reply (t, String.concat " " rest))
   | "send" :: p :: rest -> Some (Send (p, String.concat " " rest))
@@ -520,7 +520,7 @@ Commands:
   
   # cn operations (orchestrator)
   sync                Fetch inbound + send outbound
-  inbound             Queue inbox → input.md → wake agent (alias: process)
+  in                  Queue inbox → input.md → wake agent (alias: inbound, process)
   queue [list|clear]  View or clear the task queue
   mca [list|add <desc>] Surface MCAs for community pickup
   inbox               List inbox threads
@@ -555,4 +555,4 @@ Actor Model:
   Agent reads input.md, processes, deletes when done.
 |}
 
-let version = "2.2.0"
+let version = "2.2.1"

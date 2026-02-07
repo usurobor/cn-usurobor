@@ -1149,7 +1149,7 @@ let auto_save hub_path name =
   | _ -> ()
 
 let run_inbound hub_path name =
-  print_endline (info "cn inbound: handling external input...");
+  print_endline (info "cn in: handling external input...");
   
   (* Step 1: Queue any new inbox items *)
   let queued = queue_inbox_items hub_path in
