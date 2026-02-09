@@ -50,8 +50,8 @@ Each bullet should stand alone as a complete teaching.
 2.2. **Example from WRITING.md**
   ```markdown
   1.1. **Cut filler phrases**
-    - ❌ "In order to" → ✅ "To"
-    - ❌ "Due to the fact that" → ✅ "Because"
+    - ❌ "In order to"
+    - ✅ "To"
   ```
   - Rule is clear: cut filler
   - Examples are immediate: reader sees exactly what "filler" means
