@@ -1052,12 +1052,29 @@ let feed_next_input hub_path =
 
 (* === Wake agent === *)
 
-let wake_agent () =
-  print_endline (info "Triggering OpenClaw wake...");
-  let wake_cmd = "openclaw system event --text 'input.md ready' --mode now 2>/dev/null" in
-  match Child_process.exec wake_cmd with
-  | Some _ -> print_endline (ok "Wake triggered")
-  | None -> print_endline (warn "Wake trigger failed - is OpenClaw running?")
+(* Shell-escape a string for single-quoted context *)
+let shell_escape s =
+  (* Replace ' with '\'' (end quote, escaped quote, start quote) *)
+  let buf = Buffer.create (String.length s * 2) in
+  String.iter (fun c ->
+    if c = '\'' then Buffer.add_string buf "'\\''"
+    else Buffer.add_char buf c
+  ) s;
+  Buffer.contents buf
+
+let wake_agent hub_path =
+  let inp = input_path hub_path in
+  if not (Fs.exists inp) then begin
+    print_endline (warn "No input.md to wake with");
+  end else begin
+    let content = Fs.read inp in
+    let escaped = shell_escape content in
+    print_endline (info "Triggering OpenClaw wake with input content...");
+    let wake_cmd = Printf.sprintf "openclaw system event --text '%s' --mode now 2>/dev/null" escaped in
+    match Child_process.exec wake_cmd with
+    | Some _ -> print_endline (ok "Wake triggered with input content")
+    | None -> print_endline (warn "Wake trigger failed - is OpenClaw running?")
+  end
 
 (* === Sync === *)
 
@@ -1413,7 +1430,7 @@ let run_inbound hub_path name =
       (* Step 4: Auto-save after successful processing *)
       auto_save hub_path name;
       (* Feed next input *)
-      if feed_next_input hub_path then wake_agent ()
+      if feed_next_input hub_path then wake_agent hub_path
     end
   end
   else if Fs.exists inp then begin
@@ -1423,7 +1440,7 @@ let run_inbound hub_path name =
   end
   else begin
     (* No input - feed next *)
-    if feed_next_input hub_path then wake_agent ()
+    if feed_next_input hub_path then wake_agent hub_path
   end
 
 (* === Runtime === *)
