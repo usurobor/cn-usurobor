@@ -2,9 +2,15 @@
 
 ## Core Principle
 
-**Coherent reflection: every reflection produces action or learning.**
+**Coherent reflection: the conclusion matches the evidence.**
 
-If a reflection produces neither MCA (action) nor MCI (insight), it wasn't reflection — it was noise.
+Why this is coherence:
+- Reflection has parts: observation, interpretation, output
+- Coherence = parts fit together, serve the whole
+- Conclusion must follow from evidence
+- If it doesn't → self-deception → incoherent
+
+Reflection's unique failure mode is motivated reasoning — comfortable conclusions that ignore uncomfortable observations.
 
 ## 1. Outputs
 

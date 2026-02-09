@@ -28,13 +28,19 @@ This formula is:
 
 ### 1. Core Principle
 
-1.1. **Formulate "Coherent X: Y"**
+1.1. **First ask: "What makes this a coherence formula?"**
+  - Coherence = every part serves the whole
+  - What are the parts in this skill's domain?
+  - How do they fit (or fail to fit)?
+  - The formula must answer this — not just state a goal
+
+1.2. **Formulate "Coherent X: Y"**
   - X = the skill domain
   - Y = what coherence means specifically for X
-  - ❌ "Coherent writing: follow best practices"
-  - ✅ "Coherent writing: nothing can be removed without loss"
+  - ❌ "Coherent writing: follow best practices" (goal, not coherence)
+  - ✅ "Coherent writing: nothing can be removed without loss" (parts serving whole)
 
-1.2. **One sentence expansion**
+1.3. **One sentence expansion**
   - Unpacks the formula
   - No more than needed
 
