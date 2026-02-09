@@ -2,12 +2,54 @@
 
 Ship code to production or merge to main.
 
-## Core Rule
+## Core Rules
 
 **Author never self-merges.** Reviewer merges, author gets notified.
 
 - ❌ Author merges their own branch
 - ✅ Reviewer approves → Reviewer merges → Author notified
+
+**Bug fixes require TDD.** Test catches bug before code fixes it.
+
+- ❌ Fix code → write test → ship
+- ✅ Write test → verify it fails → fix code → verify it passes → ship
+
+## Bug Fix Flow (TDD)
+
+```
+1. Write test that reproduces the bug
+2. Run test — MUST FAIL (proves test catches bug)
+3. Fix the code
+4. Run test — MUST PASS (proves fix works)
+5. Run all tests — no regressions
+6. Ship
+```
+
+If the test doesn't fail in step 2, the test doesn't catch the bug. Rewrite it.
+
+### Example
+
+```bash
+# 1. Write failing test
+cat > test/bug-123.t << 'EOF'
+  $ cn inbox 2>&1 | grep "expected output"
+  expected output
+EOF
+
+# 2. Verify it fails
+dune runtest test/bug-123.t  # MUST FAIL
+
+# 3. Fix the code
+vim src/cn.ml
+
+# 4. Verify it passes
+dune runtest test/bug-123.t  # MUST PASS
+
+# 5. Run all tests
+dune runtest  # No regressions
+
+# 6. Ship
+```
 
 ## Pre-Ship Checklist
 
