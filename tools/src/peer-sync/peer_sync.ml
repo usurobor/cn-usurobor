@@ -30,6 +30,23 @@ module Path = struct
   external resolve : string -> string -> string = "resolve" [@@mel.module "path"]
 end
 
+(* Unicode helpers (Melange outputs \xNN which JS reads as Latin-1) *)
+module Str = struct
+  external from_code_point : int -> string = "fromCodePoint" [@@mel.scope "String"]
+end
+let check = Str.from_code_point 0x2713     (* ✓ *)
+let lightning = Str.from_code_point 0x26A1 (* ⚡ *)
+let dot = Str.from_code_point 0x00B7       (* · *)
+
+(* Format report_result with proper Unicode *)
+let format_report (status, msg) =
+  let prefix = match status with
+    | Peer_sync_lib.Ok -> check
+    | Peer_sync_lib.Alert -> lightning
+    | Peer_sync_lib.Skip -> dot
+  in
+  Printf.sprintf "  %s %s" prefix msg
+
 (* Shell execution *)
 let run_cmd cmd =
   try Some (Child_process.exec_sync cmd (Child_process.make_options ~encoding:"utf8"))
@@ -84,7 +101,7 @@ let () =
           print_endline (Printf.sprintf "Syncing %d peers as %s...\n" (List.length peers) my_name);
           
           let results = peers |> List.map (sync_peer my_name) in
-          results |> List.iter (fun r -> print_endline (report_result r));
+          results |> List.iter (fun r -> print_endline (format_report (report_result r)));
           
           let alerts = collect_alerts results in
           print_endline "";

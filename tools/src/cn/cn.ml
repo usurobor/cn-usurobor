@@ -91,6 +91,17 @@ module Json = struct
   external stringify : 'a -> string = "stringify" [@@mel.scope "JSON"]
 end
 
+(* === Unicode Helpers === *)
+(* Melange emits UTF-8 literals as \xNN escapes which JS interprets as Latin-1.
+   Use String.fromCodePoint for correct Unicode output. *)
+module Str = struct
+  external from_code_point : int -> string = "fromCodePoint" [@@mel.scope "String"]
+end
+
+let check = Str.from_code_point 0x2713  (* ✓ U+2713 *)
+let cross = Str.from_code_point 0x2717  (* ✗ U+2717 *)
+let warning = Str.from_code_point 0x26A0 (* ⚠ U+26A0 *)
+
 (* === Time === *)
 
 let now_iso () = Js.Date.toISOString (Js.Date.make ())
@@ -106,9 +117,9 @@ let yellow = color "33"
 let cyan = color "36"
 let dim = color "2"
 
-let ok msg = green "✓ " ^ msg
-let fail msg = red "✗ " ^ msg
-let warn msg = yellow "⚠ " ^ msg
+let ok msg = green (check ^ " ") ^ msg
+let fail msg = red (cross ^ " ") ^ msg
+let warn msg = yellow (warning ^ " ") ^ msg
 let info = cyan
 
 (* === Dry Run Mode === *)
@@ -682,9 +693,9 @@ let run_reply hub_path thread_id message =
 let run_status hub_path name =
   print_endline (info (Printf.sprintf "cn hub: %s" name));
   print_endline "";
-  Printf.printf "hub..................... %s\n" (green "✓");
-  Printf.printf "name.................... %s %s\n" (green "✓") name;
-  Printf.printf "path.................... %s %s\n" (green "✓") hub_path;
+  Printf.printf "hub..................... %s\n" (green check);
+  Printf.printf "name.................... %s %s\n" (green check) name;
+  Printf.printf "path.................... %s %s\n" (green check) hub_path;
   print_endline "";
   print_endline (dim (Printf.sprintf "[status] ok version=%s" version))
 
@@ -741,7 +752,7 @@ let run_doctor hub_path =
   let width = 22 in
   checks |> List.iter (fun c ->
     let dots = String.make (max 1 (width - String.length c.name)) '.' in
-    let status = if c.passed then green ("✓ " ^ c.value) else red ("✗ " ^ c.value) in
+    let status = if c.passed then green (check ^ " " ^ c.value) else red (cross ^ " " ^ c.value) in
     Printf.printf "%s%s %s\n" c.name dots status);
   
   print_endline "";
