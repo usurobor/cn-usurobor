@@ -85,15 +85,3 @@ Each paragraph moves understanding forward.
 4.4. **Front-load important information**
   - ❌ Build-up paragraph that buries the point at the end
   - ✅ Point first, then supporting details
-
-## Platform
-
-| Platform | Rules |
-|----------|-------|
-| Discord/WhatsApp | No markdown tables, use bullets |
-| Discord links | Wrap in `<>` to suppress embeds |
-| WhatsApp | No headers, use **bold** or CAPS |
-
-## Voice
-
-Use TTS for stories and summaries when available.
