@@ -66,6 +66,10 @@ Concrete and sourceable. Vibes don't survive scrutiny.
   - ❌ "The API supports various authentication methods"
   - ✅ "The API supports OAuth, API keys, and JWT"
 
+3.5. **State what it is, not what it isn't**
+  - ❌ "CN isn't a platform. It's not a messaging app."
+  - ✅ "CN is a protocol."
+
 ### 4. Structure
 
 Each paragraph moves understanding forward.
