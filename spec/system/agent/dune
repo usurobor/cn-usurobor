@@ -1,3 +1,0 @@
-(mdx
- (files AGENT.md)
- (preludes prelude.ml))
