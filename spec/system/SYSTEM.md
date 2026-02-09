@@ -282,7 +282,7 @@ Agent reflections (α/β/γ) produce two types of output:
 
 ## Version
 
-cn: 2.1.22+
+cn: 2.2.9+
 Protocol: input.md/output.md v1  
 Last updated: 2026-02-07T09:53Z
 
