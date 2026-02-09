@@ -22,7 +22,12 @@ jobs:
         run: |
           opam install dune melange ppx_expect ppxlib --yes
       
-      - name: Run OCaml tests
+      - name: Build CLI
+        run: |
+          eval $(opam env)
+          cd tools && npm ci && npm run build
+      
+      - name: Run tests (cram + unit)
         run: |
           eval $(opam env)
           dune runtest

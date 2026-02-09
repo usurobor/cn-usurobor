@@ -1,0 +1,6 @@
+; Cram tests for cn CLI
+; Run: dune runtest
+
+(cram
+ (deps
+  (:cn ../tools/dist/cn.js)))
