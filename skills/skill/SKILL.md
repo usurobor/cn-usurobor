@@ -1,4 +1,4 @@
-# skill-writing
+# skill
 
 How to write skills.
 
@@ -31,8 +31,8 @@ This formula is:
 1.1. **Formulate "Coherent X: Y"**
   - X = the skill domain
   - Y = what coherence means specifically for X
-  - ❌ "Coherent code review: follow best practices"
-  - ✅ "Coherent code review: every comment actionable"
+  - ❌ "Coherent writing: follow best practices"
+  - ✅ "Coherent writing: nothing can be removed without loss"
 
 1.2. **One sentence expansion**
   - Unpacks the formula
