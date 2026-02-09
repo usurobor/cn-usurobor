@@ -145,6 +145,88 @@ let load_peers hub_path =
 let is_md_file = ends_with ~suffix:".md"
 let split_lines s = String.split_on_char '\n' s |> List.filter non_empty
 
+let slugify s =
+  s
+  |> Js.String.toLowerCase
+  |> Js.String.replaceByRe ~regexp:[%mel.re "/[^a-z0-9]+/g"] ~replacement:"-"
+  |> Js.String.replaceByRe ~regexp:[%mel.re "/^-|-$/g"] ~replacement:""
+
+(* === Path Constants (v2 structure) === *)
+
+let threads_in hub = Path.join hub "threads/in"
+let threads_mail_inbox hub = Path.join hub "threads/mail/inbox"
+let threads_mail_outbox hub = Path.join hub "threads/mail/outbox"
+let threads_mail_sent hub = Path.join hub "threads/mail/sent"
+let threads_reflections_daily hub = Path.join hub "threads/reflections/daily"
+let threads_adhoc hub = Path.join hub "threads/adhoc"
+
+(* === Timestamped Naming === *)
+
+let timestamp_slug () =
+  (* YYYYMMDD-HHMMSS format from ISO *)
+  let iso = now_iso () in
+  (* 2026-02-09T05:39:00.000Z → 20260209-053900 *)
+  let date = String.sub iso 0 10 |> String.split_on_char '-' |> String.concat "" in
+  let time = String.sub iso 11 8 |> String.split_on_char ':' |> String.concat "" in
+  Printf.sprintf "%s-%s" date time
+
+let make_thread_filename slug =
+  Printf.sprintf "%s-%s.md" (timestamp_slug ()) slug
+
+(* === Branch Operations === *)
+
+(* Delete remote branch after processing *)
+let delete_remote_branch hub_path branch =
+  let cmd = Printf.sprintf "git push origin --delete %s 2>/dev/null" branch in
+  match Child_process.exec_in ~cwd:hub_path cmd with
+  | Some _ -> 
+      log_action hub_path "branch.delete" branch;
+      print_endline (dim (Printf.sprintf "  Deleted remote: %s" branch));
+      true
+  | None -> false
+
+(* === Orphan Branch Detection === *)
+
+let is_orphan_branch hub_path branch =
+  let cmd = Printf.sprintf "git merge-base main origin/%s 2>/dev/null || git merge-base master origin/%s 2>/dev/null" branch branch in
+  match Child_process.exec_in ~cwd:hub_path cmd with
+  | Some _ -> false  (* has merge base = not orphan *)
+  | None -> true     (* no merge base = orphan *)
+
+let get_branch_author hub_path branch =
+  let cmd = Printf.sprintf "git log -1 --format='%%an <%%ae>' origin/%s 2>/dev/null" branch in
+  Child_process.exec_in ~cwd:hub_path cmd
+  |> Option.map String.trim
+  |> Option.value ~default:"unknown"
+
+let reject_orphan_branch hub_path peer_name branch =
+  let ts = now_iso () in
+  let author = get_branch_author hub_path branch in
+  let slug = slugify branch in
+  let filename = make_thread_filename (Printf.sprintf "rejected-%s" slug) in
+  
+  let content = Printf.sprintf 
+    "---\nto: %s\ncreated: %s\nsubject: Branch rejected (orphan)\n---\n\n\
+     Branch `%s` rejected and deleted.\n\n\
+     **Reason:** No merge base with main.\n\n\
+     This happens when pushing from `cn-%s` instead of `cn-{recipient}-clone`.\n\n\
+     **Author:** %s\n\n\
+     **Fix:**\n\
+     1. Delete local branch: `git branch -D %s`\n\
+     2. Re-send via cn outbox (uses clone automatically)\n"
+    peer_name ts branch peer_name author branch in
+  
+  (* Write rejection notice to outbox *)
+  let outbox_dir = threads_mail_outbox hub_path in
+  Fs.ensure_dir outbox_dir;
+  Fs.write (Path.join outbox_dir filename) content;
+  
+  (* Delete the orphan branch *)
+  let _ = delete_remote_branch hub_path branch in
+  
+  log_action hub_path "inbox.reject" (Printf.sprintf "branch:%s peer:%s author:%s reason:orphan" branch peer_name author);
+  print_endline (fail (Printf.sprintf "Rejected orphan: %s (from %s)" branch author))
+
 (* === Result Types === *)
 
 type branch_info = { peer: string; branch: string }
@@ -179,58 +261,64 @@ let inbox_check hub_path name =
   
   if total = 0 then print_endline (ok "Inbox clear")
 
-(* Delete remote branch after processing *)
-let delete_remote_branch hub_path branch =
-  let cmd = Printf.sprintf "git push origin --delete %s 2>/dev/null" branch in
-  match Child_process.exec_in ~cwd:hub_path cmd with
-  | Some _ -> 
-      log_action hub_path "branch.delete" branch;
-      print_endline (dim (Printf.sprintf "  Deleted remote: %s" branch));
-      true
-  | None -> false
-
 let materialize_branch hub_path inbox_dir peer_name branch =
-  let diff_cmd = Printf.sprintf "git diff main...origin/%s --name-only 2>/dev/null || git diff master...origin/%s --name-only" branch branch in
-  let files = Child_process.exec_in ~cwd:hub_path diff_cmd
-    |> Option.map split_lines
-    |> Option.value ~default:[]
-    |> List.filter is_md_file in
-  
-  (* Get commit hash of branch tip — the trigger for this run *)
-  let trigger = 
-    Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git rev-parse origin/%s" branch)
-    |> Option.map String.trim
-    |> Option.value ~default:"unknown" in
-  
-  let branch_slug = match branch |> String.split_on_char '/' |> List.rev with
-    | x :: _ -> x
-    | [] -> branch in
-  let inbox_file = Printf.sprintf "%s-%s.md" peer_name branch_slug in
-  let inbox_path = Path.join inbox_dir inbox_file in
-  let archived_path = Path.join (Path.join inbox_dir "_archived") inbox_file in
-  
-  (* Already processed? Delete branch but don't re-materialize *)
-  if Fs.exists inbox_path || Fs.exists archived_path then begin
-    let _ = delete_remote_branch hub_path branch in
+  (* Check for orphan branch first *)
+  if is_orphan_branch hub_path branch then begin
+    reject_orphan_branch hub_path peer_name branch;
     []
   end
-  else
-    files |> List.filter_map (fun file ->
-      let show_cmd = Printf.sprintf "git show origin/%s:%s" branch file in
-      match Child_process.exec_in ~cwd:hub_path show_cmd with
-      | None -> None
-      | Some content ->
-          (* Include trigger — the commit that initiated this run *)
-          let meta = [("from", peer_name); ("branch", branch); ("trigger", trigger); ("file", file); ("received", now_iso ())] in
-          Fs.write inbox_path (update_frontmatter content meta);
-          log_action hub_path "inbox.materialize" (Printf.sprintf "%s trigger:%s" inbox_file trigger);
-          (* Delete remote branch after successful materialization *)
-          let _ = delete_remote_branch hub_path branch in
-          Some inbox_file)
+  else begin
+    let diff_cmd = Printf.sprintf "git diff main...origin/%s --name-only 2>/dev/null || git diff master...origin/%s --name-only" branch branch in
+    let files = Child_process.exec_in ~cwd:hub_path diff_cmd
+      |> Option.map split_lines
+      |> Option.value ~default:[]
+      |> List.filter is_md_file in
+    
+    (* Get commit hash of branch tip — the trigger for this run *)
+    let trigger = 
+      Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git rev-parse origin/%s" branch)
+      |> Option.map String.trim
+      |> Option.value ~default:"unknown" in
+    
+    let branch_slug = match branch |> String.split_on_char '/' |> List.rev with
+      | x :: _ -> x
+      | [] -> branch in
+    (* Use timestamped filename *)
+    let inbox_file = make_thread_filename (Printf.sprintf "%s-%s" peer_name branch_slug) in
+    let inbox_path = Path.join inbox_dir inbox_file in
+    
+    (* Check if already processed (by branch name pattern, not exact file) *)
+    let already_exists = 
+      Fs.readdir inbox_dir 
+      |> List.exists (fun f -> String.length f > 16 && ends_with ~suffix:(Printf.sprintf "%s-%s.md" peer_name branch_slug) f) in
+    let archived_dir = Path.join inbox_dir "_archived" in
+    let already_archived = Fs.exists archived_dir &&
+      Fs.readdir archived_dir 
+      |> List.exists (fun f -> String.length f > 16 && ends_with ~suffix:(Printf.sprintf "%s-%s.md" peer_name branch_slug) f) in
+    
+    (* Already processed? Delete branch but don't re-materialize *)
+    if already_exists || already_archived then begin
+      let _ = delete_remote_branch hub_path branch in
+      []
+    end
+    else
+      files |> List.filter_map (fun file ->
+        let show_cmd = Printf.sprintf "git show origin/%s:%s" branch file in
+        match Child_process.exec_in ~cwd:hub_path show_cmd with
+        | None -> None
+        | Some content ->
+            (* Include trigger — the commit that initiated this run *)
+            let meta = [("from", peer_name); ("branch", branch); ("trigger", trigger); ("file", file); ("received", now_iso ())] in
+            Fs.write inbox_path (update_frontmatter content meta);
+            log_action hub_path "inbox.materialize" (Printf.sprintf "%s trigger:%s" inbox_file trigger);
+            (* Delete remote branch after successful materialization *)
+            let _ = delete_remote_branch hub_path branch in
+            Some inbox_file)
+  end
 
 let inbox_process hub_path =
   print_endline (info "Processing inbox...");
-  let inbox_dir = Path.join hub_path "threads/inbox" in
+  let inbox_dir = threads_mail_inbox hub_path in
   Fs.ensure_dir inbox_dir;
   
   let peers = load_peers hub_path in
@@ -253,7 +341,7 @@ let inbox_process hub_path =
 (* === Outbox Operations === *)
 
 let outbox_check hub_path =
-  let outbox_dir = Path.join hub_path "threads/outbox" in
+  let outbox_dir = threads_mail_outbox hub_path in
   match Fs.exists outbox_dir with
   | false -> print_endline (ok "Outbox clear")
   | true ->
@@ -304,10 +392,10 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
               let _ = Child_process.exec_in ~cwd:clone_path "git pull --ff-only 2>/dev/null || true" in
               let _ = Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git checkout -b %s 2>/dev/null || git checkout %s" branch_name branch_name) in
               
-              let peer_thread_dir = Path.join clone_path "threads/adhoc" in
+              let peer_thread_dir = Path.join clone_path "threads/in" in
               Fs.ensure_dir peer_thread_dir;
               Fs.write (Path.join peer_thread_dir file) content;
-              let _ = Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git add 'threads/adhoc/%s'" file) in
+              let _ = Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git add 'threads/in/%s'" file) in
               let _ = Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git commit -m '%s: %s'" name thread_name) in
               let _ = Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git push -u origin %s -f" branch_name) in
               let _ = Child_process.exec_in ~cwd:clone_path "git checkout main 2>/dev/null || git checkout master" in
@@ -320,8 +408,8 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
               Some file
 
 let outbox_flush hub_path name =
-  let outbox_dir = Path.join hub_path "threads/outbox" in
-  let sent_dir = Path.join hub_path "threads/sent" in
+  let outbox_dir = threads_mail_outbox hub_path in
+  let sent_dir = threads_mail_sent hub_path in
   
   if not (Fs.exists outbox_dir) then print_endline (ok "Outbox clear")
   else begin
@@ -339,7 +427,7 @@ let outbox_flush hub_path name =
 (* === Next Inbox Item === *)
 
 let get_next_inbox_item hub_path =
-  let inbox_dir = Path.join hub_path "threads/inbox" in
+  let inbox_dir = threads_mail_inbox hub_path in
   if not (Fs.exists inbox_dir) then None
   else
     Fs.readdir inbox_dir
@@ -364,7 +452,12 @@ let run_next hub_path =
 (* === GTD Operations === *)
 
 let find_thread hub_path thread_id =
-  let locations = ["inbox"; "outbox"; "doing"; "deferred"; "daily"; "adhoc"] in
+  (* v2 structure: mail/inbox, mail/outbox, reflections/daily, etc. *)
+  let locations = [
+    "in"; "mail/inbox"; "mail/outbox"; "mail/sent";
+    "doing"; "deferred"; "adhoc";
+    "reflections/daily"; "reflections/weekly"; "reflections/monthly"
+  ] in
   match String.contains thread_id '/' with
   | true ->
       let path = Path.join hub_path (Printf.sprintf "threads/%s.md" thread_id) in
@@ -401,7 +494,7 @@ let gtd_delegate hub_path name thread_id peer =
   match find_thread hub_path thread_id with
   | None -> print_endline (fail (Printf.sprintf "Thread not found: %s" thread_id))
   | Some path ->
-      let outbox_dir = Path.join hub_path "threads/outbox" in
+      let outbox_dir = threads_mail_outbox hub_path in
       Fs.ensure_dir outbox_dir;
       let content = Fs.read path in
       Fs.write (Path.join outbox_dir (Path.basename path))
@@ -457,7 +550,7 @@ let run_read hub_path thread_id =
 (* === Inbox/Outbox List === *)
 
 let run_inbox_list hub_path =
-  let inbox_dir = Path.join hub_path "threads/inbox" in
+  let inbox_dir = threads_mail_inbox hub_path in
   if not (Fs.exists inbox_dir) then print_endline "(empty)"
   else
     match Fs.readdir inbox_dir |> List.filter is_md_file with
@@ -470,7 +563,7 @@ let run_inbox_list hub_path =
         Printf.printf "%s/%s\n" from id)
 
 let run_outbox_list hub_path =
-  let outbox_dir = Path.join hub_path "threads/outbox" in
+  let outbox_dir = threads_mail_outbox hub_path in
   if not (Fs.exists outbox_dir) then print_endline "(empty)"
   else
     match Fs.readdir outbox_dir |> List.filter is_md_file with
@@ -518,7 +611,7 @@ let run_push hub_path =
 (* === Send Message === *)
 
 let run_send hub_path peer message =
-  let outbox_dir = Path.join hub_path "threads/outbox" in
+  let outbox_dir = threads_mail_outbox hub_path in
   Fs.ensure_dir outbox_dir;
   
   let slug = 
@@ -716,7 +809,7 @@ let execute_op hub_path name input_id op =
            log_action hub_path "op.reply" (Printf.sprintf "thread:%s (not found)" id);
            print_endline (warn (Printf.sprintf "Thread not found for reply: %s" id)))
   | Send (peer, msg, body_opt) ->
-      let outbox_dir = Path.join hub_path "threads/outbox" in
+      let outbox_dir = threads_mail_outbox hub_path in
       Fs.ensure_dir outbox_dir;
       let slug = 
         msg |> Js.String.slice ~start:0 ~end_:30 
@@ -736,7 +829,7 @@ let execute_op hub_path name input_id op =
   | Delegate (id, peer) ->
       (match find_thread hub_path id with
        | Some path ->
-           let outbox_dir = Path.join hub_path "threads/outbox" in
+           let outbox_dir = threads_mail_outbox hub_path in
            Fs.ensure_dir outbox_dir;
            let content = Fs.read path in
            Fs.write (Path.join outbox_dir (Path.basename path))
@@ -835,7 +928,7 @@ let archive_io_pair hub_path name =
 (* === Queue inbox items === *)
 
 let queue_inbox_items hub_path =
-  let inbox_dir = Path.join hub_path "threads/inbox" in
+  let inbox_dir = threads_mail_inbox hub_path in
   if not (Fs.exists inbox_dir) then 0
   else
     Fs.readdir inbox_dir
@@ -1041,7 +1134,7 @@ let run_out hub_path name gtd =
   end;
   
   (* 5. Execute the op *)
-  let outbox_dir = Path.join hub_path "threads/outbox" in
+  let outbox_dir = threads_mail_outbox hub_path in
   Fs.ensure_dir outbox_dir;
   (match op_kind with
    | `Reply message ->
@@ -1337,9 +1430,14 @@ let run_init name =
   Fs.mkdir_p (Path.join hub_dir ".cn");
   Fs.mkdir_p (Path.join hub_dir "spec");
   Fs.mkdir_p (Path.join hub_dir "state");
-  Fs.mkdir_p (Path.join hub_dir "threads/inbox");
-  Fs.mkdir_p (Path.join hub_dir "threads/outbox");
-  Fs.mkdir_p (Path.join hub_dir "threads/daily");
+  (* v2 thread structure *)
+  Fs.mkdir_p (Path.join hub_dir "threads/in");
+  Fs.mkdir_p (Path.join hub_dir "threads/mail/inbox");
+  Fs.mkdir_p (Path.join hub_dir "threads/mail/outbox");
+  Fs.mkdir_p (Path.join hub_dir "threads/mail/sent");
+  Fs.mkdir_p (Path.join hub_dir "threads/reflections/daily");
+  Fs.mkdir_p (Path.join hub_dir "threads/reflections/weekly");
+  Fs.mkdir_p (Path.join hub_dir "threads/reflections/monthly");
   Fs.mkdir_p (Path.join hub_dir "threads/adhoc");
   Fs.mkdir_p (Path.join hub_dir "threads/archived");
   Fs.mkdir_p (Path.join hub_dir "logs");
@@ -1490,7 +1588,7 @@ let run_peer_sync hub_path =
 
 let inbox_flush hub_path _name =
   print_endline (info "Flushing inbox (deleting processed branches)...");
-  let inbox_dir = Path.join hub_path "threads/inbox" in
+  let inbox_dir = threads_mail_inbox hub_path in
   
   if not (Fs.exists inbox_dir) then begin
     print_endline (ok "Inbox empty");
