@@ -97,4 +97,11 @@ The best code is no code. The best action is often no action. Don't add complexi
 
 ---
 
+**"Brevity is the soul of wit."**
+— Shakespeare, *Hamlet*
+
+Say less. Mean more.
+
+---
+
 *Add new aphorisms as they emerge. Attribution matters.*
