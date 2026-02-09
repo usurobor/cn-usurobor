@@ -97,5 +97,6 @@ Three lenses for what to examine:
   - ✅ Capture when it happens
 
 5.2. **Higher cadences consolidate**
-  - Weekly reviews daily
-  - Pattern that survives → migrate to skill
+  - Weekly reviews daily, monthly reviews weekly
+  - ❌ Same insight in 4 daily threads, never migrated
+  - ✅ "Investigate before escalating" survived 3 weeks → add to skill
