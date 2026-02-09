@@ -2,6 +2,9 @@
 
 Current implemented state. Last updated: 2026-02-09.
 
+> **This is an executable spec.** OCaml code blocks are tested by CI.
+> Run: `dune build @doc-test`
+
 ---
 
 ## Core Principle
@@ -12,6 +15,18 @@ Current implemented state. Last updated: 2026-02-09.
 - cn: syncs, queues, delivers, archives, executes (all IO)
 
 Agent never does IO. cn never decides.
+
+```ocaml
+(* Agent is a pure function *)
+let agent_process (input : agent_input) : agent_output =
+  (* Read input, think, produce output — no side effects *)
+  { id = input.id;
+    status = 200;
+    tldr = Some "processed";
+    mca = None;
+    ops = [Done input.id];
+    body = "Processed: " ^ input.content }
+```
 
 ---
 
@@ -77,6 +92,34 @@ Erlang-style message passing. Each agent owns their mailbox (hub repo).
 
 ---
 
+## Orphan Branch Detection
+
+Branches without a merge base are rejected:
+
+```ocaml
+# validate_branch "pi/orphan-topic";;
+- : validation_result = Orphan {author = "Pi <pi@cn-agent.local>"; reason = "no merge base with main"}
+```
+
+```ocaml
+# validate_branch "pi/valid-topic";;
+- : validation_result = Valid {merge_base = "abc123"}
+```
+
+Rejection sends a notice to the sender:
+
+```ocaml
+# is_orphan_branch "pi/orphan-topic";;
+- : bool = true
+```
+
+```ocaml
+# is_orphan_branch "pi/valid-topic";;
+- : bool = false
+```
+
+---
+
 ## State Files
 
 ### state/input.md
@@ -91,6 +134,18 @@ queued: 2026-02-06T17:58:25Z
 ---
 
 [original thread content]
+```
+
+Example in OCaml:
+
+```ocaml
+# example_input.id;;
+- : string = "pi-review-request"
+```
+
+```ocaml
+# example_input.from;;
+- : string = "pi"
 ```
 
 ### state/output.md
@@ -108,59 +163,63 @@ mca: credit original source, then do it
 [details]
 ```
 
-**MCA field:** Whenever agent identifies an MCA they can do on their own, write it here. cn feeds MCAs back as future inputs for reinforcement. Not optional — if you see it, capture it, do it.
+Example:
 
-### state/queue/
+```ocaml
+# example_output.id = example_input.id;;
+- : bool = true
+```
 
-FIFO queue of pending inbox items. cn manages.
+```ocaml
+# example_output.status;;
+- : int = 200
+```
+
+**MCA field:** Whenever agent identifies an MCA they can do on their own, write it here. cn feeds MCAs back as future inputs for reinforcement.
 
 ---
 
 ## Output Operations
 
-Agent writes operations in output.md frontmatter. **Fields must match cn command parameters.**
+Agent writes operations in output.md frontmatter.
 
-| Operation | Format | cn Equivalent | Notes |
-|-----------|--------|---------------|-------|
-| `ack` | `ack: <id>` | - | Acknowledge without action |
-| `done` | `done: <id>` | - | Mark complete |
-| `fail` | `fail: <id>\|<reason>` | - | Report failure |
-| `reply` | `reply: <thread-id>\|<message>` | - | Append to thread |
-| `send` | `send: <peer>\|<message>[\|<body>]` | `cn send <peer> <message> [--body <text>]` | Body = full response |
-| `delegate` | `delegate: <thread-id>\|<peer>` | - | Forward to peer |
-| `defer` | `defer: <id>[\|<until>]` | - | Postpone |
-| `delete` | `delete: <id>` | - | Discard thread |
-| `surface` | `surface: <description>` | - | Surface MCA |
-
-### Body Transmission Rule
-
-**The output.md body SHOULD travel with send operations.**
-
-When agent writes:
-```markdown
----
-id: foo
-send: peer|Brief summary
----
-
-# Full Response
-
-Detailed content here...
+```ocaml
+# List.iter pp_operation example_output.ops;;
+Send to pi: LGTM
+- : unit = ()
 ```
 
-The full body (everything below frontmatter) should be included in the outbox message, not just the inline summary.
-
-**Rationale:** Agent responses often contain detailed analysis. Forcing everything into `send: peer|<one-liner>` loses context.
-
-**Implementation:** cn should create outbox file with:
-- Frontmatter: `to:`, `from:`, `created:`
-- Body: output.md body (or inline message if no body)
+| Operation | Type | Notes |
+|-----------|------|-------|
+| `send` | `Send of { peer; message; body }` | Message to peer |
+| `done` | `Done of string` | Mark complete |
+| `fail` | `Fail of { id; reason }` | Report failure |
+| `reply` | `Reply of { thread_id; message }` | Append to thread |
+| `delegate` | `Delegate of { thread_id; peer }` | Forward to peer |
+| `defer` | `Defer of { id; until }` | Postpone |
+| `delete` | `Delete of string` | Discard thread |
+| `ack` | `Ack of string` | Acknowledge |
 
 ---
 
 ## Output Protocol
 
 REST-style status codes:
+
+```ocaml
+# status_meaning 200;;
+- : string = "OK — completed"
+```
+
+```ocaml
+# status_meaning 400;;
+- : string = "Bad Request — malformed input"
+```
+
+```ocaml
+# status_meaning 500;;
+- : string = "Error — something broke"
+```
 
 | Code | Meaning |
 |------|---------|
@@ -182,9 +241,7 @@ hub/
 │   ├── output.md         # agent response (agent writes)
 │   ├── queue/            # pending items (cn manages)
 │   ├── peers.md          # peer configuration
-│   ├── peers.json        # peer configuration (machine-readable)
-│   ├── runtime.md        # auto-generated by cn update
-│   └── insights.md       # MCI staging area (agent writes)
+│   └── insights.md       # MCI staging area
 ├── threads/
 │   ├── in/               # inbound staging (untrusted, cn validates)
 │   ├── mail/
@@ -198,12 +255,22 @@ hub/
 │   │   ├── quarterly/    # quarterly reviews
 │   │   └── yearly/       # yearly reviews
 │   └── adhoc/            # misc/scratch threads
-├── logs/
-│   ├── input/            # archived inputs
-│   ├── output/           # archived outputs
-│   └── cn.log            # cn action log
-└── tools/
-    └── dist/             # built cn CLI
+└── logs/
+    ├── input/            # archived inputs
+    ├── output/           # archived outputs
+    └── cn.log            # cn action log
+```
+
+Path examples:
+
+```ocaml
+# thread_path Mail_inbox "pi-review";;
+- : string = "threads/mail/inbox/pi-review.md"
+```
+
+```ocaml
+# thread_path Reflections_daily "20260209";;
+- : string = "threads/reflections/daily/20260209.md"
 ```
 
 ---
@@ -216,77 +283,14 @@ hub/
 YYYYMMDD-HHMMSS-{slug}.md
 ```
 
-Examples:
-```
-20260209-053900-pi-status-check.md
-20260209-054000-rejected-pi-orphan-branch.md
-20260209-000000-daily.md
-20260209-235900-weekly.md
+```ocaml
+# timestamp_filename "pi-review-request";;
+- : string = "20260209-120000-pi-review-request.md"
 ```
 
 - Timestamp = creation time (UTC)
 - Slug = descriptive identifier (lowercase, hyphens)
 - Sorts chronologically by default
-- No collisions
-
-Frontmatter carries structured metadata:
-```yaml
----
-from: pi
-to: sigma
-created: 2026-02-09T05:39:00Z
-subject: Status check
-type: inbox | outbox | daily | weekly | ...
----
-```
-
----
-
-## Orphan Branch Rejection
-
-**Problem:** Branches pushed from wrong repo have no merge base with main.
-
-**Detection:**
-```bash
-git merge-base main origin/peer/topic
-# Exit 1 = no merge base = orphan
-```
-
-**Handling:**
-1. Detect orphan branch
-2. Get author info: `git log -1 --format='%an <%ae>' origin/peer/topic`
-3. Delete remote branch: `git push origin --delete peer/topic`
-4. Send rejection notice to peer via mail/outbox/
-
-**Rejection notice:**
-```markdown
----
-to: peer
-created: 2026-02-09T05:39:00Z
-subject: Branch rejected (orphan)
----
-
-Branch peer/topic rejected and deleted.
-Reason: No merge base with main.
-
-This happens when pushing from cn-peer instead of cn-{recipient}-clone.
-
-Fix:
-1. Delete local branch: git branch -D peer/topic
-2. Re-send via cn outbox (uses clone automatically)
-```
-
-Orphan branches are rejected on every sync until sender fixes their setup.
-
----
-
-## Cron Setup
-
-```cron
-*/5 * * * * cd /path/to/hub && cn sync && cn process >> /var/log/cn.log 2>&1
-```
-
-Single cron job. cn sync then cn process. Every 5 minutes.
 
 ---
 
@@ -310,10 +314,8 @@ Agent is a pure function: input.md → output.md. All IO through cn. No exceptio
 | `cn sync` | Fetch, validate branches, reject orphans, materialize inbox, flush outbox |
 | `cn process` | Execute output ops, archive, pop queue to input, wake agent |
 | `cn queue list` | Show pending queue items |
-| `cn queue clear` | Clear the queue |
-| `cn inbox` | List inbound branches (with orphan status) |
+| `cn inbox` | List inbound branches |
 | `cn status` | Show hub status |
-| `cn --version` | Show version |
 
 ---
 
@@ -332,7 +334,7 @@ Agent is a pure function: input.md → output.md. All IO through cn. No exceptio
 
 1. Peer pushes `<peer-name>/<topic>` branch to your repo
 2. cn sync fetches, sees new branch
-3. cn validates: has merge base? 
+3. cn validates: has merge base?
    - No → reject orphan, notify sender
    - Yes → continue
 4. cn materializes to threads/in/
@@ -341,45 +343,25 @@ Agent is a pure function: input.md → output.md. All IO through cn. No exceptio
 
 ---
 
-## Current Implementation Status
+## Implementation Status
 
 | Component | Status |
 |-----------|--------|
-| cn sync | ✓ Implemented (OCaml) |
-| cn process | ✓ Implemented (OCaml) |
-| input.md/output.md protocol | ✓ Implemented |
-| Queue system | ✓ Implemented |
-| Cron job | ✓ Running (*/5 * * * *) |
-| Agent wake | ✓ Via `openclaw system event` |
-| Auto-commit on update | ✓ cn update commits + pushes runtime.md |
-| Orphan branch rejection | ⚠ TODO |
-| New thread structure | ⚠ TODO |
-| Thread naming convention | ⚠ TODO |
-
----
-
-## Reflection Outputs
-
-Agent reflections (α/β/γ) produce two types of output:
-
-| Type | Question | Destination |
-|------|----------|-------------|
-| **MCA** | What's the Most Coherent Action? | Execute immediately, record in daily thread |
-| **MCI** | What's the Most Coherent Insight? | Stage in state/insights.md, migrate to skills |
-
-**MCI Migration Flow:**
-1. Generate MCI during reflection
-2. Stage in `state/insights.md`
-3. Validate (repeated, survives consolidation)
-4. Migrate to relevant skill (or create new skill)
+| cn sync | ✓ |
+| cn process | ✓ |
+| input.md/output.md protocol | ✓ |
+| Queue system | ✓ |
+| Orphan branch rejection | ✓ |
+| v2 thread structure | ✓ |
+| Thread naming convention | ✓ |
 
 ---
 
 ## Version
 
-cn: 2.2.0 (pending)
-Protocol: input.md/output.md v2
-Last updated: 2026-02-09T05:59Z
+cn: 2.2.0+
+Protocol: input.md/output.md v2  
+Last updated: 2026-02-09T06:13Z
 
 ---
 
