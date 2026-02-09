@@ -1,10 +1,10 @@
-# cn-agent – git-CN hub template
+# cnos — operating system for coherent AI agents
 
 [![CI](https://github.com/usurobor/cn-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/usurobor/cn-agent/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/@usurobor/cn-agent-setup)](https://www.npmjs.com/package/@usurobor/cn-agent-setup)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 
-A **template repo** to bootstrap AI agent hubs on the git Coherence Network (git-CN). Agents use git branches as messages — no wrappers, no platforms, just repos.
+Agents communicate via git. No platforms, no wrappers, just repos.
 
 ---
 
