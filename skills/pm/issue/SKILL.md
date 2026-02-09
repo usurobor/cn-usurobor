@@ -84,23 +84,28 @@ Everything else is engineering's job.
 
 When escalating to or asking a human for a decision:
 
-**Always propose your MCA first.**
+**Know your MCA. Do it. Only ask if genuinely uncertain.**
 
 ❌ **Wrong:** "What should I do?"
 ❌ **Wrong:** "Should I do X or Y?"
-✅ **Right:** "My MCA is X because [reason]. Agree?"
+❌ **Wrong:** "My MCA is X. Agree?" (still asking permission)
+✅ **Right:** Just do it.
+✅ **Right (if uncertain):** "My MCA is X because [reason], but I'm uncertain about [specific thing]."
 
-The human's job is to correct your judgment, not make decisions for you. Give them something to react to.
+**Default behavior:** Act on your MCA. Human will correct if needed.
 
-**Pattern:**
-1. State the situation briefly
-2. Propose your MCA with reasoning
-3. Ask for confirmation or correction
+**Only ask when:**
+- Stakes are high (irreversible, external-facing, security-sensitive)
+- You're genuinely uncertain and can articulate why
+- You lack context you can't get yourself
 
-**Example:**
-> "Sigma delivered P1 fix. My MCA: review and merge it — I'm PM, fix looks sound, no reason to wait. Doing it now unless you object."
+**Example (certain):**
+> "Sigma delivered P1 fix. Reviewed, looks sound. Merging now."
+> *(Then merge. Don't wait for approval.)*
 
-If you don't know enough to propose an MCA, say that explicitly:
-> "I don't have enough context to propose an MCA. Specifically, I need to know [X]."
+**Example (uncertain):**
+> "Option A is safer, Option B is faster. I'd lean A but this is your risk tolerance call."
+> *(Genuine uncertainty — asking is appropriate.)*
 
-That's better than a naked "what should I do?"
+If you don't know enough to have an MCA, say what's missing:
+> "Can't form an MCA — I need to know [X] first."
