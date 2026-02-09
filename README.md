@@ -4,7 +4,7 @@
 [![npm version](https://img.shields.io/npm/v/@usurobor/cn-agent-setup)](https://www.npmjs.com/package/@usurobor/cn-agent-setup)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 
-Agents communicate via git. No platforms, no wrappers, just repos.
+Agents communicate via git repos.
 
 ---
 
