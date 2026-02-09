@@ -4,90 +4,80 @@ How to write skills.
 
 ## Core Principle
 
-**Coherent skill-writing: the skill's coherence formula is specific and demonstrated.**
+**Coherent skill: the formula is specific to the domain and demonstrated throughout.**
 
-Every skill must articulate what coherence means for *that* skill. Generic principles don't teach.
+## Algorithm
 
-## Example
+1. **Define** — What makes this a coherence formula?
+2. **Unfold** — Break into sections (high alpha, high beta)
+3. **Example** — Every bullet gets ❌/✅
 
-WRITING.md opens with:
+---
 
-> **Coherent writing: nothing can be removed without loss.**
+## 1. Define
 
-Why this is coherence:
-- Coherence = every part serves the whole
-- If something can be removed without loss, it wasn't serving the whole
-- It was noise, not signal
+Ask: "What makes this a coherence formula?"
 
-This formula is:
-- Specific to writing (not generic advice)
-- Testable (try removing something — does meaning change?)
-- Demonstrated (the skill itself follows the formula)
-
-## Skill Structure
-
-### 1. Core Principle
-
-1.1. **First ask: "What makes this a coherence formula?"**
-  - Coherence = every part serves the whole
+1.1. **Identify the parts**
   - What are the parts in this skill's domain?
-  - How do they fit (or fail to fit)?
-  - The formula must answer this — not just state a goal
+  - ❌ Skip straight to writing rules
+  - ✅ "Reflection has: observation, interpretation, output"
 
-1.2. **Formulate "Coherent X: Y"**
-  - X = the skill domain
-  - Y = what coherence means specifically for X
+1.2. **Articulate how they fit**
+  - Coherence = parts serve the whole
   - ❌ "Coherent writing: follow best practices" (goal, not coherence)
   - ✅ "Coherent writing: nothing can be removed without loss" (parts serving whole)
 
-1.3. **One sentence expansion**
-  - Unpacks the formula
-  - No more than needed
+1.3. **Name the failure mode**
+  - What does incoherence look like here?
+  - ❌ Generic: "doing it wrong"
+  - ✅ Specific: "Reflection fails via motivated reasoning — comfortable conclusions ignoring evidence"
 
-### 2. High Alpha (each part internally coherent)
+## 2. Unfold
 
-Each bullet should stand alone as a complete teaching.
+Break the principle into sections with high alpha and beta.
 
-2.1. **Rule + example in one unit**
-  - The rule states the principle
-  - The ❌/✅ demonstrates it immediately
+2.1. **High Alpha — each bullet internally coherent**
+  - Rule + example in one unit
   - Reader doesn't need to look elsewhere
+  - ❌ "Cut filler (see appendix for examples)"
+  - ✅ "Cut filler: ❌ 'In order to' → ✅ 'To'"
 
-2.2. **Example from WRITING.md**
-  ```markdown
-  1.1. **Cut filler phrases**
-    - ❌ "In order to"
-    - ✅ "To"
-  ```
-  - Rule is clear: cut filler
-  - Examples are immediate: reader sees exactly what "filler" means
-  - Self-contained: no cross-references needed
+2.2. **High Beta — sections relate to whole**
+  - Sections build on each other
+  - ❌ Random ordering of tips
+  - ✅ Evidence → Interpretation → Conclusion (each step requires the previous)
 
-### 3. High Beta (parts relate to whole)
-
-Sections should fit together as a progression.
-
-3.1. **Sections build on each other**
+2.3. **Progression patterns**
   - Small → large
   - Simple → complex
-  - Foundation → application
+  - Gather → process → act
 
-3.2. **Example from WRITING.md**
-  ```
-  1. Words      (smallest unit)
-  2. Sentences  (built from words)
-  3. Content    (meaning within sentences)
-  4. Structure  (arrangement of paragraphs)
-  ```
-  - Each level contains the previous
-  - Mastering 1 enables 2, 2 enables 3
-  - The whole reveals: coherent writing = coherence at every scale
+## 3. Example
 
-### 4. Referenceable
+Every bullet gets concrete ❌/✅.
 
-4.1. **Use numbered IDs (1.1, 2.3, etc.)**
-  - "See 2.3" not "see above"
-  - Makes feedback precise
+3.1. **No bullet without example**
+  - ❌ "Be specific" (rule only)
+  - ✅ "Be specific: ❌ 'Session went poorly' → ✅ 'Missed two requests, repeated three times'"
+
+3.2. **Examples from the domain**
+  - Use real cases from this skill
+  - ❌ Generic examples that could be anywhere
+  - ✅ Examples a practitioner would recognize
+
+3.3. **Keep examples short**
+  - One line each for ❌ and ✅
+  - ❌ Multi-paragraph example that buries the point
+  - ✅ "❌ 'I tried to help' → ✅ 'I sent three messages, none addressed the question'"
+
+---
+
+## Reference
+
+4.1. **Use numbered IDs (1.1, 2.3)**
+  - ❌ "See above"
+  - ✅ "See 2.1"
 
 4.2. **Keep IDs stable**
   - Add new items at end of section
