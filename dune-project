@@ -4,6 +4,9 @@
 ; Melange for OCaml → JavaScript compilation
 (using melange 0.1)
 
+; MDX for executable documentation
+(using mdx 0.4)
+
 ; Package metadata
 (generate_opam_files true)
 
