@@ -59,11 +59,16 @@ Every bullet states a rule with a list of examples:
 
 ```markdown
 N.N. **Imperative statement**
-  - Context (one line)
-  - ❌ Example 1
-  - ✅ Example 1
-  - ❌ Example 2
-  - ✅ Example 2
+  - ❌ "short" → ✅ "shorter"
+  - ❌ "short" → ✅ "shorter"
+```
+
+Or for longer examples:
+
+```markdown
+N.N. **Imperative statement**
+  - ❌ "Longer example that needs its own line"
+  - ✅ "Fixed version"
 ```
 
 3.1. **Imperative statement**
