@@ -255,9 +255,6 @@ let reject_orphan_branch hub_path peer_name branch =
     Fs.write (Path.join outbox_dir filename) content
   end;
   
-  (* Delete the orphan branch *)
-  let _ = delete_remote_branch hub_path branch in
-  
   log_action hub_path "inbox.reject" (Printf.sprintf "branch:%s peer:%s author:%s reason:orphan" branch peer_name author);
   print_endline (fail (Printf.sprintf "Rejected orphan: %s (from %s)" branch author))
 
@@ -312,6 +309,8 @@ let materialize_branch ~clone_path ~hub_path ~inbox_dir ~peer_name ~branch =
   (* Check for orphan branch in peer's clone *)
   if is_orphan_branch clone_path branch then begin
     reject_orphan_branch hub_path peer_name branch;
+    (* Delete remote ref from clone to prevent re-detection on next sync *)
+    let _ = delete_remote_branch clone_path branch in
     []
   end
   else begin
