@@ -291,11 +291,11 @@ let%expect_test "report_result" =
   [Fetched ("pi", []);
    Fetched ("omega", ["omega/feature-1"; "omega/bugfix"]);
    Skipped ("missing", "not found")]
-  |> List.iter (fun r -> print_endline (report_result r));
+  |> List.iter (fun r -> print_endline (format_report (report_result r)));
   [%expect {|
-    ✓ pi (no inbound)
-    ⚡ omega (2 inbound)
-    · missing (not found)
+  [ok] pi (no inbound)
+  [!] omega (2 inbound)
+  [-] missing (not found)
   |}]
 
 let%expect_test "collect_alerts empty" =

@@ -13,10 +13,10 @@ Setup test hub:
 Sync shows dry-run banner:
 
   $ node ../../tools/dist/cn.js sync --dry-run 2>&1 | head -4
-  â  DRY RUN â no changes will be made
+  ⚠ DRY RUN â no changes will be made
   Syncing...
   Checking inbox for test-hub...
-  â Inbox clear
+  ✓ Inbox clear
 
 Status works:
 

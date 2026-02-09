@@ -243,13 +243,17 @@ let filter_branches output =
 
 (* === Reporting === *)
 
+(* Return (status_char, message) for caller to format with proper Unicode *)
+type report_status = Ok | Alert | Skip
 let report_result = function
-  | Fetched (name, []) -> 
-      Printf.sprintf "  ✓ %s (no inbound)" name
-  | Fetched (name, branches) -> 
-      Printf.sprintf "  ⚡ %s (%d inbound)" name (List.length branches)
-  | Skipped (name, reason) -> 
-      Printf.sprintf "  · %s (%s)" name reason
+  | Fetched (name, []) -> (Ok, Printf.sprintf "%s (no inbound)" name)
+  | Fetched (name, branches) -> (Alert, Printf.sprintf "%s (%d inbound)" name (List.length branches))
+  | Skipped (name, reason) -> (Skip, Printf.sprintf "%s (%s)" name reason)
+
+(* ASCII fallback for native tests *)
+let format_report (status, msg) =
+  let prefix = match status with Ok -> "[ok]" | Alert -> "[!]" | Skip -> "[-]" in
+  Printf.sprintf "  %s %s" prefix msg
 
 let collect_alerts results =
   results |> List.filter_map (function

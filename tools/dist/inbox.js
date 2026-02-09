@@ -24855,18 +24855,15 @@ var require_inbox_lib = __commonJS({
     function report_result(param) {
       if (param.TAG !== /* Fetched */
       0) {
-        return Curry2._2(Stdlib__Printf2.sprintf({
-          TAG: (
-            /* Format */
-            0
-          ),
-          _0: {
+        return [
+          /* Skip */
+          2,
+          Curry2._2(Stdlib__Printf2.sprintf({
             TAG: (
-              /* String_literal */
-              11
+              /* Format */
+              0
             ),
-            _0: "  \xC2\xB7 ",
-            _1: {
+            _0: {
               TAG: (
                 /* String */
                 2
@@ -24906,25 +24903,22 @@ var require_inbox_lib = __commonJS({
                   }
                 }
               }
-            }
-          },
-          _1: "  \xC2\xB7 %s (%s)"
-        }), param._0, param._1);
+            },
+            _1: "%s (%s)"
+          }), param._0, param._1)
+        ];
       }
       const name = param._0;
       if (param._1) {
-        return Curry2._2(Stdlib__Printf2.sprintf({
-          TAG: (
-            /* Format */
-            0
-          ),
-          _0: {
+        return [
+          /* Alert */
+          1,
+          Curry2._2(Stdlib__Printf2.sprintf({
             TAG: (
-              /* String_literal */
-              11
+              /* Format */
+              0
             ),
-            _0: "  \xE2\x9A\xA1 ",
-            _1: {
+            _0: {
               TAG: (
                 /* String */
                 2
@@ -24969,23 +24963,20 @@ var require_inbox_lib = __commonJS({
                   }
                 }
               }
-            }
-          },
-          _1: "  \xE2\x9A\xA1 %s (%d inbound)"
-        }), name, Stdlib__List2.length(param._1));
+            },
+            _1: "%s (%d inbound)"
+          }), name, Stdlib__List2.length(param._1))
+        ];
       } else {
-        return Curry2._1(Stdlib__Printf2.sprintf({
-          TAG: (
-            /* Format */
-            0
-          ),
-          _0: {
+        return [
+          /* Ok */
+          0,
+          Curry2._1(Stdlib__Printf2.sprintf({
             TAG: (
-              /* String_literal */
-              11
+              /* Format */
+              0
             ),
-            _0: "  \xE2\x9C\x93 ",
-            _1: {
+            _0: {
               TAG: (
                 /* String */
                 2
@@ -25005,11 +24996,76 @@ var require_inbox_lib = __commonJS({
                   0
                 )
               }
-            }
-          },
-          _1: "  \xE2\x9C\x93 %s (no inbound)"
-        }), name);
+            },
+            _1: "%s (no inbound)"
+          }), name)
+        ];
       }
+    }
+    function format_report2(param) {
+      let prefix2;
+      switch (param[0]) {
+        case /* Ok */
+        0:
+          prefix2 = "[ok]";
+          break;
+        case /* Alert */
+        1:
+          prefix2 = "[!]";
+          break;
+        case /* Skip */
+        2:
+          prefix2 = "[-]";
+          break;
+      }
+      return Curry2._2(Stdlib__Printf2.sprintf({
+        TAG: (
+          /* Format */
+          0
+        ),
+        _0: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: "  ",
+          _1: {
+            TAG: (
+              /* String */
+              2
+            ),
+            _0: (
+              /* No_padding */
+              0
+            ),
+            _1: {
+              TAG: (
+                /* Char_literal */
+                12
+              ),
+              _0: (
+                /* ' ' */
+                32
+              ),
+              _1: {
+                TAG: (
+                  /* String */
+                  2
+                ),
+                _0: (
+                  /* No_padding */
+                  0
+                ),
+                _1: (
+                  /* End_of_format */
+                  0
+                )
+              }
+            }
+          }
+        },
+        _1: "  %s %s"
+      }), prefix2, param[1]);
     }
     function collect_alerts(results) {
       return Stdlib__List2.filter_map((function(param) {
@@ -26271,6 +26327,7 @@ var require_inbox_lib = __commonJS({
       make_peer,
       filter_branches,
       report_result,
+      format_report: format_report2,
       collect_alerts,
       collect_branches,
       format_alerts,
@@ -26299,6 +26356,76 @@ var Process$1 = {};
 var Child_process$1 = {};
 var Fs$1 = {};
 var Path$1 = {};
+var Str = {};
+var check = String.fromCodePoint(10003);
+var cross = String.fromCodePoint(10007);
+var lightning = String.fromCodePoint(9889);
+var dot = String.fromCodePoint(183);
+function format_report(param) {
+  let prefix;
+  switch (param[0]) {
+    case /* Ok */
+    0:
+      prefix = check;
+      break;
+    case /* Alert */
+    1:
+      prefix = lightning;
+      break;
+    case /* Skip */
+    2:
+      prefix = dot;
+      break;
+  }
+  return Curry._2(Stdlib__Printf.sprintf({
+    TAG: (
+      /* Format */
+      0
+    ),
+    _0: {
+      TAG: (
+        /* String_literal */
+        11
+      ),
+      _0: "  ",
+      _1: {
+        TAG: (
+          /* String */
+          2
+        ),
+        _0: (
+          /* No_padding */
+          0
+        ),
+        _1: {
+          TAG: (
+            /* Char_literal */
+            12
+          ),
+          _0: (
+            /* ' ' */
+            32
+          ),
+          _1: {
+            TAG: (
+              /* String */
+              2
+            ),
+            _0: (
+              /* No_padding */
+              0
+            ),
+            _1: (
+              /* End_of_format */
+              0
+            )
+          }
+        }
+      }
+    },
+    _1: "  %s %s"
+  }), prefix, param[1]);
+}
 function run_cmd(cmd) {
   try {
     return Child_process.execSync(cmd, {
@@ -26481,7 +26608,7 @@ function run_check(hub_path, my_name, peers) {
     return check_peer_inbound(hub_path, param);
   }), peers);
   Stdlib__List.iter((function(r) {
-    console.log(Inbox_lib.report_result(r));
+    console.log(format_report(Inbox_lib.report_result(r)));
   }), results);
   const alerts = Inbox_lib.collect_alerts(results);
   console.log("");
@@ -26525,7 +26652,7 @@ function execute_action(hub_path, action) {
         return false;
     }
   } catch (exn) {
-    console.log(Curry._1(Stdlib__Printf.sprintf({
+    console.log(Curry._2(Stdlib__Printf.sprintf({
       TAG: (
         /* Format */
         0
@@ -26535,7 +26662,7 @@ function execute_action(hub_path, action) {
           /* String_literal */
           11
         ),
-        _0: "  \xE2\x9C\x97 Failed: ",
+        _0: "  ",
         _1: {
           TAG: (
             /* String */
@@ -26545,14 +26672,31 @@ function execute_action(hub_path, action) {
             /* No_padding */
             0
           ),
-          _1: (
-            /* End_of_format */
-            0
-          )
+          _1: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: " Failed: ",
+            _1: {
+              TAG: (
+                /* String */
+                2
+              ),
+              _0: (
+                /* No_padding */
+                0
+              ),
+              _1: (
+                /* End_of_format */
+                0
+              )
+            }
+          }
         }
       },
-      _1: "  \xE2\x9C\x97 Failed: %s"
-    }), Inbox_lib.string_of_atomic_action(action)));
+      _1: "  %s Failed: %s"
+    }), cross, Inbox_lib.string_of_atomic_action(action)));
     return false;
   }
 }
@@ -26804,9 +26948,9 @@ function materialize_branch(hub_path, my_name, peer, branch) {
     _1: "Materializing %s..."
   }), branch));
   if (execute_actions(hub_path, actions)) {
-    console.log("  \xE2\x9C\x93 Thread created");
+    console.log("  " + (check + " Thread created"));
   } else {
-    console.log("  \xE2\x9C\x97 Failed to create thread");
+    console.log("  " + (cross + " Failed to create thread"));
   }
 }
 function run_process(hub_path, my_name, peers) {
@@ -27146,10 +27290,10 @@ function run_flush(hub_path, _my_name, _peers) {
             },
             _1: "rm %s"
           }), thread_path));
-          console.log("  \xE2\x9C\x93 Done (thread removed)");
+          console.log("  " + (check + " Done (thread removed)"));
           processed.contents = processed.contents + 1 | 0;
         } else {
-          console.log("  \xE2\x9C\x97 Execution failed");
+          console.log("  " + (cross + " Execution failed"));
           skipped.contents = skipped.contents + 1 | 0;
         }
         return;
@@ -27403,6 +27547,12 @@ module.exports = {
   Child_process: Child_process$1,
   Fs: Fs$1,
   Path: Path$1,
+  Str,
+  check,
+  cross,
+  lightning,
+  dot,
+  format_report,
   run_cmd,
   find_inbound_from_peer,
   check_peer_inbound,

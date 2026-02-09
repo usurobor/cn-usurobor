@@ -13,4 +13,4 @@ Help shows usage:
 Unknown command fails:
 
   $ node ../tools/dist/cn.js unknown-cmd 2>&1 | head -1
-  â Unknown command: unknown-cmd
+  ✗ Unknown command: unknown-cmd
