@@ -288,7 +288,66 @@ CN (scheduler)              Agent (via cn only)
 
 This mirrors Erlang's `receive` — the runtime delivers one message at a time, actor handles it, repeat.
 
-### 4.4 Protocol Specification
+### 4.4 Event Model: All Events Are Git Commits
+
+**Design Decision (2026-02-09):** Every event in the system is a git commit. The commit hash is the **trigger** — what initiated the processing.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  INVARIANT: event = git commit                          │
+│                                                         │
+│  External events (peer messages):                       │
+│    - Peer pushes branch → branch tip is a commit       │
+│    - trigger = commit hash of branch tip               │
+│                                                         │
+│  Internal events (MCA review, system triggers):         │
+│    - cn generates content                               │
+│    - cn commits FIRST                                   │
+│    - cn queues with commit hash as trigger              │
+│                                                         │
+│  Terminology:                                           │
+│    - "git" = the underlying storage/distribution layer  │
+│    - "trigger" = the commit that initiated this run     │
+│                                                         │
+│  Result:                                                │
+│    - Git history IS the event log                       │
+│    - Every run has immutable, verifiable trigger        │
+│    - Full provenance: run → trigger → content           │
+│    - "If it's not in the repo, it didn't happen"        │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Why commit hash as trigger:**
+
+| Property | Benefit |
+|----------|---------|
+| **Immutable** | Hash never changes, unlike branch names |
+| **Precise** | One commit, not "latest on branch" |
+| **Verifiable** | Cryptographic integrity |
+| **Unified** | Same model for all event types |
+
+**Frontmatter:**
+```yaml
+trigger: a1b2c3d4e5f6  # the commit that triggered this run
+```
+
+**Flow for external events:**
+```
+peer branch → cn sync → materialize with trigger → queue(trigger) → input.md
+```
+
+**Flow for internal events:**
+```
+cn generates content → cn commits → queue(trigger) → input.md
+```
+
+**Implementation:**
+- `materialize_branch`: capture `git rev-parse origin/<branch>` as trigger
+- `queue_add`: use trigger (commit hash) as id
+- Internal events: commit to `threads/system/<event>.md`, use commit hash as trigger
+- `archive_io_pair`: trigger from input.md, passed through from commit
+
+### 4.5 Protocol Specification
 
 #### 4.4.1 Sending a Message
 
@@ -359,7 +418,7 @@ Agents perform **GTD (Getting Things Done)** on their inbox. For each inbound br
 | pi | pi/roadmap | Done | sigma/ack-roadmap |
 ```
 
-### 4.5 Failure Handling
+### 4.6 Failure Handling
 
 #### 4.5.1 Delivery Guarantee
 
@@ -384,7 +443,7 @@ If item deferred more than N times:
 2. Force decision: Do, Delegate, or Delete
 3. No infinite deferral
 
-### 4.6 Coherence Analysis
+### 4.7 Coherence Analysis
 
 | Axis | How Design Addresses It |
 |------|-------------------------|
