@@ -126,7 +126,7 @@ type agent_op =
   | Done of string                     (* Mark input/thread complete *)
   | Fail of string * string            (* Failed to process: id, reason *)
   | Reply of string * string           (* Reply to thread: id, message *)
-  | Send of string * string            (* Send to peer: peer, message *)
+  | Send of string * string * string option  (* Send to peer: peer, message, body *)
   | Delegate of string * string        (* Forward to peer: id, peer *)
   | Defer of string * string option    (* Postpone: id, until *)
   | Delete of string                   (* Discard: id *)
@@ -137,7 +137,7 @@ let string_of_agent_op = function
   | Done id -> "done:" ^ id
   | Fail (id, reason) -> "fail:" ^ id ^ " reason:" ^ reason
   | Reply (id, _) -> "reply:" ^ id
-  | Send (peer, _) -> "send:" ^ peer
+  | Send (peer, _, _) -> "send:" ^ peer
   | Delegate (id, peer) -> "delegate:" ^ id ^ " to:" ^ peer
   | Defer (id, None) -> "defer:" ^ id
   | Defer (id, Some until) -> "defer:" ^ id ^ " until:" ^ until
@@ -159,7 +159,16 @@ let parse_agent_op key value =
        | None -> None)
   | "send" ->
       (match String.index_opt value '|' with
-       | Some i -> Some (Send (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
+       | Some i -> 
+           let peer = String.sub value 0 i in
+           let rest = String.sub value (i+1) (String.length value - i - 1) in
+           (* Check for second pipe (body) *)
+           (match String.index_opt rest '|' with
+            | Some j -> 
+                let message = String.sub rest 0 j in
+                let body = String.sub rest (j+1) (String.length rest - j - 1) in
+                Some (Send (peer, message, Some body))
+            | None -> Some (Send (peer, rest, None)))
        | None -> None)
   | "delegate" ->
       (match String.index_opt value '|' with
@@ -580,4 +589,4 @@ Actor Model:
   Agent reads input.md, processes, deletes when done.
 |}
 
-let version = "2.2.9"
+let version = "2.2.10"
