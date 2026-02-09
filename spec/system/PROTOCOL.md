@@ -56,21 +56,56 @@ Rejection sends notice to sender:
 
 ---
 
+## Message Direction
+
+Messages flow via branches in the SENDER's repo. Recipient pulls.
+
+**Outbound (sigma sends to pi):**
+1. Sigma creates branch `pi/topic` in sigma's repo
+2. Sigma pushes to sigma's origin
+3. Pi fetches sigma's clone, sees `origin/pi/topic`
+
+**Inbound (sigma receives from pi):**
+1. Pi pushed branch `sigma/topic` to pi's repo
+2. Sigma fetches pi's clone
+3. Sigma sees `origin/sigma/topic` in pi-clone
+
+```ocaml
+(* Outbound: push <recipient>/* to YOUR origin *)
+# outbound_branch ~sender:"sigma" ~recipient:"pi" ~topic:"hello";;
+- : string = "pi/hello"
+
+(* Inbound: look for <your-name>/* in PEER's clone *)
+# inbound_pattern ~my_name:"sigma";;
+- : string = "origin/sigma/*"
+```
+
+Key invariant: **you only write to YOUR repo, peers pull from you.**
+
+```ocaml
+# message_direction;;
+- : direction = PushToSelf_PeerPulls
+```
+
+---
+
 ## Sync Flow
 
 **Inbound:**
 ```
-fetch → validate → materialize → triage → queue
+for each peer:
+  fetch peer's clone → find origin/<my-name>/* → validate → materialize → delete branch
 ```
 
 **Outbound:**
 ```
-outbox → create branch in clone → push → move to sent
+for each outbox thread:
+  read "to:" → create <recipient>/* branch in peer's clone → push → move to sent
 ```
 
 ```ocaml
 # sync_phases;;
-- : string list = ["fetch"; "validate"; "materialize"; "triage"; "flush"]
+- : string list = ["fetch_peers"; "check_inbound"; "materialize"; "flush_outbox"]
 ```
 
 ---

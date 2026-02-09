@@ -48,7 +48,20 @@ let validate_branch branch =
 let rejection_notice peer branch =
   Printf.sprintf "Branch %s rejected: no merge base with main" branch
 
-let sync_phases = ["fetch"; "validate"; "materialize"; "triage"; "flush"]
+(* Message direction: you push to YOUR repo, peers pull from you *)
+type direction = PushToSelf_PeerPulls
+
+let message_direction = PushToSelf_PeerPulls
+
+(* Outbound: create branch named <recipient>/<topic> in YOUR repo *)
+let outbound_branch ~sender:_ ~recipient ~topic =
+  recipient ^ "/" ^ topic
+
+(* Inbound: look for branches named <your-name>/* in peer's clone *)
+let inbound_pattern ~my_name =
+  "origin/" ^ my_name ^ "/*"
+
+let sync_phases = ["fetch_peers"; "check_inbound"; "materialize"; "flush_outbox"]
 
 let required_frontmatter = ["to"; "created"]
 let optional_frontmatter = ["from"; "subject"; "in-reply-to"; "branch"; "trigger"]
