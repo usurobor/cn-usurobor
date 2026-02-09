@@ -14,6 +14,11 @@ WRITING.md opens with:
 
 > **Coherent writing: nothing can be removed without loss.**
 
+Why this is coherence:
+- Coherence = every part serves the whole
+- If something can be removed without loss, it wasn't serving the whole
+- It was noise, not signal
+
 This formula is:
 - Specific to writing (not generic advice)
 - Testable (try removing something — does meaning change?)
