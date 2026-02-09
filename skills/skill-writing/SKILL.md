@@ -4,61 +4,53 @@ How to write skills.
 
 ## Core Principle
 
-**Coherent skill: actionable guidance that can't be reduced without loss.**
+**Coherent skill-writing: the skill's coherence formula is specific and demonstrated.**
 
-A skill teaches one thing. If you can split it, split it.
+Every skill must articulate what coherence means for *that* skill. Generic principles don't teach.
+
+## Example
+
+WRITING.md opens with:
+
+> **Coherent writing: nothing can be removed without loss.**
+
+This formula is:
+- Specific to writing (not generic advice)
+- Testable (try removing something — does meaning change?)
+- Demonstrated (the skill itself follows the formula)
 
 ## Skill Structure
 
-### 1. Header
+### 1. Core Principle
 
-1.1. **Name as slug**
-  - ❌ "How To Write Good Code"
-  - ✅ "code-review"
+1.1. **Formulate "Coherent X: Y"**
+  - X = the skill domain
+  - Y = what coherence means specifically for X
+  - ❌ "Coherent code review: follow best practices"
+  - ✅ "Coherent code review: every comment actionable"
 
-1.2. **One-line description**
-  - ❌ Paragraph explaining the skill
-  - ✅ "How to review code."
+1.2. **One sentence expansion**
+  - Unpacks the formula
+  - No more than needed
 
-### 2. Core Principle
+### 2. Numbered Sections
 
-2.1. **Formula: "Coherent X: Y"**
-  - ❌ "This skill is about writing good code"
-  - ✅ "Coherent code: does one thing, obviously"
+2.1. **Top-level: category (### 1. Name)**
+  - Group related rules
 
-2.2. **One sentence expansion**
-  - Unpacks the formula, no more
+2.2. **Sub-level: specific rule (1.1. **Rule**)**
+  - One rule per item
 
-### 3. Numbered Sections
-
-3.1. **Top-level: category**
-  - `### 1. Preparation`
-  - `### 2. Execution`
-  - `### 3. Verification`
-
-3.2. **Sub-level: specific rule**
-  - `1.1. **Check prerequisites**`
-  - `1.2. **Read the diff first**`
-
-3.3. **Each rule has examples**
-  - ❌ and ✅ showing wrong vs right
-
-### 4. Examples
-
-4.1. **Every rule needs ❌/✅**
+2.3. **Each rule has ❌/✅ examples**
   - Abstract rules don't stick
   - Concrete examples do
 
-4.2. **Examples from real work**
-  - ❌ Made-up hypotheticals
-  - ✅ Actual patterns you've seen
+### 3. Referenceable
 
-### 5. Referenceable
-
-5.1. **Use numbered IDs**
+3.1. **Use numbered IDs (1.1, 2.3, etc.)**
   - "See 2.3" not "see above"
   - Makes feedback precise
 
-5.2. **Keep IDs stable**
-  - Don't renumber on every edit
+3.2. **Keep IDs stable**
   - Add new items at end of section
+  - Don't renumber on edit
