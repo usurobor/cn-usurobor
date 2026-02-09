@@ -1586,6 +1586,35 @@ let run_update_with_cron hub_path =
        | None -> print_endline (dim "No origin remote - skipping push"))
   | None -> print_endline (dim "No runtime changes to commit")
 
+(* === Self-Update Check === *)
+
+(* Check npm for latest version and self-update if newer *)
+let self_update_check () =
+  (* Skip for help/version commands - no need to update for those *)
+  let args = Process.argv |> Array.to_list in
+  let is_skip_cmd = List.exists (fun a -> 
+    a = "--help" || a = "-h" || a = "--version" || a = "-V" || a = "help"
+  ) args in
+  if is_skip_cmd then ()
+  else
+    (* Fetch latest version from npm (no cache) *)
+    match Child_process.exec "npm view cnagent version --fetch-timeout=5000 2>/dev/null" with
+    | None -> () (* Network error - continue with current version *)
+    | Some latest_raw ->
+        let latest = String.trim latest_raw in
+        if latest <> version && latest <> "" then begin
+          print_endline (info (Printf.sprintf "Updating cn %s → %s..." version latest));
+          match Child_process.exec "npm install -g cnagent@latest 2>/dev/null" with
+          | Some _ -> 
+              print_endline (ok (Printf.sprintf "Updated to cn %s" latest));
+              (* Re-exec with same args to run with new version *)
+              let args_str = args |> List.tl |> String.concat " " in
+              let _ = Child_process.exec (Printf.sprintf "cn %s" args_str) in
+              Process.exit 0
+          | None -> 
+              print_endline (warn "Self-update failed - continuing with current version")
+        end
+
 (* === Main === *)
 
 let drop n lst =
@@ -1596,6 +1625,9 @@ let drop n lst =
   in go n lst
 
 let () =
+  (* Always check for updates first *)
+  self_update_check ();
+  
   let args = Process.argv |> Array.to_list |> drop 2 in
   let flags, cmd_args = parse_flags args in
   let _ = flags in
