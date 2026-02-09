@@ -1,3 +1,8 @@
+Setup:
+
+  $ chmod +x cn.sh
+  $ CN="$(pwd)/cn.sh"
+
 Setup test hub with outbox message:
 
   $ mkdir -p test-hub/.cn test-hub/state test-hub/threads/mail/inbox test-hub/threads/mail/outbox test-hub/threads/mail/sent
@@ -26,13 +31,13 @@ Create outbox message:
 
 Outbox check shows pending:
 
-  $ node ../../tools/dist/cn.js outbox 2>&1
+  $ $CN outbox 2>&1
   ⚠ 1 pending send(s):
     â recipient: hello.md
 
 Dry-run shows would send (but fails - no clone path):
 
-  $ node ../../tools/dist/cn.js sync --dry-run 2>&1 | grep -E "(Would:|No clone)"
+  $ $CN sync --dry-run 2>&1 | grep -E "(Would:|No clone)"
   ✗ No clone path for peer: recipient
 
 Message still in outbox:
