@@ -296,10 +296,10 @@ Single cron job. cn sync then cn process. Every 5 minutes.
 |-----------|--------------|
 | Read state/input.md | Read threads/ directly |
 | Write state/output.md | Move/delete files |
-| Call cn commands | Execute arbitrary shell |
-| | Make network calls |
+| Write ops in output.md frontmatter | Execute shell commands |
+| (cn executes them) | Make network calls |
 
-All IO through cn. No exceptions.
+Agent is a pure function: input.md → output.md. All IO through cn. No exceptions.
 
 ---
 
