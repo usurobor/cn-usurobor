@@ -288,7 +288,57 @@ CN (scheduler)              Agent (via cn only)
 
 This mirrors Erlang's `receive` — the runtime delivers one message at a time, actor handles it, repeat.
 
-### 4.4 Protocol Specification
+### 4.4 Event Model: All Events Are Git Commits
+
+**Design Decision (2026-02-09):** Every event in the system is a git commit. Run ID = commit hash.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  INVARIANT: event = git commit                          │
+│                                                         │
+│  External events (peer messages):                       │
+│    - Peer pushes branch → branch tip is a commit       │
+│    - Run ID = commit hash of branch tip                │
+│                                                         │
+│  Internal events (MCA review, system triggers):         │
+│    - cn generates content                               │
+│    - cn commits FIRST                                   │
+│    - cn queues with commit hash as run ID               │
+│                                                         │
+│  Result:                                                │
+│    - Git history IS the event log                       │
+│    - Every run has immutable, verifiable ID             │
+│    - Full provenance: run → commit → content            │
+│    - "If it's not in the repo, it didn't happen"        │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Why commit hash as run ID:**
+
+| Property | Benefit |
+|----------|---------|
+| **Immutable** | Hash never changes, unlike branch names |
+| **Precise** | One commit, not "latest on branch" |
+| **Verifiable** | Cryptographic integrity |
+| **Unified** | Same model for all event types |
+
+**Flow for external events:**
+```
+peer branch → cn sync → materialize with commit hash → queue(hash) → input.md
+```
+
+**Flow for internal events:**
+```
+cn generates content → cn commits → queue(hash) → input.md
+```
+
+**Implementation:**
+- `materialize_branch`: capture `git rev-parse origin/<branch>` as run ID
+- `queue_add`: accept run_id parameter (commit hash)
+- Internal events: commit to `threads/system/<event>.md`, use commit hash
+- `archive_io_pair`: run ID from input.md, passed through from commit
+
+### 4.5 Protocol Specification
 
 #### 4.4.1 Sending a Message
 
@@ -359,7 +409,7 @@ Agents perform **GTD (Getting Things Done)** on their inbox. For each inbound br
 | pi | pi/roadmap | Done | sigma/ack-roadmap |
 ```
 
-### 4.5 Failure Handling
+### 4.6 Failure Handling
 
 #### 4.5.1 Delivery Guarantee
 
@@ -384,7 +434,7 @@ If item deferred more than N times:
 2. Force decision: Do, Delegate, or Delete
 3. No infinite deferral
 
-### 4.6 Coherence Analysis
+### 4.7 Coherence Analysis
 
 | Axis | How Design Addresses It |
 |------|-------------------------|

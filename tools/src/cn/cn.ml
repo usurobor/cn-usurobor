@@ -196,6 +196,12 @@ let materialize_branch hub_path inbox_dir peer_name branch =
     |> Option.value ~default:[]
     |> List.filter is_md_file in
   
+  (* Get commit hash of branch tip — this becomes the run ID *)
+  let commit_hash = 
+    Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git rev-parse origin/%s" branch)
+    |> Option.map String.trim
+    |> Option.value ~default:"unknown" in
+  
   let branch_slug = match branch |> String.split_on_char '/' |> List.rev with
     | x :: _ -> x
     | [] -> branch in
@@ -214,9 +220,10 @@ let materialize_branch hub_path inbox_dir peer_name branch =
       match Child_process.exec_in ~cwd:hub_path show_cmd with
       | None -> None
       | Some content ->
-          let meta = [("from", peer_name); ("branch", branch); ("file", file); ("received", now_iso ())] in
+          (* Include commit hash — the canonical run ID *)
+          let meta = [("from", peer_name); ("branch", branch); ("commit", commit_hash); ("file", file); ("received", now_iso ())] in
           Fs.write inbox_path (update_frontmatter content meta);
-          log_action hub_path "inbox.materialize" inbox_file;
+          log_action hub_path "inbox.materialize" (Printf.sprintf "%s commit:%s" inbox_file commit_hash);
           (* Delete remote branch after successful materialization *)
           let _ = delete_remote_branch hub_path branch in
           Some inbox_file)
@@ -839,7 +846,9 @@ let queue_inbox_items hub_path =
         let is_queued = List.exists (fun (k, _) -> k = "queued-for-processing") meta in
         if is_queued then None
         else begin
-          let id = Path.basename_ext file ".md" in
+          (* Run ID = commit hash (canonical). Fallback to filename if no commit. *)
+          let id = meta |> List.find_map (fun (k, v) -> if k = "commit" then Some v else None)
+            |> Option.value ~default:(Path.basename_ext file ".md") in
           let from = meta |> List.find_map (fun (k, v) -> if k = "from" then Some v else None)
             |> Option.value ~default:"unknown" in
           
@@ -1132,7 +1141,7 @@ let mca_count hub_path =
   if not (Fs.exists dir) then 0
   else Fs.readdir dir |> List.filter is_md_file |> List.length
 
-let queue_mca_review hub_path =
+let queue_mca_review hub_path name =
   let dir = mca_dir hub_path in
   let mcas = Fs.readdir dir |> List.filter is_md_file |> List.sort String.compare in
   let mca_list = mcas |> List.map (fun file ->
@@ -1157,8 +1166,14 @@ let queue_mca_review hub_path =
     Printf.sprintf "- [%s] %s (by %s)" id (String.trim desc) by
   ) |> String.concat "\n" in
   
-  let review_id = Printf.sprintf "mca-review-%s" (now_iso () |> Js.String.slice ~start:0 ~end_:10) in
-  let body = Printf.sprintf {|# MCA Review
+  let ts = now_iso () |> Js.String.replaceByRe ~regexp:[%mel.re "/[:.]/g"] ~replacement:"-" in
+  let event_file = Printf.sprintf "threads/system/mca-review-%s.md" ts in
+  let body = Printf.sprintf {|---
+type: mca-review
+created: %s
+---
+
+# MCA Review
 
 Review the MCA queue below. Identify the highest priority MCA with:
 - Lowest cost to complete
@@ -1169,11 +1184,25 @@ If you can do it now, do it. Otherwise, explain why not.
 ## Open MCAs
 
 %s
-|} mca_list in
+|} (now_iso ()) mca_list in
   
-  let _ = queue_add hub_path review_id "system" body in
-  log_action hub_path "mca.review-queued" (Printf.sprintf "count:%d" (List.length mcas));
-  print_endline (ok (Printf.sprintf "Queued MCA review (%d MCAs)" (List.length mcas)))
+  (* Commit first — all events are git commits *)
+  let system_dir = Path.join hub_path "threads/system" in
+  Fs.ensure_dir system_dir;
+  Fs.write (Path.join hub_path event_file) body;
+  let _ = Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git add '%s'" event_file) in
+  let _ = Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m '%s: system event mca-review'" name) in
+  
+  (* Get commit hash — the canonical run ID *)
+  let commit_hash = 
+    Child_process.exec_in ~cwd:hub_path "git rev-parse HEAD"
+    |> Option.map String.trim
+    |> Option.value ~default:(Printf.sprintf "mca-review-%s" ts) in
+  
+  (* Queue with commit hash as run ID *)
+  let _ = queue_add hub_path commit_hash "system" body in
+  log_action hub_path "mca.review-queued" (Printf.sprintf "commit:%s count:%d" commit_hash (List.length mcas));
+  print_endline (ok (Printf.sprintf "Queued MCA review (%d MCAs) commit:%s" (List.length mcas) (String.sub commit_hash 0 7)))
 
 (* === Inbound (Actor Loop) === *)
 
@@ -1210,7 +1239,7 @@ let run_inbound hub_path name =
   (* Step 2: Check MCA review cycle *)
   let cycle = increment_mca_cycle hub_path in
   if cycle mod mca_review_interval = 0 && mca_count hub_path > 0 then
-    queue_mca_review hub_path;
+    queue_mca_review hub_path name;
   
   (* Step 3: Check if completed IO pair exists, archive if so *)
   let inp = input_path hub_path in
