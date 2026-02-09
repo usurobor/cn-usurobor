@@ -715,7 +715,7 @@ let execute_op hub_path name input_id op =
        | None ->
            log_action hub_path "op.reply" (Printf.sprintf "thread:%s (not found)" id);
            print_endline (warn (Printf.sprintf "Thread not found for reply: %s" id)))
-  | Send (peer, msg) ->
+  | Send (peer, msg, body_opt) ->
       let outbox_dir = Path.join hub_path "threads/outbox" in
       Fs.ensure_dir outbox_dir;
       let slug = 
@@ -726,8 +726,10 @@ let execute_op hub_path name input_id op =
       in
       let file_name = slug ^ ".md" in
       let first_line = match String.split_on_char '\n' msg with x :: _ -> x | [] -> msg in
+      (* Use body if provided, otherwise use message *)
+      let body = match body_opt with Some b -> b | None -> msg in
       let content = Printf.sprintf "---\nto: %s\ncreated: %s\nfrom: %s\n---\n\n# %s\n\n%s\n" 
-        peer (now_iso ()) name first_line msg in
+        peer (now_iso ()) name first_line body in
       Fs.write (Path.join outbox_dir file_name) content;
       log_action hub_path "op.send" (Printf.sprintf "to:%s thread:%s" peer slug);
       print_endline (ok (Printf.sprintf "Queued message to %s" peer))
