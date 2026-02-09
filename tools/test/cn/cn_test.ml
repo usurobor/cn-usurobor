@@ -16,7 +16,7 @@ let%expect_test "parse_command basic" =
     doctor
     sync
     next
-    process
+    in
   |}]
 
 let%expect_test "parse_command inbox subcommands" =
