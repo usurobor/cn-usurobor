@@ -290,7 +290,7 @@ This mirrors Erlang's `receive` — the runtime delivers one message at a time, 
 
 ### 4.4 Event Model: All Events Are Git Commits
 
-**Design Decision (2026-02-09):** Every event in the system is a git commit. Run ID = commit hash.
+**Design Decision (2026-02-09):** Every event in the system is a git commit. The commit hash is the **trigger** — what initiated the processing.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -298,22 +298,26 @@ This mirrors Erlang's `receive` — the runtime delivers one message at a time, 
 │                                                         │
 │  External events (peer messages):                       │
 │    - Peer pushes branch → branch tip is a commit       │
-│    - Run ID = commit hash of branch tip                │
+│    - trigger = commit hash of branch tip               │
 │                                                         │
 │  Internal events (MCA review, system triggers):         │
 │    - cn generates content                               │
 │    - cn commits FIRST                                   │
-│    - cn queues with commit hash as run ID               │
+│    - cn queues with commit hash as trigger              │
+│                                                         │
+│  Terminology:                                           │
+│    - "git" = the underlying storage/distribution layer  │
+│    - "trigger" = the commit that initiated this run     │
 │                                                         │
 │  Result:                                                │
 │    - Git history IS the event log                       │
-│    - Every run has immutable, verifiable ID             │
-│    - Full provenance: run → commit → content            │
+│    - Every run has immutable, verifiable trigger        │
+│    - Full provenance: run → trigger → content           │
 │    - "If it's not in the repo, it didn't happen"        │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Why commit hash as run ID:**
+**Why commit hash as trigger:**
 
 | Property | Benefit |
 |----------|---------|
@@ -322,21 +326,26 @@ This mirrors Erlang's `receive` — the runtime delivers one message at a time, 
 | **Verifiable** | Cryptographic integrity |
 | **Unified** | Same model for all event types |
 
+**Frontmatter:**
+```yaml
+trigger: a1b2c3d4e5f6  # the commit that triggered this run
+```
+
 **Flow for external events:**
 ```
-peer branch → cn sync → materialize with commit hash → queue(hash) → input.md
+peer branch → cn sync → materialize with trigger → queue(trigger) → input.md
 ```
 
 **Flow for internal events:**
 ```
-cn generates content → cn commits → queue(hash) → input.md
+cn generates content → cn commits → queue(trigger) → input.md
 ```
 
 **Implementation:**
-- `materialize_branch`: capture `git rev-parse origin/<branch>` as run ID
-- `queue_add`: accept run_id parameter (commit hash)
-- Internal events: commit to `threads/system/<event>.md`, use commit hash
-- `archive_io_pair`: run ID from input.md, passed through from commit
+- `materialize_branch`: capture `git rev-parse origin/<branch>` as trigger
+- `queue_add`: use trigger (commit hash) as id
+- Internal events: commit to `threads/system/<event>.md`, use commit hash as trigger
+- `archive_io_pair`: trigger from input.md, passed through from commit
 
 ### 4.5 Protocol Specification
 

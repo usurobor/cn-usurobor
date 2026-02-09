@@ -196,8 +196,8 @@ let materialize_branch hub_path inbox_dir peer_name branch =
     |> Option.value ~default:[]
     |> List.filter is_md_file in
   
-  (* Get commit hash of branch tip — this becomes the run ID *)
-  let commit_hash = 
+  (* Get commit hash of branch tip — the trigger for this run *)
+  let trigger = 
     Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git rev-parse origin/%s" branch)
     |> Option.map String.trim
     |> Option.value ~default:"unknown" in
@@ -220,10 +220,10 @@ let materialize_branch hub_path inbox_dir peer_name branch =
       match Child_process.exec_in ~cwd:hub_path show_cmd with
       | None -> None
       | Some content ->
-          (* Include commit hash — the canonical run ID *)
-          let meta = [("from", peer_name); ("branch", branch); ("commit", commit_hash); ("file", file); ("received", now_iso ())] in
+          (* Include trigger — the commit that initiated this run *)
+          let meta = [("from", peer_name); ("branch", branch); ("trigger", trigger); ("file", file); ("received", now_iso ())] in
           Fs.write inbox_path (update_frontmatter content meta);
-          log_action hub_path "inbox.materialize" (Printf.sprintf "%s commit:%s" inbox_file commit_hash);
+          log_action hub_path "inbox.materialize" (Printf.sprintf "%s trigger:%s" inbox_file trigger);
           (* Delete remote branch after successful materialization *)
           let _ = delete_remote_branch hub_path branch in
           Some inbox_file)
@@ -786,31 +786,31 @@ let execute_op hub_path name input_id op =
 
 (* === Archive completed IO pair === *)
 
-(* Generate timestamp-based ID as fallback *)
-let generate_run_id () =
+(* Generate timestamp-based trigger as fallback *)
+let generate_trigger () =
   now_iso () |> Js.String.replaceByRe ~regexp:[%mel.re "/[:.]/g"] ~replacement:"-"
 
 let archive_io_pair hub_path name =
   let inp = input_path hub_path in
   let outp = output_path hub_path in
   
-  (* Run ID comes from input.md (cn owns it), fallback to timestamp *)
-  let run_id = get_file_id inp |> Option.value ~default:(generate_run_id ()) in
+  (* Trigger comes from input.md (cn owns it), fallback to timestamp *)
+  let trigger = get_file_id inp |> Option.value ~default:(generate_trigger ()) in
   
   (* Check if output exists - if not, agent still working *)
   if not (Fs.exists outp) then begin
-    print_endline (info (Printf.sprintf "Waiting: run=%s, no output yet" run_id));
+    print_endline (info (Printf.sprintf "Waiting: trigger=%s, no output yet" trigger));
     false
   end
   else begin
-    (* Archive both under run_id *)
+    (* Archive both under trigger *)
     let logs_in = logs_input_dir hub_path in
     let logs_out = logs_output_dir hub_path in
     Fs.ensure_dir logs_in;
     Fs.ensure_dir logs_out;
     
     let output_content = Fs.read outp in
-    let archive_name = run_id ^ ".md" in
+    let archive_name = trigger ^ ".md" in
     Fs.write (Path.join logs_in archive_name) (Fs.read inp);
     Fs.write (Path.join logs_out archive_name) output_content;
     
@@ -819,14 +819,14 @@ let archive_io_pair hub_path name =
     let ops = extract_ops output_meta in
     ops |> List.iter (fun op ->
       print_endline (info (Printf.sprintf "Executing: %s" (string_of_agent_op op)));
-      execute_op hub_path name run_id op);
+      execute_op hub_path name trigger op);
     
     (* Clear both *)
     Fs.unlink inp;
     Fs.unlink outp;
     
-    log_action hub_path "io.archive" (Printf.sprintf "run:%s ops:%d" run_id (List.length ops));
-    print_endline (ok (Printf.sprintf "Archived: %s (%d ops)" run_id (List.length ops)));
+    log_action hub_path "io.archive" (Printf.sprintf "trigger:%s ops:%d" trigger (List.length ops));
+    print_endline (ok (Printf.sprintf "Archived: %s (%d ops)" trigger (List.length ops)));
     true
   end
 
@@ -846,16 +846,16 @@ let queue_inbox_items hub_path =
         let is_queued = List.exists (fun (k, _) -> k = "queued-for-processing") meta in
         if is_queued then None
         else begin
-          (* Run ID = commit hash (canonical). Fallback to filename if no commit. *)
-          let id = meta |> List.find_map (fun (k, v) -> if k = "commit" then Some v else None)
+          (* trigger = commit hash (canonical). Fallback to filename if no trigger. *)
+          let trigger = meta |> List.find_map (fun (k, v) -> if k = "trigger" then Some v else None)
             |> Option.value ~default:(Path.basename_ext file ".md") in
           let from = meta |> List.find_map (fun (k, v) -> if k = "from" then Some v else None)
             |> Option.value ~default:"unknown" in
           
-          let _ = queue_add hub_path id from content in
+          let _ = queue_add hub_path trigger from content in
           Fs.write file_path (update_frontmatter content [("queued-for-processing", now_iso ())]);
           
-          print_endline (ok (Printf.sprintf "Queued: %s (from %s)" id from));
+          print_endline (ok (Printf.sprintf "Queued: %s (from %s)" trigger from));
           Some file
         end)
     |> List.length
@@ -1193,16 +1193,16 @@ If you can do it now, do it. Otherwise, explain why not.
   let _ = Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git add '%s'" event_file) in
   let _ = Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m '%s: system event mca-review'" name) in
   
-  (* Get commit hash — the canonical run ID *)
-  let commit_hash = 
+  (* Get commit hash — the trigger for this run *)
+  let trigger = 
     Child_process.exec_in ~cwd:hub_path "git rev-parse HEAD"
     |> Option.map String.trim
     |> Option.value ~default:(Printf.sprintf "mca-review-%s" ts) in
   
-  (* Queue with commit hash as run ID *)
-  let _ = queue_add hub_path commit_hash "system" body in
-  log_action hub_path "mca.review-queued" (Printf.sprintf "commit:%s count:%d" commit_hash (List.length mcas));
-  print_endline (ok (Printf.sprintf "Queued MCA review (%d MCAs) commit:%s" (List.length mcas) (String.sub commit_hash 0 7)))
+  (* Queue with trigger (commit hash) *)
+  let _ = queue_add hub_path trigger "system" body in
+  log_action hub_path "mca.review-queued" (Printf.sprintf "trigger:%s count:%d" trigger (List.length mcas));
+  print_endline (ok (Printf.sprintf "Queued MCA review (%d MCAs) trigger:%s" (List.length mcas) (String.sub trigger 0 7)))
 
 (* === Inbound (Actor Loop) === *)
 
