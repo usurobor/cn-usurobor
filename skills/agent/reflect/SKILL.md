@@ -86,10 +86,12 @@ When to reflect.
 
 5.2. **Consolidate at higher cadences**
   - ❌ Same insight in 4 daily threads, never migrated → ✅ Weekly catches it, migrates to skill
-  - ❌ Never review weekly → ✅ Weekly reviews daily, monthly reviews weekly
+  - ❌ Skip cadences → ✅ Weekly reviews daily, monthly reviews weekly, quarterly reviews monthly, yearly reviews quarterly
 
-| Cadence | File |
-|---------|------|
-| Daily | `threads/reflections/daily/YYYYMMDD.md` |
-| Weekly | `threads/reflections/weekly/YYYY-WNN.md` |
-| Monthly | `threads/reflections/monthly/YYYYMM.md` |
+| Cadence | When | File |
+|---------|------|------|
+| Daily | End of session | `threads/reflections/daily/YYYYMMDD.md` |
+| Weekly | Sunday | `threads/reflections/weekly/YYYY-WNN.md` |
+| Monthly | 1st | `threads/reflections/monthly/YYYYMM.md` |
+| Quarterly | Q start | `threads/reflections/quarterly/YYYYQN.md` |
+| Yearly | Jan 1 | `threads/reflections/yearly/YYYY.md` |
