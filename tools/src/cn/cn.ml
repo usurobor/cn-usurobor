@@ -438,35 +438,39 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
           log_action hub_path "outbox.skip" (Printf.sprintf "thread:%s to:%s reason:no clone path" file to_name);
           print_endline (fail (Printf.sprintf "No clone path for peer: %s" to_name));
           None
-      | Some { clone = Some clone_path; _ } ->
+      | Some { clone = Some _clone_path; _ } ->
+          (* Push-to-self protocol: push <recipient>/* branch to MY repo *)
           let thread_name = Path.basename_ext file ".md" in
-          let branch_name = Printf.sprintf "%s/%s" name thread_name in
+          let branch_name = Printf.sprintf "%s/%s" to_name thread_name in
           
           if !dry_run_mode then begin
             print_endline (dim (Printf.sprintf "Would: send %s to %s (branch: %s)" file to_name branch_name));
             Some file
           end else
-          match Child_process.exec_in ~cwd:clone_path "git checkout main 2>/dev/null || git checkout master" with
+          match Child_process.exec_in ~cwd:hub_path "git checkout main 2>/dev/null || git checkout master" with
           | None ->
               log_action hub_path "outbox.send" (Printf.sprintf "to:%s thread:%s error:checkout failed" to_name file);
               print_endline (fail (Printf.sprintf "Failed to send %s" file));
               None
           | Some _ ->
-              let _ = Child_process.exec_in ~cwd:clone_path "git pull --ff-only 2>/dev/null || true" in
-              let _ = Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git checkout -b %s 2>/dev/null || git checkout %s" branch_name branch_name) in
+              (* Create branch in MY repo with recipient's name as prefix *)
+              let _ = Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git checkout -b %s 2>/dev/null || git checkout %s" branch_name branch_name) in
               
-              let peer_thread_dir = Path.join clone_path "threads/in" in
-              Fs.ensure_dir peer_thread_dir;
-              Fs.write (Path.join peer_thread_dir file) content;
-              let _ = Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git add 'threads/in/%s'" file) in
-              let _ = Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git commit -m '%s: %s'" name thread_name) in
-              let _ = Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git push -u origin %s -f" branch_name) in
-              let _ = Child_process.exec_in ~cwd:clone_path "git checkout main 2>/dev/null || git checkout master" in
+              (* Write thread content to threads/in for recipient *)
+              let thread_dir = Path.join hub_path "threads/in" in
+              Fs.ensure_dir thread_dir;
+              Fs.write (Path.join thread_dir file) content;
+              let _ = Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git add 'threads/in/%s'" file) in
+              let _ = Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m '%s: %s'" name thread_name) in
+              
+              (* Push to MY origin — recipient will fetch my repo to see it *)
+              let _ = Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git push -u origin %s -f" branch_name) in
+              let _ = Child_process.exec_in ~cwd:hub_path "git checkout main 2>/dev/null || git checkout master" in
               
               Fs.write (Path.join sent_dir file) (update_frontmatter content [("sent", now_iso ())]);
               Fs.unlink file_path;
               
-              log_action hub_path "outbox.send" (Printf.sprintf "to:%s thread:%s" to_name file);
+              log_action hub_path "outbox.send" (Printf.sprintf "to:%s thread:%s branch:%s" to_name file branch_name);
               print_endline (ok (Printf.sprintf "Sent to %s: %s" to_name file));
               Some file
 
