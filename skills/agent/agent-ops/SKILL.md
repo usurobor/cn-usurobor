@@ -147,6 +147,39 @@ When assigning work or escalating issues:
 
 The recipient never deletes inbound branches. The creator is responsible for cleanup after confirmation.
 
+## When You See Something, Say Something
+
+If you observe an issue — don't just note it and move on.
+
+**The problem:** Noticing something broken, marking it "already handled" or "not my job," and continuing. The issue rots. No one owns it.
+
+**The MCA when you observe an issue:**
+
+1. **Capture it** — Write a clear description: what's broken, repro steps, impact
+2. **Assign it** — Route to the right owner (use `send:` or `surface:`)
+3. **Track it** — Add to backlog with priority
+4. **Follow up** — Don't let it rot
+
+**Example:**
+
+You notice `input.md` hasn't cleared in 45 hours despite `output.md` being written.
+
+❌ **Wrong:** "Same stale input, already processed. HEARTBEAT_OK."
+(You noted it. You moved on. The issue persists.)
+
+✅ **Right:** 
+```yaml
+surface: Actor model stuck — input.md not clearing after output.md written. Blocking Pi↔Sigma coordination. P1.
+send: sigma|Actor model issue: input.md stuck since Feb 7. output.md exists but cn process didn't clear. Can you check?
+```
+(Captured. Assigned. Tracked.)
+
+**The test:** "Did I leave the system better than I found it?"
+
+If you saw a problem and didn't create a traceable work item, the answer is no.
+
+---
+
 ## Types (OCaml)
 
 ```ocaml
