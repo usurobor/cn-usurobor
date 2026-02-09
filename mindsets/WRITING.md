@@ -12,35 +12,58 @@ If a word, sentence, or paragraph can be cut without reducing understanding — 
 
 Remove what doesn't change meaning.
 
-- ❌ "In order to configure the settings"
-- ✅ "To configure settings"
+- Cut filler phrases
+  - ❌ "In order to" → ✅ "To"
+  - ❌ "Due to the fact that" → ✅ "Because"
+  - ❌ "At this point in time" → ✅ "Now"
+- Cut hedging that adds nothing
+  - ❌ "I think maybe we should" → ✅ "We should"
+  - ❌ "It seems like it might be" → ✅ "It is"
+- Cut redundancy
+  - ❌ "Completely finished" → ✅ "Finished"
+  - ❌ "End result" → ✅ "Result"
 
 ### Sentences
 
 Direct path to meaning. No preamble.
 
-- ❌ "It is important to note that the system requires authentication"
-- ✅ "The system requires authentication"
-
-- ❌ "This section describes how X works"
-- ✅ "X works by..."
+- Cut throat-clearing
+  - ❌ "It is important to note that the system requires authentication"
+  - ✅ "The system requires authentication"
+- Cut announcements
+  - ❌ "This section describes how X works"
+  - ✅ "X works by..."
+- Cut passive voice when active is clearer
+  - ❌ "The file was deleted by the user"
+  - ✅ "The user deleted the file"
 
 ### Content
 
 Concrete and sourceable. Vibes don't survive scrutiny.
 
-- ❌ "This approach is more elegant"
-- ✅ "This approach uses 3 fewer lines"
-
-- ❌ "This is the best approach"
-- ✅ "This approach is used by Linux, Git, and Postgres"
+- Replace adjectives with measurements
+  - ❌ "This approach is more elegant"
+  - ✅ "This approach uses 3 fewer lines"
+- Replace opinions with sources
+  - ❌ "This is the best approach"
+  - ✅ "This approach is used by Linux, Git, and Postgres"
+- Replace vague with specific
+  - ❌ "The system is fast"
+  - ✅ "The system responds in <50ms"
 
 ### Structure
 
 Each paragraph moves understanding forward.
 
-- ❌ Restating what was just said
-- ✅ New fact, new angle, or new consequence
+- One idea per paragraph
+  - ❌ Paragraph that covers three unrelated points
+  - ✅ Three short paragraphs, one point each
+- No restating
+  - ❌ "As mentioned above..." 
+  - ✅ Just continue forward
+- Earn transitions
+  - ❌ "Additionally, furthermore, moreover" (filler)
+  - ✅ Let the logic connect, or use silence (line break)
 
 ## Platform
 
