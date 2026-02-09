@@ -55,21 +55,34 @@ Break the principle into sections with high alpha and beta.
 
 ## 3. Example
 
-Every bullet gets concrete ❌/✅.
+Every bullet follows this recipe:
 
-3.1. **No bullet without example**
-  - ❌ "Be specific" (rule only)
-  - ✅ "Be specific: ❌ 'Session went poorly' → ✅ 'Missed two requests, repeated three times'"
+```markdown
+N.N. **Rule as imperative**
+  - One line: why or when
+  - ❌ Bad example
+  - ✅ Good example
+```
 
-3.2. **Examples from the domain**
-  - Use real cases from this skill
-  - ❌ Generic examples that could be anywhere
-  - ✅ Examples a practitioner would recognize
+3.1. **Rule as imperative**
+  - Start with verb: "Cut", "Name", "Check"
+  - ❌ "Filler phrases are bad"
+  - ✅ "Cut filler phrases"
 
-3.3. **Keep examples short**
-  - One line each for ❌ and ✅
-  - ❌ Multi-paragraph example that buries the point
-  - ✅ "❌ 'I tried to help' → ✅ 'I sent three messages, none addressed the question'"
+3.2. **One line context**
+  - Why this matters or when it applies
+  - ❌ Three sentences of background
+  - ✅ "Vague observations don't produce action"
+
+3.3. **❌ shows the failure**
+  - Real example of incoherence
+  - ❌ "Don't do bad things"
+  - ✅ ❌ "I tried to help"
+
+3.4. **✅ shows the fix**
+  - Same situation, done right
+  - ❌ Unrelated example
+  - ✅ ✅ "I sent three messages, none addressed the question"
 
 ---
 
