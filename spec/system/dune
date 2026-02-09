@@ -1,6 +1,0 @@
-; Executable specification
-; Run: dune build @doc-test
-
-(mdx
- (files SYSTEM.md)
- (preludes prelude.ml))
