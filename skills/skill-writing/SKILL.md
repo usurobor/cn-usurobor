@@ -38,24 +38,51 @@ This formula is:
   - Unpacks the formula
   - No more than needed
 
-### 2. Numbered Sections
+### 2. High Alpha (each part internally coherent)
 
-2.1. **Top-level: category (### 1. Name)**
-  - Group related rules
+Each bullet should stand alone as a complete teaching.
 
-2.2. **Sub-level: specific rule (1.1. **Rule**)**
-  - One rule per item
+2.1. **Rule + example in one unit**
+  - The rule states the principle
+  - The ❌/✅ demonstrates it immediately
+  - Reader doesn't need to look elsewhere
 
-2.3. **Each rule has ❌/✅ examples**
-  - Abstract rules don't stick
-  - Concrete examples do
+2.2. **Example from WRITING.md**
+  ```markdown
+  1.1. **Cut filler phrases**
+    - ❌ "In order to" → ✅ "To"
+    - ❌ "Due to the fact that" → ✅ "Because"
+  ```
+  - Rule is clear: cut filler
+  - Examples are immediate: reader sees exactly what "filler" means
+  - Self-contained: no cross-references needed
 
-### 3. Referenceable
+### 3. High Beta (parts relate to whole)
 
-3.1. **Use numbered IDs (1.1, 2.3, etc.)**
+Sections should fit together as a progression.
+
+3.1. **Sections build on each other**
+  - Small → large
+  - Simple → complex
+  - Foundation → application
+
+3.2. **Example from WRITING.md**
+  ```
+  1. Words      (smallest unit)
+  2. Sentences  (built from words)
+  3. Content    (meaning within sentences)
+  4. Structure  (arrangement of paragraphs)
+  ```
+  - Each level contains the previous
+  - Mastering 1 enables 2, 2 enables 3
+  - The whole reveals: coherent writing = coherence at every scale
+
+### 4. Referenceable
+
+4.1. **Use numbered IDs (1.1, 2.3, etc.)**
   - "See 2.3" not "see above"
   - Makes feedback precise
 
-3.2. **Keep IDs stable**
+4.2. **Keep IDs stable**
   - Add new items at end of section
   - Don't renumber on edit
