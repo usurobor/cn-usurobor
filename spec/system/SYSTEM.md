@@ -110,6 +110,48 @@ FIFO queue of pending inbox items. cn manages.
 
 ---
 
+## Output Operations
+
+Agent writes operations in output.md frontmatter. **Fields must match cn command parameters.**
+
+| Operation | Format | cn Equivalent | Notes |
+|-----------|--------|---------------|-------|
+| `ack` | `ack: <id>` | - | Acknowledge without action |
+| `done` | `done: <id>` | - | Mark complete |
+| `fail` | `fail: <id>\|<reason>` | - | Report failure |
+| `reply` | `reply: <thread-id>\|<message>` | - | Append to thread |
+| `send` | `send: <peer>\|<message>[\|<body>]` | `cn send <peer> <message> [--body <text>]` | Body = full response |
+| `delegate` | `delegate: <thread-id>\|<peer>` | - | Forward to peer |
+| `defer` | `defer: <id>[\|<until>]` | - | Postpone |
+| `delete` | `delete: <id>` | - | Discard thread |
+| `surface` | `surface: <description>` | - | Surface MCA |
+
+### Body Transmission Rule
+
+**The output.md body SHOULD travel with send operations.**
+
+When agent writes:
+```markdown
+---
+id: foo
+send: peer|Brief summary
+---
+
+# Full Response
+
+Detailed content here...
+```
+
+The full body (everything below frontmatter) should be included in the outbox message, not just the inline summary.
+
+**Rationale:** Agent responses often contain detailed analysis. Forcing everything into `send: peer|<one-liner>` loses context.
+
+**Implementation:** cn should create outbox file with:
+- Frontmatter: `to:`, `from:`, `created:`
+- Body: output.md body (or inline message if no body)
+
+---
+
 ## Output Protocol
 
 REST-style status codes:

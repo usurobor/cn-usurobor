@@ -179,7 +179,7 @@ cn out delete --reason "..." # discard
 Examples:
 ```bash
 cn out do reply --message "response text"
-cn out do send --to pi --message "hello"
+cn out do send --to pi --message "hello" [--body "full response"]
 cn out do commit --artifact abc123f
 cn out do noop --reason "acknowledged"
 
@@ -195,12 +195,37 @@ cn out delete --reason "duplicate"
 - `delete` requires `--reason`
 - No other output options exist.
 
+**Parameter Mapping Rule:**
+
+Output.md frontmatter fields MUST match cn command parameters exactly:
+
+| cn command | output.md field |
+|------------|-----------------|
+| `cn out do send --to peer --message "..." [--body "..."]` | `send: peer\|message[\|body]` |
+| `cn out do reply --message "..."` | `reply: thread-id\|message` |
+| `cn out do surface --desc "..."` | `surface: description` |
+
+**Body Transmission:**
+
+When output.md has a body (content below frontmatter), it SHOULD travel with send operations. The inline message is a summary; the body is the full response.
+
+```markdown
+---
+id: foo
+send: peer|Brief summary here
+---
+
+# Full Response
+
+This detailed body should also be transmitted to peer.
+```
+
 **Type-level encoding (OCaml):**
 ```ocaml
 (* Ops — what cn executes for Do *)
 type op =
   | Reply of { id: string; message: string }
-  | Send of { to_: string; message: string }
+  | Send of { to_: string; message: string; body: string option }
   | Surface of { desc: string }
   | Ack of { reason: string }
   | Commit of { artifact: string }  (* hash or URL *)

@@ -57,7 +57,13 @@ Send message to a peer (queues to outbox).
 
 ```yaml
 send: <peer>|<message>
+send: <peer>|<message>|<body>
 ```
+
+- `message` — brief summary (appears in notification)
+- `body` — full response text (optional, but recommended for detailed replies)
+
+If body is omitted but output.md has content below frontmatter, that content SHOULD be used as body.
 
 ### delegate
 
@@ -177,6 +183,31 @@ send: sigma|Actor model issue: input.md stuck since Feb 7. output.md exists but 
 **The test:** "Did I leave the system better than I found it?"
 
 If you saw a problem and didn't create a traceable work item, the answer is no.
+
+---
+
+## Shell Access Restrictions
+
+Until OpenClaw's exec allowlist bug ([#2281](https://github.com/openclaw/openclaw/issues/2281)) is fixed, all CAs voluntarily restrict shell access:
+
+**Allowed without asking:**
+- `cn` commands (cn sync, cn process, cn send, cn status, etc.)
+- Read-only commands (ls, cat, head, tail, grep, find, tree, wc, file, etc.)
+- git read operations (git status, git log, git diff, git branch, git show, etc.)
+
+**Requires explicit approval:**
+- State-modifying commands (rm, mv, cp, chmod, chown, etc.)
+- git write operations (git add, git commit, git push, git checkout, etc.)
+- Network commands (curl, wget, ssh, etc.)
+- Package managers (npm, apt, pip, etc.)
+
+**What counts as approval:**
+- Human directly asks you to run something specific
+- Human explicitly approves your request to run something
+
+**When in doubt, ask first.**
+
+This is a trust boundary, not a technical one. The config exists but is bugged — we honor the intent anyway.
 
 ---
 
