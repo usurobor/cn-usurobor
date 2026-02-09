@@ -37,6 +37,24 @@ module Path = struct
   external resolve : string -> string -> string = "resolve" [@@mel.module "path"]
 end
 
+(* === Unicode helpers (Melange outputs \xNN which JS reads as Latin-1) === *)
+module Str = struct
+  external from_code_point : int -> string = "fromCodePoint" [@@mel.scope "String"]
+end
+let check = Str.from_code_point 0x2713  (* ✓ *)
+let cross = Str.from_code_point 0x2717  (* ✗ *)
+let lightning = Str.from_code_point 0x26A1 (* ⚡ *)
+let dot = Str.from_code_point 0x00B7     (* · *)
+
+(* Format report_result with proper Unicode *)
+let format_report (status, msg) =
+  let prefix = match status with
+    | Inbox_lib.Ok -> check
+    | Inbox_lib.Alert -> lightning
+    | Inbox_lib.Skip -> dot
+  in
+  Printf.sprintf "  %s %s" prefix msg
+
 (* === Shell execution === *)
 
 let run_cmd cmd =
@@ -68,7 +86,7 @@ let run_check hub_path my_name peers =
   print_endline (Printf.sprintf "Checking inbox for %s (%d peers)...\n" my_name (List.length peers));
   
   let results = peers |> List.map (check_peer_inbound hub_path) in
-  results |> List.iter (fun r -> print_endline (report_result r));
+  results |> List.iter (fun r -> print_endline (format_report (report_result r)));
   
   let alerts = collect_alerts results in
   print_endline "";
@@ -103,7 +121,7 @@ let execute_action ~hub_path action =
             Fs_write.append_file_sync p (line ^ "\n"); true
         | _ -> false  (* shouldn't happen *)
   with _ -> 
-    print_endline (Printf.sprintf "  ✗ Failed: %s" (string_of_atomic_action action));
+    print_endline (Printf.sprintf "  %s Failed: %s" cross (string_of_atomic_action action));
     false
 
 let execute_actions ~hub_path actions =
@@ -141,9 +159,9 @@ let materialize_branch hub_path my_name peer branch =
   let actions = materialize_thread_actions ~threads_dir ~branch:short_name ~peer ~content:thread_content in
   print_endline (Printf.sprintf "Materializing %s..." branch);
   if execute_actions ~hub_path actions then
-    print_endline "  ✓ Thread created"
+    print_endline ("  " ^ check ^ " Thread created")
   else
-    print_endline "  ✗ Failed to create thread"
+    print_endline ("  " ^ cross ^ " Failed to create thread")
 
 let run_process hub_path my_name peers =
   print_endline (Printf.sprintf "Materializing inbox for %s...\n" my_name);
@@ -241,10 +259,10 @@ let run_flush hub_path _my_name _peers =
             if execute_actions ~hub_path actions then begin
               (* Remove processed thread *)
               let _ = run_cmd (Printf.sprintf "rm %s" thread_path) in
-              print_endline "  ✓ Done (thread removed)";
+              print_endline ("  " ^ check ^ " Done (thread removed)");
               incr processed
             end else begin
-              print_endline "  ✗ Execution failed";
+              print_endline ("  " ^ cross ^ " Execution failed");
               incr skipped
             end
       );

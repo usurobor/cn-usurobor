@@ -2,5 +2,4 @@
 ; Run: dune runtest
 
 (cram
- (deps
-  (:cn ../tools/dist/cn.js)))
+ (deps cn.sh))

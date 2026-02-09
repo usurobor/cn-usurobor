@@ -1,3 +1,8 @@
+Setup:
+
+  $ chmod +x cn.sh
+  $ CN="$(pwd)/cn.sh"
+
 Setup test hub:
 
   $ mkdir -p test-hub/.cn test-hub/state test-hub/threads/mail/inbox test-hub/threads/mail/outbox
@@ -12,13 +17,13 @@ Setup test hub:
 
 Sync shows dry-run banner:
 
-  $ node ../../tools/dist/cn.js sync --dry-run 2>&1 | head -4
-  â  DRY RUN â no changes will be made
+  $ $CN sync --dry-run 2>&1 | head -4
+  ⚠ DRY RUN â no changes will be made
   Syncing...
   Checking inbox for test-hub...
-  â Inbox clear
+  ✓ Inbox clear
 
 Status works:
 
-  $ node ../../tools/dist/cn.js status 2>&1 | head -1
+  $ $CN status 2>&1 | head -1
   cn hub: test-hub
