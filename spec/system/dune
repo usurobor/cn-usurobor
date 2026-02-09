@@ -1,3 +1,0 @@
-(mdx
- (files GIT.md PROTOCOL.md HUB.md AGENT.md)
- (preludes prelude.ml))
