@@ -10,7 +10,7 @@ How to write skills.
 
 1. **Define** — What makes this a coherence formula?
 2. **Unfold** — Break into sections (high alpha, high beta)
-3. **Rules** — Every bullet states a rule with ❌/✅
+3. **Rules** — Every bullet states a rule with a list of ❌/✅
 
 ---
 
@@ -55,13 +55,15 @@ Break the principle into sections with high alpha and beta.
 
 ## 3. Rules
 
-Every bullet states a rule. Every rule has this structure:
+Every bullet states a rule with a list of examples:
 
 ```markdown
 N.N. **Imperative statement**
-  - One line: why or when
-  - ❌ Bad example
-  - ✅ Good example
+  - Context (one line)
+  - ❌ Example 1
+  - ✅ Example 1
+  - ❌ Example 2
+  - ✅ Example 2
 ```
 
 3.1. **Imperative statement**
