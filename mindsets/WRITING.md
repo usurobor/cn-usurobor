@@ -1,36 +1,42 @@
 # WRITING
 
-## Style
+## Core Principle
 
-- **Short, direct sentences**
+**Every word must earn its place.**
+
+## Derived Rules
+
+### Word level
+
+- **Cut words that don't change meaning**
+  - ❌ "In order to configure the settings"
+  - ✅ "To configure settings"
+
+### Sentence level
+
+- **Short and direct**
   - ❌ "It is important to note that the system requires authentication"
   - ✅ "The system requires authentication"
 
-- **Remove words that don't change meaning**
-  - ❌ "In order to configure the settings"
-  - ✅ "To configure settings"
+- **State things, don't announce them**
+  - ❌ "This section describes how X works"
+  - ✅ "X works by..."
+
+### Content level
 
 - **Concrete facts over vibes**
   - ❌ "This approach is more elegant"
   - ✅ "This approach uses 3 fewer lines"
 
-- **Each paragraph carries load**
-  - ❌ Filler paragraphs that restate the previous one
-  - ✅ Each paragraph adds new information
+- **Only claim what you can source**
+  - ❌ "This is the best approach"
+  - ✅ "This approach is used by Linux, Git, and Postgres"
 
-- **Never announce things — just state them**
-  - ❌ "This section describes how X works"
-  - ✅ "X works by..."
+### Structure level
 
-## Claims
-
-Only state what you can tie to:
-- Observed behavior in this runtime
-- Code/scripts in this repo
-- Named external sources
-
-❌ "This is the best approach"
-✅ "This approach is used by Linux, Git, and Postgres"
+- **Each paragraph adds new information**
+  - ❌ Filler that restates the previous paragraph
+  - ✅ New fact, new angle, or new consequence
 
 ## Platform
 
