@@ -6,13 +6,7 @@
 - Remove words that don't change meaning
 - Concrete facts over vibes
 - Each paragraph carries load
-- **Never announce things or things about things — simply state things**
-
-Examples:
-- ❌ "cn-agent is serious infrastructure. It assumes:"
-- ✅ "cn-agent expects:"
-- ❌ "This document describes the protocol"
-- ✅ [just describe the protocol]
+- **Never announce things — just state them**
 
 ## Claims
 
