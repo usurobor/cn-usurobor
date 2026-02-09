@@ -111,6 +111,20 @@ let fail msg = red "✗ " ^ msg
 let warn msg = yellow "⚠ " ^ msg
 let info = cyan
 
+(* === Dry Run Mode === *)
+
+let dry_run_mode = ref false
+
+let would msg = 
+  if !dry_run_mode then begin
+    print_endline (dim ("Would: " ^ msg));
+    true
+  end else false
+
+let dry_run_banner () =
+  if !dry_run_mode then
+    print_endline (warn "DRY RUN — no changes will be made")
+
 (* === Hub Detection === *)
 
 let rec find_hub_path dir =
@@ -177,13 +191,16 @@ let make_thread_filename slug =
 
 (* Delete remote branch after processing *)
 let delete_remote_branch hub_path branch =
-  let cmd = Printf.sprintf "git push origin --delete %s 2>/dev/null" branch in
-  match Child_process.exec_in ~cwd:hub_path cmd with
-  | Some _ -> 
-      log_action hub_path "branch.delete" branch;
-      print_endline (dim (Printf.sprintf "  Deleted remote: %s" branch));
-      true
-  | None -> false
+  if would (Printf.sprintf "delete remote branch %s" branch) then true
+  else begin
+    let cmd = Printf.sprintf "git push origin --delete %s 2>/dev/null" branch in
+    match Child_process.exec_in ~cwd:hub_path cmd with
+    | Some _ -> 
+        log_action hub_path "branch.delete" branch;
+        print_endline (dim (Printf.sprintf "  Deleted remote: %s" branch));
+        true
+    | None -> false
+  end
 
 (* === Orphan Branch Detection === *)
 
@@ -200,26 +217,32 @@ let get_branch_author hub_path branch =
   |> Option.value ~default:"unknown"
 
 let reject_orphan_branch hub_path peer_name branch =
-  let ts = now_iso () in
   let author = get_branch_author hub_path branch in
-  let slug = slugify branch in
-  let filename = make_thread_filename (Printf.sprintf "rejected-%s" slug) in
   
-  let content = Printf.sprintf 
-    "---\nto: %s\ncreated: %s\nsubject: Branch rejected (orphan)\n---\n\n\
-     Branch `%s` rejected and deleted.\n\n\
-     **Reason:** No merge base with main.\n\n\
-     This happens when pushing from `cn-%s` instead of `cn-{recipient}-clone`.\n\n\
-     **Author:** %s\n\n\
-     **Fix:**\n\
-     1. Delete local branch: `git branch -D %s`\n\
-     2. Re-send via cn outbox (uses clone automatically)\n"
-    peer_name ts branch peer_name author branch in
-  
-  (* Write rejection notice to outbox *)
-  let outbox_dir = threads_mail_outbox hub_path in
-  Fs.ensure_dir outbox_dir;
-  Fs.write (Path.join outbox_dir filename) content;
+  if !dry_run_mode then begin
+    print_endline (dim (Printf.sprintf "Would: reject orphan %s (from %s)" branch author));
+    print_endline (dim (Printf.sprintf "Would: send rejection notice to %s" peer_name))
+  end else begin
+    let ts = now_iso () in
+    let slug = slugify branch in
+    let filename = make_thread_filename (Printf.sprintf "rejected-%s" slug) in
+    
+    let content = Printf.sprintf 
+      "---\nto: %s\ncreated: %s\nsubject: Branch rejected (orphan)\n---\n\n\
+       Branch `%s` rejected and deleted.\n\n\
+       **Reason:** No merge base with main.\n\n\
+       This happens when pushing from `cn-%s` instead of `cn-{recipient}-clone`.\n\n\
+       **Author:** %s\n\n\
+       **Fix:**\n\
+       1. Delete local branch: `git branch -D %s`\n\
+       2. Re-send via cn outbox (uses clone automatically)\n"
+      peer_name ts branch peer_name author branch in
+    
+    (* Write rejection notice to outbox *)
+    let outbox_dir = threads_mail_outbox hub_path in
+    Fs.ensure_dir outbox_dir;
+    Fs.write (Path.join outbox_dir filename) content
+  end;
   
   (* Delete the orphan branch *)
   let _ = delete_remote_branch hub_path branch in
@@ -300,6 +323,11 @@ let materialize_branch hub_path inbox_dir peer_name branch =
     if already_exists || already_archived then begin
       let _ = delete_remote_branch hub_path branch in
       []
+    end
+    else if !dry_run_mode then begin
+      print_endline (dim (Printf.sprintf "Would: materialize %s → %s" branch inbox_file));
+      print_endline (dim (Printf.sprintf "Would: delete remote branch %s" branch));
+      [inbox_file]
     end
     else
       files |> List.filter_map (fun file ->
@@ -383,6 +411,10 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
           let thread_name = Path.basename_ext file ".md" in
           let branch_name = Printf.sprintf "%s/%s" name thread_name in
           
+          if !dry_run_mode then begin
+            print_endline (dim (Printf.sprintf "Would: send %s to %s (branch: %s)" file to_name branch_name));
+            Some file
+          end else
           match Child_process.exec_in ~cwd:clone_path "git checkout main 2>/dev/null || git checkout master" with
           | None ->
               log_action hub_path "outbox.send" (Printf.sprintf "to:%s thread:%s error:checkout failed" to_name file);
@@ -1730,7 +1762,8 @@ let () =
   
   let args = Process.argv |> Array.to_list |> drop 2 in
   let flags, cmd_args = parse_flags args in
-  let _ = flags in
+  dry_run_mode := flags.dry_run;
+  if flags.dry_run then dry_run_banner ();
   
   match parse_command cmd_args with
   | None ->
