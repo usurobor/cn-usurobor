@@ -1,4 +1,4 @@
-# Aphorisms
+# WISDOM
 
 Bits of wisdom that emerged from building coherent systems.
 
