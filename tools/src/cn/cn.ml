@@ -91,6 +91,17 @@ module Json = struct
   external stringify : 'a -> string = "stringify" [@@mel.scope "JSON"]
 end
 
+(* === Unicode Helpers === *)
+(* Melange emits UTF-8 literals as \xNN escapes which JS interprets as Latin-1.
+   Use String.fromCodePoint for correct Unicode output. *)
+module Str = struct
+  external from_code_point : int -> string = "fromCodePoint" [@@mel.scope "String"]
+end
+
+let check = Str.from_code_point 0x2713  (* ✓ U+2713 *)
+let cross = Str.from_code_point 0x2717  (* ✗ U+2717 *)
+let warning = Str.from_code_point 0x26A0 (* ⚠ U+26A0 *)
+
 (* === Time === *)
 
 let now_iso () = Js.Date.toISOString (Js.Date.make ())
@@ -106,9 +117,9 @@ let yellow = color "33"
 let cyan = color "36"
 let dim = color "2"
 
-let ok msg = green "✓ " ^ msg
-let fail msg = red "✗ " ^ msg
-let warn msg = yellow "⚠ " ^ msg
+let ok msg = green (check ^ " ") ^ msg
+let fail msg = red (cross ^ " ") ^ msg
+let warn msg = yellow (warning ^ " ") ^ msg
 let info = cyan
 
 (* === Dry Run Mode === *)
@@ -256,50 +267,63 @@ type branch_info = { peer: string; branch: string }
 
 (* === Inbox Operations === *)
 
-let get_peer_branches hub_path peer_name =
-  Printf.sprintf "git branch -r | grep 'origin/%s/' | sed 's/.*origin\\///'" peer_name
-  |> Child_process.exec_in ~cwd:hub_path
+(* Protocol: peer pushes <my-name>/* branches to THEIR repo.
+   We fetch peer's clone and look for origin/<my-name>/* branches. *)
+let get_inbound_branches clone_path my_name =
+  Printf.sprintf "git branch -r | grep 'origin/%s/' | sed 's/.*origin\\///'" my_name
+  |> Child_process.exec_in ~cwd:clone_path
   |> Option.map split_lines
   |> Option.value ~default:[]
-  |> List.map (fun branch -> { peer = peer_name; branch })
 
 let inbox_check hub_path name =
-  let _ = Child_process.exec_in ~cwd:hub_path "git fetch origin" in
   let peers = load_peers hub_path in
   
   print_endline (info (Printf.sprintf "Checking inbox for %s..." name));
   
   let total = peers |> List.fold_left (fun acc peer ->
-    match peer.kind with
-    | Some "template" -> acc
-    | _ ->
-        let branches = get_peer_branches hub_path peer.name in
-        (match branches with
-         | [] -> print_endline (dim (Printf.sprintf "  %s: no inbound" peer.name))
-         | bs ->
-             print_endline (warn (Printf.sprintf "From %s: %d inbound" peer.name (List.length bs)));
-             bs |> List.iter (fun b -> print_endline (Printf.sprintf "  ← %s" b.branch)));
-        acc + List.length branches
+    match peer.kind, peer.clone with
+    | Some "template", _ -> acc  (* skip templates *)
+    | _, None -> 
+        print_endline (dim (Printf.sprintf "  %s: no clone path" peer.name));
+        acc
+    | _, Some clone_path ->
+        if not (Fs.exists clone_path) then begin
+          print_endline (dim (Printf.sprintf "  %s: clone not found" peer.name));
+          acc
+        end else begin
+          (* Fetch peer's repo to get latest branches *)
+          let _ = Child_process.exec_in ~cwd:clone_path "git fetch origin" in
+          let branches = get_inbound_branches clone_path name in
+          (match branches with
+           | [] -> print_endline (dim (Printf.sprintf "  %s: no inbound" peer.name))
+           | bs ->
+               print_endline (warn (Printf.sprintf "From %s: %d inbound" peer.name (List.length bs)));
+               bs |> List.iter (fun b -> print_endline (Printf.sprintf "  ← %s" b)));
+          acc + List.length branches
+        end
   ) 0 in
   
   if total = 0 then print_endline (ok "Inbox clear")
 
-let materialize_branch hub_path inbox_dir peer_name branch =
-  (* Check for orphan branch first *)
-  if is_orphan_branch hub_path branch then begin
+(* materialize_branch: fetch content from peer's clone, write to my inbox
+   clone_path = peer's cloned repo (source of message)
+   hub_path = my hub (destination for inbox file) *)
+let materialize_branch ~clone_path ~hub_path ~inbox_dir ~peer_name ~branch =
+  (* Check for orphan branch in peer's clone *)
+  if is_orphan_branch clone_path branch then begin
     reject_orphan_branch hub_path peer_name branch;
     []
   end
   else begin
     let diff_cmd = Printf.sprintf "git diff main...origin/%s --name-only 2>/dev/null || git diff master...origin/%s --name-only" branch branch in
-    let files = Child_process.exec_in ~cwd:hub_path diff_cmd
+    let files = Child_process.exec_in ~cwd:clone_path diff_cmd
       |> Option.map split_lines
       |> Option.value ~default:[]
       |> List.filter is_md_file in
     
     (* Get commit hash of branch tip — the trigger for this run *)
     let trigger = 
-      Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git rev-parse origin/%s" branch)
+      Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git rev-parse origin/%s" branch)
       |> Option.map String.trim
       |> Option.value ~default:"unknown" in
     
@@ -321,7 +345,7 @@ let materialize_branch hub_path inbox_dir peer_name branch =
     
     (* Already processed? Delete branch but don't re-materialize *)
     if already_exists || already_archived then begin
-      let _ = delete_remote_branch hub_path branch in
+      let _ = delete_remote_branch clone_path branch in
       []
     end
     else if !dry_run_mode then begin
@@ -332,15 +356,15 @@ let materialize_branch hub_path inbox_dir peer_name branch =
     else
       files |> List.filter_map (fun file ->
         let show_cmd = Printf.sprintf "git show origin/%s:%s" branch file in
-        match Child_process.exec_in ~cwd:hub_path show_cmd with
+        match Child_process.exec_in ~cwd:clone_path show_cmd with
         | None -> None
         | Some content ->
             (* Include trigger — the commit that initiated this run *)
             let meta = [("from", peer_name); ("branch", branch); ("trigger", trigger); ("file", file); ("received", now_iso ())] in
             Fs.write inbox_path (update_frontmatter content meta);
             log_action hub_path "inbox.materialize" (Printf.sprintf "%s trigger:%s" inbox_file trigger);
-            (* Delete remote branch after successful materialization *)
-            let _ = delete_remote_branch hub_path branch in
+            (* Delete remote branch from peer's clone after successful materialization *)
+            let _ = delete_remote_branch clone_path branch in
             Some inbox_file)
   end
 
@@ -349,16 +373,24 @@ let inbox_process hub_path =
   let inbox_dir = threads_mail_inbox hub_path in
   Fs.ensure_dir inbox_dir;
   
+  let my_name = derive_name hub_path in
   let peers = load_peers hub_path in
   let materialized = peers |> List.fold_left (fun acc peer ->
-    match peer.kind with
-    | Some "template" -> acc
-    | _ ->
-        let branches = get_peer_branches hub_path peer.name in
-        let files = branches |> List.concat_map (fun b ->
-          materialize_branch hub_path inbox_dir peer.name b.branch)
-        in
-        acc @ files
+    match peer.kind, peer.clone with
+    | Some "template", _ -> acc  (* skip templates *)
+    | _, None -> acc  (* no clone path, can't fetch *)
+    | _, Some clone_path ->
+        if not (Fs.exists clone_path) then acc
+        else begin
+          (* Fetch peer's repo *)
+          let _ = Child_process.exec_in ~cwd:clone_path "git fetch origin" in
+          (* Look for branches addressed to me *)
+          let branches = get_inbound_branches clone_path my_name in
+          let files = branches |> List.concat_map (fun branch ->
+            materialize_branch ~clone_path ~hub_path ~inbox_dir ~peer_name:peer.name ~branch)
+          in
+          acc @ files
+        end
   ) [] in
   
   materialized |> List.iter (fun f -> print_endline (ok (Printf.sprintf "Materialized: %s" f)));
@@ -682,9 +714,9 @@ let run_reply hub_path thread_id message =
 let run_status hub_path name =
   print_endline (info (Printf.sprintf "cn hub: %s" name));
   print_endline "";
-  Printf.printf "hub..................... %s\n" (green "✓");
-  Printf.printf "name.................... %s %s\n" (green "✓") name;
-  Printf.printf "path.................... %s %s\n" (green "✓") hub_path;
+  Printf.printf "hub..................... %s\n" (green check);
+  Printf.printf "name.................... %s %s\n" (green check) name;
+  Printf.printf "path.................... %s %s\n" (green check) hub_path;
   print_endline "";
   print_endline (dim (Printf.sprintf "[status] ok version=%s" version))
 
@@ -741,7 +773,7 @@ let run_doctor hub_path =
   let width = 22 in
   checks |> List.iter (fun c ->
     let dots = String.make (max 1 (width - String.length c.name)) '.' in
-    let status = if c.passed then green ("✓ " ^ c.value) else red ("✗ " ^ c.value) in
+    let status = if c.passed then green (check ^ " " ^ c.value) else red (cross ^ " " ^ c.value) in
     Printf.printf "%s%s %s\n" c.name dots status);
   
   print_endline "";

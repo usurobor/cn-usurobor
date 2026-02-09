@@ -80,13 +80,13 @@ let%expect_test "filter_branches cleans output" =
   |}]
 
 let%expect_test "report_result formats correctly" =
-  print_endline (report_result (Fetched ("pi", [])));
-  print_endline (report_result (Fetched ("pi", ["b1"; "b2"])));
-  print_endline (report_result (Skipped ("pi", "not found")));
+  print_endline (format_report (report_result (Fetched ("pi", []))));
+  print_endline (format_report (report_result (Fetched ("pi", ["b1"; "b2"]))));
+  print_endline (format_report (report_result (Skipped ("pi", "not found"))));
   [%expect {|
-    ✓ pi (no inbound)
-    ⚡ pi (2 inbound)
-    · pi (not found)
+  [ok] pi (no inbound)
+  [!] pi (2 inbound)
+  [-] pi (not found)
   |}]
 
 let%expect_test "collect_alerts filters only non-empty fetched" =
