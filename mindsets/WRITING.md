@@ -7,6 +7,8 @@
 - Concrete facts over vibes
 - Each paragraph carries load
 - **Never announce things — just state them**
+  - ❌ "This section describes how X works"
+  - ✅ "X works by..."
 
 ## Claims
 
