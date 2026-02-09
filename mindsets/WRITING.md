@@ -8,62 +8,83 @@ If a word, sentence, or paragraph can be cut without reducing understanding — 
 
 ## Coherence at Each Level
 
-### Words
+### 1. Words
 
 Remove what doesn't change meaning.
 
-- Cut filler phrases
+1.1. **Cut filler phrases**
   - ❌ "In order to" → ✅ "To"
   - ❌ "Due to the fact that" → ✅ "Because"
   - ❌ "At this point in time" → ✅ "Now"
-- Cut hedging that adds nothing
+
+1.2. **Cut hedging that adds nothing**
   - ❌ "I think maybe we should" → ✅ "We should"
   - ❌ "It seems like it might be" → ✅ "It is"
-- Cut redundancy
+
+1.3. **Cut redundancy**
   - ❌ "Completely finished" → ✅ "Finished"
   - ❌ "End result" → ✅ "Result"
+  - ❌ "Past history" → ✅ "History"
 
-### Sentences
+### 2. Sentences
 
 Direct path to meaning. No preamble.
 
-- Cut throat-clearing
+2.1. **Cut throat-clearing**
   - ❌ "It is important to note that the system requires authentication"
   - ✅ "The system requires authentication"
-- Cut announcements
+
+2.2. **Cut announcements**
   - ❌ "This section describes how X works"
   - ✅ "X works by..."
-- Cut passive voice when active is clearer
+
+2.3. **Cut passive voice when active is clearer**
   - ❌ "The file was deleted by the user"
   - ✅ "The user deleted the file"
 
-### Content
+2.4. **Lead with the point**
+  - ❌ "After much consideration and review of the options, we decided to use Postgres"
+  - ✅ "We use Postgres"
+
+### 3. Content
 
 Concrete and sourceable. Vibes don't survive scrutiny.
 
-- Replace adjectives with measurements
+3.1. **Replace adjectives with measurements**
   - ❌ "This approach is more elegant"
   - ✅ "This approach uses 3 fewer lines"
-- Replace opinions with sources
+
+3.2. **Replace opinions with sources**
   - ❌ "This is the best approach"
   - ✅ "This approach is used by Linux, Git, and Postgres"
-- Replace vague with specific
+
+3.3. **Replace vague with specific**
   - ❌ "The system is fast"
   - ✅ "The system responds in <50ms"
 
-### Structure
+3.4. **Replace abstractions with examples**
+  - ❌ "The API supports various authentication methods"
+  - ✅ "The API supports OAuth, API keys, and JWT"
+
+### 4. Structure
 
 Each paragraph moves understanding forward.
 
-- One idea per paragraph
+4.1. **One idea per paragraph**
   - ❌ Paragraph that covers three unrelated points
   - ✅ Three short paragraphs, one point each
-- No restating
-  - ❌ "As mentioned above..." 
+
+4.2. **No restating**
+  - ❌ "As mentioned above..."
   - ✅ Just continue forward
-- Earn transitions
+
+4.3. **Earn transitions**
   - ❌ "Additionally, furthermore, moreover" (filler)
   - ✅ Let the logic connect, or use silence (line break)
+
+4.4. **Front-load important information**
+  - ❌ Build-up paragraph that buries the point at the end
+  - ✅ Point first, then supporting details
 
 ## Platform
 
