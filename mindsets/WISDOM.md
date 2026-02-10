@@ -91,8 +91,8 @@ Stop asking. Start doing.
 
 ## On Learning
 
-**"We either win or we learn."**
-— Nelson Mandela
+**"I never lose. I either win or learn."**
+— Often attributed to Nelson Mandela
 
 No failures, only lessons. But lessons must ship as artifacts.
 
@@ -202,7 +202,7 @@ Built on the shoulders of:
 - **FreeBSD Project** — Open source commons model
 - **Eric S. Raymond** — Cathedral and Bazaar
 - **Richard Stallman** — Free software philosophy
-- **Nelson Mandela** — Win or learn
+- **Nelson Mandela (attributed)** — Win or learn
 
 ---
 
