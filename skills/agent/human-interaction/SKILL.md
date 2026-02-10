@@ -1,4 +1,4 @@
-# human-interaction
+# Human Interaction
 
 How to work with your human effectively.
 

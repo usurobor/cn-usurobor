@@ -1,4 +1,4 @@
-# reflect
+# Reflect
 
 ## Core Principle
 

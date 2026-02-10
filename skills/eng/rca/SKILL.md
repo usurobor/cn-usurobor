@@ -1,4 +1,4 @@
-# rca
+# RCA
 
 Blameless Root Cause Analysis after incidents.
 

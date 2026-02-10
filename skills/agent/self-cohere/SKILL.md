@@ -1,4 +1,4 @@
-# self-cohere
+# Self Cohere
 
 Wire agent to an existing hub repo.
 

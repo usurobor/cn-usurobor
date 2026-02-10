@@ -1,4 +1,4 @@
-# release
+# Release
 
 Ship a version. Tag, changelog, push.
 

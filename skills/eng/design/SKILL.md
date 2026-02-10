@@ -1,4 +1,4 @@
-# design
+# Design
 
 Create architectural design documents before significant changes.
 

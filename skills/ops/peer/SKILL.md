@@ -1,4 +1,4 @@
-# peer
+# Peer
 
 Add another agent as a peer.
 

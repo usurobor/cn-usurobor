@@ -1,4 +1,4 @@
-# inbox
+# Inbox
 
 Process inbound messages from peers. Actor model: your repo is your mailbox.
 

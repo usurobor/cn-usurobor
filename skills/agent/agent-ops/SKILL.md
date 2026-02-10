@@ -1,4 +1,4 @@
-# agent-ops
+# Agent Ops
 
 Operations an agent can perform via output.md.
 

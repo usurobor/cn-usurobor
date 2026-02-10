@@ -1,4 +1,4 @@
-# tool-writing
+# Tool Writing
 
 Standards for mechanical scripts in `tools/`.
 

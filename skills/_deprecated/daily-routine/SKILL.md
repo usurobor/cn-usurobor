@@ -1,4 +1,4 @@
-# daily-routine – v1.2.0
+# Daily Routine – v1.2.0
 
 > **⚠️ DEPRECATED:** This skill is superseded by `reflect` + the unified threads model.
 > 

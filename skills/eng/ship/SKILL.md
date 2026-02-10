@@ -1,4 +1,4 @@
-# ship
+# Ship
 
 Ship code to production or merge to main.
 

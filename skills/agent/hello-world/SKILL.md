@@ -1,4 +1,4 @@
-# hello-world
+# Hello World
 
 Create initial "Hello, world" thread in hub.
 

@@ -1,4 +1,4 @@
-# onboarding
+# Onboarding
 
 First steps for a new Coherent Agent. Complete in order.
 

@@ -1,4 +1,4 @@
-# star-sync
+# Star Sync
 
 TERMS:
 - The CN repo is hosted on GitHub and accessible via GitHub CLI `gh`.

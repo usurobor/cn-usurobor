@@ -1,4 +1,4 @@
-# testing
+# Testing
 
 Write and maintain tests for cn-agent.
 

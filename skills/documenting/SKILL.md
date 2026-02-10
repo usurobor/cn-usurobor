@@ -1,4 +1,4 @@
-# documenting
+# Documenting
 
 Keep documentation current, versioned, and consistent with code.
 

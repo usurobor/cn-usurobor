@@ -1,4 +1,4 @@
-# ux-cli
+# UX CLI
 
 Terminal application UX standards.
 

@@ -1,4 +1,4 @@
-# coding
+# Coding
 
 Git workflow and code review practices for cn-agent development.
 

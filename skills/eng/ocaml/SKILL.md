@@ -1,4 +1,4 @@
-# ocaml
+# OCaml
 
 Write OCaml tools for cn-agent. Compile via Melange, bundle with esbuild.
 

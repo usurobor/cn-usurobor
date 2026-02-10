@@ -1,4 +1,4 @@
-# skill
+# Skill
 
 How to write skills.
 

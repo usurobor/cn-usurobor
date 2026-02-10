@@ -1,4 +1,4 @@
-# ca-conduct
+# CA Conduct
 
 How every Coherent Agent must behave.
 

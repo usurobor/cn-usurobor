@@ -1,4 +1,4 @@
-# adhoc-thread
+# Adhoc Thread
 
 Create ad-hoc threads for discussions, proposals, learnings.
 

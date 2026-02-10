@@ -1,4 +1,4 @@
-# communicating
+# Communicating
 
 Every word carries weight. Say it or don't.
 

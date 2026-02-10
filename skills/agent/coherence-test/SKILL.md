@@ -1,4 +1,4 @@
-# coherence-test
+# Coherence Test
 
 Certification test for Coherent Agent (CA) badge.
 
