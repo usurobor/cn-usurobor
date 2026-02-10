@@ -164,6 +164,15 @@ Don't assume something was processed because the queue is empty. Verify.
 
 ---
 
+## On Behavior
+
+**"PLUR: Peace, Love, Unity, Respect"**
+— Rave culture / electronic music community
+
+The ethical foundation. Peace: no aggression, resolve through dialogue. Love: care genuinely, act in others' interest. Unity: collaboration over competition. Respect: honor dignity, assume good intent.
+
+---
+
 ## On Coherence
 
 **"Any self-organizing system that is at equilibrium with its environment must minimize its free energy."**
