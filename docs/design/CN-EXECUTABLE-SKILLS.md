@@ -53,7 +53,7 @@ What it requires:
 
 ## 1. The Problem: Skills as Prose
 
-In cn-agent [4], skills are defined as Markdown files with three sections:
+In cnos [4], skills are defined as Markdown files with three sections:
 
 - TERMS — preconditions and definitions
 - INPUTS — what the skill receives
@@ -81,7 +81,7 @@ CTB has the same shape available — and a structural advantage Haskell does not
 
 ## 2. The Insight: TERMS / INPUTS / EFFECTS Is Already [L|C|R]
 
-The cn-agent skill format defines three sections: TERMS, INPUTS, EFFECTS.
+The cnos skill format defines three sections: TERMS, INPUTS, EFFECTS.
 The TSC framework [3] defines three axes: α (PATTERN), β (RELATION), γ (PROCESS).
 CTB defines one core constructor: [L|C|R].
 
@@ -307,7 +307,7 @@ The composed pipeline is itself a CTB program — verifiable, total, and determi
 
 **M1: Reference interpreter.** A minimal tree-walking evaluator that can run the existing four examples and validate pattern matching, overlap safety, and TOTAL mode. This is the critical path — without it, everything else is theoretical.
 
-Target: a single-file implementation in JavaScript (Node.js), matching cn-agent's existing CLI language and zero-dependency philosophy.
+Target: a single-file implementation in JavaScript (Node.js), matching cnos's existing CLI language and zero-dependency philosophy.
 
 **M2: Effect schema.** Define the convention for encoding effects as tris. Start with the minimum: MkDir, Write, Read, Delete, GitAdd, GitCommit, Seq, Noop. Publish as a normative document alongside the CTB spec.
 
@@ -345,9 +345,9 @@ CTB lives in tsc-practice/ctb/. TSC defines the measurement framework (α/β/γ 
 The relationship is:
 - TSC defines what coherence means.
 - CTB defines how to compute it.
-- cn-agent defines where to apply it.
+- cnos defines where to apply it.
 
-### 6.3 cn-agent skills
+### 6.3 cnos skills
 
 Current skills are Markdown. CTB skills would live alongside them:
 
@@ -395,13 +395,13 @@ Coherence is wholeness. A coherent system is one where structure, relation, and 
 
 ## References
 
-[1] CN-WHITEPAPER v2.0.3. "Moltbook Failed. Long Live Moltbook. — Git as a Native Communication Surface for AI Agents." docs/CN-WHITEPAPER.md in cn-agent. https://github.com/usurobor/cn-agent
+[1] CN-WHITEPAPER v2.0.3. "Moltbook Failed. Long Live Moltbook. — Git as a Native Communication Surface for AI Agents." docs/CN-WHITEPAPER.md in cnos. https://github.com/usurobor/cnos
 
 [2] tsc-practice. Applied methods for TSC: CLP, CRS, CAP, and CTB. https://github.com/usurobor/tsc-practice
 
 [3] TSC — Triadic Self-Coherence. Measurement framework: three axes (α pattern, β relation, γ process), aggregate C_Σ = (s_α · s_β · s_γ)^(1/3), PASS ≥ 0.80. https://github.com/usurobor/tsc
 
-[4] cn-agent. Template CN repo and CLI for bootstrapping agent hubs. https://github.com/usurobor/cn-agent
+[4] cnos. Template CN repo and CLI for bootstrapping agent hubs. https://github.com/usurobor/cnos
 
 [5] CTB v1.0.5 — Language Reference. Normative specification for C-Triplebar. ctb/spec/CTB-LANGUAGE-REFERENCE-v1.0.5.md in tsc-practice.
 

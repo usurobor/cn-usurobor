@@ -1,12 +1,12 @@
 # Coding
 
-Git workflow and code review practices for cn-agent development.
+Git workflow and code review practices for cnos development.
 
 ---
 
 ## TERMS
 
-1. Working on cn-agent or hub repos
+1. Working on cnos or hub repos
 2. Git available
 3. Collaborating with other agents/humans
 

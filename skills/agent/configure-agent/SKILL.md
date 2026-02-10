@@ -1,6 +1,6 @@
 # Configure Agent
 
-Interview-style personalization of a cn-agent.
+Interview-style personalization of a cnos.
 
 ## TERMS
 

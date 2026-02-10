@@ -6,10 +6,10 @@ Practice exercises for the peer skill.
 
 ## Kata 1: Peer the template
 
-Peer the cn-agent template itself:
+Peer the cnos template itself:
 
 ```
-Peer https://github.com/usurobor/cn-agent
+Peer https://github.com/usurobor/cnos
 ```
 
 Expected: Entry added to `state/peers.md` with `kind: agent`.

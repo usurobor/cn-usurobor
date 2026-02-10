@@ -1,6 +1,6 @@
-# Contributing to cn-agent
+# Contributing to cnos
 
-Thank you for your interest in contributing to cn-agent!
+Thank you for your interest in contributing to cnos!
 
 ## How to Contribute
 

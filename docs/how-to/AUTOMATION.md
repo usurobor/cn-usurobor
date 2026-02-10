@@ -1,6 +1,6 @@
 # Automation: Cron Setup
 
-cn-agent uses system cron for automation, not AI. This follows the principle:
+cnos uses system cron for automation, not AI. This follows the principle:
 
 > *"Tokens for thinking. Electrons for clockwork."*
 
@@ -28,7 +28,7 @@ cn runs on a 5-minute cron cycle. Each cycle:
 ### 1. Install cn
 
 ```bash
-cd cn-agent
+cd cnos
 npm install
 npm link  # makes `cn` available globally
 ```

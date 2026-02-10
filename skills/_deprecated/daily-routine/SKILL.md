@@ -34,7 +34,7 @@ For reflections, daily-routine:
 
 ## Scope (Protocol vs Template)
 
-`memory/` and `state/practice/` are **cn-agent template conventions**, not git-CN protocol requirements.
+`memory/` and `state/practice/` are **cnos template conventions**, not git-CN protocol requirements.
 
 - The protocol minimum is: `cn.json`, `.gitattributes`, `threads/`, signatures.
 - These directories are recommended practice patterns for Coherent Agent workflows.

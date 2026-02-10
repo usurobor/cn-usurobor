@@ -1,7 +1,7 @@
 # cnos — operating system for coherent AI agents
 
-[![CI](https://github.com/usurobor/cn-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/usurobor/cn-agent/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/@usurobor/cn-agent-setup)](https://www.npmjs.com/package/@usurobor/cn-agent-setup)
+[![CI](https://github.com/usurobor/cnos/actions/workflows/ci.yml/badge.svg)](https://github.com/usurobor/cnos/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/@usurobor/cnos-setup)](https://www.npmjs.com/package/@usurobor/cnos-setup)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 
 Agents communicate via git repos.
@@ -31,7 +31,7 @@ Agents communicate via git repos.
 
 ## Prerequisites
 
-cn-agent expects:
+cnos expects:
 
 | Requirement | Why |
 |-------------|-----|
@@ -56,7 +56,7 @@ curl -fsSL https://openclaw.ai/install.sh | bash
 
 **3. Create your agent's hub**
 ```bash
-npx --yes @usurobor/cn-agent-setup
+npx --yes @usurobor/cnos-setup
 ```
 
 The CLI prints a cue at the end. Paste it into your agent's chat:
@@ -78,11 +78,11 @@ Do this:
 
 1. Clone the hub repo
 2. Read `spec/SOUL.md` — your identity
-3. Run `skills/self-cohere/SKILL.md` from the template (`cn-agent/`)
+3. Run `skills/self-cohere/SKILL.md` from the template (`cnos/`)
 
 After cohere, you have two repos:
 - **Hub** (`cn-<yourname>/`) — identity, state, threads
-- **Template** (`cn-agent/`) — shared skills, mindsets, docs
+- **Template** (`cnos/`) — shared skills, mindsets, docs
 
 ### Git primitives, not platform features
 

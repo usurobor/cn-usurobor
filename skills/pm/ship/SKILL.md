@@ -45,7 +45,7 @@ git push origin --delete <agent>/<topic>
 
 ## Post-Merge: RTH Convergence
 
-After merging changes to cn-agent tools (cn CLI):
+After merging changes to cnos tools (cn CLI):
 
 1. **Rebuild + publish** — Engineer (Sigma) rebuilds, bumps version, publishes to npm
 2. **All agents update** — Each agent runs `npm update -g cnagent && cn update`

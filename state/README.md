@@ -3,7 +3,7 @@
 This directory contains **scaffold files** used by the CLI when creating new hubs.
 
 In the two-repo model:
-- **Template** (`cn-agent/`) — contains these scaffolds
+- **Template** (`cnos/`) — contains these scaffolds
 - **Hub** (`cn-<name>/`) — contains actual state
 
 ## Files

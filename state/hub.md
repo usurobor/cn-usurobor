@@ -6,5 +6,5 @@ Hub configuration for this agent.
 name: agent
 owner: owner
 created: YYYY-MM-DD
-template: https://github.com/usurobor/cn-agent
+template: https://github.com/usurobor/cnos
 ```

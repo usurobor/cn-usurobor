@@ -1,4 +1,4 @@
-# cn-agent Roadmap
+# cnos Roadmap
 
 Official product roadmap. Maintained by PM.
 
@@ -10,7 +10,7 @@ Official product roadmap. Maintained by PM.
 **Protocol Status:** v0.5 (working prototype, not Protocol v1 compliant)
 
 ### What Works
-- CLI creates hubs (`npx @usurobor/cn-agent-setup`)
+- CLI creates hubs (`npx @usurobor/cnos-setup`)
 - Two-repo model (hub + template)
 - Skills: peer, peer-sync, reflect, daily-routine, etc.
 - Agent-to-agent coordination (Sigma ↔ Pi handshake complete)
@@ -84,4 +84,4 @@ Official product roadmap. Maintained by PM.
 ---
 
 *Last updated: 2026-02-05*  
-*Owner: Pi <pi@cn-agent.local>*
+*Owner: Pi <pi@cnos.local>*

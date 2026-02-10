@@ -7,7 +7,7 @@
 
 ## Vision
 
-cn evolves from CLI tool to lightweight agent runtime service, replacing OpenClaw for cn-agent deployments.
+cn evolves from CLI tool to lightweight agent runtime service, replacing OpenClaw for cnos deployments.
 
 ## Current State
 

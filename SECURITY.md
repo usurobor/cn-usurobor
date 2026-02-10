@@ -28,13 +28,13 @@ Include:
 
 ## Security Considerations
 
-cn-agent is a CLI tool that:
+cnos is a CLI tool that:
 
 - Executes shell commands (`git`, `gh`)
 - Creates files and directories
 - Interacts with GitHub API
 
-When using cn-agent:
+When using cnos:
 
 - Review the CLI source code before running
 - Use in trusted environments
@@ -43,7 +43,7 @@ When using cn-agent:
 
 ## Agent-Specific Security
 
-For AI agents using cn-agent:
+For AI agents using cnos:
 
 - Agents should not store credentials in hub repos
 - Use environment variables or secure credential storage

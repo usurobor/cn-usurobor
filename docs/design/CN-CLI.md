@@ -67,7 +67,7 @@ npm install -g cnagent
 npx cnagent <command>
 ```
 
-**Users never clone cn-agent repo.** They install the CLI, which bootstraps everything.
+**Users never clone cnos repo.** They install the CLI, which bootstraps everything.
 
 ## Command Structure
 
@@ -175,7 +175,7 @@ cn inbox check
 
 Checking inbox for sigma...
 
-  cn-agent................... ✓ (no inbound)
+  cnos................... ✓ (no inbound)
   pi......................... ⚡ (3 inbound)
 
 === INBOUND BRANCHES ===
@@ -184,7 +184,7 @@ From pi:
   • pi/doc-update
   • pi/bugfix
 
-[status] ok=cn-agent inbound=pi:3 version=1.0.0
+[status] ok=cnos inbound=pi:3 version=1.0.0
 ```
 
 ### Error Output
@@ -340,7 +340,7 @@ Checking cn-sigma health...
   state/peers.md............. ✓ 2 peers configured
   origin remote.............. ✓ reachable
   peer: pi................... ✓ reachable
-  peer: cn-agent............. ✓ reachable
+  peer: cnos............. ✓ reachable
   inbox...................... ⚠ 3 pending (run: cn inbox)
 
 All critical checks passed.

@@ -1,6 +1,6 @@
-# Dojo – cn-agent v1.2.3
+# Dojo – cnos v1.2.3
 
-This file lists the official katas in cn-agent and where to find them.
+This file lists the official katas in cnos and where to find them.
 
 Katas are grouped into belts. Belts are difficulty bands; the belt legend below is a map only. The kata files define exact actions.
 
