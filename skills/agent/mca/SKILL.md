@@ -1,6 +1,6 @@
-# mca
+# MCA
 
-How to identify and take minimum coherent actions.
+How to identify and take Minimum Coherent Actions.
 
 ## Core Principle
 
