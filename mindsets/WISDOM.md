@@ -207,7 +207,7 @@ Built on the shoulders of:
 - **Elon Musk** — Delete before optimize
 - **Facebook / Meta** — The Hacker Way
 - **Vatsal Mehta** — Solutions over problems
-- **RBI** — Productive laziness
+- **RBI** — Pragmatic restraint
 - **FreeBSD Project** — Open source commons model
 - **Eric S. Raymond** — Cathedral and Bazaar
 - **Richard Stallman** — Free software philosophy
