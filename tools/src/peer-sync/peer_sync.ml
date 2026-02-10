@@ -65,7 +65,7 @@ let sync_peer my_name peer =
   | false -> 
       Skipped (peer.name, Printf.sprintf "not found: %s" peer.repo_path)
   | true ->
-      let _ = run_cmd (Printf.sprintf "cd %s && git fetch --all 2>&1" peer.repo_path) in
+      let _ = run_cmd (Printf.sprintf "cd %s && git pull --ff-only 2>&1" peer.repo_path) in
       let branches = find_inbound_branches peer.repo_path my_name in
       Fetched (peer.name, branches)
 
