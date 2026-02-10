@@ -155,7 +155,9 @@ let log_action hub_path action details =
   let logs_dir = Path.join hub_path "logs" in
   Fs.ensure_dir logs_dir;
   let entry = [%mel.obj { ts = now_iso (); action; details }] in
-  Fs.append (Path.join logs_dir "cn.log") (Json.stringify entry ^ "\n")
+  let date_str = String.sub (now_iso ()) 0 10 |> Js.String.replaceByRe ~regexp:[%mel.re "/-/g"] ~replacement:"" in
+  let log_file = Printf.sprintf "cn-%s.log" date_str in
+  Fs.append (Path.join logs_dir log_file) (Json.stringify entry ^ "\n")
 
 (* === Peers === *)
 
@@ -1823,7 +1825,7 @@ let inbox_flush hub_path _name =
 (* === Update === *)
 
 let update_cron hub_path =
-  let cron_line = Printf.sprintf "*/5 * * * * cd %s && cn sync && cn process >> /var/log/cn.log 2>&1" hub_path in
+  let cron_line = Printf.sprintf "*/5 * * * * cd %s && cn sync && cn process >> /var/log/cn-$(date +\\%%Y\\%%m\\%%d).log 2>&1" hub_path in
   print_endline (info "Updating crontab (5 min intervals)...");
   let cmd = Printf.sprintf "echo '%s' | crontab -" cron_line in
   match Child_process.exec cmd with
