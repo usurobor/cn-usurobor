@@ -290,7 +290,7 @@ let inbox_check hub_path name =
           acc
         end else begin
           (* Fetch peer's repo to get latest branches *)
-          let _ = Child_process.exec_in ~cwd:clone_path "git fetch origin" in
+          let _ = Child_process.exec_in ~cwd:clone_path "git fetch origin --prune" in
           let branches = get_inbound_branches clone_path name in
           (match branches with
            | [] -> print_endline (dim (Printf.sprintf "  %s: no inbound" peer.name))
@@ -382,8 +382,8 @@ let inbox_process hub_path =
     | _, Some clone_path ->
         if not (Fs.exists clone_path) then acc
         else begin
-          (* Fetch peer's repo *)
-          let _ = Child_process.exec_in ~cwd:clone_path "git fetch origin" in
+          (* Fetch peer's repo (prune removes deleted remote branches) *)
+          let _ = Child_process.exec_in ~cwd:clone_path "git fetch origin --prune" in
           (* Look for branches addressed to me *)
           let branches = get_inbound_branches clone_path my_name in
           let files = branches |> List.concat_map (fun branch ->
@@ -1772,7 +1772,7 @@ let run_peer_sync hub_path =
     | None -> print_endline (dim (Printf.sprintf "  %s: no clone path" peer.name))
     | Some clone_path ->
         if Fs.exists clone_path then begin
-          match Child_process.exec_in ~cwd:clone_path "git fetch origin && git pull --ff-only" with
+          match Child_process.exec_in ~cwd:clone_path "git fetch origin --prune && git pull --ff-only" with
           | Some _ -> print_endline (ok (Printf.sprintf "  %s: updated" peer.name))
           | None -> print_endline (warn (Printf.sprintf "  %s: fetch failed" peer.name))
         end else
