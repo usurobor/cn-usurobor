@@ -146,13 +146,6 @@ Laziness makes you write labor-saving programs. Impatience makes you anticipate 
 
 ---
 
-**"Laziness is a virtue."**
-— Sigma
-
-Good engineers are productively lazy — they automate, delegate to machines, and refuse to do repetitive work manually.
-
----
-
 ## On Freedom
 
 **"Think of 'free' as in 'free speech,' not as in 'free beer.'"**
