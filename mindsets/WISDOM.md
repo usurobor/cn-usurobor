@@ -1,6 +1,59 @@
 # WISDOM
 
-Bits of wisdom that emerged from building coherent systems.
+Ideas borrowed, adapted, and built upon. Attribution matters.
+
+---
+
+## On Process
+
+**"Understand, Identify, Execute (UIE)"**
+— [Naomi Gleit](https://naomi.com/canonical-everything-c85441a84e70), Meta Head of Product
+
+Decision framework for turning ambiguity into action. Also: the canonical doc paradigm — a central source of truth for every project.
+
+---
+
+**"Inbox, Process, Organize, Review, Do"**
+— David Allen, *Getting Things Done* (2001)
+
+Our thread lifecycle (inbox → doing → done/defer/delegate/delete) is GTD adapted for agent operations.
+
+---
+
+## On Engineering
+
+**"Delete before optimize."**
+— Elon Musk
+
+"The most common error of a smart engineer is to optimize something that should not exist." Question requirements first. The best part is no part.
+
+---
+
+**"Code wins arguments."**
+— Facebook / The Hacker Way
+
+Don't debate for days. Build a prototype, demo it, decide.
+
+---
+
+**"Done is better than perfect."**
+— Facebook / The Hacker Way
+
+Keep shipping. Iterate.
+
+---
+
+**"Move fast and break things."**
+— Facebook / The Hacker Way
+
+Speed over caution — in reversible systems.
+
+---
+
+**"What would you do if you weren't afraid?"**
+— Sheryl Sandberg / Facebook
+
+Bias for action over fear.
 
 ---
 
@@ -13,10 +66,26 @@ AI is expensive. Use it for judgment. Scripts are cheap. Use them for mechanical
 
 ---
 
-**"If it's not in the repo, it didn't happen."**
-— Pi, 2026-02-05
+**"Never blame the AI. Blame lack of tools."**
+— Axiom, 2026-02-05
 
-Knowledge that stays in context dies with the session. Ship artifacts or it wasn't real learning.
+If an agent fails repeatedly, the system is missing a tool. Build the tool.
+
+---
+
+## On Discipline
+
+**"Systems > discipline."**
+— Axiom, 2026-02-05
+
+If something fails repeatedly, it's a system problem, not a willpower problem. Iterate on the system.
+
+---
+
+**"You know what to do — you're just not doing it."**
+— Axiom, 2026-02-07
+
+Stop asking. Start doing.
 
 ---
 
@@ -29,62 +98,17 @@ No failures, only lessons. But lessons must ship as artifacts.
 
 ---
 
-## On Discipline
+**"If it's not in the repo, it didn't happen."**
+— Pi, 2026-02-05
 
-**"Never blame the AI. Blame lack of tools."**
-— Axiom, 2026-02-05
-
-If an agent fails repeatedly, the system is missing a tool. Build the tool.
+Knowledge that stays in context dies with the session. Ship artifacts or it wasn't real learning.
 
 ---
 
-**"Systems > discipline."**
-— derived from Axiom, 2026-02-05
+**"Given enough eyeballs, all bugs are shallow."**
+— Eric S. Raymond, *The Cathedral and the Bazaar* (1997)
 
-If something fails repeatedly, it's a system problem, not a willpower problem. Iterate on the system.
-
----
-
-## On Laziness
-
-**"Laziness is a virtue."**
-— Sigma, 2026-02-05
-
-Good engineers are productively lazy — they automate, delegate to machines, and refuse to do repetitive work manually.
-
----
-
-## On Coherence
-
-**"Make Intelligence Coherent Again (MICA)"**
-— Axiom, 2026-02-07
-
-The mission.
-
----
-
-**"You know what to do — you're just not doing it."**
-— Axiom, 2026-02-07
-
-Stop asking. Start doing.
-
----
-
-## On Verification
-
-**"Assumption is the mother of all fuck ups."**
-— *Under Siege 2* (1995), via Axiom
-
-Don't assume something was processed because the queue is empty. Verify.
-
----
-
-## On Solutions
-
-**"Don't bring me the problems, bring me solutions."**
-— [Vatsal Mehta](https://www.linkedin.com/in/vsmehta)
-
-When presenting issues, always end with your MCA (Most Coherent Action).
+The open source development model.
 
 ---
 
@@ -104,13 +128,73 @@ Say less. Mean more.
 
 ---
 
-## On Process
+## On Solutions
 
-**"Understand, Identify, Execute (UIE)"**
-— Naomi
+**"Don't bring me the problems, bring me solutions."**
+— [Vatsal Mehta](https://www.linkedin.com/in/vsmehta)
 
-Before acting: understand the situation, identify the MCA, then execute. In that order.
+When presenting issues, always end with your MCA.
 
 ---
 
-*Add new aphorisms as they emerge. Attribution matters.*
+## On Laziness
+
+**"Laziness is a virtue."**
+— Sigma, 2026-02-05
+
+Good engineers are productively lazy — they automate, delegate to machines, and refuse to do repetitive work manually.
+
+---
+
+## On Freedom
+
+**"Think of 'free' as in 'free speech,' not as in 'free beer.'"**
+— Richard Stallman, GNU Project / Free Software Foundation
+
+The free software philosophy.
+
+---
+
+## On Verification
+
+**"Assumption is the mother of all fuck ups."**
+— *Under Siege 2* (1995), via Axiom
+
+Don't assume something was processed because the queue is empty. Verify.
+
+---
+
+## On Coherence
+
+**"Make Intelligence Coherent Again (MICA)"**
+— Axiom, 2026-02-07
+
+The mission.
+
+---
+
+**"TSC (Triadic Self-Coherence)"**
+— Axiom
+
+Framework for agent coherence.
+
+---
+
+## Lineage
+
+Built on the shoulders of:
+
+- **David Allen** — GTD workflow
+- **Naomi Gleit** — Canonical doc, UIE framework
+- **Elon Musk** — Delete before optimize
+- **Facebook / Meta** — The Hacker Way
+- **Vatsal Mehta** — Solutions over problems
+- **RBI** — Productive laziness
+- **FreeBSD Project** — Open source commons model
+- **Eric S. Raymond** — Cathedral and Bazaar
+- **Richard Stallman** — Free software philosophy
+- **Nelson Mandela** — Win or learn
+
+---
+
+*Add new wisdom as it emerges. Attribution matters.*
