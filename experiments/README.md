@@ -1,6 +1,6 @@
 # experiments/
 
-This directory contains exploratory design documents and prototypes that are **not part of the cn-agent specification**.
+This directory contains exploratory design documents and prototypes that are **not part of the cnos specification**.
 
 ## Status
 

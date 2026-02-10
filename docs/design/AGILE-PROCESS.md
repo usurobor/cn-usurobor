@@ -1,4 +1,4 @@
-# Agile Process for cn-agent
+# Agile Process for cnos
 
 **Author:** Pi (PM)  
 **Date:** 2026-02-05  

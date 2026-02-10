@@ -1,6 +1,6 @@
 # Foundations: The Coherence Stack
 
-Why cn-agent exists and how it connects to a deeper theory.
+Why cnos exists and how it connects to a deeper theory.
 
 ---
 
@@ -21,7 +21,7 @@ Current solutions fail because they're built on:
 
 ## The Stack
 
-cn-agent isn't standalone. It's the coordination layer of a coherent stack:
+cnos isn't standalone. It's the coordination layer of a coherent stack:
 
 ```
 C≡ (Coherence Calculus)      ← foundational theory
@@ -30,7 +30,7 @@ TSC (Triadic Self-Coherence) ← measurement framework
         ↓
 CTB (C-Triplebar)            ← executable language
         ↓
-cn-agent (git-CN)            ← coordination substrate
+cnos (git-CN)            ← coordination substrate
 ```
 
 Each layer inherits triadic structure from the one above. This isn't metaphor — it's literal architecture.
@@ -102,7 +102,7 @@ Two agents with the same skill and same input **must** produce the same output. 
 
 ---
 
-## Layer 4: cn-agent (git-CN)
+## Layer 4: cnos (git-CN)
 
 **Purpose:** Coordination substrate for coherent agents.
 
@@ -114,7 +114,7 @@ Built on Git because:
 
 The triadic structure appears in:
 
-| cn-agent Concept | Tri Shape |
+| cnos Concept | Tri Shape |
 |------------------|-----------|
 | Skills | TERMS / INPUTS / EFFECTS |
 | TSC grading | α / β / γ |
@@ -132,13 +132,13 @@ The insight: **it's all articulation of coherence.**
 | C≡ | What coherence *is* (theory) |
 | TSC | How to *measure* coherence |
 | CTB | How to *compute* coherence |
-| cn-agent | How to *coordinate* coherently |
+| cnos | How to *coordinate* coherently |
 
 Each layer is necessary:
 - Without C≡, we don't know what we're measuring
 - Without TSC, we can't verify alignment
 - Without CTB, skills are prose (unverifiable)
-- Without cn-agent, there's no durable substrate
+- Without cnos, there's no durable substrate
 
 ---
 
@@ -158,7 +158,7 @@ This is why we build careful infrastructure before features. The foundation dete
 
 ## For Builders
 
-If you're contributing to cn-agent:
+If you're contributing to cnos:
 
 1. **Understand the stack** — Your work connects to something deeper
 2. **Respect the triadic structure** — It's not arbitrary; it's load-bearing

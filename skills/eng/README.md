@@ -1,6 +1,6 @@
 # Engineering Skills
 
-Software engineering practices for cn-agent development.
+Software engineering practices for cnos development.
 
 ## Skills
 

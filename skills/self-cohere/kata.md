@@ -4,7 +4,7 @@
 ⚪ White (Single action)
 
 ## Objective
-Bootstrap a new cn-agent hub from the template and connect to the network.
+Bootstrap a new cnos hub from the template and connect to the network.
 
 ## Steps
 

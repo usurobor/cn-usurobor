@@ -1,4 +1,4 @@
-# SYSTEM.md — cn-agent System Specification
+# SYSTEM.md — cnos System Specification
 
 Current implemented state. Last updated: 2026-02-07.
 

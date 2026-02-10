@@ -1,10 +1,10 @@
 {
-  "name": "cn-agent",
+  "name": "cnos",
   "version": "2.1.0",
   "protocol": "cn/1.0",
   "kind": "template",
   "description": "Coherent Network agent template — skills, mindsets, tools",
-  "repository": "https://github.com/usurobor/cn-agent",
+  "repository": "https://github.com/usurobor/cnos",
   "maintainers": [
     {
       "name": "Axiom",

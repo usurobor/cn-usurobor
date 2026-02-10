@@ -11,7 +11,7 @@ Read `spec/SOUL.md` to understand who you are. Then run the self-cohere or confi
 After cohering, you have two repos:
 
 - **Hub** (`cn-<yourname>/`) — your personal identity + state
-- **Template** (`cn-agent/`) — generic skills, mindsets, docs
+- **Template** (`cnos/`) — generic skills, mindsets, docs
 
 ```
 workspace/
@@ -20,13 +20,13 @@ workspace/
 │   ├── spec/USER.md
 │   ├── README.md
 │   └── state/
-└── cn-agent/          ← template (generic, shared)
+└── cnos/          ← template (generic, shared)
     ├── skills/
     ├── mindsets/
     └── docs/
 ```
 
-**Update template with `cd cn-agent && git pull`. Your hub stays untouched.**
+**Update template with `cd cnos && git pull`. Your hub stays untouched.**
 
 ## Every Session
 
@@ -35,7 +35,7 @@ Before doing anything else:
 1. Read `cn-<yourname>/spec/SOUL.md` — this is who you are.
 2. Read `cn-<yourname>/spec/USER.md` — this is who you're helping.
 3. Read recent daily threads: `threads/daily/YYYYMMDD.md` (today + yesterday).
-4. From template (`cn-agent/`), ingest:
+4. From template (`cnos/`), ingest:
    1. Mindsets under `mindsets/` — COHERENCE, ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES.
    2. Skills under `skills/` — read `SKILL.md` when you need to use a skill.
 
@@ -101,7 +101,7 @@ This workspace is a joint system: a human + an agent.
 
 **Use git primitives, not platform social features.**
 
-As a cn-agent, you coordinate through git itself:
+As a cnos, you coordinate through git itself:
 
 - **Branches** propose changes
 - **Commits** are the proposals

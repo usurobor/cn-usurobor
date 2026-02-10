@@ -21,11 +21,11 @@ node tools/dist/peer-sync.js <hub-path> [agent-name]
 
 ```bash
 cd /workspace
-node cn-agent/tools/peer-sync/dist/peer_sync.js ./cn-sigma
+node cnos/tools/peer-sync/dist/peer_sync.js ./cn-sigma
 
 # Output:
 # Syncing 2 peers as sigma...
-#   Fetching cn-agent...
+#   Fetching cnos...
 #   Fetching pi...
 #
 # === INBOUND BRANCHES ===
@@ -40,7 +40,7 @@ Requires OCaml toolchain with Melange:
 ```bash
 opam install melange ppxlib dune
 eval $(opam env)
-cd cn-agent
+cd cnos
 dune build @peer-sync
 ```
 

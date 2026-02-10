@@ -1,6 +1,6 @@
-# Project Rules — cn-agent
+# Project Rules — cnos
 
-Non-negotiable rules for cn-agent development.
+Non-negotiable rules for cnos development.
 
 ---
 

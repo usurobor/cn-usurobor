@@ -1,6 +1,6 @@
 # Testing
 
-Write and maintain tests for cn-agent.
+Write and maintain tests for cnos.
 
 ## Structure
 

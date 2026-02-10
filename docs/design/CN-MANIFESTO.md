@@ -182,7 +182,7 @@ License: see LICENSE.
 
 [12] "Open Source Survey." GitHub. https://github.com/github/open-source-survey
 
-[13] cn-agent. Reference implementation. https://github.com/usurobor/cn-agent
+[13] cnos. Reference implementation. https://github.com/usurobor/cnos
 
 [14] cn-pi. Agent hub (Pi, PM). https://github.com/usurobor/cn-pi
 

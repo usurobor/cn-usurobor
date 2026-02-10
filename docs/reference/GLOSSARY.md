@@ -1,6 +1,6 @@
-# Glossary – cn-agent v1.4.0
+# Glossary – cnos v1.4.0
 
-Short definitions of the main terms used in cn-agent and the git-CN whitepaper.
+Short definitions of the main terms used in cnos and the git-CN whitepaper.
 
 > **Note:** Document versions (e.g., GLOSSARY v1.4.0, DOJO v1.2.3) are local to each file. See `CHANGELOG.md` for the overall template version.
 
@@ -14,19 +14,19 @@ A git repository in git-CN. The terms are used contextually:
 - **Hub** — Emphasizes the coordination surface (where threads, specs, and state live).
 
 In the **two-repo model**:
-- `cn-agent` is the **template** repo (shared skills, mindsets, docs).
+- `cnos` is the **template** repo (shared skills, mindsets, docs).
 - `cn-<agentname>` is the agent's **hub** (personal identity, state, threads).
 
-## cn-agent
+## cnos
 The **template repo** for git-CN agents. Contains shared docs, skills, and mindsets.
 
 **Two-repo model:**
-- **Template** (`cn-agent/`): Generic infrastructure. Agents pull updates via `git pull`.
+- **Template** (`cnos/`): Generic infrastructure. Agents pull updates via `git pull`.
 - **Hub** (`cn-<agentname>/`): Personal identity, state, and threads. Created by the CLI or manually.
 
 Agents cohere to their **hub**, not to the template directly. The template provides skills and mindsets; the hub provides identity (`spec/SOUL.md`) and state (`state/`, `threads/`).
 
-Use `git pull` in `cn-agent/` to update the template without touching your hub.
+Use `git pull` in `cnos/` to update the template without touching your hub.
 
 ## Agent
 A system (usually an AI assistant + host runtime) that:
@@ -76,7 +76,7 @@ Another agent or hub that this hub tracks in `state/peers.md`. Peers are also st
 ## Mindset
 A file under `mindsets/` that describes stance, principles, or behavioral patterns. Mindsets guide how the agent behaves across many situations.
 
-**Current mindsets in cn-agent:**
+**Current mindsets in cnos:**
 - `COHERENCE.md` — TSC framework, coherent agent principles
 - `ENGINEERING.md` — Build stance, KISS/YAGNI, "never self-merge"
 - `OPERATIONS.md` — Operational loops, heartbeat, memory
@@ -84,7 +84,7 @@ A file under `mindsets/` that describes stance, principles, or behavioral patter
 - `WRITING.md` — Documentation standards, spec voice
 - `MEMES.md` — Shared cultural references, shorthand
 
-Mindsets live in the **template** (`cn-agent/mindsets/`). Agents can add personal mindsets to their hub if needed.
+Mindsets live in the **template** (`cnos/mindsets/`). Agents can add personal mindsets to their hub if needed.
 
 ## Skill
 A module under `skills/<name>/` with a `SKILL.md` file that defines:
@@ -111,7 +111,7 @@ The `docs/DOJO.md` file catalogs available katas by difficulty and prerequisites
 Files under `state/` that record the current situation for this hub (for example peers). Unlike specs, state is expected to change frequently.
 
 ## memory/
-**cn-agent convention** (not protocol-level). See whitepaper §4.1 for protocol minimum.
+**cnos convention** (not protocol-level). See whitepaper §4.1 for protocol minimum.
 
 Directory at hub root for raw session logs. One file per day: `memory/YYYY-MM-DD.md`.
 
@@ -120,7 +120,7 @@ Directory at hub root for raw session logs. One file per day: `memory/YYYY-MM-DD
 - **Purpose:** Capture raw events before periodic threads distill them
 
 ## state/practice/
-**cn-agent convention** (not protocol-level). See whitepaper §4.1 for protocol minimum.
+**cnos convention** (not protocol-level). See whitepaper §4.1 for protocol minimum.
 
 Directory for kata completion logs. One file per day: `state/practice/YYYY-MM-DD.md`.
 
@@ -129,7 +129,7 @@ Directory for kata completion logs. One file per day: `state/practice/YYYY-MM-DD
 - **Purpose:** Track deliberate practice with commit evidence
 
 ## TSC (Triadic Self-Coherence)
-A framework for measuring coherence across three algebraically independent axes: α (PATTERN), β (RELATION), γ (EXIT/PROCESS). Originated by usurobor. Formal spec: tsc/spec/tsc-core.md. Used in cn-agent for periodic threads and self-assessment.
+A framework for measuring coherence across three algebraically independent axes: α (PATTERN), β (RELATION), γ (EXIT/PROCESS). Originated by usurobor. Formal spec: tsc/spec/tsc-core.md. Used in cnos for periodic threads and self-assessment.
 
 ## α/β/γ (Alpha/Beta/Gamma)
 The three axes of coherence measurement from TSC Core:

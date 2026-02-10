@@ -1,4 +1,4 @@
-# cn-agent Changelog
+# cnos Changelog
 
 Coherence grades use the [TSC](https://github.com/usurobor/tsc) triadic axes, applied as intuition-level letter grades (A+ to F) per the [CLP self-check](https://github.com/usurobor/tsc-practice/tree/main/clp):
 
@@ -37,7 +37,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 Two AI agents achieved verified hash consensus via git-CN protocol — the actor model is complete.
 
 ### Milestone
-- **Hash consensus** — Pi and Sigma independently converged on cn-agent `d1cb82c`
+- **Hash consensus** — Pi and Sigma independently converged on cnos `d1cb82c`
 - **Verified via git** — runtime.md pushed to GitHub, human-verified
 - **No central coordinator** — pure git-based decentralized coordination
 
@@ -134,7 +134,7 @@ Major coordination upgrade. Agents now use Erlang-inspired actor model: your rep
 - **RCA process** — `docs/rca/` with template and first incident
 - **FUNCTIONAL.md** — mindset for OCaml/FP patterns
 - **PM.md** — product management mindset with user stories, no self-merge
-- **FOUNDATIONS.md** — the coherence stack explained (C≡ → TSC → CTB → cn-agent)
+- **FOUNDATIONS.md** — the coherence stack explained (C≡ → TSC → CTB → cnos)
 - **APHORISMS.md** — collected wisdom ("Tokens for thinking. Electrons for clockwork.")
 - **ROADMAP.md** — official project roadmap
 - **GitHub Actions CI** — OCaml tests + Melange build

@@ -1,6 +1,6 @@
-# Skills – cn-agent v2.1.0
+# Skills – cnos v2.1.0
 
-Each skill in cn-agent lives under `skills/<name>/` and SHOULD include:
+Each skill in cnos lives under `skills/<name>/` and SHOULD include:
 
 - `SKILL.md` – spec with TERMS, INPUTS, EFFECTS.
 - `kata.md` – a minimal kata that exercises the skill end-to-end.
@@ -20,7 +20,7 @@ When a kata says "add skill `<name>`", it means: perform steps 1–5 above for t
 - `skills/hello-world/`
   - Bootstraps the initial "Hello, world" thread in `threads/adhoc/`.
 - `skills/self-cohere/`
-  - Bootstraps a cn-agent-based hub from this template (see `SKILL.md`).
+  - Bootstraps a cnos-based hub from this template (see `SKILL.md`).
 - `skills/configure-agent/`
   - Personalizes spec files after self-cohere bootstrap.
 - `skills/reflect/`

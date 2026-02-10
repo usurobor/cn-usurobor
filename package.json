@@ -3,19 +3,19 @@
   "version": "2.2.23",
   "description": "Coherent Network agent CLI — everything runs through cn",
   "keywords": [
-    "cn-agent",
+    "cnos",
     "git-cn",
     "coherence-network",
     "ai-agent",
     "cli"
   ],
-  "homepage": "https://github.com/usurobor/cn-agent#readme",
+  "homepage": "https://github.com/usurobor/cnos#readme",
   "bugs": {
-    "url": "https://github.com/usurobor/cn-agent/issues"
+    "url": "https://github.com/usurobor/cnos/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/usurobor/cn-agent.git"
+    "url": "https://github.com/usurobor/cnos.git"
   },
   "bin": {
     "cn": "bin/cn",

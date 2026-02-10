@@ -1,11 +1,11 @@
 # OCaml
 
-Write OCaml tools for cn-agent. Compile via Melange, bundle with esbuild.
+Write OCaml tools for cnos. Compile via Melange, bundle with esbuild.
 
 ## Toolchain
 
 ```bash
-opam switch create cn-agent 4.14.1
+opam switch create cnos 4.14.1
 opam install dune melange melange.ppx ppx_expect
 ```
 

@@ -5,7 +5,7 @@ Wire agent to an existing hub repo.
 ## TERMS
 
 1. Hub URL provided: `https://github.com/<owner>/cn-<agentname>`
-2. Template at `/root/.openclaw/workspace/cn-agent`
+2. Template at `/root/.openclaw/workspace/cnos`
 3. Symlinks exist in workspace root (created by CLI)
 4. Git installed and identity configured
 
@@ -24,9 +24,9 @@ ls -la /root/.openclaw/workspace/SOUL.md
 workspace/
 ├── SOUL.md      → cn-<name>/spec/SOUL.md (hub)
 ├── USER.md      → cn-<name>/spec/USER.md (hub)
-├── AGENTS.md    → cn-agent/spec/AGENTS.md (template)
+├── AGENTS.md    → cnos/spec/AGENTS.md (template)
 ├── cn-<name>/   (hub: identity + state)
-└── cn-agent/    (template: skills + mindsets)
+└── cnos/    (template: skills + mindsets)
 ```
 
 Hub = personal. Template = generic. Don't mix.
@@ -45,5 +45,5 @@ Hub = personal. Template = generic. Don't mix.
 ```
 ✓ SELF-COHERE COMPLETE
 HUB: https://github.com/<owner>/cn-<agentname>
-TEMPLATE: /root/.openclaw/workspace/cn-agent
+TEMPLATE: /root/.openclaw/workspace/cnos
 ```
