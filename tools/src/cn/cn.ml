@@ -1825,7 +1825,7 @@ let inbox_flush hub_path _name =
 (* === Update === *)
 
 let update_cron hub_path =
-  let cron_line = Printf.sprintf "*/5 * * * * cd %s && cn sync && cn process >> /var/log/cn-$(date +\\%%Y\\%%m\\%%d).log 2>&1" hub_path in
+  let cron_line = Printf.sprintf "*/5 * * * * cn-cron %s" hub_path in
   print_endline (info "Updating crontab (5 min intervals)...");
   let cmd = Printf.sprintf "echo '%s' | crontab -" cron_line in
   match Child_process.exec cmd with

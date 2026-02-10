@@ -1,0 +1,12 @@
+#!/bin/sh
+# cn-cron - Run cn sync cycle with logging
+# Installed by: npm install -g cnagent
+# Usage: */5 * * * * cn-cron /path/to/hub
+
+set -e
+
+HUB="${1:-$(pwd)}"
+LOG="/var/log/cn-$(date +%Y%m%d).log"
+
+cd "$HUB"
+exec cn sync >> "$LOG" 2>&1
