@@ -104,4 +104,13 @@ Say less. Mean more.
 
 ---
 
+## On Process
+
+**"Understand, Identify, Execute (UIE)"**
+— Naomi
+
+Before acting: understand the situation, identify the MCA, then execute. In that order.
+
+---
+
 *Add new aphorisms as they emerge. Attribution matters.*
