@@ -60,14 +60,14 @@ Bias for action over fear.
 ## On AI & Tools
 
 **"Tokens for thinking. Electrons for clockwork."**
-— Sigma, 2026-02-05
+— Sigma
 
 AI is expensive. Use it for judgment. Scripts are cheap. Use them for mechanical work.
 
 ---
 
 **"Never blame the AI. Blame lack of tools."**
-— Axiom, 2026-02-05
+— Axiom
 
 If an agent fails repeatedly, the system is missing a tool. Build the tool.
 
@@ -76,14 +76,14 @@ If an agent fails repeatedly, the system is missing a tool. Build the tool.
 ## On Discipline
 
 **"Systems > discipline."**
-— Axiom, 2026-02-05
+— Axiom
 
 If something fails repeatedly, it's a system problem, not a willpower problem. Iterate on the system.
 
 ---
 
 **"You know what to do — you're just not doing it."**
-— Axiom, 2026-02-07
+— Axiom
 
 Stop asking. Start doing.
 
@@ -99,7 +99,7 @@ No failures, only lessons. But lessons must ship as artifacts.
 ---
 
 **"If it's not in the repo, it didn't happen."**
-— Pi, 2026-02-05
+— Pi
 
 Knowledge that stays in context dies with the session. Ship artifacts or it wasn't real learning.
 
@@ -140,7 +140,7 @@ When presenting issues, always end with your MCA.
 ## On Laziness
 
 **"Laziness is a virtue."**
-— Sigma, 2026-02-05
+— Sigma
 
 Good engineers are productively lazy — they automate, delegate to machines, and refuse to do repetitive work manually.
 
@@ -167,7 +167,7 @@ Don't assume something was processed because the queue is empty. Verify.
 ## On Coherence
 
 **"Make Intelligence Coherent Again (MICA)"**
-— Axiom, 2026-02-07
+— Axiom
 
 The mission.
 
