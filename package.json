@@ -1,6 +1,6 @@
 {
   "name": "cnagent",
-  "version": "2.2.16",
+  "version": "2.2.17",
   "description": "Coherent Network agent CLI — everything runs through cn",
   "keywords": [
     "cn-agent",
@@ -18,7 +18,8 @@
     "url": "https://github.com/usurobor/cn-agent.git"
   },
   "bin": {
-    "cn": "bin/cn"
+    "cn": "bin/cn",
+    "cn-cron": "bin/cn-cron"
   },
   "files": [
     "bin/",
