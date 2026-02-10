@@ -158,7 +158,7 @@ The free software philosophy.
 ## On Verification
 
 **"Assumption is the mother of all fuck ups."**
-— *Under Siege 2* (1995), via Axiom
+— Marcus Penn, *Under Siege 2* (1995)
 
 Don't assume something was processed because the queue is empty. Verify.
 
