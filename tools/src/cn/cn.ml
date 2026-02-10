@@ -151,13 +151,11 @@ let rec find_hub_path dir =
 
 (* === Logging === *)
 
-let log_action hub_path action details =
-  let logs_dir = Path.join hub_path "logs" in
-  Fs.ensure_dir logs_dir;
-  let entry = [%mel.obj { ts = now_iso (); action; details }] in
-  let date_str = String.sub (now_iso ()) 0 10 |> Js.String.replaceByRe ~regexp:[%mel.re "/-/g"] ~replacement:"" in
-  let log_file = Printf.sprintf "cn-%s.log" date_str in
-  Fs.append (Path.join logs_dir log_file) (Json.stringify entry ^ "\n")
+let log_action _hub_path _action _details =
+  (* Removed: hub log redundant with system log + logs/runs/
+     System log: /var/log/cn-YYYYMMDD.log (cron stdout)
+     Audit trail: logs/runs/ (input + output + meta) *)
+  ()
 
 (* === Peers === *)
 
