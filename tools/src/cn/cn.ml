@@ -183,6 +183,7 @@ let threads_mail_inbox hub = Path.join hub "threads/mail/inbox"
 let threads_mail_outbox hub = Path.join hub "threads/mail/outbox"
 let threads_mail_sent hub = Path.join hub "threads/mail/sent"
 let threads_reflections_daily hub = Path.join hub "threads/reflections/daily"
+let threads_reflections_weekly hub = Path.join hub "threads/reflections/weekly"
 let threads_adhoc hub = Path.join hub "threads/adhoc"
 
 (* === Timestamped Naming === *)
@@ -1178,6 +1179,108 @@ let run_mca_list hub_path =
             |> Option.value ~default:"(no description)" in
           print_endline (Printf.sprintf "  [%s] %s (by %s)" id (String.trim desc) by))
 
+(* === Thread Creation Commands === *)
+
+let run_adhoc hub_path title =
+  let dir = threads_adhoc hub_path in
+  Fs.ensure_dir dir;
+  
+  let ts = now_iso () in
+  let date = String.sub ts 0 10 in
+  let time = String.sub ts 11 8 |> Js.String.replaceByRe ~regexp:[%mel.re "/:/g"] ~replacement:"" in
+  let slug = 
+    title 
+    |> Js.String.slice ~start:0 ~end_:40
+    |> Js.String.toLowerCase 
+    |> Js.String.replaceByRe ~regexp:[%mel.re "/[^a-z0-9]+/g"] ~replacement:"-"
+    |> Js.String.replaceByRe ~regexp:[%mel.re "/^-|-$/g"] ~replacement:""
+  in
+  let file_name = Printf.sprintf "%s-%s-%s.md" (Js.String.replaceByRe ~regexp:[%mel.re "/-/g"] ~replacement:"" date) time slug in
+  let file_path = Path.join dir file_name in
+  
+  let content = Printf.sprintf {|---
+created: %s
+type: adhoc
+---
+
+# %s
+
+|} ts title in
+  
+  Fs.write file_path content;
+  print_endline (ok (Printf.sprintf "Created: %s" file_path))
+
+let run_daily hub_path =
+  let dir = threads_reflections_daily hub_path in
+  Fs.ensure_dir dir;
+  
+  let today = String.sub (now_iso ()) 0 10 |> Js.String.replaceByRe ~regexp:[%mel.re "/-/g"] ~replacement:"" in
+  let file_name = Printf.sprintf "%s.md" today in
+  let file_path = Path.join dir file_name in
+  
+  if Fs.exists file_path then begin
+    print_endline (info (Printf.sprintf "Daily exists: %s" file_path));
+    let content = Fs.read file_path in
+    print_endline content
+  end else begin
+    let ts = now_iso () in
+    let content = Printf.sprintf {|---
+date: %s
+type: daily
+---
+
+# Daily Reflection
+
+## Done
+
+## In Progress
+
+## Blocked
+
+## α (What did I do?)
+
+## β (What would I do differently?)
+
+## γ (What did I learn?)
+|} ts in
+    Fs.write file_path content;
+    print_endline (ok (Printf.sprintf "Created: %s" file_path))
+  end
+
+let run_weekly hub_path =
+  let dir = threads_reflections_weekly hub_path in
+  Fs.ensure_dir dir;
+  
+  (* Get week number *)
+  let ts = now_iso () in
+  let year = String.sub ts 0 4 in
+  let file_name = Printf.sprintf "%s-W%02d.md" year ((int_of_string (String.sub ts 5 2)) / 4 + 1) in
+  let file_path = Path.join dir file_name in
+  
+  if Fs.exists file_path then begin
+    print_endline (info (Printf.sprintf "Weekly exists: %s" file_path));
+    let content = Fs.read file_path in
+    print_endline content
+  end else begin
+    let content = Printf.sprintf {|---
+date: %s
+type: weekly
+---
+
+# Weekly Reflection
+
+## Summary
+
+## Key Accomplishments
+
+## Challenges
+
+## Next Week Focus
+|} ts in
+    Fs.write file_path content;
+    print_endline (ok (Printf.sprintf "Created: %s" file_path))
+  end
+
 (* === Agent Output (cn out) === *)
 
 let run_out hub_path name gtd =
@@ -1871,4 +1974,7 @@ let () =
           | Mca Mca.List -> run_mca_list hub_path
           | Mca (Mca.Add desc) -> run_mca_add hub_path name desc
           | Out gtd -> run_out hub_path name gtd
+          | Adhoc title -> run_adhoc hub_path title
+          | Daily -> run_daily hub_path
+          | Weekly -> run_weekly hub_path
           | Help | Version | Init _ | Update -> () (* handled above *)

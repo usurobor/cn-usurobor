@@ -210,6 +210,9 @@ type command =
   | Save of string option
   | Inbound  (* was: Process *)
   | Update
+  | Adhoc of string  (* Create adhoc thread *)
+  | Daily            (* Create/open daily reflection *)
+  | Weekly           (* Create/open weekly reflection *)
 
 (* Exhaustive - compiler warns on missing cases *)
 let string_of_command = function
@@ -257,6 +260,9 @@ let string_of_command = function
   | Save (Some m) -> "save " ^ m
   | Inbound -> "in"
   | Update -> "update"
+  | Adhoc t -> "adhoc " ^ t
+  | Daily -> "daily"
+  | Weekly -> "weekly"
 
 (* === Alias Expansion === *)
 
@@ -379,6 +385,9 @@ let rec parse_command = function
   | ["push"] -> Some Push
   | "save" :: rest -> Some (Save (join_rest rest))
   | ["update"] -> Some Update
+  | "adhoc" :: rest -> join_rest rest |> Option.map (fun t -> Adhoc t)
+  | ["daily"] -> Some Daily
+  | ["weekly"] -> Some Weekly
   | "out" :: rest -> parse_out_cmd rest |> Option.map (fun c -> Out c)
   | [alias] ->
       let expanded = expand_alias alias in
@@ -562,6 +571,11 @@ Commands:
   next                Get next inbox item (with cadence)
   read <thread>       Read thread with cadence
   
+  # Thread creation
+  adhoc <title>       Create adhoc thread
+  daily               Create/show daily reflection
+  weekly              Create/show weekly reflection
+  
   # Hub management
   init [name]         Create new hub
   status              Show hub state
@@ -589,4 +603,4 @@ Actor Model:
   Agent reads input.md, processes, deletes when done.
 |}
 
-let version = "2.2.14"
+let version = "2.2.15"
