@@ -48,6 +48,47 @@ let validate_branch branch =
 let rejection_notice peer branch =
   Printf.sprintf "Branch %s rejected: no merge base with main" branch
 
+(* === Rejection Terminal Cleanup === *)
+
+type cleanup_result =
+  | Deleted of string
+  | NotFound of string
+
+type rejection_result = {
+  materialized: bool;
+  branch_deleted: string option;
+}
+
+(* Parse rejected branch name from rejection notice body *)
+(* Pattern: "Branch `<branch>` rejected" *)
+let parse_rejected_branch content =
+  match String.split_on_char '`' content with
+  | _ :: branch :: _ when String.length branch > 0 
+      && String.length content >= 8
+      && String.sub content 0 8 = "Branch `" ->
+      Some branch
+  | _ -> None
+
+(* Mock: tracks deleted branches for testing *)
+let deleted_branches = ref []
+let local_branches = ref ["pi/failed-topic"; "pi/other-topic"]
+
+let rejection_cleanup ~hub_path ~branch =
+  if List.mem branch !local_branches then begin
+    local_branches := List.filter ((<>) branch) !local_branches;
+    deleted_branches := branch :: !deleted_branches;
+    Deleted branch
+  end else
+    NotFound branch
+
+let process_rejection_notice ~hub_path ~content =
+  match parse_rejected_branch content with
+  | Some branch ->
+      let _ = rejection_cleanup ~hub_path ~branch in
+      { materialized = true; branch_deleted = Some branch }
+  | None ->
+      { materialized = true; branch_deleted = None }
+
 (* Message direction: you push to YOUR repo, peers pull from you *)
 type direction = PushToSelf_PeerPulls
 

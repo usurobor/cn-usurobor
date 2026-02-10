@@ -13667,7 +13667,7 @@ var require_cn_lib = __commonJS({
       );
     }
     var help_text = "cn - Coherent Network agent CLI\n\nUsage: cn <command> [options]\n\nCommands:\n  # Agent decisions (output)\n  delete <thread>     GTD: discard\n  defer <thread>      GTD: postpone\n  delegate <t> <peer> GTD: forward\n  do <thread>         GTD: claim/start\n  done <thread>       GTD: complete \xE2\x86\x92 archive\n  reply <thread> <msg> Append to thread\n  send <peer> <msg>   Message to peer (or self)\n  \n  # cn operations (orchestrator)\n  sync                Fetch inbound + send outbound\n  in                  Queue inbox \xE2\x86\x92 input.md \xE2\x86\x92 wake agent (alias: inbound, process)\n  queue [list|clear]  View or clear the task queue\n  mca [list|add <desc>] Surface MCAs for community pickup\n  inbox               List inbox threads\n  outbox              List outbox threads\n  next                Get next inbox item (with cadence)\n  read <thread>       Read thread with cadence\n  \n  # Thread creation\n  adhoc <title>       Create adhoc thread\n  daily               Create/show daily reflection\n  weekly              Create/show weekly reflection\n  \n  # Hub management\n  init [name]         Create new hub\n  setup               System setup (logrotate + cron) \xE2\x80\x94 run with sudo\n  status              Show hub state\n  commit [msg]        Stage + commit\n  push                Push to origin\n  save [msg]          Commit + push\n  peer                Manage peers\n  doctor              Health check\n  update              Update cn to latest version\n\nAliases:\n  i = inbox, o = outbox, s = status, d = doctor\n\nFlags:\n  --help, -h          Show help\n  --version, -V       Show version\n  --json              Machine-readable output\n  --quiet, -q         Minimal output\n  --dry-run           Show what would happen\n\nActor Model:\n  cn runs on cron (every 5 min). It:\n  1. Syncs peers \xE2\x86\x92 queues new inbox items to state/queue/\n  2. If input.md empty \xE2\x86\x92 pops from queue \xE2\x86\x92 writes input.md \xE2\x86\x92 wakes agent\n  Agent reads input.md, processes, deletes when done.\n";
-    var version = "2.2.23";
+    var version = "2.2.24";
     module2.exports = {
       starts_with,
       strip_prefix,
@@ -27279,6 +27279,130 @@ function reject_orphan_branch(hub_path, peer_name, branch) {
     _1: "Rejected orphan: %s (from %s)"
   }), branch, author)));
 }
+function parse_rejected_branch(content) {
+  const match2 = Stdlib__String.split_on_char(
+    /* '`' */
+    96,
+    content
+  );
+  if (!match2) {
+    return;
+  }
+  const match$1 = match2.tl;
+  if (!match$1) {
+    return;
+  }
+  const branch = match$1.hd;
+  if (branch.length !== 0 && content.length >= 8 && Stdlib__String.sub(content, 0, 8) === "Branch `") {
+    return branch;
+  }
+}
+function cleanup_rejected_branch(hub_path, branch) {
+  const cmd2 = Curry._1(Stdlib__Printf.sprintf({
+    TAG: (
+      /* Format */
+      0
+    ),
+    _0: {
+      TAG: (
+        /* String_literal */
+        11
+      ),
+      _0: "git branch -D ",
+      _1: {
+        TAG: (
+          /* String */
+          2
+        ),
+        _0: (
+          /* No_padding */
+          0
+        ),
+        _1: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: " 2>/dev/null",
+          _1: (
+            /* End_of_format */
+            0
+          )
+        }
+      }
+    },
+    _1: "git branch -D %s 2>/dev/null"
+  }), branch);
+  const match2 = exec_in(hub_path, cmd2);
+  if (match2 !== void 0) {
+    Curry._1(Stdlib__Printf.sprintf({
+      TAG: (
+        /* Format */
+        0
+      ),
+      _0: {
+        TAG: (
+          /* String_literal */
+          11
+        ),
+        _0: "deleted local branch ",
+        _1: {
+          TAG: (
+            /* String */
+            2
+          ),
+          _0: (
+            /* No_padding */
+            0
+          ),
+          _1: (
+            /* End_of_format */
+            0
+          )
+        }
+      },
+      _1: "deleted local branch %s"
+    }), branch);
+    console.log(color("2", Curry._1(Stdlib__Printf.sprintf({
+      TAG: (
+        /* Format */
+        0
+      ),
+      _0: {
+        TAG: (
+          /* String_literal */
+          11
+        ),
+        _0: "  Cleaned up rejected branch: ",
+        _1: {
+          TAG: (
+            /* String */
+            2
+          ),
+          _0: (
+            /* No_padding */
+            0
+          ),
+          _1: (
+            /* End_of_format */
+            0
+          )
+        }
+      },
+      _1: "  Cleaned up rejected branch: %s"
+    }), branch)));
+    return true;
+  } else {
+    return false;
+  }
+}
+function process_rejection_cleanup(hub_path, content) {
+  const branch = parse_rejected_branch(content);
+  if (branch !== void 0) {
+    cleanup_rejected_branch(hub_path, branch);
+    return;
+  }
+}
 function get_inbound_branches(clone_path, my_name) {
   return Stdlib__Option.value(
     Stdlib__Option.map(split_lines, exec_in(clone_path, Curry._1(Stdlib__Printf.sprintf({
@@ -28044,6 +28168,7 @@ function materialize_branch(clone_path, hub_path, inbox_dir, peer_name, branch) 
         },
         _1: "%s trigger:%s"
       }), inbox_file, trigger);
+      process_rejection_cleanup(hub_path, content);
       delete_remote_branch(clone_path, branch);
       return inbox_file;
     }), files);
@@ -38472,6 +38597,9 @@ module.exports = {
   is_orphan_branch,
   get_branch_author,
   reject_orphan_branch,
+  parse_rejected_branch,
+  cleanup_rejected_branch,
+  process_rejection_cleanup,
   get_inbound_branches,
   inbox_check,
   materialize_branch,

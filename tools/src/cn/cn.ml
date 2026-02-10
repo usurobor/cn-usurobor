@@ -259,6 +259,37 @@ let reject_orphan_branch hub_path peer_name branch =
   log_action hub_path "inbox.reject" (Printf.sprintf "branch:%s peer:%s author:%s reason:orphan" branch peer_name author);
   print_endline (fail (Printf.sprintf "Rejected orphan: %s (from %s)" branch author))
 
+(* === Rejection Terminal Cleanup === *)
+(* When receiving a rejection notice, delete the local branch that was rejected.
+   Rejection is terminal — the message will never be delivered. *)
+
+(* Parse rejected branch name from content: "Branch `<branch>` rejected" *)
+let parse_rejected_branch content =
+  match String.split_on_char '`' content with
+  | _ :: branch :: _ when String.length branch > 0 
+      && String.length content >= 8
+      && String.sub content 0 8 = "Branch `" ->
+      Some branch
+  | _ -> None
+
+(* Delete local branch that was rejected *)
+let cleanup_rejected_branch hub_path branch =
+  let cmd = Printf.sprintf "git branch -D %s 2>/dev/null" branch in
+  match Child_process.exec_in ~cwd:hub_path cmd with
+  | Some _ ->
+      log_action hub_path "rejection.cleanup" (Printf.sprintf "deleted local branch %s" branch);
+      print_endline (dim (Printf.sprintf "  Cleaned up rejected branch: %s" branch));
+      true
+  | None -> false  (* branch didn't exist locally, that's fine *)
+
+(* Process rejection notice: materialize and cleanup dead branch *)
+let process_rejection_cleanup hub_path content =
+  match parse_rejected_branch content with
+  | Some branch -> 
+      let _ = cleanup_rejected_branch hub_path branch in
+      ()
+  | None -> ()
+
 (* === Result Types === *)
 
 type branch_info = { peer: string; branch: string }
@@ -363,6 +394,8 @@ let materialize_branch ~clone_path ~hub_path ~inbox_dir ~peer_name ~branch =
             let meta = [("from", peer_name); ("branch", branch); ("trigger", trigger); ("file", file); ("received", now_iso ())] in
             Fs.write inbox_path (update_frontmatter content meta);
             log_action hub_path "inbox.materialize" (Printf.sprintf "%s trigger:%s" inbox_file trigger);
+            (* If this is a rejection notice, cleanup the dead local branch *)
+            process_rejection_cleanup hub_path content;
             (* Delete remote branch from peer's clone after successful materialization *)
             let _ = delete_remote_branch clone_path branch in
             Some inbox_file)

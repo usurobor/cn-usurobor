@@ -1,6 +1,6 @@
 {
   "name": "cnagent",
-  "version": "2.2.23",
+  "version": "2.2.24",
   "description": "Coherent Network agent CLI — everything runs through cn",
   "keywords": [
     "cnos",

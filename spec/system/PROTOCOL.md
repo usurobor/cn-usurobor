@@ -56,6 +56,45 @@ Rejection sends notice to sender:
 
 ---
 
+## Rejection Terminal Cleanup
+
+When receiving a rejection notice, the sender must clean up the dead branch.
+Rejection is a **terminal state** — the message will never be delivered.
+
+**Invariant:** After processing a rejection, the rejected branch no longer exists locally.
+
+Parse rejected branch from notice:
+
+```ocaml
+# parse_rejected_branch "Branch `pi/failed-topic` rejected and deleted.";;
+- : string option = Some "pi/failed-topic"
+
+# parse_rejected_branch "Some other message";;
+- : string option = None
+```
+
+Cleanup deletes the local branch:
+
+```ocaml
+# rejection_cleanup ~hub_path:"/path/to/hub" ~branch:"pi/failed-topic";;
+- : cleanup_result = Deleted "pi/failed-topic"
+
+# rejection_cleanup ~hub_path:"/path/to/hub" ~branch:"pi/nonexistent";;
+- : cleanup_result = NotFound "pi/nonexistent"
+```
+
+Full flow when materializing a rejection:
+
+```ocaml
+# process_rejection_notice ~hub_path:"/path/to/hub" ~content:"Branch `pi/failed-topic` rejected and deleted.";;
+- : rejection_result = { materialized = true; branch_deleted = Some "pi/failed-topic" }
+
+# process_rejection_notice ~hub_path:"/path/to/hub" ~content:"Regular message, not a rejection";;
+- : rejection_result = { materialized = true; branch_deleted = None }
+```
+
+---
+
 ## Message Direction
 
 Messages flow via branches in the SENDER's repo. Recipient pulls.
