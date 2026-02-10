@@ -1822,6 +1822,50 @@ let inbox_flush hub_path _name =
     | fs -> print_endline (ok (Printf.sprintf "Flushed %d thread(s)" (List.length fs)))
   end
 
+(* === Setup === *)
+
+let run_setup hub_path =
+  (* Check if running as root *)
+  let uid = match Child_process.exec "id -u" with
+    | Some s -> String.trim s
+    | None -> "unknown"
+  in
+  if uid <> "0" then begin
+    print_endline (fail "Setup requires root. Run: sudo cn setup");
+    Process.exit 1
+  end;
+  
+  print_endline (info "Setting up cn system components...");
+  
+  (* 1. Create logrotate config *)
+  let logrotate_config = {|/var/log/cn-*.log {
+    daily
+    rotate 7
+    compress
+    missingok
+    notifempty
+}
+|} in
+  let logrotate_path = "/etc/logrotate.d/cn" in
+  Fs.write logrotate_path logrotate_config;
+  print_endline (ok (Printf.sprintf "Created %s" logrotate_path));
+  
+  (* 2. Setup crontab *)
+  let cron_line = Printf.sprintf "*/5 * * * * cn-cron %s" hub_path in
+  let cmd = Printf.sprintf "echo '%s' | crontab -" cron_line in
+  (match Child_process.exec cmd with
+   | Some _ -> print_endline (ok "Crontab configured")
+   | None -> print_endline (warn "Crontab update failed - configure manually"));
+  
+  print_endline "";
+  print_endline (ok "Setup complete!");
+  print_endline "";
+  print_endline "Configured:";
+  print_endline (Printf.sprintf "  • Logrotate: %s" logrotate_path);
+  print_endline (Printf.sprintf "  • Cron: */5 * * * * cn-cron %s" hub_path);
+  print_endline "";
+  print_endline "Logs will be written to: /var/log/cn-YYYYMMDD.log"
+
 (* === Update === *)
 
 let update_cron hub_path =
@@ -1979,4 +2023,5 @@ let () =
           | Adhoc title -> run_adhoc hub_path title
           | Daily -> run_daily hub_path
           | Weekly -> run_weekly hub_path
+          | Setup -> run_setup hub_path
           | Help | Version | Init _ | Update -> () (* handled above *)

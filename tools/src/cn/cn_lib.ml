@@ -213,6 +213,7 @@ type command =
   | Adhoc of string  (* Create adhoc thread *)
   | Daily            (* Create/open daily reflection *)
   | Weekly           (* Create/open weekly reflection *)
+  | Setup            (* System setup: logrotate + cron *)
 
 (* Exhaustive - compiler warns on missing cases *)
 let string_of_command = function
@@ -263,6 +264,7 @@ let string_of_command = function
   | Adhoc t -> "adhoc " ^ t
   | Daily -> "daily"
   | Weekly -> "weekly"
+  | Setup -> "setup"
 
 (* === Alias Expansion === *)
 
@@ -385,6 +387,7 @@ let rec parse_command = function
   | ["push"] -> Some Push
   | "save" :: rest -> Some (Save (join_rest rest))
   | ["update"] -> Some Update
+  | ["setup"] -> Some Setup
   | "adhoc" :: rest -> join_rest rest |> Option.map (fun t -> Adhoc t)
   | ["daily"] -> Some Daily
   | ["weekly"] -> Some Weekly
@@ -578,6 +581,7 @@ Commands:
   
   # Hub management
   init [name]         Create new hub
+  setup               System setup (logrotate + cron) — run with sudo
   status              Show hub state
   commit [msg]        Stage + commit
   push                Push to origin
@@ -603,4 +607,4 @@ Actor Model:
   Agent reads input.md, processes, deletes when done.
 |}
 
-let version = "2.2.17"
+let version = "2.2.18"
