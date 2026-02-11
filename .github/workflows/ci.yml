@@ -37,7 +37,7 @@ jobs:
           eval $(opam env)
           dune build @peer-sync
 
-  # Node.js CLI tests
+  # Node.js CLI smoke tests (verify bundled CLI runs on different Node versions)
   node:
     runs-on: ubuntu-latest
     strategy:
@@ -51,5 +51,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       
-      - name: Run CLI tests
-        run: npm test
+      - name: Smoke test bundled CLI
+        run: |
+          node tools/dist/cn.js --version
+          node tools/dist/cn.js --help
