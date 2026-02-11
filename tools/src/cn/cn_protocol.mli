@@ -57,12 +57,14 @@ type actor_state =
   | InputReady     (** input.md written, agent not yet woken *)
   | Processing     (** agent working, awaiting output.md *)
   | OutputReady    (** output.md exists, ready to archive *)
+  | TimedOut       (** agent exceeded max processing time *)
 
 type actor_event =
   | Queue_pop
   | Queue_empty
   | Wake
   | Output_received
+  | Timeout          (** processing exceeded max cycles *)
   | Archive_complete
   | Archive_fail
 
@@ -73,6 +75,9 @@ val actor_transition : actor_state -> actor_event -> (actor_state, string) resul
 
 val actor_derive_state : input_exists:bool -> output_exists:bool -> actor_state
 (** Derive actor state from filesystem: input.md and output.md existence. *)
+
+val actor_derive_state_with_timeout : input_exists:bool -> output_exists:bool -> input_age_min:int -> max_age_min:int -> actor_state
+(** Derive actor state with timeout check. If input.md exists and age > max_age, returns TimedOut. *)
 
 
 (** {1 FSM 3: Transport Sender} *)

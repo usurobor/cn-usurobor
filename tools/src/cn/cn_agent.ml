@@ -451,9 +451,29 @@ let run_inbound hub_path name =
   (* Step 3: Actor FSM — derive state, apply transitions *)
   let inp = input_path hub_path in
   let outp = output_path hub_path in
-  let actor_state = Cn_protocol.actor_derive_state
+  
+  (* Timeout config: read from env or use defaults *)
+  let cron_period_min = match Sys.getenv_opt "CN_CRON_PERIOD_MIN" with
+    | Some s -> (try int_of_string s with _ -> 5)
+    | None -> 5 in
+  let timeout_cycles = match Sys.getenv_opt "CN_TIMEOUT_CYCLES" with
+    | Some s -> (try int_of_string s with _ -> 6)
+    | None -> 6 in
+  let max_age_min = cron_period_min * timeout_cycles in
+  
+  (* Calculate input.md age in minutes *)
+  let input_age_min = 
+    if Cn_ffi.Fs.exists inp then
+      let stat = Unix.stat inp in
+      let age_sec = Unix.time () -. stat.Unix.st_mtime in
+      int_of_float (age_sec /. 60.0)
+    else 0 in
+  
+  let actor_state = Cn_protocol.actor_derive_state_with_timeout
     ~input_exists:(Cn_ffi.Fs.exists inp)
-    ~output_exists:(Cn_ffi.Fs.exists outp) in
+    ~output_exists:(Cn_ffi.Fs.exists outp)
+    ~input_age_min
+    ~max_age_min in
 
   print_endline (Cn_fmt.dim (Printf.sprintf "Actor state: %s"
     (Cn_protocol.string_of_actor_state actor_state)));
@@ -469,9 +489,17 @@ let run_inbound hub_path name =
              if feed_next_input hub_path then wake_agent hub_path
            end
        | Ok _ -> ())
+  | Cn_protocol.TimedOut ->
+      (* Agent timed out — archive as failed, proceed to next *)
+      print_endline (Cn_fmt.warn (Printf.sprintf "Agent timeout (age=%d min, max=%d min)" input_age_min max_age_min));
+      Cn_hub.log_action hub_path "actor.timeout" (Printf.sprintf "age:%d max:%d" input_age_min max_age_min);
+      if archive_io_pair hub_path name then begin
+        auto_save hub_path name;
+        if feed_next_input hub_path then wake_agent hub_path
+      end
   | Cn_protocol.Processing ->
-      (* Agent working — wait *)
-      print_endline (Cn_fmt.info "Agent working (input.md exists, awaiting output.md)");
+      (* Agent working — show progress *)
+      print_endline (Cn_fmt.info (Printf.sprintf "Agent working (%d/%d min)" input_age_min max_age_min));
       print_endline (Cn_fmt.info (Printf.sprintf "Queue depth: %d" (queue_count hub_path)))
   | Cn_protocol.Idle ->
       (* Nothing active — try to feed from queue *)

@@ -248,6 +248,20 @@ let%expect_test "actor: idle + wake is invalid" =
   show_actor Idle Wake;
   [%expect {| ERROR: invalid actor transition: idle + wake |}]
 
+(* --- Timeout transitions --- *)
+
+let%expect_test "actor: processing + timeout → timed_out" =
+  show_actor Processing Timeout;
+  [%expect {| processing → timed_out |}]
+
+let%expect_test "actor: timed_out + archive_complete → idle" =
+  show_actor TimedOut Archive_complete;
+  [%expect {| timed_out → idle |}]
+
+let%expect_test "actor: idle + timeout is invalid" =
+  show_actor Idle Timeout;
+  [%expect {| ERROR: invalid actor transition: idle + timeout |}]
+
 (* --- State derivation from filesystem --- *)
 
 let%expect_test "actor: derive_state" =
@@ -260,6 +274,28 @@ let%expect_test "actor: derive_state" =
     input=true output=false → processing
     input=true output=true → output_ready
     input=false output=true → idle
+  |}]
+
+let%expect_test "actor: derive_state_with_timeout" =
+  (* max_age = 30 min *)
+  let max_age = 30 in
+  (* input exists, not timed out (age=10) *)
+  let s1 = actor_derive_state_with_timeout ~input_exists:true ~output_exists:false ~input_age_min:10 ~max_age_min:max_age in
+  Printf.printf "input, age=10, max=30 → %s\n" (string_of_actor_state s1);
+  (* input exists, timed out (age=45) *)
+  let s2 = actor_derive_state_with_timeout ~input_exists:true ~output_exists:false ~input_age_min:45 ~max_age_min:max_age in
+  Printf.printf "input, age=45, max=30 → %s\n" (string_of_actor_state s2);
+  (* input exists, exactly at boundary (age=30) *)
+  let s3 = actor_derive_state_with_timeout ~input_exists:true ~output_exists:false ~input_age_min:30 ~max_age_min:max_age in
+  Printf.printf "input, age=30, max=30 → %s\n" (string_of_actor_state s3);
+  (* input exists, one over boundary (age=31) *)
+  let s4 = actor_derive_state_with_timeout ~input_exists:true ~output_exists:false ~input_age_min:31 ~max_age_min:max_age in
+  Printf.printf "input, age=31, max=30 → %s\n" (string_of_actor_state s4);
+  [%expect {|
+    input, age=10, max=30 → processing
+    input, age=45, max=30 → timed_out
+    input, age=30, max=30 → processing
+    input, age=31, max=30 → timed_out
   |}]
 
 
@@ -415,18 +451,18 @@ let%expect_test "property: thread FSM — valid/invalid counts" =
   Printf.printf "valid=%d invalid=%d total=%d\n" !valid !invalid (!valid + !invalid);
   [%expect {| valid=32 invalid=32 total=64 |}]
 
-let%expect_test "property: actor FSM — no panics (24 combinations)" =
-  let all_states = [Idle; InputReady; Processing; OutputReady] in
-  let all_events = [Queue_pop; Queue_empty; Wake; Output_received; Archive_complete; Archive_fail] in
+let%expect_test "property: actor FSM — no panics (35 combinations)" =
+  let all_states = [Idle; InputReady; Processing; OutputReady; TimedOut] in
+  let all_events = [Queue_pop; Queue_empty; Wake; Output_received; Timeout; Archive_complete; Archive_fail] in
   all_states |> List.iter (fun s ->
     all_events |> List.iter (fun e ->
       ignore (actor_transition s e)));
-  print_endline "24 combinations: no panics";
-  [%expect {| 24 combinations: no panics |}]
+  print_endline "35 combinations: no panics";
+  [%expect {| 35 combinations: no panics |}]
 
 let%expect_test "property: actor FSM — valid/invalid counts" =
-  let all_states = [Idle; InputReady; Processing; OutputReady] in
-  let all_events = [Queue_pop; Queue_empty; Wake; Output_received; Archive_complete; Archive_fail] in
+  let all_states = [Idle; InputReady; Processing; OutputReady; TimedOut] in
+  let all_events = [Queue_pop; Queue_empty; Wake; Output_received; Timeout; Archive_complete; Archive_fail] in
   let valid = ref 0 in
   let invalid = ref 0 in
   all_states |> List.iter (fun s ->
@@ -435,7 +471,7 @@ let%expect_test "property: actor FSM — valid/invalid counts" =
       | Ok _ -> incr valid
       | Error _ -> incr invalid));
   Printf.printf "valid=%d invalid=%d total=%d\n" !valid !invalid (!valid + !invalid);
-  [%expect {| valid=6 invalid=18 total=24 |}]
+  [%expect {| valid=8 invalid=27 total=35 |}]
 
 let%expect_test "property: sender FSM — no panics (36 combinations)" =
   let all_states = [S_Pending; S_BranchCreated; S_Pushing; S_Pushed; S_Failed; S_Delivered] in

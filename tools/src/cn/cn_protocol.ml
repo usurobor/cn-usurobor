@@ -125,18 +125,21 @@ type actor_state =
   | InputReady     (* input.md written, agent not yet woken *)
   | Processing     (* agent working, awaiting output.md *)
   | OutputReady    (* output.md exists, ready to archive *)
+  | TimedOut       (* agent exceeded max processing time *)
 
 type actor_event =
   | Queue_pop
   | Queue_empty
   | Wake
   | Output_received
+  | Timeout          (* processing exceeded max cycles *)
   | Archive_complete
   | Archive_fail
 
 let string_of_actor_state = function
   | Idle -> "idle" | InputReady -> "input_ready"
   | Processing -> "processing" | OutputReady -> "output_ready"
+  | TimedOut -> "timed_out"
 
 let actor_transition state event =
   match state, event with
@@ -144,12 +147,15 @@ let actor_transition state event =
   | Idle,         Queue_empty       -> Ok Idle
   | InputReady,   Wake              -> Ok Processing
   | Processing,   Output_received   -> Ok OutputReady
+  | Processing,   Timeout           -> Ok TimedOut     (* supervisor recovery *)
   | OutputReady,  Archive_complete  -> Ok Idle
   | OutputReady,  Archive_fail      -> Ok OutputReady  (* retry *)
+  | TimedOut,     Archive_complete  -> Ok Idle         (* timeout recovery done *)
   | s, e ->
       let ev_str = match e with
         | Queue_pop -> "queue_pop" | Queue_empty -> "queue_empty"
         | Wake -> "wake" | Output_received -> "output_received"
+        | Timeout -> "timeout"
         | Archive_complete -> "archive_complete" | Archive_fail -> "archive_fail"
       in
       Error (Printf.sprintf "invalid actor transition: %s + %s"
@@ -159,7 +165,15 @@ let actor_transition state event =
 let actor_derive_state ~input_exists ~output_exists =
   match input_exists, output_exists with
   | false, false -> Idle
-  | true,  false -> Processing
+  | true,  false -> Processing  (* caller checks age for TimedOut *)
+  | true,  true  -> OutputReady
+  | false, true  -> Idle  (* stale output, treat as idle *)
+
+(* Derive actor state with timeout check *)
+let actor_derive_state_with_timeout ~input_exists ~output_exists ~input_age_min ~max_age_min =
+  match input_exists, output_exists with
+  | false, false -> Idle
+  | true,  false -> if input_age_min > max_age_min then TimedOut else Processing
   | true,  true  -> OutputReady
   | false, true  -> Idle  (* stale output, treat as idle *)
 
