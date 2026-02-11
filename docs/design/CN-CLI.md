@@ -60,14 +60,14 @@ Agent thinks and decides. `cn` senses and executes. The agent never touches git,
 ## Distribution
 
 ```bash
-# Install globally via npm
-npm install -g cnagent
+# Install via git (one-liner)
+curl -fsSL https://raw.githubusercontent.com/usurobor/cnos/main/install.sh | sh
 
-# Or run directly
-npx cnagent <command>
+# Update
+cn update
 ```
 
-**Users never clone cnos repo.** They install the CLI, which bootstraps everything.
+**Users install the CLI, which bootstraps everything.** Updates are pulled directly from git.
 
 ## Command Structure
 
@@ -278,21 +278,18 @@ npx esbuild _build/.../cn.js --bundle --platform=node --outfile=dist/cn.js
 node dist/cn.js inbox check
 ```
 
-### npm Package
+### Package Structure
 
-`package.json`:
+The CLI is distributed as bundled JavaScript:
 
-```json
-{
-  "name": "cnagent",
-  "version": "1.0.0",
-  "bin": {
-    "cn": "./dist/cn.js"
-  },
-  "files": ["dist/"],
-  "engines": {"node": ">=18"}
-}
 ```
+cnos/
+├── tools/dist/cn.js     # Bundled CLI
+├── bin/cn               # Entry wrapper
+└── install.sh           # One-liner installer
+```
+
+Installed to `/usr/local/lib/cnos/`, binary linked at `/usr/local/bin/cn`.
 
 ## Command Routing
 
@@ -389,7 +386,7 @@ cn import                   # Import hub state
 
 ## Success Criteria
 
-1. `npm install -g cnagent && cn init sigma` creates working hub
+1. Install + `cn init sigma` creates working hub
 2. `cn inbox check` shows inbound with UX-CLI compliant output
 3. Agent never needs to run git commands directly
 4. Works offline (after initial clone)
@@ -400,4 +397,4 @@ cn import                   # Import hub state
 2. Wire existing inbox tool as `cn inbox`
 3. Add `cn init` command
 4. Add `cn peer` commands
-5. Package for npm
+5. Distribute via git
