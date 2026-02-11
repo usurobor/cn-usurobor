@@ -30,6 +30,7 @@
 ; CN command modules (all share cn_ffi, cn_lib)
 (library
  (name cn_cmd)
+ (wrapped false)
  (modules cn_fmt cn_hub cn_mail cn_gtd cn_agent cn_mca
           cn_commands cn_system)
  (libraries cn_ffi cn_lib inbox_lib git cn_io)
