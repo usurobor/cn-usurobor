@@ -30,7 +30,7 @@ let drop n lst =
 let () =
   Cn_system.self_update_check ();
 
-  let args = Cn_ffi.Process.argv |> Array.to_list |> drop 2 in
+  let args = Cn_ffi.Process.argv |> Array.to_list |> drop 1 in
   let flags, cmd_args = parse_flags args in
   Cn_fmt.dry_run_mode := flags.dry_run;
   if flags.dry_run then Cn_fmt.dry_run_banner ();
