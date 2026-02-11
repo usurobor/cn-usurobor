@@ -143,6 +143,8 @@ let sync_inbox ~hub ~peers =
     let branches = get_inbound_branches ~hub ~peer_name:peer.name in
     let materialized = branches |> List.fold_left (fun acc2 b ->
       let files = materialize_branch ~hub ~inbox_dir ~peer_name:peer.name ~branch:b.branch in
+      (* Clean up local branch after processing (regardless of materialization) *)
+      let _ = Git.delete_local_branch ~cwd:hub ~branch:b.branch in
       acc2 + List.length files
     ) 0 in
     acc + materialized

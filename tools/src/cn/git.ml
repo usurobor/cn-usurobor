@@ -78,6 +78,9 @@ let checkout_create ~cwd ~branch =
 let checkout_main ~cwd =
   Child_process.exec_in ~cwd "git checkout main 2>/dev/null || git checkout master" |> Option.is_some
 
+let delete_local_branch ~cwd ~branch =
+  Child_process.exec_in ~cwd (Printf.sprintf "git branch -D %s 2>/dev/null" branch) |> Option.is_some
+
 (* === Query Operations === *)
 
 let status_porcelain ~cwd =
