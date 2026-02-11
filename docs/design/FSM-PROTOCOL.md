@@ -43,7 +43,7 @@ Lifecycle of an outbound message from creation to delivery.
 
 ```
                 ┌──────────┐
-                │ Pending  │  file in threads/outbox/
+                │ Pending  │  file in threads/mail/outbox/
                 └────┬─────┘
                      │ create_branch
                      ▼

@@ -78,5 +78,5 @@ Two agents (Sigma and Pi) failed to coordinate for 4 hours despite both being on
 
 ## Related
 
-- Design doc: [ACTOR-MODEL-DESIGN.md](../design/ACTOR-MODEL-DESIGN.md)
+- Design doc: [ACTOR-MODEL-DESIGN.md](../design/_archive/ACTOR-MODEL-DESIGN.md) (archived)
 - Branch: `sigma/actor-model-design`

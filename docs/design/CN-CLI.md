@@ -1,214 +1,159 @@
-# CN CLI Design
+# CN CLI Reference
 
-**Status:** Draft  
-**Author:** Sigma  
-**Date:** 2026-02-05
+**Status:** Current
+**Date:** 2026-02-11
+**Author:** Sigma
 
-## Design Moment
+---
 
-**Everything runs through `cn`.**
-
-Like `npm` for Node.js, `cn` is the single entrypoint for all agent operations. Agents don't run git commands directly, don't write files manually, don't manage state by hand. They use `cn`.
-
-## Inspiration: Best-in-Class CLIs
-
-### npm
-- `npm init` — interactive with smart defaults
-- Aliases: `npm i` = `npm install`
-- Scripts: `npm run <name>` — extensible
-- `npm doctor` — self-diagnose
-
-### git
-- `git status` — always shows what to do next
-- Porcelain (human) vs plumbing (machine) modes
-- Configurable aliases
-- Contextual help
-
-### gh (GitHub CLI)
-- `gh auth login` — guided flow, no manual tokens
-- `gh pr create` — smart defaults from branch
-- `--json` flag for machine output
-- Errors include fix commands
-
-### cargo (Rust)
-- `cargo new` — scaffolds complete project
-- `cargo run` — build + execute in one
-- Colored, structured output
-- `cargo fmt`, `cargo clippy` — tooling included
-
-## Patterns to Adopt
-
-| Pattern | Example | Why |
-|---------|---------|-----|
-| **Smart defaults** | `cn init` guesses name from directory | Reduce friction |
-| **Progressive disclosure** | Simple output by default, `--verbose` for detail | Don't overwhelm |
-| **Machine-readable** | `--json` flag on all commands | Scriptable |
-| **Helpful errors** | Show exact fix command | Recovery without docs |
-| **Aliases** | `cn i` = `cn inbox`, `cn s` = `cn status` | Speed for experts |
-| **Status command** | `cn status` always works, shows everything | Orientation |
-| **Doctor command** | `cn doctor` checks git, config, peers | Self-service debug |
-| **Shell completion** | `cn completion bash/zsh/fish` | Discoverability |
-| **Dry run** | `cn inbox flush --dry-run` | Safe exploration |
-| **Quiet mode** | `cn inbox check --quiet` | For scripts |
-
-## Core Principle
+## Design Principle
 
 **Agent = brain. cn = body.**
 
-Agent thinks and decides. `cn` senses and executes. The agent never touches git, filesystem, or network directly — `cn` does it all.
+Agent thinks and decides. `cn` senses and executes. The agent never touches git, filesystem, or network directly. Everything goes through `cn`.
 
-## Distribution
-
-```bash
-# Install via git (one-liner)
-curl -fsSL https://raw.githubusercontent.com/usurobor/cnos/main/install.sh | sh
-
-# Update
-cn update
-```
-
-**Users install the CLI, which bootstraps everything.** Updates are pulled directly from git.
-
-## Command Structure
+## Usage
 
 ```
-cn <command> [subcommand] [options]
+cn <command> [options]
+```
+
+## Commands
+
+### Agent Decisions (GTD)
+
+The five GTD operations on threads:
+
+```
+cn delete <thread>           Discard thread
+cn defer <thread> [until]    Postpone thread
+cn delegate <thread> <peer>  Forward thread to peer
+cn do <thread>               Claim/start thread → threads/doing/
+cn done <thread>             Complete thread → threads/archived/
+```
+
+Plus direct communication:
+
+```
+cn reply <thread> <message>  Append reply to thread
+cn send <peer> <message>     Send message to peer (or self)
+```
+
+### Agent Output (Structured)
+
+For agent-to-cn structured responses (used by actor loop):
+
+```
+cn out do reply --message <msg>
+cn out do send --to <peer> --message <msg>
+cn out do surface --desc <desc>
+cn out do noop --reason <reason>          Reason must be ≥10 chars, non-trivial
+cn out do commit --artifact <path>
+cn out defer --reason <reason>
+cn out delegate --to <peer>
+cn out delete --reason <reason>
+```
+
+### Orchestration
+
+```
+cn sync                      Fetch inbound + send outbound
+cn in                        Queue inbox → input.md → wake agent
+cn next                      Get next inbox item (with cadence priority)
+cn read <thread>             Display thread content
+cn inbox [check]             List inbound branches / materialized threads
+cn inbox process             Materialize inbound branches as threads
+cn inbox flush               Execute queued agent decisions
+cn outbox [check]            List outbound threads
+cn outbox flush              Push outbox threads to peers
+cn queue [list]              Show task queue
+cn queue clear               Empty task queue
+cn mca [list]                List managed concern aggregations
+cn mca add <description>     Surface MCA for community pickup
+```
+
+### Thread Creation
+
+```
+cn adhoc <title>             Create adhoc thread in threads/adhoc/
+cn daily                     Create/show daily reflection
+cn weekly                    Create/show weekly reflection
 ```
 
 ### Hub Management
 
-```bash
-cn init [name]              # Create new hub (interactive)
-cn init --name sigma        # Create hub with name
-cn status                   # Show hub state, peers, pending
+```
+cn init [name]               Create new hub
+cn setup                     System setup (logrotate + cron) — run with sudo
+cn status                    Show hub state
+cn doctor                    Health check
+cn update                    Update cn to latest version
+cn commit [message]          Stage + commit
+cn push                      Push to origin
+cn save [message]            Commit + push (shorthand)
+cn peer [list]               List peers
+cn peer add <name> <url>     Add peer
+cn peer remove <name>        Remove peer
+cn peer sync                 Fetch all peer repos
 ```
 
-### Inbox (Coordination)
-
-```bash
-cn inbox                    # Alias for 'cn inbox check'
-cn inbox check              # List inbound branches
-cn inbox process            # Materialize branches as threads
-cn inbox flush              # Execute decisions from threads
-cn inbox log                # Show today's inbox log
-```
-
-### Peer Management
-
-```bash
-cn peer                     # List peers
-cn peer add <name> <url>    # Add peer
-cn peer remove <name>       # Remove peer
-cn peer sync                # Fetch all peer repos
-```
-
-### Outbound (Sending)
-
-```bash
-cn send <peer> <branch>     # Push branch to peer's repo
-cn send --all <branch>      # Push to all peers
-```
-
-### Actions (Low-level)
-
-```bash
-cn run <action>             # Execute single atomic action
-cn run checkout main
-cn run merge pi/feature
-cn run push origin main
-```
-
-### Threads
-
-```bash
-cn thread new <topic>       # Create adhoc thread
-cn thread daily             # Open/create today's daily thread
-cn thread list              # List recent threads
-```
-
-### Config
-
-```bash
-cn config                   # Show current config
-cn config set <key> <val>   # Set config value
-cn config get <key>         # Get config value
-```
-
-### Update
-
-```bash
-cn update                   # Update cn CLI to latest
-cn update --check           # Check for updates without installing
-```
-
-### Diagnostics
-
-```bash
-cn doctor                   # Check git, config, peers, connectivity
-```
-
-### Aliases (Built-in)
-
-```bash
-cn i                        # cn inbox
-cn s                        # cn status
-cn p                        # cn peer
-```
-
-### Global Flags
-
-```bash
---json                      # Machine-readable JSON output
---quiet, -q                 # Minimal output (exit code only)
---verbose, -v               # Detailed output
---dry-run                   # Show what would happen
---help, -h                  # Show help
---version                   # Show version
-```
-
-## Output Format (UX-CLI Compliant)
-
-All output follows `skills/ux-cli/SKILL.md`:
+### Aliases
 
 ```
-cn inbox check
-
-Checking inbox for sigma...
-
-  cnos................... ✓ (no inbound)
-  pi......................... ⚡ (3 inbound)
-
-=== INBOUND BRANCHES ===
-From pi:
-  • pi/feature-proposal
-  • pi/doc-update
-  • pi/bugfix
-
-[status] ok=cnos inbound=pi:3 version=1.0.0
+i = inbox    o = outbox    s = status    d = doctor
 ```
 
-### Error Output
+`cn in`, `cn inbound`, and `cn process` are all aliases for the inbound command.
+
+### Flags
 
 ```
-cn inbox flush
-
-✗ Cannot continue — no decisions found
-
-Threads without decisions:
-  • threads/inbox/pi-feature-proposal.md
-  • threads/inbox/pi-doc-update.md
-
-Fix by adding decisions to each thread:
-
-  1) Edit threads/inbox/pi-feature-proposal.md
-  2) Add: decision: do:merge (or delete:<reason>)
-
-After completing the steps above, run:
-
-  cn inbox flush
-
-[status] pending=2 version=1.0.0
+--help, -h       Show help
+--version, -V    Show version
+--json           Machine-readable output
+--quiet, -q      Minimal output
+--dry-run        Show what would happen
+--verbose, -v    Detailed output
 ```
+
+## Command Types (Implementation)
+
+From `cn_lib.ml` — exhaustive variant, compiler warns on missing cases:
+
+```ocaml
+type command =
+  | Help | Version | Status | Doctor
+  | Init of string option
+  | Inbox of Inbox.cmd         (* Check | Process | Flush *)
+  | Outbox of Outbox.cmd       (* Check | Flush *)
+  | Peer of Peer.cmd           (* List | Add | Remove | Sync *)
+  | Queue of Queue.cmd         (* List | Clear *)
+  | Mca of Mca.cmd             (* List | Add *)
+  | Sync | Next | Inbound
+  | Read of string
+  | Reply of string * string
+  | Send of string * string
+  | Gtd of Gtd.cmd             (* Delete | Defer | Delegate | Do | Done *)
+  | Out of Out.gtd             (* Structured agent output *)
+  | Commit of string option
+  | Push
+  | Save of string option
+  | Adhoc of string
+  | Daily | Weekly
+  | Update | Setup
+```
+
+## Dispatch
+
+`cn.ml` is ~100 lines of pure routing. It:
+
+1. Parses flags (`--dry-run`, `--json`, etc.)
+2. Parses command (string list → `command option`)
+3. Finds hub (`Cn_hub.find_hub_path`)
+4. Routes to module (`Cn_mail.inbox_check`, `Cn_agent.run_inbound`, etc.)
+
+Commands that work without a hub: `help`, `version`, `init`, `update`.
+All others require being inside a hub directory.
 
 ## Directory Structure
 
@@ -216,185 +161,72 @@ After completing the steps above, run:
 
 ```
 cn-<name>/
-├── spec/
-│   ├── SOUL.md           # Agent identity
-│   ├── USER.md           # Human context
-│   └── HEARTBEAT.md      # Heartbeat config
-├── threads/
-│   ├── daily/
-│   ├── weekly/
-│   ├── adhoc/
-│   └── inbox/
-├── state/
-│   ├── peers.md          # Peer registry
-│   └── hub.md            # Hub metadata
-├── logs/
-│   └── inbox/
-└── .cn/
-    └── config.json       # Local config
+ +-- .cn/
+ |    +-- config.yaml
+ +-- threads/
+ |    +-- in/
+ |    +-- mail/
+ |    |    +-- inbox/
+ |    |    +-- outbox/
+ |    |    +-- sent/
+ |    +-- doing/
+ |    +-- deferred/
+ |    +-- archived/
+ |    +-- adhoc/
+ |    +-- reflections/
+ |         +-- daily/
+ |         +-- weekly/
+ +-- state/
+ |    +-- peers.md
+ |    +-- runtime.md
+ |    +-- queue/
+ |    +-- mca/
+ +-- logs/
+ |    +-- runs/
+ +-- spec/
 ```
 
-## Config File
-
-`.cn/config.json`:
-
-```json
-{
-  "name": "sigma",
-  "version": "1.0.0",
-  "hub_path": "/path/to/cn-sigma",
-  "peers": [
-    {"name": "pi", "url": "git@github.com:user/cn-pi.git"}
-  ],
-  "defaults": {
-    "branch": "main",
-    "remote": "origin"
-  }
-}
-```
+See [ARCHITECTURE.md](../ARCHITECTURE.md) for full directory layout details.
 
 ## Implementation
 
-### Language: OCaml → Melange → JS
-
 ```
-tools/src/cli/
-├── cn.ml                 # Main entrypoint
-├── cn_commands.ml        # Command implementations
-├── cn_config.ml          # Config handling
-└── cn_output.ml          # UX-CLI compliant output
+tools/src/cn/
+ +-- cn.ml              CLI dispatch
+ +-- cn_lib.ml          Types, parsing, help text (pure)
+ +-- cn_agent.ml        Agent loop, queue, out commands
+ +-- cn_mail.ml         Inbox/outbox transport
+ +-- cn_gtd.ml          GTD commands + thread creation
+ +-- cn_mca.ml          MCA commands
+ +-- cn_commands.ml     Peer + git commands
+ +-- cn_system.ml       Init, setup, update, status, doctor
+ +-- cn_hub.ml          Hub discovery, paths
+ +-- cn_fmt.ml          Output formatting
+ +-- cn_ffi.ml          System bindings
+ +-- cn_io.ml           Protocol I/O
+ +-- cn_protocol.ml     Typed FSMs
+ +-- git.ml             Raw git operations
 ```
 
-### Build & Bundle
+### Build
 
 ```bash
-# Build with Melange
-dune build tools/src/cli
-
-# Bundle with esbuild
-npx esbuild _build/.../cn.js --bundle --platform=node --outfile=dist/cn.js
-
-# Test
-node dist/cn.js inbox check
+dune build tools/src/cn          # Build with Melange
+npx esbuild ... --bundle         # Bundle to dist/cn.js
 ```
 
-### Package Structure
+Installed to `/usr/local/lib/cnos/`, binary at `/usr/local/bin/cn`.
 
-The CLI is distributed as bundled JavaScript:
-
-```
-cnos/
-├── tools/dist/cn.js     # Bundled CLI
-├── bin/cn               # Entry wrapper
-└── install.sh           # One-liner installer
-```
-
-Installed to `/usr/local/lib/cnos/`, binary linked at `/usr/local/bin/cn`.
-
-## Command Routing
-
-```ocaml
-type command =
-  | Init of { name: string option }
-  | Status
-  | Inbox of inbox_cmd
-  | Peer of peer_cmd
-  | Send of { peer: string; branch: string }
-  | Run of action
-  | Thread of thread_cmd
-  | Config of config_cmd
-  | Update of { check_only: bool }
-
-and inbox_cmd = Check | Process | Flush | Log
-and peer_cmd = List | Add of string * string | Remove of string | Sync
-and thread_cmd = New of string | Daily | List
-and config_cmd = Show | Set of string * string | Get of string
-```
-
-## Exit Codes
+### Exit Codes
 
 | Code | Meaning |
 |------|---------|
 | 0 | Success |
-| 1 | Error (general) |
-| 2 | Pending items (inbox has inbound, needs attention) |
-
-## cn doctor (Self-Diagnosis)
-
-Like `npm doctor`, checks system health:
-
-```
-cn doctor
-
-Checking cn-sigma health...
-
-  git........................ ✓ installed (2.43.0)
-  git config user.name....... ✓ set (Sigma)
-  git config user.email...... ✓ set (sigma@example.com)
-  hub directory.............. ✓ exists
-  .cn/config.json............ ✓ valid
-  spec/SOUL.md............... ✓ exists
-  state/peers.md............. ✓ 2 peers configured
-  origin remote.............. ✓ reachable
-  peer: pi................... ✓ reachable
-  peer: cnos............. ✓ reachable
-  inbox...................... ⚠ 3 pending (run: cn inbox)
-
-All critical checks passed.
-
-[status] ok=10 warn=1 fail=0 version=1.0.0
-```
-
-On failure:
-
-```
-cn doctor
-
-Checking cn-sigma health...
-
-  git........................ ✓ installed (2.43.0)
-  git config user.name....... ✗ not set
-  git config user.email...... ✗ not set
-
-✗ 2 issues found
-
-Fix by running:
-
-  1) git config --global user.name "Your Name"
-  2) git config --global user.email "you@example.com"
-
-Then run: cn doctor
-
-[status] ok=1 warn=0 fail=2 version=1.0.0
-```
-
-## Future Commands (YAGNI for now)
-
-```bash
-cn watch                    # Watch for changes, auto-process
-cn cron install             # Install system cron job
-cn export                   # Export hub state
-cn import                   # Import hub state
-```
+| 1 | Error |
 
 ## Non-Goals
 
-- **No daemon mode** — use system cron for automation
-- **No GUI** — terminal only
-- **No network services** — git is the transport
-- **No cloud dependencies** — works offline
-
-## Success Criteria
-
-1. Install + `cn init sigma` creates working hub
-2. `cn inbox check` shows inbound with UX-CLI compliant output
-3. Agent never needs to run git commands directly
-4. Works offline (after initial clone)
-
-## Next Steps
-
-1. Implement `cn` CLI entrypoint
-2. Wire existing inbox tool as `cn inbox`
-3. Add `cn init` command
-4. Add `cn peer` commands
-5. Distribute via git
+- No daemon mode (use system cron)
+- No GUI (terminal only)
+- No network services (git is the transport)
+- No cloud dependencies (works offline)

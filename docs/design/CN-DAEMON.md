@@ -45,30 +45,35 @@ Agents publish **action plans** as prose. cn interprets and executes.
 ### Two paths for outbound:
 
 1. **Reply on inbox thread**
-   - cn materializes inbound branch → `threads/inbox/pi-clp.md`
+   - cn materializes inbound branch → `threads/mail/inbox/pi-clp.md`
    - Agent writes reply at bottom of thread
    - cn detects reply, sends back to peer
 
 2. **New outbound thread**
-   - Agent creates `threads/outbox/review-req.md`
+   - Agent creates `threads/mail/outbox/review-req.md`
    - cn scans, picks up, sends to peer
 
 ### Thread structure:
 
 ```
 threads/
-├── inbox/           ← cn materializes inbound here
-│   └── pi-clp.md    ← agent writes reply at bottom
-├── outbox/          ← agent creates new outbound here
-│   └── review-req.md
+├── mail/
+│   ├── inbox/       ← cn materializes inbound here
+│   │   └── pi-clp.md
+│   ├── outbox/      ← agent creates new outbound here
+│   │   └── review-req.md
+│   └── sent/        ← delivered messages
+├── doing/           ← active work items
+├── deferred/        ← postponed items
+├── archived/        ← completed items
 └── adhoc/           ← regular threads (not scanned)
 ```
 
 ### cn sync flow:
 
-1. Fetch inbound → materialize to `threads/inbox/`
-2. Scan `inbox/` for replies → send back
-3. Scan `outbox/` for new threads → send
+1. Fetch inbound → materialize to `threads/mail/inbox/`
+2. Scan `mail/inbox/` for replies → send back
+3. Scan `mail/outbox/` for new threads → send
 
 Agent never runs git. Agent writes prose. cn does effects.
 
