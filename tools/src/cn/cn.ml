@@ -1922,10 +1922,14 @@ let run_update () =
   (* Get current version *)
   print_endline (Printf.sprintf "Current version: %s" version);
   
-  (* Check latest version *)
-  match Child_process.exec "npm view cnagent version 2>/dev/null" with
+  (* Check latest version from git *)
+  let install_dir = "/usr/local/lib/cnos" in
+  let fetch_cmd = Printf.sprintf "cd %s && git fetch origin main --quiet 2>&1" install_dir in
+  let _ = Child_process.exec fetch_cmd in
+  let version_cmd = Printf.sprintf "cd %s && git show origin/main:tools/src/cn/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*\"\\([^\"]*\\)\".*/\\1/'" install_dir in
+  match Child_process.exec version_cmd with
   | None ->
-      print_endline (fail "Could not check npm registry");
+      print_endline (fail "Could not check for updates. Is cnos installed via git?");
       Process.exit 1
   | Some latest_raw ->
       let latest = String.trim latest_raw in
@@ -1933,10 +1937,13 @@ let run_update () =
       | true -> print_endline (ok "Already up to date")
       | false ->
           print_endline (info (Printf.sprintf "New version available: %s" latest));
-          print_endline (info "Updating...");
-          match Child_process.exec "npm install -g cnagent@latest" with
+          print_endline (info "Updating via git...");
+          (* Git-based update: pull and rebuild *)
+          let install_dir = "/usr/local/lib/cnos" in
+          let pull_cmd = Printf.sprintf "cd %s && git pull --ff-only 2>&1" install_dir in
+          match Child_process.exec pull_cmd with
           | Some _ -> print_endline (ok (Printf.sprintf "Updated to v%s" latest))
-          | None -> print_endline (fail "Update failed. Try: npm install -g cnagent@latest")
+          | None -> print_endline (fail "Update failed. Try: cd /usr/local/lib/cnos && git pull")
 
 let run_update_with_cron hub_path =
   run_update ();
@@ -1961,7 +1968,7 @@ let run_update_with_cron hub_path =
 
 (* === Self-Update Check === *)
 
-(* Check npm for latest version and self-update if newer *)
+(* Check git for latest version and self-update if newer *)
 let self_update_check () =
   (* Skip for help/version commands - no need to update for those *)
   let args = Process.argv |> Array.to_list in
@@ -1970,14 +1977,20 @@ let self_update_check () =
   ) args in
   if is_skip_cmd then ()
   else
-    (* Fetch latest version from npm (no cache) *)
-    match Child_process.exec "npm view cnagent version --fetch-timeout=5000 2>/dev/null" with
-    | None -> () (* Network error - continue with current version *)
+    let install_dir = "/usr/local/lib/cnos" in
+    (* Fetch latest from git and check version *)
+    let fetch_cmd = Printf.sprintf "cd %s && git fetch origin main --quiet 2>/dev/null" install_dir in
+    let _ = Child_process.exec fetch_cmd in
+    (* Get remote version from cn_lib.ml *)
+    let version_cmd = Printf.sprintf "cd %s && git show origin/main:tools/src/cn/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*\"\\([^\"]*\\)\".*/\\1/'" install_dir in
+    match Child_process.exec version_cmd with
+    | None -> () (* Network error or not git install - continue with current version *)
     | Some latest_raw ->
         let latest = String.trim latest_raw in
         if latest <> version && latest <> "" then begin
           print_endline (info (Printf.sprintf "Updating cn %s → %s..." version latest));
-          match Child_process.exec "npm install -g cnagent@latest 2>/dev/null" with
+          let pull_cmd = Printf.sprintf "cd %s && git pull --ff-only 2>/dev/null" install_dir in
+          match Child_process.exec pull_cmd with
           | Some _ -> 
               print_endline (ok (Printf.sprintf "Updated to cn %s" latest));
               (* Re-exec with same args to run with new version *)

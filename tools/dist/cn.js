@@ -13667,7 +13667,7 @@ var require_cn_lib = __commonJS({
       );
     }
     var help_text = "cn - Coherent Network agent CLI\n\nUsage: cn <command> [options]\n\nCommands:\n  # Agent decisions (output)\n  delete <thread>     GTD: discard\n  defer <thread>      GTD: postpone\n  delegate <t> <peer> GTD: forward\n  do <thread>         GTD: claim/start\n  done <thread>       GTD: complete \xE2\x86\x92 archive\n  reply <thread> <msg> Append to thread\n  send <peer> <msg>   Message to peer (or self)\n  \n  # cn operations (orchestrator)\n  sync                Fetch inbound + send outbound\n  in                  Queue inbox \xE2\x86\x92 input.md \xE2\x86\x92 wake agent (alias: inbound, process)\n  queue [list|clear]  View or clear the task queue\n  mca [list|add <desc>] Surface MCAs for community pickup\n  inbox               List inbox threads\n  outbox              List outbox threads\n  next                Get next inbox item (with cadence)\n  read <thread>       Read thread with cadence\n  \n  # Thread creation\n  adhoc <title>       Create adhoc thread\n  daily               Create/show daily reflection\n  weekly              Create/show weekly reflection\n  \n  # Hub management\n  init [name]         Create new hub\n  setup               System setup (logrotate + cron) \xE2\x80\x94 run with sudo\n  status              Show hub state\n  commit [msg]        Stage + commit\n  push                Push to origin\n  save [msg]          Commit + push\n  peer                Manage peers\n  doctor              Health check\n  update              Update cn to latest version\n\nAliases:\n  i = inbox, o = outbox, s = status, d = doctor\n\nFlags:\n  --help, -h          Show help\n  --version, -V       Show version\n  --json              Machine-readable output\n  --quiet, -q         Minimal output\n  --dry-run           Show what would happen\n\nActor Model:\n  cn runs on cron (every 5 min). It:\n  1. Syncs peers \xE2\x86\x92 queues new inbox items to state/queue/\n  2. If input.md empty \xE2\x86\x92 pops from queue \xE2\x86\x92 writes input.md \xE2\x86\x92 wakes agent\n  Agent reads input.md, processes, deletes when done.\n";
-    var version = "2.2.24";
+    var version = "2.2.25";
     module2.exports = {
       starts_with,
       strip_prefix,
@@ -37999,7 +37999,79 @@ function run_update(param) {
     },
     _1: "Current version: %s"
   }), Cn_lib.version));
-  const latest_raw = exec("npm view cnagent version 2>/dev/null");
+  const install_dir = "/usr/local/lib/cnos";
+  const fetch_cmd = Curry._1(Stdlib__Printf.sprintf({
+    TAG: (
+      /* Format */
+      0
+    ),
+    _0: {
+      TAG: (
+        /* String_literal */
+        11
+      ),
+      _0: "cd ",
+      _1: {
+        TAG: (
+          /* String */
+          2
+        ),
+        _0: (
+          /* No_padding */
+          0
+        ),
+        _1: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: " && git fetch origin main --quiet 2>&1",
+          _1: (
+            /* End_of_format */
+            0
+          )
+        }
+      }
+    },
+    _1: "cd %s && git fetch origin main --quiet 2>&1"
+  }), install_dir);
+  exec(fetch_cmd);
+  const version_cmd = Curry._1(Stdlib__Printf.sprintf({
+    TAG: (
+      /* Format */
+      0
+    ),
+    _0: {
+      TAG: (
+        /* String_literal */
+        11
+      ),
+      _0: "cd ",
+      _1: {
+        TAG: (
+          /* String */
+          2
+        ),
+        _0: (
+          /* No_padding */
+          0
+        ),
+        _1: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: ` && git show origin/main:tools/src/cn/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*"\\([^"]*\\)".*/\\1/'`,
+          _1: (
+            /* End_of_format */
+            0
+          )
+        }
+      }
+    },
+    _1: `cd %s && git show origin/main:tools/src/cn/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*"\\([^"]*\\)".*/\\1/'`
+  }), install_dir);
+  const latest_raw = exec(version_cmd);
   if (latest_raw !== void 0) {
     const latest = Stdlib__String.trim(latest_raw);
     if (latest === Cn_lib.version) {
@@ -38034,8 +38106,43 @@ function run_update(param) {
       },
       _1: "New version available: %s"
     }), latest)));
-    console.log(color("36", "Updating..."));
-    const match2 = exec("npm install -g cnagent@latest");
+    console.log(color("36", "Updating via git..."));
+    const pull_cmd = Curry._1(Stdlib__Printf.sprintf({
+      TAG: (
+        /* Format */
+        0
+      ),
+      _0: {
+        TAG: (
+          /* String_literal */
+          11
+        ),
+        _0: "cd ",
+        _1: {
+          TAG: (
+            /* String */
+            2
+          ),
+          _0: (
+            /* No_padding */
+            0
+          ),
+          _1: {
+            TAG: (
+              /* String_literal */
+              11
+            ),
+            _0: " && git pull --ff-only 2>&1",
+            _1: (
+              /* End_of_format */
+              0
+            )
+          }
+        }
+      },
+      _1: "cd %s && git pull --ff-only 2>&1"
+    }), "/usr/local/lib/cnos");
+    const match2 = exec(pull_cmd);
     if (match2 !== void 0) {
       console.log(ok(Curry._1(Stdlib__Printf.sprintf({
         TAG: (
@@ -38066,11 +38173,11 @@ function run_update(param) {
         _1: "Updated to v%s"
       }), latest)));
     } else {
-      console.log(fail("Update failed. Try: npm install -g cnagent@latest"));
+      console.log(fail("Update failed. Try: cd /usr/local/lib/cnos && git pull"));
     }
     return;
   }
-  console.log(fail("Could not check npm registry"));
+  console.log(fail("Could not check for updates. Is cnos installed via git?"));
   process.exit(1);
 }
 function run_update_with_cron(hub_path) {
@@ -38110,7 +38217,79 @@ function self_update_check(param) {
   if (is_skip_cmd) {
     return;
   }
-  const latest_raw = exec("npm view cnagent version --fetch-timeout=5000 2>/dev/null");
+  const install_dir = "/usr/local/lib/cnos";
+  const fetch_cmd = Curry._1(Stdlib__Printf.sprintf({
+    TAG: (
+      /* Format */
+      0
+    ),
+    _0: {
+      TAG: (
+        /* String_literal */
+        11
+      ),
+      _0: "cd ",
+      _1: {
+        TAG: (
+          /* String */
+          2
+        ),
+        _0: (
+          /* No_padding */
+          0
+        ),
+        _1: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: " && git fetch origin main --quiet 2>/dev/null",
+          _1: (
+            /* End_of_format */
+            0
+          )
+        }
+      }
+    },
+    _1: "cd %s && git fetch origin main --quiet 2>/dev/null"
+  }), install_dir);
+  exec(fetch_cmd);
+  const version_cmd = Curry._1(Stdlib__Printf.sprintf({
+    TAG: (
+      /* Format */
+      0
+    ),
+    _0: {
+      TAG: (
+        /* String_literal */
+        11
+      ),
+      _0: "cd ",
+      _1: {
+        TAG: (
+          /* String */
+          2
+        ),
+        _0: (
+          /* No_padding */
+          0
+        ),
+        _1: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: ` && git show origin/main:tools/src/cn/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*"\\([^"]*\\)".*/\\1/'`,
+          _1: (
+            /* End_of_format */
+            0
+          )
+        }
+      }
+    },
+    _1: `cd %s && git show origin/main:tools/src/cn/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*"\\([^"]*\\)".*/\\1/'`
+  }), install_dir);
+  const latest_raw = exec(version_cmd);
   if (latest_raw === void 0) {
     return;
   }
@@ -38170,7 +38349,42 @@ function self_update_check(param) {
     },
     _1: "Updating cn %s \xE2\x86\x92 %s..."
   }), Cn_lib.version, latest)));
-  const match2 = exec("npm install -g cnagent@latest 2>/dev/null");
+  const pull_cmd = Curry._1(Stdlib__Printf.sprintf({
+    TAG: (
+      /* Format */
+      0
+    ),
+    _0: {
+      TAG: (
+        /* String_literal */
+        11
+      ),
+      _0: "cd ",
+      _1: {
+        TAG: (
+          /* String */
+          2
+        ),
+        _0: (
+          /* No_padding */
+          0
+        ),
+        _1: {
+          TAG: (
+            /* String_literal */
+            11
+          ),
+          _0: " && git pull --ff-only 2>/dev/null",
+          _1: (
+            /* End_of_format */
+            0
+          )
+        }
+      }
+    },
+    _1: "cd %s && git pull --ff-only 2>/dev/null"
+  }), install_dir);
+  const match2 = exec(pull_cmd);
   if (match2 !== void 0) {
     console.log(ok(Curry._1(Stdlib__Printf.sprintf({
       TAG: (
