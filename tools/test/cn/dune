@@ -1,6 +1,15 @@
 ; cn tests (ppx_expect)
 (library
  (name cn_test)
+ (modules cn_test)
  (libraries cn_lib)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
+; cn_protocol FSM tests (ppx_expect)
+(library
+ (name cn_protocol_test)
+ (modules cn_protocol_test)
+ (libraries cn_protocol)
  (inline_tests)
  (preprocess (pps ppx_expect)))
