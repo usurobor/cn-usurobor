@@ -7,33 +7,32 @@ on:
     branches: [main]
 
 jobs:
-  # OCaml native build and tests
-  build:
+  ocaml:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup OCaml
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 4.14.x
-      
+
       - name: Install dependencies
         run: |
-          opam install dune mdx ppx_expect ppxlib --yes
-      
+          opam install dune ppx_expect ppxlib mdx --yes
+
       - name: Build native binary
         run: |
           eval $(opam env)
           dune build tools/src/cn/cn.exe
-      
-      - name: Smoke test binary
+
+      - name: Run tests (cram + unit)
+        run: |
+          eval $(opam env)
+          dune runtest
+
+      - name: Smoke test
         run: |
           eval $(opam env)
           ./_build/default/tools/src/cn/cn.exe --version
           ./_build/default/tools/src/cn/cn.exe --help
-      
-      - name: Run tests
-        run: |
-          eval $(opam env)
-          dune runtest

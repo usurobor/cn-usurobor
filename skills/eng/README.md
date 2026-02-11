@@ -7,7 +7,7 @@ Software engineering practices for cnos development.
 | Skill | Purpose |
 |-------|---------|
 | `coding/` | Git workflow, branches, commits, merge protocol |
-| `ocaml/` | OCaml toolchain, conventions, Melange |
+| `ocaml/` | OCaml toolchain, conventions, native builds |
 | `design/` | Architectural design docs |
 | `review/` | Code review process, verdicts |
 | `rca/` | Root cause analysis, blameless post-mortems |

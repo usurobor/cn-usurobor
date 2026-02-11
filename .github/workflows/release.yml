@@ -1,24 +1,14 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  release:
+    types: [published]
 
 jobs:
   build:
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linux-x64
-          - os: macos-latest
-            target: macos-x64
-          - os: macos-14
-            target: macos-arm64
-
-    runs-on: ${{ matrix.os }}
-
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -28,39 +18,21 @@ jobs:
           ocaml-compiler: 4.14.x
 
       - name: Install dependencies
-        run: opam install dune --yes
+        run: |
+          opam install dune ppx_expect ppxlib mdx --yes
 
       - name: Build native binary
         run: |
           eval $(opam env)
           dune build tools/src/cn/cn.exe
 
-      - name: Package binary
+      - name: Run tests
         run: |
-          mkdir -p dist
-          cp _build/default/tools/src/cn/cn.exe dist/cn-${{ matrix.target }}
-          chmod +x dist/cn-${{ matrix.target }}
+          eval $(opam env)
+          dune runtest
 
-      - name: Upload artifact
+      - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: cn-${{ matrix.target }}
-          path: dist/cn-${{ matrix.target }}
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Create release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: artifacts/*/cn-*
-          generate_release_notes: true
+          name: cn-linux-amd64
+          path: _build/default/tools/src/cn/cn.exe

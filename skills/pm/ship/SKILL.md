@@ -47,8 +47,8 @@ git push origin --delete <agent>/<topic>
 
 After merging changes to cnos tools (cn CLI):
 
-1. **Rebuild + publish** — Engineer (Sigma) rebuilds, bumps version, publishes to npm
-2. **All agents update** — Each agent runs `npm update -g cnagent && cn update`
+1. **Rebuild** — Engineer (Sigma) rebuilds native binary, bumps version
+2. **All agents update** — Each agent runs `cn update`
 3. **Verify convergence** — Check `state/runtime.md` across all hubs for matching `cn_commit`
 
 **PM responsibility:** After merge, notify engineer to rebuild/publish, then track until all agents show same RTH.

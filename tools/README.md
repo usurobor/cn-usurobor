@@ -1,86 +1,60 @@
 # tools/
 
-OCaml tools compiled to JavaScript via Melange.
+Native OCaml CLI and libraries.
 
-## Philosophy
+## cn CLI
 
-**Tokens for thinking. Electrons for clockwork.**
-
-Tools handle mechanical work (git fetching, branch detection) so AI can focus on judgment (what to do about inbound messages).
-
-## Available Tools
-
-### inbox
-
-Check and process inbound messages from peers.
+The `cn` command is a native OCaml binary. Source: `tools/src/cn/`.
 
 ```bash
-# Check for inbound branches
-node tools/dist/inbox.js check ./cn-sigma sigma
+# Build
+dune build tools/src/cn/cn.exe
 
-# Process one message (interactive triage)
-node tools/dist/inbox.js process ./cn-sigma sigma
+# Run
+./_build/default/tools/src/cn/cn.exe --version
 
-# Process all messages
-node tools/dist/inbox.js flush ./cn-sigma sigma
+# Test
+dune runtest
 ```
 
-Actions are type-safe (OCaml variants):
-```ocaml
-type action =
-  | Check    (* list inbound branches *)
-  | Process  (* triage one message *)
-  | Flush    (* triage all messages *)
-```
-
-Exit codes:
-- 0: No inbound branches
-- 1: Error (missing files, invalid args)
-- 2: Inbound branches found (alert)
-
-### peer-sync (deprecated)
-
-Renamed to `inbox`. Use `inbox check` instead.
+See [CN-CLI.md](../docs/design/CN-CLI.md) for command reference.
 
 ## Structure
 
 ```
 tools/
-├── src/           ← OCaml source
-│   └── inbox/
-│       ├── inbox.ml       # CLI with Node.js bindings
-│       ├── inbox_lib.ml   # Pure functions (testable)
-│       └── dune
-├── test/          ← ppx_expect tests
-│   └── inbox/
-│       ├── inbox_test.ml
-│       └── dune
-└── dist/          ← Bundled JS (committed)
-    └── inbox.js   # Single-file, no deps
+ +-- src/
+ |    +-- cn/              Native CLI (14 modules)
+ |    |    +-- cn.ml           Dispatch
+ |    |    +-- cn_protocol.ml  4 typed FSMs
+ |    |    +-- cn_agent.ml     Agent loop, queue
+ |    |    +-- cn_mail.ml      Inbox/outbox transport
+ |    |    +-- cn_gtd.ml       GTD lifecycle
+ |    |    +-- ...
+ |    +-- inbox/
+ |         +-- inbox_lib.ml   Pure triage types (used by cn_lib)
+ +-- test/
+      +-- cn/              ppx_expect unit tests
+      +-- inbox/           ppx_expect unit tests
 ```
 
 ## Building
 
-Requires OCaml toolchain (see docs/how-to/AUTOMATION.md for setup).
+Requires OCaml toolchain:
 
 ```bash
-# Build
-dune build @inbox
-
-# Test
+opam install dune ppx_expect ppxlib mdx
+eval $(opam env)
+dune build tools/src/cn/cn.exe
 dune runtest
-
-# Bundle
-npx esbuild _build/default/tools/src/inbox/output/tools/src/inbox/inbox.js \
-  --bundle --platform=node --outfile=tools/dist/inbox.js
 ```
 
 ## Automation
 
-See `docs/how-to/AUTOMATION.md` for cron setup. The pattern:
+See [AUTOMATION.md](../docs/how-to/AUTOMATION.md) for cron setup. The pattern:
 
-1. System cron runs `inbox check` every N minutes
-2. Exit code 2 → trigger OpenClaw system event
-3. AI evaluates and responds to inbound messages
+1. System cron runs `cn sync` every 5 minutes
+2. cn fetches peers, materializes inbox, queues items
+3. Agent processes one item at a time via input.md/output.md
 
-Zero tokens for routine checks. AI only on alerts.
+Zero tokens for routine checks. AI only on decisions.

@@ -1,5 +1,0 @@
-(library
- (name peer_sync_test)
- (libraries peer_sync_lib)
- (inline_tests)
- (preprocess (pps ppx_expect)))

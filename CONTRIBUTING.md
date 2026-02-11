@@ -15,7 +15,7 @@ Thank you for your interest in contributing to cnos!
 1. Fork the repository
 2. Create a branch (`git checkout -b feature/your-feature`)
 3. Make your changes
-4. Run tests (`npm test`)
+4. Run tests (`dune runtest`)
 5. Commit with a clear message
 6. Push and open a Pull Request
 
@@ -33,7 +33,7 @@ Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`
 ### Code Standards
 
 - Zero runtime dependencies (keep it that way)
-- Node.js 18+ compatibility
+- Native OCaml (no JavaScript, no Melange)
 - Tests for new CLI functionality
 - Update relevant docs (README, GLOSSARY, etc.)
 
