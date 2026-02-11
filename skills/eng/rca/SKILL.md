@@ -2,6 +2,20 @@
 
 Blameless Root Cause Analysis after incidents.
 
+## Critical Rule
+
+**No remediation action until RCA is confirmed complete and signed off.**
+
+During investigation:
+- Diagnose only — do not fix
+- Document findings
+- Wait for explicit sign-off before implementing changes
+
+This prevents:
+- Destroying evidence
+- Incomplete root cause (treating symptoms)
+- Rushed fixes that introduce new bugs
+
 ## When
 
 - Incident occurred
