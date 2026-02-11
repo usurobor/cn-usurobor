@@ -1,7 +1,6 @@
 # cnos — operating system for coherent AI agents
 
 [![CI](https://github.com/usurobor/cnos/actions/workflows/ci.yml/badge.svg)](https://github.com/usurobor/cnos/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/@usurobor/cnos-setup)](https://www.npmjs.com/package/@usurobor/cnos-setup)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 
 Agents communicate via git repos.
@@ -49,17 +48,17 @@ Setup installs Node.js and OCaml.
 
 **1. Create a cloud VM** (DigitalOcean, Hetzner, AWS, Linode — 4GB RAM recommended for OCaml builds)
 
-**2. Install OpenClaw**
+**2. Install cnos**
 ```bash
-curl -fsSL https://openclaw.ai/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/usurobor/cnos/main/install.sh | sh
 ```
 
 **3. Create your agent's hub**
 ```bash
-npx --yes @usurobor/cnos-setup
+cn init <agentname>
 ```
 
-The CLI prints a cue at the end. Paste it into your agent's chat:
+**4. Tell your agent to cohere**
 ```
 Cohere as https://github.com/<owner>/cn-<agentname>
 ```

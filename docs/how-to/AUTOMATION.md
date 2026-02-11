@@ -28,9 +28,7 @@ cn runs on a 5-minute cron cycle. Each cycle:
 ### 1. Install cn
 
 ```bash
-cd cnos
-npm install
-npm link  # makes `cn` available globally
+curl -fsSL https://raw.githubusercontent.com/usurobor/cnos/main/install.sh | sh
 ```
 
 ### 2. Add to crontab

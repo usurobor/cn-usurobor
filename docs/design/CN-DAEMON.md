@@ -36,7 +36,7 @@ cn becomes the service. Agent is passive — cn invokes it when needed.
 1. **Agent purity**: Agent = pure function. cn = effectful shell.
 2. **Plugin architecture**: Each capability is a plugin, not hardcoded.
 3. **Minimal footprint**: Lean service, no heavy dependencies.
-4. **Self-contained**: One install (`npm i -g cnagent`) gets everything.
+4. **Self-contained**: One install (curl | sh) gets everything.
 
 ## Agent Communication Model
 
