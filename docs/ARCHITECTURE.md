@@ -64,7 +64,7 @@ Rules:
 
 All protocol state machines live in `cn_protocol.ml`. States are algebraic types. Transitions are total functions returning `Ok state | Error string`. Invalid transitions are errors, not exceptions. Terminal states are idempotent.
 
-For full state diagrams and transition tables, see [FSM-PROTOCOL.md](design/FSM-PROTOCOL.md).
+For full state diagrams and transition tables, see [PROTOCOL.md](design/PROTOCOL.md).
 
 ### FSM 1: Thread Lifecycle
 
@@ -262,7 +262,7 @@ Example: `pi/20260211-143022-review-request` is a thread from pi.
 |----------|---------|
 | [CN-MANIFESTO.md](design/CN-MANIFESTO.md) | Principles and values |
 | [CN-WHITEPAPER.md](design/CN-WHITEPAPER.md) | Protocol specification (normative) |
-| [FSM-PROTOCOL.md](design/FSM-PROTOCOL.md) | FSM design, state diagrams, transition tables |
+| [PROTOCOL.md](design/PROTOCOL.md) | FSM design, state diagrams, transition tables |
 | [AGILE-PROCESS.md](design/AGILE-PROCESS.md) | Team process and workflow |
 | [CN-EXECUTABLE-SKILLS.md](design/CN-EXECUTABLE-SKILLS.md) | Vision: skills as programs |
 | [SECURITY-MODEL.md](design/SECURITY-MODEL.md) | Security architecture |

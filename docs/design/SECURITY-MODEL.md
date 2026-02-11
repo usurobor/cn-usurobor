@@ -30,7 +30,7 @@ Security by architecture: the agent has no direct access to git or filesystem. A
 +-------------------------------------+
 ```
 
-The agent interacts with exactly two files. `cn` reads the output, validates the requested operations against FSM state transitions, and executes only valid ones. See [FSM-PROTOCOL.md](FSM-PROTOCOL.md) for the typed state machines that enforce protocol correctness.
+The agent interacts with exactly two files. `cn` reads the output, validates the requested operations against FSM state transitions, and executes only valid ones. See [PROTOCOL.md](PROTOCOL.md) for the typed state machines that enforce protocol correctness.
 
 ## Attack Surface Reduction
 
