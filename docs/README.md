@@ -23,7 +23,6 @@ Organized using [Diátaxis](https://diataxis.fr/).
 ## 💡 Explanation (Understanding-oriented)
 
 - [FOUNDATIONS.md](./explanation/FOUNDATIONS.md) — The coherence stack
-- [APHORISMS.md](./explanation/APHORISMS.md) — Principles in short form
 
 ## 📐 Design (Specifications)
 
@@ -37,6 +36,7 @@ Domain:
 - [CN-CLI.md](./design/CN-CLI.md) — CLI command reference
 - [CN-LOGGING.md](./design/CN-LOGGING.md) — Logging architecture
 - [SECURITY-MODEL.md](./design/SECURITY-MODEL.md) — Security model
+- [THREAD-API.md](./design/THREAD-API.md) — Agent content abstraction API
 - [AGILE-PROCESS.md](./design/AGILE-PROCESS.md) — Team process
 
 Vision:
