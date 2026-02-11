@@ -429,7 +429,7 @@ let auto_save hub_path name =
            print_endline (Cn_fmt.warn "Auto-commit failed"))
   | _ -> ()
 
-(* === Inbound (Actor Loop) === *)
+(* === Inbound (Actor Loop — FSM-driven) === *)
 
 let run_inbound hub_path name =
   print_endline (Cn_fmt.info "cn in: handling external input...");
@@ -448,20 +448,34 @@ let run_inbound hub_path name =
     print_endline (Cn_fmt.ok (Printf.sprintf "Queued MCA review (%d MCAs) trigger:%s" review.count (String.sub review.trigger 0 7)))
   end;
 
-  (* Step 3: Check if completed IO pair exists, archive if so *)
+  (* Step 3: Actor FSM — derive state, apply transitions *)
   let inp = input_path hub_path in
   let outp = output_path hub_path in
+  let actor_state = Cn_protocol.actor_derive_state
+    ~input_exists:(Cn_ffi.Fs.exists inp)
+    ~output_exists:(Cn_ffi.Fs.exists outp) in
 
-  if Cn_ffi.Fs.exists inp && Cn_ffi.Fs.exists outp then begin
-    if archive_io_pair hub_path name then begin
-      auto_save hub_path name;
+  print_endline (Cn_fmt.dim (Printf.sprintf "Actor state: %s"
+    (Cn_protocol.string_of_actor_state actor_state)));
+
+  match actor_state with
+  | Cn_protocol.OutputReady ->
+      (* output.md exists — archive, then feed next *)
+      (match Cn_protocol.actor_transition actor_state Cn_protocol.Archive_complete with
+       | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "Actor FSM error: %s" e))
+       | Ok Cn_protocol.Idle ->
+           if archive_io_pair hub_path name then begin
+             auto_save hub_path name;
+             if feed_next_input hub_path then wake_agent hub_path
+           end
+       | Ok _ -> ())
+  | Cn_protocol.Processing ->
+      (* Agent working — wait *)
+      print_endline (Cn_fmt.info "Agent working (input.md exists, awaiting output.md)");
+      print_endline (Cn_fmt.info (Printf.sprintf "Queue depth: %d" (queue_count hub_path)))
+  | Cn_protocol.Idle ->
+      (* Nothing active — try to feed from queue *)
       if feed_next_input hub_path then wake_agent hub_path
-    end
-  end
-  else if Cn_ffi.Fs.exists inp then begin
-    print_endline (Cn_fmt.info "Agent working (input.md exists, awaiting output.md)");
-    print_endline (Cn_fmt.info (Printf.sprintf "Queue depth: %d" (queue_count hub_path)))
-  end
-  else begin
-    if feed_next_input hub_path then wake_agent hub_path
-  end
+  | Cn_protocol.InputReady ->
+      (* input.md written but agent not woken — wake it *)
+      wake_agent hub_path

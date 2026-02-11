@@ -3,7 +3,8 @@
     Thread finding, GTD state transitions (delete/defer/delegate/do/done),
     thread reading/listing, and thread creation (adhoc/daily/weekly).
 
-    Merged from: cn_gtd + cn_threads in the 14-module plan. *)
+    All GTD transitions validated by Cn_protocol.thread_transition.
+    Invalid transitions (e.g. gtd_do on Doing) are rejected with error. *)
 
 open Cn_lib
 
@@ -24,70 +25,81 @@ let find_thread hub_path thread_id =
         let path = Cn_ffi.Path.join hub_path (Printf.sprintf "threads/%s/%s.md" loc thread_id) in
         match Cn_ffi.Fs.exists path with true -> Some path | false -> None)
 
-(* === GTD State Transitions === *)
+(* === FSM-Validated GTD Transitions === *)
+
+(* Apply a thread event: validate transition, move file, update frontmatter *)
+let apply_transition hub_path thread_id event ~on_success =
+  match find_thread hub_path thread_id with
+  | None -> print_endline (Cn_fmt.fail (Printf.sprintf "Thread not found: %s" thread_id))
+  | Some path ->
+      let content = Cn_ffi.Fs.read path in
+      let meta = parse_frontmatter content in
+      let current_state = Cn_protocol.thread_state_of_meta meta path in
+      match Cn_protocol.thread_transition current_state event with
+      | Error reason ->
+          print_endline (Cn_fmt.fail (Printf.sprintf "Cannot %s thread %s (state: %s): %s"
+            (Cn_protocol.string_of_thread_event event)
+            thread_id
+            (Cn_protocol.string_of_thread_state current_state)
+            reason))
+      | Ok new_state ->
+          on_success path content new_state
 
 let gtd_delete hub_path thread_id =
-  match find_thread hub_path thread_id with
-  | None -> print_endline (Cn_fmt.fail (Printf.sprintf "Thread not found: %s" thread_id))
-  | Some path ->
+  apply_transition hub_path thread_id Cn_protocol.Discard
+    ~on_success:(fun path _content _new_state ->
       Cn_ffi.Fs.unlink path;
       Cn_hub.log_action hub_path "gtd.delete" thread_id;
-      print_endline (Cn_fmt.ok (Printf.sprintf "Deleted: %s" thread_id))
+      print_endline (Cn_fmt.ok (Printf.sprintf "Deleted: %s" thread_id)))
 
 let gtd_defer hub_path thread_id until =
-  match find_thread hub_path thread_id with
-  | None -> print_endline (Cn_fmt.fail (Printf.sprintf "Thread not found: %s" thread_id))
-  | Some path ->
+  apply_transition hub_path thread_id Cn_protocol.Defer
+    ~on_success:(fun path content _new_state ->
       let deferred_dir = Cn_ffi.Path.join hub_path "threads/deferred" in
       Cn_ffi.Fs.ensure_dir deferred_dir;
-      let content = Cn_ffi.Fs.read path in
       let until_str = Option.value until ~default:"unspecified" in
       Cn_ffi.Fs.write (Cn_ffi.Path.join deferred_dir (Cn_ffi.Path.basename path))
-        (update_frontmatter content [("deferred", Cn_fmt.now_iso ()); ("until", until_str)]);
+        (update_frontmatter content
+          [("state", "deferred"); ("deferred", Cn_fmt.now_iso ()); ("until", until_str)]);
       Cn_ffi.Fs.unlink path;
       Cn_hub.log_action hub_path "gtd.defer" (Printf.sprintf "%s until:%s" thread_id until_str);
       let suffix = match until with Some u -> " until " ^ u | None -> "" in
-      print_endline (Cn_fmt.ok (Printf.sprintf "Deferred: %s%s" thread_id suffix))
+      print_endline (Cn_fmt.ok (Printf.sprintf "Deferred: %s%s" thread_id suffix)))
 
 let gtd_delegate hub_path name thread_id peer =
-  match find_thread hub_path thread_id with
-  | None -> print_endline (Cn_fmt.fail (Printf.sprintf "Thread not found: %s" thread_id))
-  | Some path ->
+  apply_transition hub_path thread_id Cn_protocol.Delegate
+    ~on_success:(fun path content _new_state ->
       let outbox_dir = Cn_hub.threads_mail_outbox hub_path in
       Cn_ffi.Fs.ensure_dir outbox_dir;
-      let content = Cn_ffi.Fs.read path in
       Cn_ffi.Fs.write (Cn_ffi.Path.join outbox_dir (Cn_ffi.Path.basename path))
-        (update_frontmatter content [("to", peer); ("delegated", Cn_fmt.now_iso ()); ("delegated-by", name)]);
+        (update_frontmatter content
+          [("state", "delegated"); ("to", peer); ("delegated", Cn_fmt.now_iso ()); ("delegated-by", name)]);
       Cn_ffi.Fs.unlink path;
       Cn_hub.log_action hub_path "gtd.delegate" (Printf.sprintf "%s to:%s" thread_id peer);
       print_endline (Cn_fmt.ok (Printf.sprintf "Delegated to %s: %s" peer thread_id));
-      print_endline (Cn_fmt.info "Run \"cn sync\" to send")
+      print_endline (Cn_fmt.info "Run \"cn sync\" to send"))
 
 let gtd_do hub_path thread_id =
-  match find_thread hub_path thread_id with
-  | None -> print_endline (Cn_fmt.fail (Printf.sprintf "Thread not found: %s" thread_id))
-  | Some path ->
+  apply_transition hub_path thread_id Cn_protocol.Claim
+    ~on_success:(fun path content _new_state ->
       let doing_dir = Cn_ffi.Path.join hub_path "threads/doing" in
       Cn_ffi.Fs.ensure_dir doing_dir;
-      let content = Cn_ffi.Fs.read path in
       Cn_ffi.Fs.write (Cn_ffi.Path.join doing_dir (Cn_ffi.Path.basename path))
-        (update_frontmatter content [("started", Cn_fmt.now_iso ())]);
+        (update_frontmatter content [("state", "doing"); ("started", Cn_fmt.now_iso ())]);
       Cn_ffi.Fs.unlink path;
       Cn_hub.log_action hub_path "gtd.do" thread_id;
-      print_endline (Cn_fmt.ok (Printf.sprintf "Started: %s" thread_id))
+      print_endline (Cn_fmt.ok (Printf.sprintf "Started: %s" thread_id)))
 
 let gtd_done hub_path thread_id =
-  match find_thread hub_path thread_id with
-  | None -> print_endline (Cn_fmt.fail (Printf.sprintf "Thread not found: %s" thread_id))
-  | Some path ->
+  apply_transition hub_path thread_id Cn_protocol.Complete
+    ~on_success:(fun path content _new_state ->
       let archived_dir = Cn_ffi.Path.join hub_path "threads/archived" in
       Cn_ffi.Fs.ensure_dir archived_dir;
-      let content = Cn_ffi.Fs.read path in
       Cn_ffi.Fs.write (Cn_ffi.Path.join archived_dir (Cn_ffi.Path.basename path))
-        (update_frontmatter content [("completed", Cn_fmt.now_iso ())]);
+        (update_frontmatter content [("state", "archived"); ("completed", Cn_fmt.now_iso ())]);
       Cn_ffi.Fs.unlink path;
       Cn_hub.log_action hub_path "gtd.done" thread_id;
-      print_endline (Cn_fmt.ok (Printf.sprintf "Completed: %s → archived" thread_id))
+      print_endline (Cn_fmt.ok (Printf.sprintf "Completed: %s → archived" thread_id)))
 
 (* === Read Thread === *)
 

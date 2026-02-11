@@ -130,32 +130,27 @@ let inbox_check hub_path name =
   if total = 0 then print_endline (Cn_fmt.ok "Inbox clear")
 
 let materialize_branch ~clone_path ~hub_path ~inbox_dir ~peer_name ~branch =
+  (* Receiver FSM: Fetched → classify → materialize or skip → clean *)
+  let fsm_state = ref Cn_protocol.R_Fetched in
+  let advance event =
+    match Cn_protocol.receiver_transition !fsm_state event with
+    | Ok s -> fsm_state := s; true
+    | Error e ->
+        print_endline (Cn_fmt.fail (Printf.sprintf "Receiver FSM: %s" e)); false
+  in
+
+  (* Classify: orphan, duplicate, or new *)
   if is_orphan_branch clone_path branch then begin
+    let _ = advance Cn_protocol.RE_IsOrphan in
     reject_orphan_branch hub_path peer_name branch;
     let _ = delete_remote_branch clone_path branch in
+    let _ = advance Cn_protocol.RE_DeleteBranch in
     []
   end
   else begin
-    let diff_cmd = Printf.sprintf "git diff main...origin/%s --name-only 2>/dev/null || git diff master...origin/%s --name-only" branch branch in
-    let files = Cn_ffi.Child_process.exec_in ~cwd:clone_path diff_cmd
-      |> Option.map Cn_hub.split_lines
-      |> Option.value ~default:[]
-      |> List.filter (fun f ->
-           String.length f > 11 &&
-           String.sub f 0 11 = "threads/in/" &&
-           Cn_hub.is_md_file f) in
-
-    let trigger =
-      Cn_ffi.Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git rev-parse origin/%s" branch)
-      |> Option.map String.trim
-      |> Option.value ~default:"unknown" in
-
     let branch_slug = match branch |> String.split_on_char '/' |> List.rev with
       | x :: _ -> x
       | [] -> branch in
-    let inbox_file = Cn_hub.make_thread_filename (Printf.sprintf "%s-%s" peer_name branch_slug) in
-    let inbox_path = Cn_ffi.Path.join inbox_dir inbox_file in
-
     let already_exists =
       Cn_ffi.Fs.readdir inbox_dir
       |> List.exists (fun f -> String.length f > 16 && ends_with ~suffix:(Printf.sprintf "%s-%s.md" peer_name branch_slug) f) in
@@ -165,26 +160,60 @@ let materialize_branch ~clone_path ~hub_path ~inbox_dir ~peer_name ~branch =
       |> List.exists (fun f -> String.length f > 16 && ends_with ~suffix:(Printf.sprintf "%s-%s.md" peer_name branch_slug) f) in
 
     if already_exists || already_archived then begin
+      let _ = advance Cn_protocol.RE_IsDuplicate in
       let _ = delete_remote_branch clone_path branch in
+      let _ = advance Cn_protocol.RE_DeleteBranch in
       []
     end
     else if !(Cn_fmt.dry_run_mode) then begin
-      print_endline (Cn_fmt.dim (Printf.sprintf "Would: materialize %s → %s" branch inbox_file));
+      print_endline (Cn_fmt.dim (Printf.sprintf "Would: materialize %s → %s-%s" branch peer_name branch_slug));
       print_endline (Cn_fmt.dim (Printf.sprintf "Would: delete remote branch %s" branch));
-      [inbox_file]
+      [Cn_hub.make_thread_filename (Printf.sprintf "%s-%s" peer_name branch_slug)]
     end
-    else
-      files |> List.filter_map (fun file ->
+    else begin
+      let _ = advance Cn_protocol.RE_IsNew in
+
+      let diff_cmd = Printf.sprintf "git diff main...origin/%s --name-only 2>/dev/null || git diff master...origin/%s --name-only" branch branch in
+      let files = Cn_ffi.Child_process.exec_in ~cwd:clone_path diff_cmd
+        |> Option.map Cn_hub.split_lines
+        |> Option.value ~default:[]
+        |> List.filter (fun f ->
+             String.length f > 11 &&
+             String.sub f 0 11 = "threads/in/" &&
+             Cn_hub.is_md_file f) in
+
+      let trigger =
+        Cn_ffi.Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git rev-parse origin/%s" branch)
+        |> Option.map String.trim
+        |> Option.value ~default:"unknown" in
+
+      let inbox_file = Cn_hub.make_thread_filename (Printf.sprintf "%s-%s" peer_name branch_slug) in
+      let inbox_path = Cn_ffi.Path.join inbox_dir inbox_file in
+
+      let result = files |> List.filter_map (fun file ->
         let show_cmd = Printf.sprintf "git show origin/%s:%s" branch file in
         match Cn_ffi.Child_process.exec_in ~cwd:clone_path show_cmd with
         | None -> None
         | Some content ->
-            let meta = [("from", peer_name); ("branch", branch); ("trigger", trigger); ("file", file); ("received", Cn_fmt.now_iso ())] in
+            let meta = [("state", "received"); ("from", peer_name); ("branch", branch);
+                        ("trigger", trigger); ("file", file); ("received", Cn_fmt.now_iso ())] in
             Cn_ffi.Fs.write inbox_path (update_frontmatter content meta);
             Cn_hub.log_action hub_path "inbox.materialize" (Printf.sprintf "%s trigger:%s" inbox_file trigger);
             process_rejection_cleanup hub_path content;
-            let _ = delete_remote_branch clone_path branch in
             Some inbox_file)
+      in
+      (* Transition: Materializing → Materialized → Cleaned *)
+      if result <> [] then begin
+        let _ = advance Cn_protocol.RE_WriteOk in
+        let _ = delete_remote_branch clone_path branch in
+        let _ = advance Cn_protocol.RE_DeleteBranch in
+        ()
+      end else begin
+        let _ = advance Cn_protocol.RE_WriteFail in
+        ()
+      end;
+      result
+    end
   end
 
 let inbox_process hub_path =
@@ -257,6 +286,15 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
           print_endline (Cn_fmt.fail (Printf.sprintf "No clone path for peer: %s" to_name));
           None
       | Some { clone = Some _clone_path; _ } ->
+          (* Sender FSM: Pending → BranchCreated → Pushing → Pushed → Delivered *)
+          let fsm_state = ref Cn_protocol.S_Pending in
+          let advance event =
+            match Cn_protocol.sender_transition !fsm_state event with
+            | Ok s -> fsm_state := s; true
+            | Error e ->
+                print_endline (Cn_fmt.fail (Printf.sprintf "Sender FSM: %s" e)); false
+          in
+
           let thread_name = Cn_ffi.Path.basename_ext file ".md" in
           let branch_name = Printf.sprintf "%s/%s" to_name thread_name in
 
@@ -270,23 +308,44 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
               print_endline (Cn_fmt.fail (Printf.sprintf "Failed to send %s" file));
               None
           | Some _ ->
+              (* Create branch *)
               let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git checkout -b %s 2>/dev/null || git checkout %s" branch_name branch_name) in
-
               let thread_dir = Cn_ffi.Path.join hub_path "threads/in" in
               Cn_ffi.Fs.ensure_dir thread_dir;
               Cn_ffi.Fs.write (Cn_ffi.Path.join thread_dir file) content;
               let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git add 'threads/in/%s'" file) in
               let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m '%s: %s'" name thread_name) in
+              let _ = advance Cn_protocol.SE_CreateBranch in
 
-              let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git push -u origin %s -f" branch_name) in
+              (* Push *)
+              let _ = advance Cn_protocol.SE_Push in
+              (match Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git push -u origin %s -f" branch_name) with
+               | Some _ ->
+                   let _ = advance Cn_protocol.SE_PushOk in
+                   ()
+               | None ->
+                   let _ = advance Cn_protocol.SE_PushFail in
+                   ());
               let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git checkout main 2>/dev/null || git checkout master" in
 
-              Cn_ffi.Fs.write (Cn_ffi.Path.join sent_dir file) (update_frontmatter content [("sent", Cn_fmt.now_iso ())]);
-              Cn_ffi.Fs.unlink file_path;
+              (* Cleanup: move to sent *)
+              if !fsm_state = Cn_protocol.S_Pushed then begin
+                Cn_ffi.Fs.write (Cn_ffi.Path.join sent_dir file)
+                  (update_frontmatter content [("state", "sent"); ("sent", Cn_fmt.now_iso ())]);
+                Cn_ffi.Fs.unlink file_path;
+                let _ = advance Cn_protocol.SE_Cleanup in
 
-              Cn_hub.log_action hub_path "outbox.send" (Printf.sprintf "to:%s thread:%s branch:%s" to_name file branch_name);
-              print_endline (Cn_fmt.ok (Printf.sprintf "Sent to %s: %s" to_name file));
-              Some file
+                Cn_hub.log_action hub_path "outbox.send" (Printf.sprintf "to:%s thread:%s branch:%s state:%s" to_name file branch_name
+                  (Cn_protocol.string_of_sender_state !fsm_state));
+                print_endline (Cn_fmt.ok (Printf.sprintf "Sent to %s: %s" to_name file));
+                Some file
+              end else begin
+                Cn_hub.log_action hub_path "outbox.send" (Printf.sprintf "to:%s thread:%s state:%s" to_name file
+                  (Cn_protocol.string_of_sender_state !fsm_state));
+                print_endline (Cn_fmt.fail (Printf.sprintf "Send failed for %s (state: %s)" file
+                  (Cn_protocol.string_of_sender_state !fsm_state)));
+                None
+              end
 
 let outbox_flush hub_path name =
   let outbox_dir = Cn_hub.threads_mail_outbox hub_path in
