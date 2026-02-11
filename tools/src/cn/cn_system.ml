@@ -360,7 +360,7 @@ Agents and repos this hub communicates with.
 |} in
   Cn_ffi.Fs.write (Cn_ffi.Path.join hub_dir "state/peers.md") peers;
 
-  let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_dir "git init" in
+  let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_dir "git init -b main" in
 
   update_runtime hub_dir;
 

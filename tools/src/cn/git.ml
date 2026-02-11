@@ -112,7 +112,7 @@ let log_oneline ~cwd ~count =
 (* === Repo Setup === *)
 
 let init ~cwd =
-  Child_process.exec_in ~cwd "git init" |> Option.is_some
+  Child_process.exec_in ~cwd "git init -b main" |> Option.is_some
 
 let clone ~url ~dest =
   Child_process.exec_in ~cwd:"." (Printf.sprintf "git clone %s %s" url dest) |> Option.is_some
