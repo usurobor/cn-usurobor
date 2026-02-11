@@ -25,8 +25,8 @@ Init - create a new hub:
 
   $ mkdir test-init && cd test-init
   $ git init -q
-  $ git config user.email "test@test.local"
-  $ git config user.name "Test"
+  $ git config --global user.email "test@test.local"
+  $ git config --global user.name "Test"
   $ $CN init my-hub 2>&1 | head -3
   Initializing hub: my-hub
   ✓ Updated state/runtime.md
