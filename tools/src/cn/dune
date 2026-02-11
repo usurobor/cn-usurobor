@@ -20,11 +20,27 @@
  (libraries inbox_lib)
  (modes :standard melange))
 
+; Shared FFI bindings
+(library
+ (name cn_ffi)
+ (modules cn_ffi)
+ (modes melange)
+ (preprocess (pps melange.ppx)))
+
+; CN command modules (all share cn_ffi, cn_lib)
+(library
+ (name cn_cmd)
+ (modules cn_fmt cn_hub cn_mail cn_gtd cn_agent cn_mca
+          cn_commands cn_system)
+ (libraries cn_ffi cn_lib inbox_lib git cn_io)
+ (modes melange)
+ (preprocess (pps melange.ppx)))
+
 ; cn CLI (Melange -> JS)
 (melange.emit
  (target output)
  (alias cn)
  (modules cn)
- (libraries cn_lib inbox_lib git cn_io)
+ (libraries cn_cmd cn_ffi cn_lib inbox_lib git cn_io)
  (module_systems commonjs)
  (preprocess (pps melange.ppx)))
