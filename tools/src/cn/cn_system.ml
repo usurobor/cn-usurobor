@@ -257,6 +257,8 @@ let self_update_check () =
   if is_skip_cmd then ()
   else
     let install_dir = "/usr/local/lib/cnos" in
+    if not (Sys.file_exists install_dir) then ()
+    else
     let fetch_cmd = Printf.sprintf "cd %s && git fetch origin main --quiet 2>/dev/null" install_dir in
     let _ = Cn_ffi.Child_process.exec fetch_cmd in
     let version_cmd = Printf.sprintf "cd %s && git show origin/main:tools/src/cn/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*\"\\([^\"]*\\)\".*/\\1/'" install_dir in
