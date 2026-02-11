@@ -1,3 +1,6 @@
+> **ARCHIVED** — Superseded by [FSM-PROTOCOL.md](../FSM-PROTOCOL.md) and [ARCHITECTURE.md](../../ARCHITECTURE.md).
+> See [AUDIT.md](../AUDIT.md) for details. Preserved for historical reference.
+
 # cn Actions
 
 Everything cn tool must implement. Agent decides, cn executes.

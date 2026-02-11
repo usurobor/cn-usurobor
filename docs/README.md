@@ -2,6 +2,8 @@
 
 Organized using [Diátaxis](https://diataxis.fr/).
 
+**Start here:** [ARCHITECTURE.md](./ARCHITECTURE.md) — system overview, module structure, FSMs, data flow.
+
 ---
 
 ## 📚 Tutorials (Learning-oriented)
@@ -25,8 +27,25 @@ Organized using [Diátaxis](https://diataxis.fr/).
 
 ## 📐 Design (Specifications)
 
+Core:
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — Top-level architecture (entry point)
 - [CN-MANIFESTO.md](./design/CN-MANIFESTO.md) — Principles for a Human+AI Commons
-- [CN-WHITEPAPER.md](./design/CN-WHITEPAPER.md) — Protocol v1 specification
+- [CN-WHITEPAPER.md](./design/CN-WHITEPAPER.md) — Protocol specification (v2.0.4)
+- [FSM-PROTOCOL.md](./design/FSM-PROTOCOL.md) — Typed FSM design (implemented)
+
+Domain:
+- [CN-CLI.md](./design/CN-CLI.md) — CLI command reference
+- [CN-LOGGING.md](./design/CN-LOGGING.md) — Logging architecture
+- [SECURITY-MODEL.md](./design/SECURITY-MODEL.md) — Security model
+- [AGILE-PROCESS.md](./design/AGILE-PROCESS.md) — Team process
+
+Vision:
+- [CN-EXECUTABLE-SKILLS.md](./design/CN-EXECUTABLE-SKILLS.md) — Skills as programs
+- [CN-DAEMON.md](./design/CN-DAEMON.md) — Future runtime service
+
+Audit:
+- [AUDIT.md](./design/AUDIT.md) — Docs audit (2026-02-11)
+- [_archive/](./design/_archive/) — Superseded docs (preserved for reference)
 
 ## 🔍 RCA (Root Cause Analysis)
 
