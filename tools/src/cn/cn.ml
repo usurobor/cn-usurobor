@@ -350,7 +350,10 @@ let materialize_branch ~clone_path ~hub_path ~inbox_dir ~peer_name ~branch =
     let files = Child_process.exec_in ~cwd:clone_path diff_cmd
       |> Option.map split_lines
       |> Option.value ~default:[]
-      |> List.filter is_md_file in
+      |> List.filter (fun f -> 
+           String.length f > 11 && 
+           String.sub f 0 11 = "threads/in/" && 
+           is_md_file f) in
     
     (* Get commit hash of branch tip — the trigger for this run *)
     let trigger = 
