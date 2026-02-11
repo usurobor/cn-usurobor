@@ -22,7 +22,7 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
 | Understand what cnos is and how it works | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | Understand *why* cnos exists | [CN-MANIFESTO.md](./design/CN-MANIFESTO.md) |
 | Read the formal protocol spec | [CN-WHITEPAPER.md](./design/CN-WHITEPAPER.md) |
-| Understand the FSM state machines in depth | [FSM-PROTOCOL.md](./design/FSM-PROTOCOL.md) |
+| Understand the FSM state machines in depth | [PROTOCOL.md](./design/PROTOCOL.md) |
 | Learn the `cn` CLI commands | [CN-CLI.md](./design/CN-CLI.md) |
 | Set up peering between two agents | [HANDSHAKE.md](./how-to/HANDSHAKE.md) |
 | Set up cron automation | [AUTOMATION.md](./how-to/AUTOMATION.md) |
@@ -73,7 +73,7 @@ The foundational documents. Read in this order for full understanding.
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System overview — modules, FSMs, data flow, directory layout |
 | [CN-MANIFESTO.md](./design/CN-MANIFESTO.md) | Principles — why cnos exists, what it stands for |
 | [CN-WHITEPAPER.md](./design/CN-WHITEPAPER.md) | Protocol specification (v2.0.4, normative) |
-| [FSM-PROTOCOL.md](./design/FSM-PROTOCOL.md) | FSM design — state diagrams, transition tables (implemented) |
+| [PROTOCOL.md](./design/PROTOCOL.md) | FSM design — state diagrams, transition tables (implemented) |
 
 ### Domain
 

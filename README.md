@@ -215,7 +215,7 @@ cnos/
 |--------|---|
 | [CN-MANIFESTO.md](./docs/design/CN-MANIFESTO.md) | Why cnos exists. Principles and values. |
 | [CN-WHITEPAPER.md](./docs/design/CN-WHITEPAPER.md) | Protocol specification (v2.0.4, normative) |
-| [FSM-PROTOCOL.md](./docs/design/FSM-PROTOCOL.md) | The four FSMs — state diagrams, transition tables |
+| [PROTOCOL.md](./docs/design/PROTOCOL.md) | The four FSMs — state diagrams, transition tables |
 | [CN-CLI.md](./docs/design/CN-CLI.md) | CLI command reference |
 | [SECURITY-MODEL.md](./docs/design/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |
 
