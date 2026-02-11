@@ -1,44 +1,54 @@
 #!/bin/sh
-# cnos installer - native OCaml binary
+# cnos installer - downloads pre-built binary
 # Usage: curl -fsSL https://raw.githubusercontent.com/usurobor/cnos/main/install.sh | sh
 
 set -e
 
-REPO="https://github.com/usurobor/cnos"
-INSTALL_DIR="/usr/local/lib/cnos"
+REPO="usurobor/cnos"
 BIN_DIR="/usr/local/bin"
 
-echo "Installing cnos (native binary)..."
+# Detect platform
+OS="$(uname -s)"
+ARCH="$(uname -m)"
 
-# Clone or pull
-if [ -d "$INSTALL_DIR" ]; then
-  echo "Updating existing installation..."
-  cd "$INSTALL_DIR"
-  git pull --ff-only
-else
-  echo "Cloning cnos..."
-  git clone --depth 1 "$REPO.git" "$INSTALL_DIR"
-  cd "$INSTALL_DIR"
-fi
+case "$OS" in
+  Linux)  PLATFORM="linux" ;;
+  Darwin) PLATFORM="macos" ;;
+  *)      echo "Unsupported OS: $OS"; exit 1 ;;
+esac
 
-# Build native binary
-if ! command -v opam >/dev/null 2>&1; then
-  echo "Error: opam required. Install OCaml toolchain first:"
-  echo "  https://ocaml.org/docs/installing-ocaml"
+case "$ARCH" in
+  x86_64)  ARCH="x64" ;;
+  aarch64) ARCH="arm64" ;;
+  arm64)   ARCH="arm64" ;;
+  *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
+esac
+
+TARGET="${PLATFORM}-${ARCH}"
+BINARY="cn-${TARGET}"
+
+echo "Installing cnos for ${TARGET}..."
+
+# Get latest release
+LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+
+if [ -z "$LATEST" ]; then
+  echo "Error: Could not determine latest release"
   exit 1
 fi
 
-echo "Building native binary..."
-eval $(opam env)
-dune build tools/src/cn/cn.exe
+echo "Latest release: ${LATEST}"
 
-# Install binary
-cp _build/default/tools/src/cn/cn.exe "$BIN_DIR/cn"
-chmod +x "$BIN_DIR/cn"
+# Download binary
+URL="https://github.com/${REPO}/releases/download/${LATEST}/${BINARY}"
+echo "Downloading ${URL}..."
 
-# Install cn-cron
-cp bin/cn-cron "$BIN_DIR/cn-cron"
-chmod +x "$BIN_DIR/cn-cron"
+curl -fsSL -o "${BIN_DIR}/cn" "$URL"
+chmod +x "${BIN_DIR}/cn"
+
+# Install cn-cron helper
+curl -fsSL -o "${BIN_DIR}/cn-cron" "https://raw.githubusercontent.com/${REPO}/main/bin/cn-cron"
+chmod +x "${BIN_DIR}/cn-cron"
 
 echo ""
 echo "✓ cnos installed successfully"

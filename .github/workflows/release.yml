@@ -1,34 +1,66 @@
 name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x64
+          - os: macos-latest
+            target: macos-x64
+          - os: macos-14
+            target: macos-arm64
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - uses: actions/checkout@v4
-      
-      - uses: actions/setup-node@v4
+
+      - name: Setup OCaml
+        uses: ocaml/setup-ocaml@v3
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-      
-      - name: Verify version matches tag
+          ocaml-compiler: 4.14.x
+
+      - name: Install dependencies
+        run: opam install dune --yes
+
+      - name: Build native binary
         run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          TAG_VERSION=${GITHUB_REF#refs/tags/v}
-          if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
-            echo "Error: package.json version ($PACKAGE_VERSION) doesn't match tag ($TAG_VERSION)"
-            exit 1
-          fi
-      
-      - run: npm test
-      
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          eval $(opam env)
+          dune build tools/src/cn/cn.exe
+
+      - name: Package binary
+        run: |
+          mkdir -p dist
+          cp _build/default/tools/src/cn/cn.exe dist/cn-${{ matrix.target }}
+          chmod +x dist/cn-${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cn-${{ matrix.target }}
+          path: dist/cn-${{ matrix.target }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*/cn-*
+          generate_release_notes: true
