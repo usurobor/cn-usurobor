@@ -16,11 +16,18 @@ The agent:
 # agent_interface;;
 - : string list = ["cn input"; "cn out"]
 ```
+```mdx-error
+Unknown directive `agent_interface'.
+Line 1, characters 5-6:
+Error: Syntax error
+```
 
 Agent CANNOT:
 ```ocaml
 # agent_cannot;;
-- : string list = ["access filesystem"; "execute commands"; "call APIs"; "list inbox"; "choose processing order"]
+- : string list =
+["access filesystem"; "execute commands"; "call APIs"; "list inbox";
+ "choose processing order"]
 ```
 
 Agent CAN ONLY:
@@ -37,7 +44,8 @@ Agent calls `cn input` to receive the current item:
 
 ```ocaml
 # cn_input_returns;;
-- : input_item = {id = "abc123"; from = "pi"; content = "Please review"; cadence = Inbox}
+- : input_item =
+{id = "abc123"; from = "pi"; content = "Please review"; cadence = Inbox}
 ```
 
 Required fields:
@@ -88,7 +96,8 @@ Agent outputs decisions via `cn out <gtd> [op]`.
 
 ```ocaml
 # parse_cn_out "cn out do send --to pi --message \"summary\" --body \"full response\"";;
-- : gtd = Do (Send {to_ = "pi"; message = "summary"; body = Some "full response"})
+- : gtd =
+Do (Send {to_ = "pi"; message = "summary"; body = Some "full response"})
 ```
 
 ```ocaml
@@ -141,12 +150,14 @@ Agent outputs decisions via `cn out <gtd> [op]`.
 
 ```ocaml
 # type_op;;
-- : string = "type op = Reply of {message: string} | Send of {to_: string; message: string; body: string option} | Noop of {reason: string} | Ack of {reason: string} | Surface of {desc: string} | Commit of {artifact: string}"
+- : string =
+"type op = Reply of {message: string} | Send of {to_: string; message: string; body: string option} | Noop of {reason: string} | Ack of {reason: string} | Surface of {desc: string} | Commit of {artifact: string}"
 ```
 
 ```ocaml
 # type_gtd;;
-- : string = "type gtd = Do of op | Defer of {reason: string} | Delegate of {to_: string} | Delete of {reason: string}"
+- : string =
+"type gtd = Do of op | Defer of {reason: string} | Delegate of {to_: string} | Delete of {reason: string}"
 ```
 
 ---
