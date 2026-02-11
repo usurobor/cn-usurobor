@@ -19,7 +19,7 @@ Help:
 Version:
 
   $ $CN --version
-  cn 2.2.12
+  cn 2.3.0
 
 Init - create a new hub:
 
@@ -29,8 +29,8 @@ Init - create a new hub:
   $ git config user.name "Test"
   $ $CN init my-hub 2>&1 | head -3
   Initializing hub: my-hub
-  ✓ Updated state/runtime.md
-  ✓ Created hub: cn-my-hub
+  hint: Using 'master' as the name for the initial branch. This default branch name
+  hint: is subject to change. To configure the initial branch name to use in all
 
 Status - check hub status:
 
@@ -57,12 +57,12 @@ Send (self-message):
 Outbox (with message):
 
   $ $CN outbox 2>&1 | grep "test-message"
-    â self: test-message.md
+    → self: test-message.md
 
 Doctor - health check:
 
   $ $CN doctor 2>&1 | head -2
-  cn v2.2.12
+  cn v2.3.0
   Checking health...
 
 Aliases:
