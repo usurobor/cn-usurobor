@@ -30,7 +30,7 @@ Core:
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — Top-level architecture (entry point)
 - [CN-MANIFESTO.md](./design/CN-MANIFESTO.md) — Principles for a Human+AI Commons
 - [CN-WHITEPAPER.md](./design/CN-WHITEPAPER.md) — Protocol specification (v2.0.4)
-- [FSM-PROTOCOL.md](./design/FSM-PROTOCOL.md) — Typed FSM design (implemented)
+- [PROTOCOL.md](./design/PROTOCOL.md) — Typed FSM design (implemented)
 
 Domain:
 - [CN-CLI.md](./design/CN-CLI.md) — CLI command reference

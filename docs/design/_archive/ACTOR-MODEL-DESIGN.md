@@ -1,4 +1,4 @@
-> **ARCHIVED** — Superseded by [FSM-PROTOCOL.md](../FSM-PROTOCOL.md) and [ARCHITECTURE.md](../../ARCHITECTURE.md).
+> **ARCHIVED** — Superseded by [PROTOCOL.md](../PROTOCOL.md) and [ARCHITECTURE.md](../../ARCHITECTURE.md).
 > See [AUDIT.md](../AUDIT.md) for details. Preserved for historical reference.
 
 # Design Document: Actor Model for git-CN Coordination
