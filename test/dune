@@ -2,4 +2,6 @@
 ; Run: dune runtest
 
 (cram
- (deps cn.sh))
+ (deps
+  cn.sh
+  %{bin:cn}))

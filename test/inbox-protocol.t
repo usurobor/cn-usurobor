@@ -71,4 +71,4 @@ Test: cn inbox detects inbound from peer's clone (not own hub):
   $ cd ../cn-sigma
   $ $CN inbox 2>&1 | grep -E "(From pi:|sigma/)"
   ⚠ From pi: 1 inbound
-    â sigma/test-message
+    ← sigma/test-message

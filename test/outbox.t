@@ -33,7 +33,7 @@ Outbox check shows pending:
 
   $ $CN outbox 2>&1
   ⚠ 1 pending send(s):
-    â recipient: hello.md
+    → recipient: hello.md
 
 Dry-run shows would send (but fails - no clone path):
 

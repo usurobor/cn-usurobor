@@ -18,7 +18,7 @@ Setup test hub:
 Sync shows dry-run banner:
 
   $ $CN sync --dry-run 2>&1 | head -4
-  ⚠ DRY RUN â no changes will be made
+  ⚠ DRY RUN — no changes will be made
   Syncing...
   Checking inbox for test-hub...
   ✓ Inbox clear
