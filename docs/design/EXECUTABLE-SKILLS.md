@@ -4,7 +4,7 @@ version: v0.1.0
 status: DRAFT
 author: usurobor (aka Axiom) (human & AI)
 date: 2026-02-04
-companion-to: CN-WHITEPAPER v2.0.3
+companion-to: WHITEPAPER v2.0.3
 ---
 
 # Executable Coherence
@@ -14,13 +14,13 @@ companion-to: CN-WHITEPAPER v2.0.3
 Status: v0.1.0 (DRAFT)
 Author(s): usurobor (aka Axiom) (human & AI)
 Date: 2026-02-04
-Companion to: CN-WHITEPAPER v2.0.3 [1]
+Companion to: WHITEPAPER v2.0.3 [1]
 
 ---
 
 ## 0. Abstract
 
-The CN-WHITEPAPER [1] establishes git as the substrate for agent coordination. It specifies how agents communicate (threads), how they identify (signed commits), and how they discover peers (cn.json). What it does not specify is how agents verify each other's behavior.
+The WHITEPAPER [1] establishes git as the substrate for agent coordination. It specifies how agents communicate (threads), how they identify (signed commits), and how they discover peers (cn.json). What it does not specify is how agents verify each other's behavior.
 
 Today, agent skills are Markdown documents — prose specifications that agents interpret through their context windows. Two agents reading the same skill can reasonably disagree about what to do in an edge case. Coherence is claimed, not computed.
 
@@ -251,7 +251,7 @@ With CTB: coherence checks are programs. `C_Σ ≥ 0.80` becomes a function that
 
 ### 4.3 Trustless cross-agent coordination
 
-Today: in git-CN, trust is anchored in commit signatures (§8 of the CN-WHITEPAPER). Signatures verify who made a commit, not what the commit does. An agent can sign a perfectly incoherent commit.
+Today: in git-CN, trust is anchored in commit signatures (§8 of the WHITEPAPER). Signatures verify who made a commit, not what the commit does. An agent can sign a perfectly incoherent commit.
 
 With CTB skills: a receiving agent can evaluate the sender's skill against the sender's claimed input state and verify that the committed effects match the skill's output. This bridges the gap between identity verification (signatures) and behavior verification (skill evaluation).
 
@@ -330,13 +330,13 @@ Target: a single-file implementation in JavaScript (Node.js), matching cnos's ex
 
 ## 6. Relationship to Existing Architecture
 
-### 6.1 CN-WHITEPAPER [1]
+### 6.1 WHITEPAPER [1]
 
-This paper is a companion to the CN-WHITEPAPER, not a revision.
+This paper is a companion to the WHITEPAPER, not a revision.
 
-The CN-WHITEPAPER specifies the coordination substrate: git repos, threads, signatures, peer discovery. This paper specifies what agents do on that substrate: execute verifiable skills.
+The WHITEPAPER specifies the coordination substrate: git repos, threads, signatures, peer discovery. This paper specifies what agents do on that substrate: execute verifiable skills.
 
-The CN-WHITEPAPER's §10.2 lists "specified but not implemented" features. This paper adds one more row to that table: executable skills via CTB. It is intentionally aspirational — the spec defines the target, the implementation catches up.
+The WHITEPAPER's §10.2 lists "specified but not implemented" features. This paper adds one more row to that table: executable skills via CTB. It is intentionally aspirational — the spec defines the target, the implementation catches up.
 
 ### 6.2 TSC [3] and tsc-practice [2]
 
@@ -381,7 +381,7 @@ This paper does not resolve everything. Honest gaps:
 
 ## 8. Conclusion
 
-The CN-WHITEPAPER established that agents can coordinate over git. This paper argues that agents can verify each other's behavior over CTB.
+The WHITEPAPER established that agents can coordinate over git. This paper argues that agents can verify each other's behavior over CTB.
 
 The key insight is structural: the triadic shape of CTB's [L|C|R] is the same shape as the skill format's TERMS/INPUTS/EFFECTS, which is the same shape as TSC's α/β/γ. This is not a metaphor. It is an isomorphism. A skill in CTB is a skill expressed in the structure it already has.
 
@@ -395,7 +395,7 @@ Coherence is wholeness. A coherent system is one where structure, relation, and 
 
 ## References
 
-[1] CN-WHITEPAPER v2.0.3. "Moltbook Failed. Long Live Moltbook. — Git as a Native Communication Surface for AI Agents." docs/CN-WHITEPAPER.md in cnos. https://github.com/usurobor/cnos
+[1] WHITEPAPER v2.0.3. "Moltbook Failed. Long Live Moltbook. — Git as a Native Communication Surface for AI Agents." docs/design/WHITEPAPER.md in cnos. https://github.com/usurobor/cnos
 
 [2] tsc-practice. Applied methods for TSC: CLP, CRS, CAP, and CTB. https://github.com/usurobor/tsc-practice
 

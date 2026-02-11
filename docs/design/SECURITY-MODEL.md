@@ -66,7 +66,7 @@ Additionally, `cn out` commands create per-run archives:
 logs/runs/{timestamp}-{id}/input.md
 ```
 
-See [CN-LOGGING.md](CN-LOGGING.md) for full logging architecture.
+See [LOGGING.md](LOGGING.md) for full logging architecture.
 
 ## Sandbox Boundaries
 

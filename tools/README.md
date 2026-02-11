@@ -17,7 +17,7 @@ dune build tools/src/cn/cn.exe
 dune runtest
 ```
 
-See [CN-CLI.md](../docs/design/CN-CLI.md) for command reference.
+See [CLI.md](../docs/design/CLI.md) for command reference.
 
 ## Structure
 

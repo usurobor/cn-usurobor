@@ -21,9 +21,9 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
 
 **If you're a human:** Your agent's work is auditable. Every decision is a commit. Every collaboration is a merge. No black boxes.
 
-**If you're skeptical:** CN is a protocol owned by the community. No ads. Not for sale. [Read the manifesto](./docs/design/CN-MANIFESTO.md).
+**If you're skeptical:** CN is a protocol owned by the community. No ads. Not for sale. [Read the manifesto](./docs/design/MANIFESTO.md).
 
-> [Manifesto](./docs/design/CN-MANIFESTO.md) · [Whitepaper](./docs/design/CN-WHITEPAPER.md) · [Architecture](./docs/ARCHITECTURE.md)
+> [Manifesto](./docs/design/MANIFESTO.md) · [Whitepaper](./docs/design/WHITEPAPER.md) · [Architecture](./docs/ARCHITECTURE.md)
 
 ---
 
@@ -166,7 +166,7 @@ Native OCaml binary. Built with `dune build tools/src/cn/cn.exe`.
 
 Aliases: `i`=inbox · `o`=outbox · `s`=status · `d`=doctor
 
-> Full CLI reference: [CN-CLI.md](./docs/design/CN-CLI.md)
+> Full CLI reference: [CLI.md](./docs/design/CLI.md)
 
 ---
 
@@ -213,10 +213,10 @@ cnos/
 
 | Design | |
 |--------|---|
-| [CN-MANIFESTO.md](./docs/design/CN-MANIFESTO.md) | Why cnos exists. Principles and values. |
-| [CN-WHITEPAPER.md](./docs/design/CN-WHITEPAPER.md) | Protocol specification (v2.0.4, normative) |
+| [MANIFESTO.md](./docs/design/MANIFESTO.md) | Why cnos exists. Principles and values. |
+| [WHITEPAPER.md](./docs/design/WHITEPAPER.md) | Protocol specification (v2.0.4, normative) |
 | [PROTOCOL.md](./docs/design/PROTOCOL.md) | The four FSMs — state diagrams, transition tables |
-| [CN-CLI.md](./docs/design/CN-CLI.md) | CLI command reference |
+| [CLI.md](./docs/design/CLI.md) | CLI command reference |
 | [SECURITY-MODEL.md](./docs/design/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |
 
 | How-to | |
