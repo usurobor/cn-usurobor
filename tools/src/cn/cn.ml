@@ -1,4 +1,4 @@
-(** cn.ml — CLI entrypoint, thin dispatch (Melange → Node.js)
+(** cn.ml — CLI entrypoint, thin dispatch (native OCaml binary)
 
     DESIGN: This is the CLI dispatch layer. It parses args,
     finds the hub, and routes to the right module.
@@ -13,7 +13,7 @@
       cn_system.ml  → Setup, update, init
       cn_hub.ml     → Hub discovery, paths, helpers
       cn_fmt.ml     → Output formatting
-      cn_ffi.ml     → Node.js FFI bindings
+      cn_ffi.ml     → Native system bindings (stdlib + Unix)
       cn_io.ml      → Protocol I/O (sync, flush, archive)
       cn_lib.ml     → Types, parsing (pure)
       git.ml        → Raw git operations *)

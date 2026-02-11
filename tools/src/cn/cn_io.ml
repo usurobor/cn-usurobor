@@ -1,24 +1,24 @@
 (** cn_io.ml — CN protocol I/O operations
-    
+
     DESIGN: This module implements CN protocol semantics over Git.
     All I/O (git operations, file writes) lives here.
-    
+
     Layering (deliberate):
       cn.ml     → CLI commands, user interaction
       cn_io.ml  → Protocol execution (THIS FILE)
       cn_lib.ml → Pure types, parsing (no I/O)
       git.ml    → Raw git operations
-    
+
     Why separate from cn_lib?
     - cn_lib.ml is PURE (no I/O) — fully testable with ppx_expect
     - cn_io.ml has SIDE EFFECTS — needs integration tests
     - Clear boundary: types vs execution
-    
+
     Key operations:
     - sync_inbox: fetch peer branches → materialize to threads/inbox/
     - flush_outbox: threads/outbox/ → push to peer repos
     - auto_commit/auto_push: hub state management
-    
+
     CN Protocol:
     - Peers push branches to each other's repos
     - Branch name = {sender}/{topic}
@@ -26,23 +26,47 @@
 *)
 
 module Path = struct
-  let join a b = a ^ "/" ^ b
-  let basename s = 
-    match String.rindex_opt s '/' with
-    | Some i -> String.sub s (i + 1) (String.length s - i - 1)
-    | None -> s
+  let join = Filename.concat
+  let basename = Filename.basename
 end
 
 module Fs = struct
-  external exists : string -> bool = "existsSync" [@@mel.module "fs"]
-  external read : string -> string = "readFileSync" [@@mel.module "fs"]
-  external write : string -> string -> unit = "writeFileSync" [@@mel.module "fs"]
-  external readdir : string -> string array = "readdirSync" [@@mel.module "fs"]
-  external mkdir_p : string -> < recursive : bool > Js.t -> unit = "mkdirSync" [@@mel.module "fs"]
-  external unlink : string -> unit = "unlinkSync" [@@mel.module "fs"]
-  
-  let readdir_list path = readdir path |> Array.to_list
-  let ensure_dir path = if not (exists path) then mkdir_p path [%mel.obj { recursive = true }]
+  let exists = Sys.file_exists
+
+  let read path =
+    let ic = open_in path in
+    try
+      let n = in_channel_length ic in
+      let s = Bytes.create n in
+      really_input ic s 0 n;
+      close_in ic;
+      Bytes.to_string s
+    with e ->
+      close_in_noerr ic;
+      raise e
+
+  let write path content =
+    let oc = open_out path in
+    try
+      output_string oc content;
+      close_out oc
+    with e ->
+      close_out_noerr oc;
+      raise e
+
+  let readdir path = Sys.readdir path |> Array.to_list
+  let readdir_list = readdir
+
+  let unlink = Sys.remove
+
+  let rec mkdir_p path =
+    if path <> "" && path <> "/" && not (Sys.file_exists path) then begin
+      mkdir_p (Filename.dirname path);
+      try Unix.mkdir path 0o755
+      with Unix.Unix_error (Unix.EEXIST, _, _) -> ()
+    end
+
+  let ensure_dir path = if not (exists path) then mkdir_p path
 end
 
 let is_md_file f = String.length f > 3 && String.sub f (String.length f - 3) 3 = ".md"
@@ -98,7 +122,7 @@ let materialize_branch ~hub ~inbox_dir ~peer_name ~branch =
         let inbox_name = Printf.sprintf "%s-%s.md" peer_name topic in
         let inbox_path = Path.join inbox_dir inbox_name in
         let archived_path = Path.join (Path.join inbox_dir "_archived") inbox_name in
-        
+
         (* Skip if already archived *)
         if Fs.exists archived_path then None
         (* Skip if already in inbox *)
@@ -113,7 +137,7 @@ let sync_inbox ~hub ~peers =
   let inbox_dir = Path.join hub "threads/inbox" in
   Fs.ensure_dir inbox_dir;
   Fs.ensure_dir (Path.join inbox_dir "_archived");
-  
+
   peers |> List.fold_left (fun acc peer ->
     let branches = get_inbound_branches ~hub ~peer_name:peer.name in
     let materialized = branches |> List.fold_left (fun acc2 b ->
@@ -135,7 +159,7 @@ let parse_to_header content =
 let send_thread ~hub:_ ~from_name ~peer ~outbox_dir ~sent_dir ~file =
   let file_path = Path.join outbox_dir file in
   let content = Fs.read file_path in
-  
+
   match peer.clone with
   | None -> None
   | Some clone_path ->
@@ -144,37 +168,37 @@ let send_thread ~hub:_ ~from_name ~peer ~outbox_dir ~sent_dir ~file =
         let topic = if String.length file > 3 then String.sub file 0 (String.length file - 3) else file in
         let branch_name = Printf.sprintf "%s/%s" from_name topic in
         let adhoc_dir = Path.join clone_path "threads/adhoc" in
-        
+
         Fs.ensure_dir adhoc_dir;
-        
+
         let _ = Git.checkout_main ~cwd:clone_path in
         let _ = Git.pull_ff ~cwd:clone_path in
         let _ = Git.checkout_create ~cwd:clone_path ~branch:branch_name in
-        
+
         Fs.write (Path.join adhoc_dir file) content;
-        
+
         let _ = Git.add_all ~cwd:clone_path in
         let _ = Git.commit ~cwd:clone_path ~msg:(Printf.sprintf "%s: %s" from_name topic) in
         let _ = Git.push_branch ~cwd:clone_path ~branch:branch_name ~force:true in
         let _ = Git.checkout_main ~cwd:clone_path in
-        
+
         (* Move to sent *)
         let sent_path = Path.join sent_dir file in
         Fs.write sent_path content;
         Fs.unlink file_path;
-        
+
         Some file
       end
 
 let flush_outbox ~hub ~from_name ~peers =
   let outbox_dir = Path.join hub "threads/outbox" in
   let sent_dir = Path.join hub "threads/sent" in
-  
+
   if not (Fs.exists outbox_dir) then 0
   else begin
     Fs.ensure_dir sent_dir;
     let threads = Fs.readdir_list outbox_dir |> List.filter is_md_file in
-    
+
     threads |> List.filter_map (fun file ->
       let file_path = Path.join outbox_dir file in
       let content = Fs.read file_path in

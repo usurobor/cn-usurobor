@@ -1,67 +1,90 @@
-(** cn_ffi.ml — Node.js FFI bindings (Melange externals)
+(** cn_ffi.ml — Native OCaml system bindings
 
-    Single source of truth for all Node.js interop used by CN modules.
-    Extracted from cn.ml lines 37-99. *)
+    Replaces Node.js FFI with stdlib + Unix.
+    Single source of truth for all system interop used by CN modules. *)
 
 module Process = struct
-  external argv : string array = "argv" [@@mel.scope "process"]
-  external cwd : unit -> string = "cwd" [@@mel.scope "process"]
-  external exit : int -> unit = "exit" [@@mel.scope "process"]
-  external env : string Js.Dict.t = "env" [@@mel.scope "process"]
+  let argv = Sys.argv
+  let cwd () = Sys.getcwd ()
+  let exit = exit
+  let getenv_opt = Sys.getenv_opt
 end
 
 module Fs = struct
-  external exists_sync : string -> bool = "existsSync" [@@mel.module "fs"]
-  external read_file_sync : string -> string -> string = "readFileSync" [@@mel.module "fs"]
-  external write_file_sync : string -> string -> unit = "writeFileSync" [@@mel.module "fs"]
-  external append_file_sync : string -> string -> unit = "appendFileSync" [@@mel.module "fs"]
-  external unlink_sync : string -> unit = "unlinkSync" [@@mel.module "fs"]
-  external readdir_sync : string -> string array = "readdirSync" [@@mel.module "fs"]
-  external mkdir_sync : string -> < recursive : bool > Js.t -> unit = "mkdirSync" [@@mel.module "fs"]
+  let exists = Sys.file_exists
 
-  let exists = exists_sync
-  let read path = read_file_sync path "utf8"
-  let write = write_file_sync
-  let append = append_file_sync
-  let unlink = unlink_sync
-  let readdir path = readdir_sync path |> Array.to_list
-  let mkdir_p path = mkdir_sync path [%mel.obj { recursive = true }]
+  let read path =
+    let ic = open_in path in
+    try
+      let n = in_channel_length ic in
+      let s = Bytes.create n in
+      really_input ic s 0 n;
+      close_in ic;
+      Bytes.to_string s
+    with e ->
+      close_in_noerr ic;
+      raise e
+
+  let write path content =
+    let oc = open_out path in
+    try
+      output_string oc content;
+      close_out oc
+    with e ->
+      close_out_noerr oc;
+      raise e
+
+  let append path content =
+    let oc = open_out_gen [Open_append; Open_creat; Open_text] 0o644 path in
+    try
+      output_string oc content;
+      close_out oc
+    with e ->
+      close_out_noerr oc;
+      raise e
+
+  let readdir path = Sys.readdir path |> Array.to_list
+
+  let unlink = Sys.remove
+
+  let rec mkdir_p path =
+    if path <> "" && path <> "/" && not (Sys.file_exists path) then begin
+      mkdir_p (Filename.dirname path);
+      try Unix.mkdir path 0o755
+      with Unix.Unix_error (Unix.EEXIST, _, _) -> ()
+    end
+
   let ensure_dir path = if not (exists path) then mkdir_p path
 end
 
 module Path = struct
-  external join : string -> string -> string = "join" [@@mel.module "path"]
-  external dirname : string -> string = "dirname" [@@mel.module "path"]
-  external basename : string -> string = "basename" [@@mel.module "path"]
-  external basename_ext : string -> string -> string = "basename" [@@mel.module "path"]
-end
-
-module Yaml = struct
-  external parse : string -> Js.Json.t = "parse" [@@mel.module "yaml"]
-  external stringify : Js.Json.t -> string = "stringify" [@@mel.module "yaml"]
+  let join = Filename.concat
+  let dirname = Filename.dirname
+  let basename = Filename.basename
+  let basename_ext path _ext = Filename.remove_extension (basename path)
 end
 
 module Child_process = struct
-  external exec_sync : string -> < cwd : string ; encoding : string ; stdio : string array > Js.t -> string = "execSync" [@@mel.module "child_process"]
-  external exec_sync_simple : string -> < encoding : string > Js.t -> string = "execSync" [@@mel.module "child_process"]
-
   let exec_in ~cwd cmd =
-    match exec_sync cmd [%mel.obj { cwd; encoding = "utf8"; stdio = [|"pipe"; "pipe"; "pipe"|] }] with
-    | result -> Some result
-    | exception Js.Exn.Error _ -> None
+    let full_cmd = Printf.sprintf "cd %s && %s" (Filename.quote cwd) cmd in
+    try
+      let ic = Unix.open_process_in full_cmd in
+      let buf = Buffer.create 1024 in
+      (try while true do Buffer.add_char buf (input_char ic) done
+       with End_of_file -> ());
+      match Unix.close_process_in ic with
+      | Unix.WEXITED 0 -> Some (Buffer.contents buf)
+      | _ -> None
+    with _ -> None
 
   let exec cmd =
-    match exec_sync_simple cmd [%mel.obj { encoding = "utf8" }] with
-    | result -> Some result
-    | exception Js.Exn.Error _ -> None
-end
-
-module Json = struct
-  external stringify : 'a -> string = "stringify" [@@mel.scope "JSON"]
-end
-
-(* Melange emits UTF-8 literals as \xNN escapes which JS interprets as Latin-1.
-   Use String.fromCodePoint for correct Unicode output. *)
-module Str = struct
-  external from_code_point : int -> string = "fromCodePoint" [@@mel.scope "String"]
+    try
+      let ic = Unix.open_process_in cmd in
+      let buf = Buffer.create 1024 in
+      (try while true do Buffer.add_char buf (input_char ic) done
+       with End_of_file -> ());
+      match Unix.close_process_in ic with
+      | Unix.WEXITED 0 -> Some (Buffer.contents buf)
+      | _ -> None
+    with _ -> None
 end

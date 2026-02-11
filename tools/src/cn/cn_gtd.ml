@@ -141,16 +141,10 @@ let run_adhoc hub_path title =
   Cn_ffi.Fs.ensure_dir dir;
 
   let ts = Cn_fmt.now_iso () in
-  let date = String.sub ts 0 10 in
-  let time = String.sub ts 11 8 |> Js.String.replaceByRe ~regexp:[%mel.re "/:/g"] ~replacement:"" in
-  let slug =
-    title
-    |> Js.String.slice ~start:0 ~end_:40
-    |> Js.String.toLowerCase
-    |> Js.String.replaceByRe ~regexp:[%mel.re "/[^a-z0-9]+/g"] ~replacement:"-"
-    |> Js.String.replaceByRe ~regexp:[%mel.re "/^-|-$/g"] ~replacement:""
-  in
-  let file_name = Printf.sprintf "%s-%s-%s.md" (Js.String.replaceByRe ~regexp:[%mel.re "/-/g"] ~replacement:"" date) time slug in
+  let date = String.sub ts 0 10 |> Cn_hub.remove_char '-' in
+  let time = String.sub ts 11 8 |> Cn_hub.remove_char ':' in
+  let slug = Cn_hub.slugify ~max_len:40 title in
+  let file_name = Printf.sprintf "%s-%s-%s.md" date time slug in
   let file_path = Cn_ffi.Path.join dir file_name in
 
   let content = Printf.sprintf {|---
@@ -169,7 +163,7 @@ let run_daily hub_path =
   let dir = Cn_hub.threads_reflections_daily hub_path in
   Cn_ffi.Fs.ensure_dir dir;
 
-  let today = String.sub (Cn_fmt.now_iso ()) 0 10 |> Js.String.replaceByRe ~regexp:[%mel.re "/-/g"] ~replacement:"" in
+  let today = String.sub (Cn_fmt.now_iso ()) 0 10 |> Cn_hub.remove_char '-' in
   let file_name = Printf.sprintf "%s.md" today in
   let file_path = Cn_ffi.Path.join dir file_name in
 

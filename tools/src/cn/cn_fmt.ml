@@ -3,13 +3,18 @@
     Unicode symbols, color output, dry-run mode.
     Used by all CN modules for user-facing output. *)
 
-let check = Cn_ffi.Str.from_code_point 0x2713  (* ✓ U+2713 *)
-let cross = Cn_ffi.Str.from_code_point 0x2717  (* ✗ U+2717 *)
-let warning = Cn_ffi.Str.from_code_point 0x26A0 (* ⚠ U+26A0 *)
+let check = "\xe2\x9c\x93"   (* ✓ U+2713 *)
+let cross = "\xe2\x9c\x97"   (* ✗ U+2717 *)
+let warning = "\xe2\x9a\xa0" (* ⚠ U+26A0 *)
 
-let now_iso () = Js.Date.toISOString (Js.Date.make ())
+let now_iso () =
+  let t = Unix.gettimeofday () in
+  let tm = Unix.gmtime t in
+  Printf.sprintf "%04d-%02d-%02dT%02d:%02d:%02d.000Z"
+    (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday
+    tm.tm_hour tm.tm_min tm.tm_sec
 
-let no_color = Js.Dict.get Cn_ffi.Process.env "NO_COLOR" |> Option.is_some
+let no_color = Cn_ffi.Process.getenv_opt "NO_COLOR" |> Option.is_some
 
 let color code s = if no_color then s else Printf.sprintf "\027[%sm%s\027[0m" code s
 let green = color "32"

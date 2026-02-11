@@ -1,28 +1,34 @@
 (** git.ml — Pure git operations
-    
+
     DESIGN: This module contains ONLY raw git operations.
     No CN protocol knowledge. No business logic.
-    
+
     Layering (deliberate):
       cn.ml → cn_io.ml → git.ml
               ↑           ↑
               CN semantics │
                           raw git
-    
+
     Why separate?
     - Testable: can mock git.ml for cn_io tests
     - Portable: git.ml works for any git workflow
     - Clear: CN protocol lives in cn_io, not here
-    
+
     All functions are thin wrappers over git CLI.
     Returns Option for operations that can fail.
 *)
 
 module Child_process = struct
-  external exec_sync : string -> < cwd : string ; encoding : string ; stdio : string array > Js.t -> string = "execSync" [@@mel.module "child_process"]
-  
   let exec_in ~cwd cmd =
-    try Some (exec_sync cmd [%mel.obj { cwd = cwd; encoding = "utf8"; stdio = [|"pipe"; "pipe"; "pipe"|] }])
+    let full_cmd = Printf.sprintf "cd %s && %s" (Filename.quote cwd) cmd in
+    try
+      let ic = Unix.open_process_in full_cmd in
+      let buf = Buffer.create 1024 in
+      (try while true do Buffer.add_char buf (input_char ic) done
+       with End_of_file -> ());
+      match Unix.close_process_in ic with
+      | Unix.WEXITED 0 -> Some (Buffer.contents buf)
+      | _ -> None
     with _ -> None
 end
 

@@ -16,7 +16,7 @@ let queue_add hub_path id from content =
   let dir = queue_dir hub_path in
   Cn_ffi.Fs.ensure_dir dir;
 
-  let ts = Cn_fmt.now_iso () |> Js.String.replaceByRe ~regexp:[%mel.re "/[:.]/g"] ~replacement:"-" in
+  let ts = Cn_hub.sanitize_timestamp (Cn_fmt.now_iso ()) in
   let file_name = Printf.sprintf "%s-%s-%s.md" ts from id in
   let file_path = Cn_ffi.Path.join dir file_name in
 
@@ -94,12 +94,7 @@ let execute_op hub_path name input_id op =
   | Send (peer, msg, body_opt) ->
       let outbox_dir = Cn_hub.threads_mail_outbox hub_path in
       Cn_ffi.Fs.ensure_dir outbox_dir;
-      let slug =
-        msg |> Js.String.slice ~start:0 ~end_:30
-        |> Js.String.toLowerCase
-        |> Js.String.replaceByRe ~regexp:[%mel.re "/[^a-z0-9]+/g"] ~replacement:"-"
-        |> Js.String.replaceByRe ~regexp:[%mel.re "/^-|-$/g"] ~replacement:""
-      in
+      let slug = Cn_hub.slugify ~max_len:30 msg in
       let file_name = slug ^ ".md" in
       let first_line = match String.split_on_char '\n' msg with x :: _ -> x | [] -> msg in
       let body = match body_opt with Some b -> b | None -> msg in
@@ -147,13 +142,8 @@ let execute_op hub_path name input_id op =
   | Surface desc ->
       let dir = Cn_hub.mca_dir hub_path in
       Cn_ffi.Fs.ensure_dir dir;
-      let ts = Cn_fmt.now_iso () |> Js.String.replaceByRe ~regexp:[%mel.re "/[:.]/g"] ~replacement:"-" in
-      let slug =
-        desc |> Js.String.slice ~start:0 ~end_:40
-        |> Js.String.toLowerCase
-        |> Js.String.replaceByRe ~regexp:[%mel.re "/[^a-z0-9]+/g"] ~replacement:"-"
-        |> Js.String.replaceByRe ~regexp:[%mel.re "/^-|-$/g"] ~replacement:""
-      in
+      let ts = Cn_hub.sanitize_timestamp (Cn_fmt.now_iso ()) in
+      let slug = Cn_hub.slugify ~max_len:40 desc in
       let file_name = Printf.sprintf "%s-%s.md" ts slug in
       let content = Printf.sprintf "---\nid: %s\nsurfaced-by: %s\ncreated: %s\nstatus: open\n---\n\n# MCA\n\n%s\n"
         slug name (Cn_fmt.now_iso ()) desc in
@@ -164,7 +154,7 @@ let execute_op hub_path name input_id op =
 (* === Archive completed IO pair === *)
 
 let generate_trigger () =
-  Cn_fmt.now_iso () |> Js.String.replaceByRe ~regexp:[%mel.re "/[:.]/g"] ~replacement:"-"
+  Cn_hub.sanitize_timestamp (Cn_fmt.now_iso ())
 
 let archive_io_pair hub_path name =
   let inp = input_path hub_path in

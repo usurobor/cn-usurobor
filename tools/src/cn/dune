@@ -2,30 +2,25 @@
 (library
  (name git)
  (modules git)
- (modes melange)
- (preprocess (pps melange.ppx)))
+ (libraries unix))
 
 ; cn_io module (CN protocol over git)
 (library
  (name cn_io)
  (modules cn_io)
- (libraries git)
- (modes melange)
- (preprocess (pps melange.ppx)))
+ (libraries git unix))
 
 ; cn library (pure functions, testable)
 (library
  (name cn_lib)
  (modules cn_lib)
- (libraries inbox_lib)
- (modes :standard melange))
+ (libraries inbox_lib))
 
-; Shared FFI bindings
+; Native system bindings (stdlib + Unix)
 (library
  (name cn_ffi)
  (modules cn_ffi)
- (modes melange)
- (preprocess (pps melange.ppx)))
+ (libraries unix))
 
 ; CN command modules (all share cn_ffi, cn_lib)
 (library
@@ -33,15 +28,11 @@
  (wrapped false)
  (modules cn_fmt cn_hub cn_mail cn_gtd cn_agent cn_mca
           cn_commands cn_system)
- (libraries cn_ffi cn_lib inbox_lib git cn_io)
- (modes melange)
- (preprocess (pps melange.ppx)))
+ (libraries cn_ffi cn_lib inbox_lib git cn_io unix))
 
-; cn CLI (Melange -> JS)
-(melange.emit
- (target output)
- (alias cn)
+; cn CLI (native OCaml binary)
+(executable
+ (name cn)
+ (public_name cn)
  (modules cn)
- (libraries cn_cmd cn_ffi cn_lib inbox_lib git cn_io)
- (module_systems commonjs)
- (preprocess (pps melange.ppx)))
+ (libraries cn_cmd cn_ffi cn_lib inbox_lib git cn_io))

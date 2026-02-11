@@ -15,14 +15,8 @@ let run_mca_add hub_path name description =
   let dir = Cn_hub.mca_dir hub_path in
   Cn_ffi.Fs.ensure_dir dir;
 
-  let ts = Cn_fmt.now_iso () |> Js.String.replaceByRe ~regexp:[%mel.re "/[:.]/g"] ~replacement:"-" in
-  let slug =
-    description
-    |> Js.String.slice ~start:0 ~end_:40
-    |> Js.String.toLowerCase
-    |> Js.String.replaceByRe ~regexp:[%mel.re "/[^a-z0-9]+/g"] ~replacement:"-"
-    |> Js.String.replaceByRe ~regexp:[%mel.re "/^-|-$/g"] ~replacement:""
-  in
+  let ts = Cn_hub.sanitize_timestamp (Cn_fmt.now_iso ()) in
+  let slug = Cn_hub.slugify ~max_len:40 description in
   let file_name = Printf.sprintf "%s-%s.md" ts slug in
   let file_path = Cn_ffi.Path.join dir file_name in
 
@@ -129,7 +123,7 @@ let prepare_mca_review hub_path name =
     Printf.sprintf "- [%s] %s (by %s)" id (String.trim desc) by
   ) |> String.concat "\n" in
 
-  let ts = Cn_fmt.now_iso () |> Js.String.replaceByRe ~regexp:[%mel.re "/[:.]/g"] ~replacement:"-" in
+  let ts = Cn_hub.sanitize_timestamp (Cn_fmt.now_iso ()) in
   let event_file = Printf.sprintf "threads/system/mca-review-%s.md" ts in
   let body = Printf.sprintf {|---
 type: mca-review

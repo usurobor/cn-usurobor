@@ -34,16 +34,40 @@ let load_peers hub_path =
   | true -> parse_peers_md (Cn_ffi.Fs.read peers_path)
   | false -> []
 
+(* === String Helpers === *)
+
+let slugify ?max_len s =
+  let s = match max_len with
+    | Some n when String.length s > n -> String.sub s 0 n
+    | _ -> s
+  in
+  let s = String.lowercase_ascii s in
+  let buf = Buffer.create (String.length s) in
+  let last_was_sep = ref true in
+  String.iter (fun c ->
+    if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') then begin
+      Buffer.add_char buf c;
+      last_was_sep := false
+    end else if not !last_was_sep then begin
+      Buffer.add_char buf '-';
+      last_was_sep := true
+    end
+  ) s;
+  let result = Buffer.contents buf in
+  let len = String.length result in
+  if len > 0 && result.[len-1] = '-' then String.sub result 0 (len-1)
+  else result
+
+let sanitize_timestamp s =
+  String.map (fun c -> if c = ':' || c = '.' then '-' else c) s
+
+let remove_char c s =
+  String.split_on_char c s |> String.concat ""
+
 (* === Helpers === *)
 
 let is_md_file = ends_with ~suffix:".md"
 let split_lines s = String.split_on_char '\n' s |> List.filter non_empty
-
-let slugify s =
-  s
-  |> Js.String.toLowerCase
-  |> Js.String.replaceByRe ~regexp:[%mel.re "/[^a-z0-9]+/g"] ~replacement:"-"
-  |> Js.String.replaceByRe ~regexp:[%mel.re "/^-|-$/g"] ~replacement:""
 
 (* === Path Constants (v2 structure) === *)
 
@@ -60,8 +84,8 @@ let mca_dir hub = Cn_ffi.Path.join hub "state/mca"
 
 let timestamp_slug () =
   let iso = Cn_fmt.now_iso () in
-  let date = String.sub iso 0 10 |> String.split_on_char '-' |> String.concat "" in
-  let time = String.sub iso 11 8 |> String.split_on_char ':' |> String.concat "" in
+  let date = String.sub iso 0 10 |> remove_char '-' in
+  let time = String.sub iso 11 8 |> remove_char ':' in
   Printf.sprintf "%s-%s" date time
 
 let make_thread_filename slug =

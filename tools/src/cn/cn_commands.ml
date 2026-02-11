@@ -91,7 +91,7 @@ let run_commit hub_path name msg =
         | None -> Printf.sprintf "%s: auto-commit %s" name (String.sub (Cn_fmt.now_iso ()) 0 10)
       in
       let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git add -A" in
-      let escaped = Js.String.replaceByRe ~regexp:[%mel.re "/\"/g"] ~replacement:"\\\"" message in
+      let escaped = String.map (fun c -> if c = '"' then '\'' else c) message in
       match Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m \"%s\"" escaped) with
       | Some _ ->
           Cn_hub.log_action hub_path "commit" message;
@@ -117,13 +117,7 @@ let run_send hub_path peer message =
   let outbox_dir = Cn_hub.threads_mail_outbox hub_path in
   Cn_ffi.Fs.ensure_dir outbox_dir;
 
-  let slug =
-    message
-    |> Js.String.slice ~start:0 ~end_:30
-    |> Js.String.toLowerCase
-    |> Js.String.replaceByRe ~regexp:[%mel.re "/[^a-z0-9]+/g"] ~replacement:"-"
-    |> Js.String.replaceByRe ~regexp:[%mel.re "/^-|-$/g"] ~replacement:""
-  in
+  let slug = Cn_hub.slugify ~max_len:30 message in
   let file_name = slug ^ ".md" in
   let first_line = match String.split_on_char '\n' message with
     | x :: _ -> x

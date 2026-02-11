@@ -77,7 +77,11 @@ let run_doctor hub_path =
 
   let checks = [
     (match Cn_ffi.Child_process.exec "git --version" with
-     | Some v -> { name = "git"; passed = true; value = Js.String.replace ~search:"git version " ~replacement:"" (String.trim v) }
+     | Some v ->
+         let trimmed = String.trim v in
+         let value = match strip_prefix ~prefix:"git version " trimmed with
+           | Some rest -> rest | None -> trimmed in
+         { name = "git"; passed = true; value }
      | None -> { name = "git"; passed = false; value = "not installed" });
 
     (match Cn_ffi.Child_process.exec "git config user.name" with
@@ -106,8 +110,9 @@ let run_doctor hub_path =
 
     (let p = Cn_ffi.Path.join hub_path "state/peers.md" in
      if Cn_ffi.Fs.exists p then
-       let count = Js.String.match_ ~regexp:[%mel.re "/- name:/g"] (Cn_ffi.Fs.read p)
-         |> Option.map Array.length |> Option.value ~default:0 in
+       let count = Cn_ffi.Fs.read p |> String.split_on_char '\n'
+         |> List.filter (fun l -> starts_with ~prefix:"- name:" (String.trim l))
+         |> List.length in
        { name = "state/peers.md"; passed = true; value = Printf.sprintf "%d peer(s)" count }
      else { name = "state/peers.md"; passed = false; value = "missing" });
 
