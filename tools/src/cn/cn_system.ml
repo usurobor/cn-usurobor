@@ -142,7 +142,7 @@ let run_sync hub_path name =
   Cn_mail.inbox_process hub_path;
   Cn_mail.outbox_flush hub_path name;
   update_runtime hub_path;
-  let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git add state/runtime.md" in
+  let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git add -A" in
   let commit_result = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git commit -m 'heartbeat' --allow-empty" in
   (match commit_result with
    | Some _ ->
