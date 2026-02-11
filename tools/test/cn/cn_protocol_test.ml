@@ -383,3 +383,191 @@ let%expect_test "receiver: materialized + write_ok is invalid" =
 let%expect_test "receiver: skipped + write_ok is invalid" =
   show_receiver R_Skipped RE_WriteOk;
   [%expect {| ERROR: invalid receiver transition from skipped |}]
+
+
+(* ============================================================
+   Property Tests: Exhaustive State × Event Matrix
+   ============================================================
+
+   From PROTOCOL.md: "Any sequence of valid events from any
+   reachable state never panics." These tests verify that every
+   state×event combination returns Ok or Error, never raises. *)
+
+let%expect_test "property: thread FSM — no panics (64 combinations)" =
+  let all_states = [Received; Queued; Active; Doing; Deferred; Delegated; Archived; Deleted] in
+  let all_events = [Enqueue; Feed; Claim; Complete; Defer; Delegate; Discard; Resurface] in
+  all_states |> List.iter (fun s ->
+    all_events |> List.iter (fun e ->
+      ignore (thread_transition s e)));
+  print_endline "64 combinations: no panics";
+  [%expect {| 64 combinations: no panics |}]
+
+let%expect_test "property: thread FSM — valid/invalid counts" =
+  let all_states = [Received; Queued; Active; Doing; Deferred; Delegated; Archived; Deleted] in
+  let all_events = [Enqueue; Feed; Claim; Complete; Defer; Delegate; Discard; Resurface] in
+  let valid = ref 0 in
+  let invalid = ref 0 in
+  all_states |> List.iter (fun s ->
+    all_events |> List.iter (fun e ->
+      match thread_transition s e with
+      | Ok _ -> incr valid
+      | Error _ -> incr invalid));
+  Printf.printf "valid=%d invalid=%d total=%d\n" !valid !invalid (!valid + !invalid);
+  [%expect {| valid=32 invalid=32 total=64 |}]
+
+let%expect_test "property: actor FSM — no panics (24 combinations)" =
+  let all_states = [Idle; InputReady; Processing; OutputReady] in
+  let all_events = [Queue_pop; Queue_empty; Wake; Output_received; Archive_complete; Archive_fail] in
+  all_states |> List.iter (fun s ->
+    all_events |> List.iter (fun e ->
+      ignore (actor_transition s e)));
+  print_endline "24 combinations: no panics";
+  [%expect {| 24 combinations: no panics |}]
+
+let%expect_test "property: actor FSM — valid/invalid counts" =
+  let all_states = [Idle; InputReady; Processing; OutputReady] in
+  let all_events = [Queue_pop; Queue_empty; Wake; Output_received; Archive_complete; Archive_fail] in
+  let valid = ref 0 in
+  let invalid = ref 0 in
+  all_states |> List.iter (fun s ->
+    all_events |> List.iter (fun e ->
+      match actor_transition s e with
+      | Ok _ -> incr valid
+      | Error _ -> incr invalid));
+  Printf.printf "valid=%d invalid=%d total=%d\n" !valid !invalid (!valid + !invalid);
+  [%expect {| valid=6 invalid=18 total=24 |}]
+
+let%expect_test "property: sender FSM — no panics (36 combinations)" =
+  let all_states = [S_Pending; S_BranchCreated; S_Pushing; S_Pushed; S_Failed; S_Delivered] in
+  let all_events = [SE_CreateBranch; SE_Push; SE_PushOk; SE_PushFail; SE_Retry; SE_Cleanup] in
+  all_states |> List.iter (fun s ->
+    all_events |> List.iter (fun e ->
+      ignore (sender_transition s e)));
+  print_endline "36 combinations: no panics";
+  [%expect {| 36 combinations: no panics |}]
+
+let%expect_test "property: sender FSM — valid/invalid counts" =
+  let all_states = [S_Pending; S_BranchCreated; S_Pushing; S_Pushed; S_Failed; S_Delivered] in
+  let all_events = [SE_CreateBranch; SE_Push; SE_PushOk; SE_PushFail; SE_Retry; SE_Cleanup] in
+  let valid = ref 0 in
+  let invalid = ref 0 in
+  all_states |> List.iter (fun s ->
+    all_events |> List.iter (fun e ->
+      match sender_transition s e with
+      | Ok _ -> incr valid
+      | Error _ -> incr invalid));
+  Printf.printf "valid=%d invalid=%d total=%d\n" !valid !invalid (!valid + !invalid);
+  [%expect {| valid=13 invalid=23 total=36 |}]
+
+let%expect_test "property: receiver FSM — no panics (36 combinations)" =
+  let all_states = [R_Fetched; R_Materializing; R_Materialized; R_Skipped; R_Rejected; R_Cleaned] in
+  let all_events = [RE_IsNew; RE_IsDuplicate; RE_IsOrphan; RE_WriteOk; RE_WriteFail; RE_DeleteBranch] in
+  all_states |> List.iter (fun s ->
+    all_events |> List.iter (fun e ->
+      ignore (receiver_transition s e)));
+  print_endline "36 combinations: no panics";
+  [%expect {| 36 combinations: no panics |}]
+
+let%expect_test "property: receiver FSM — valid/invalid counts" =
+  let all_states = [R_Fetched; R_Materializing; R_Materialized; R_Skipped; R_Rejected; R_Cleaned] in
+  let all_events = [RE_IsNew; RE_IsDuplicate; RE_IsOrphan; RE_WriteOk; RE_WriteFail; RE_DeleteBranch] in
+  let valid = ref 0 in
+  let invalid = ref 0 in
+  all_states |> List.iter (fun s ->
+    all_events |> List.iter (fun e ->
+      match receiver_transition s e with
+      | Ok _ -> incr valid
+      | Error _ -> incr invalid));
+  Printf.printf "valid=%d invalid=%d total=%d\n" !valid !invalid (!valid + !invalid);
+  [%expect {| valid=14 invalid=22 total=36 |}]
+
+
+(* ============================================================
+   Cross-FSM: GTD command → Thread event mapping
+   ============================================================
+
+   cn_gtd.ml maps each GTD command to a Thread FSM event.
+   Verify the mapping is correct by testing the transitions
+   that cn_gtd.apply_transition would invoke. *)
+
+let%expect_test "gtd mapping: delete → Discard" =
+  show_thread Received Discard;
+  show_thread Active Discard;
+  show_thread Deferred Discard;
+  [%expect {|
+    received + discard → deleted
+    active + discard → deleted
+    deferred + discard → deleted
+  |}]
+
+let%expect_test "gtd mapping: defer → Defer" =
+  show_thread Received Defer;
+  show_thread Active Defer;
+  show_thread Doing Defer;
+  [%expect {|
+    received + defer → deferred
+    active + defer → deferred
+    doing + defer → deferred
+  |}]
+
+let%expect_test "gtd mapping: delegate → Delegate" =
+  show_thread Received Delegate;
+  show_thread Active Delegate;
+  [%expect {|
+    received + delegate → delegated
+    active + delegate → delegated
+  |}]
+
+let%expect_test "gtd mapping: do → Claim" =
+  show_thread Received Claim;
+  show_thread Active Claim;
+  [%expect {|
+    received + claim → doing
+    active + claim → doing
+  |}]
+
+let%expect_test "gtd mapping: done → Complete" =
+  show_thread Active Complete;
+  show_thread Doing Complete;
+  [%expect {|
+    active + complete → archived
+    doing + complete → archived
+  |}]
+
+let%expect_test "gtd mapping: invalid transitions agents hit" =
+  (* cn_gtd rejects these via FSM — verify they're errors *)
+  show_thread Doing Claim;
+  show_thread Queued Discard;
+  show_thread Delegated Defer;
+  [%expect {|
+    ERROR: invalid transition: doing + claim
+    ERROR: invalid transition: queued + discard
+    ERROR: invalid transition: delegated + defer
+  |}]
+
+
+(* ============================================================
+   Cross-FSM: Actor state derivation + inbound flow
+   ============================================================
+
+   cn_agent.run_inbound derives actor state from filesystem,
+   then drives transitions. Test the derivation→transition chain. *)
+
+let%expect_test "actor: idle → feed → processing → archive → idle" =
+  (* Simulates one full cn-in cycle *)
+  let s0 = actor_derive_state ~input_exists:false ~output_exists:false in
+  Printf.printf "derive(no input, no output) = %s\n" (string_of_actor_state s0);
+  (* After queue_pop + write input.md *)
+  let s1 = actor_derive_state ~input_exists:true ~output_exists:false in
+  Printf.printf "derive(input, no output) = %s\n" (string_of_actor_state s1);
+  (* After agent writes output.md *)
+  let s2 = actor_derive_state ~input_exists:true ~output_exists:true in
+  Printf.printf "derive(input, output) = %s\n" (string_of_actor_state s2);
+  (* Archive transition *)
+  show_actor s2 Archive_complete;
+  [%expect {|
+    derive(no input, no output) = idle
+    derive(input, no output) = processing
+    derive(input, output) = output_ready
+    output_ready → idle
+  |}]

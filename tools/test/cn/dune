@@ -13,3 +13,11 @@
  (libraries cn_protocol)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_cmd tests (ppx_expect) — pure functions from command modules
+(library
+ (name cn_cmd_test)
+ (modules cn_cmd_test)
+ (libraries cn_cmd cn_ffi cn_lib cn_protocol)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))

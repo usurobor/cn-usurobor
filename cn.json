@@ -1,17 +1,20 @@
 {
+  "cn_manifest": "v1",
+  "protocol": "git-cn-v1",
+  "kind": "template",
   "name": "cnos",
   "version": "2.1.0",
-  "protocol": "cn/1.0",
-  "kind": "template",
   "description": "Coherent Network agent template — skills, mindsets, tools",
-  "repository": "https://github.com/usurobor/cnos",
+  "repo_urls": [
+    "https://github.com/usurobor/cnos"
+  ],
   "maintainers": [
     {
       "name": "Axiom",
       "role": "owner"
     },
     {
-      "name": "Sigma", 
+      "name": "Sigma",
       "role": "engineer",
       "hub": "https://github.com/usurobor/cn-sigma"
     },

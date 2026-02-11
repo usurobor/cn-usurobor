@@ -177,5 +177,5 @@ The vision is worth building. The work is implementation.
 
 - `tsc/spec/tsc-core.md` — TSC measurement specification
 - `tsc-practice/ctb/spec/` — CTB language reference
-- `docs/CN-WHITEPAPER.md` — Protocol v1 specification
-- `docs/CN-EXECUTABLE-SKILLS.md` — CTB integration architecture
+- `docs/design/WHITEPAPER.md` — Protocol v1 specification
+- `docs/design/EXECUTABLE-SKILLS.md` — CTB integration architecture

@@ -66,7 +66,7 @@ Two agents (Sigma and Pi) failed to coordinate for 4 hours despite both being on
 | peer-sync v2: check own repo only, all branches | Sigma | TODO |
 | Add ACK requirement for all messages | Sigma/Pi | TODO |
 | Add timeout escalation (no response > 2h) | Sigma/Pi | TODO |
-| Document new protocol in CN-WHITEPAPER | Pi | TODO |
+| Document new protocol in WHITEPAPER | Pi | TODO |
 
 ## Lessons Learned
 

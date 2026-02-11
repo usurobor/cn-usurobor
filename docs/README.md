@@ -20,10 +20,10 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
 | I want to... | Read |
 |--------------|------|
 | Understand what cnos is and how it works | [ARCHITECTURE.md](./ARCHITECTURE.md) |
-| Understand *why* cnos exists | [CN-MANIFESTO.md](./design/CN-MANIFESTO.md) |
-| Read the formal protocol spec | [CN-WHITEPAPER.md](./design/CN-WHITEPAPER.md) |
-| Understand the FSM state machines in depth | [FSM-PROTOCOL.md](./design/FSM-PROTOCOL.md) |
-| Learn the `cn` CLI commands | [CN-CLI.md](./design/CN-CLI.md) |
+| Understand *why* cnos exists | [MANIFESTO.md](./design/MANIFESTO.md) |
+| Read the formal protocol spec | [WHITEPAPER.md](./design/WHITEPAPER.md) |
+| Understand the FSM state machines in depth | [PROTOCOL.md](./design/PROTOCOL.md) |
+| Learn the `cn` CLI commands | [CLI.md](./design/CLI.md) |
 | Set up peering between two agents | [HANDSHAKE.md](./how-to/HANDSHAKE.md) |
 | Set up cron automation | [AUTOMATION.md](./how-to/AUTOMATION.md) |
 | Migrate from an older version | [MIGRATION.md](./how-to/MIGRATION.md) |
@@ -71,9 +71,9 @@ The foundational documents. Read in this order for full understanding.
 | Document | What it is |
 |----------|-----------|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System overview — modules, FSMs, data flow, directory layout |
-| [CN-MANIFESTO.md](./design/CN-MANIFESTO.md) | Principles — why cnos exists, what it stands for |
-| [CN-WHITEPAPER.md](./design/CN-WHITEPAPER.md) | Protocol specification (v2.0.4, normative) |
-| [FSM-PROTOCOL.md](./design/FSM-PROTOCOL.md) | FSM design — state diagrams, transition tables (implemented) |
+| [MANIFESTO.md](./design/MANIFESTO.md) | Principles — why cnos exists, what it stands for |
+| [WHITEPAPER.md](./design/WHITEPAPER.md) | Protocol specification (v2.0.4, normative) |
+| [PROTOCOL.md](./design/PROTOCOL.md) | FSM design — state diagrams, transition tables (implemented) |
 
 ### Domain
 
@@ -81,9 +81,9 @@ Specifications for specific subsystems.
 
 | Document | What it is |
 |----------|-----------|
-| [CN-CLI.md](./design/CN-CLI.md) | CLI command reference — every `cn` command |
+| [CLI.md](./design/CLI.md) | CLI command reference — every `cn` command |
 | [SECURITY-MODEL.md](./design/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |
-| [CN-LOGGING.md](./design/CN-LOGGING.md) | Logging — IO pair archives, run logs, traceability |
+| [LOGGING.md](./design/LOGGING.md) | Logging — IO pair archives, run logs, traceability |
 | [AGILE-PROCESS.md](./design/AGILE-PROCESS.md) | Team process — backlog, review, sync cadence |
 
 ### Vision
@@ -92,8 +92,8 @@ Forward-looking designs. Not yet implemented.
 
 | Document | What it is |
 |----------|-----------|
-| [CN-EXECUTABLE-SKILLS.md](./design/CN-EXECUTABLE-SKILLS.md) | Skills as programs (CTB language) |
-| [CN-DAEMON.md](./design/CN-DAEMON.md) | cn as runtime service with plugins |
+| [EXECUTABLE-SKILLS.md](./design/EXECUTABLE-SKILLS.md) | Skills as programs (CTB language) |
+| [DAEMON.md](./design/DAEMON.md) | cn as runtime service with plugins |
 
 ---
 

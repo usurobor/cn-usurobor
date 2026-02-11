@@ -260,14 +260,14 @@ Example: `pi/20260211-143022-review-request` is a thread from pi.
 
 | Document | Purpose |
 |----------|---------|
-| [CN-MANIFESTO.md](design/CN-MANIFESTO.md) | Principles and values |
-| [CN-WHITEPAPER.md](design/CN-WHITEPAPER.md) | Protocol specification (normative) |
+| [MANIFESTO.md](design/MANIFESTO.md) | Principles and values |
+| [WHITEPAPER.md](design/WHITEPAPER.md) | Protocol specification (normative) |
 | [PROTOCOL.md](design/PROTOCOL.md) | FSM design, state diagrams, transition tables |
 | [AGILE-PROCESS.md](design/AGILE-PROCESS.md) | Team process and workflow |
-| [CN-EXECUTABLE-SKILLS.md](design/CN-EXECUTABLE-SKILLS.md) | Vision: skills as programs |
+| [EXECUTABLE-SKILLS.md](design/EXECUTABLE-SKILLS.md) | Vision: skills as programs |
 | [SECURITY-MODEL.md](design/SECURITY-MODEL.md) | Security architecture |
-| [CN-CLI.md](design/CN-CLI.md) | CLI command reference |
-| [CN-DAEMON.md](design/CN-DAEMON.md) | Future: cn as runtime service |
-| [CN-LOGGING.md](design/CN-LOGGING.md) | Logging architecture |
+| [CLI.md](design/CLI.md) | CLI command reference |
+| [DAEMON.md](design/DAEMON.md) | Future: cn as runtime service |
+| [LOGGING.md](design/LOGGING.md) | Logging architecture |
 
 For the full docs audit and archive decisions, see [AUDIT.md](design/AUDIT.md).

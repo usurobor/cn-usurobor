@@ -487,7 +487,7 @@ If item deferred more than N times:
 
 1. Standardize on `main` branch across all repos
 2. Update peer-sync to check own repo only
-3. Document new protocol in CN-WHITEPAPER.md
+3. Document new protocol in WHITEPAPER.md
 
 ### 5.2 Phase 2: Inbox Implementation
 

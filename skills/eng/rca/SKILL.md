@@ -26,7 +26,7 @@ This prevents:
 
 ### 1. Capture
 
-Create `threads/rca/YYYYMMDD-title.md`:
+Create `threads/rca/YYYY-MM-DD-title.md`:
 
 ```markdown
 # RCA: [Title]

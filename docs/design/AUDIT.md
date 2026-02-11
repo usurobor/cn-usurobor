@@ -15,15 +15,15 @@
 | Document | Status | Action | Notes |
 |----------|--------|--------|-------|
 | **ARCHITECTURE.md** | NEW | Created | Top-level entry point. See [../ARCHITECTURE.md](../ARCHITECTURE.md) |
-| **CN-MANIFESTO.md** | Current | Keep | Foundational values doc. Not a technical spec. |
-| **CN-WHITEPAPER.md** | Current | Keep | Authoritative protocol spec (v2.0.4 RELEASE). Normative. |
-| **CN-WHITEPAPER-v2.0.3.pdf** | Current | Keep | PDF companion to whitepaper. |
+| **MANIFESTO.md** | Current | Keep | Foundational values doc. Not a technical spec. |
+| **WHITEPAPER.md** | Current | Keep | Authoritative protocol spec (v2.0.4 RELEASE). Normative. |
+| **WHITEPAPER-v2.0.3.pdf** | Current | Keep | PDF companion to whitepaper. |
 | **PROTOCOL.md** | Current | Keep | FSM design spec. Matches `cn_protocol.ml` implementation exactly. |
 | **AGILE-PROCESS.md** | Current | Keep | Team process doc, not technical spec. |
-| **CN-EXECUTABLE-SKILLS.md** | Current | Keep | Vision paper (aspirational). Companion to whitepaper. |
-| **CN-CLI.md** | Partially current | Keep, update later | Command list partly matches implementation. Some commands unimplemented. |
-| **CN-DAEMON.md** | Current | Keep | Explicitly aspirational/future. |
-| **CN-LOGGING.md** | Partially current | Keep, update later | JSONL schema correct; JS examples outdated (now OCaml). |
+| **EXECUTABLE-SKILLS.md** | Current | Keep | Vision paper (aspirational). Companion to whitepaper. |
+| **CLI.md** | Partially current | Keep, update later | Command list partly matches implementation. Some commands unimplemented. |
+| **DAEMON.md** | Current | Keep | Explicitly aspirational/future. |
+| **LOGGING.md** | Partially current | Keep, update later | JSONL schema correct; JS examples outdated (now OCaml). |
 | **SECURITY-MODEL.md** | Partially current | Keep, update later | Principles correct; some file paths stale. |
 | **ACTOR-MODEL-DESIGN.md** | Superseded | Archive | Superseded by PROTOCOL.md. Incident RCA preserved in original. |
 | **AGENT-MODEL.md** | Superseded | Archive | Superseded by PROTOCOL.md + cn_agent.ml implementation. |
@@ -58,14 +58,14 @@ All describe: agent is pure, cn executes, decisions are GTD.
 
 ### Cluster B: Inbox/Outbox Transport Flow (4 docs)
 
-THREADS-MODEL, INBOX-ARCHITECTURE, ACTOR-MODEL-DESIGN, CN-CLI
+THREADS-MODEL, INBOX-ARCHITECTURE, ACTOR-MODEL-DESIGN, CLI
 
 All describe: materialize-triage-execute pipeline.
 **Resolved by:** PROTOCOL.md (Sender FSM + Receiver FSM) + `cn_mail.ml`
 
 ### Cluster C: Philosophy/Strategy (3 docs, low redundancy)
 
-CN-MANIFESTO, CN-WHITEPAPER, CN-EXECUTABLE-SKILLS
+MANIFESTO, WHITEPAPER, EXECUTABLE-SKILLS
 
 Each serves a distinct purpose (pitch, spec, vision). No action needed.
 
@@ -90,15 +90,15 @@ docs/
  +-- README.md                    <-- Updated with new hierarchy
  +-- design/
  |    +-- AUDIT.md                <-- THIS FILE
- |    +-- CN-MANIFESTO.md         Keep
- |    +-- CN-WHITEPAPER.md        Keep
- |    +-- CN-WHITEPAPER-v2.0.3.pdf Keep
+ |    +-- MANIFESTO.md         Keep
+ |    +-- WHITEPAPER.md        Keep
+ |    +-- WHITEPAPER-v2.0.3.pdf Keep
  |    +-- PROTOCOL.md         Keep (matches implementation)
  |    +-- AGILE-PROCESS.md        Keep
- |    +-- CN-EXECUTABLE-SKILLS.md Keep
- |    +-- CN-CLI.md               Keep (update later)
- |    +-- CN-DAEMON.md            Keep
- |    +-- CN-LOGGING.md           Keep (update later)
+ |    +-- EXECUTABLE-SKILLS.md Keep
+ |    +-- CLI.md               Keep (update later)
+ |    +-- DAEMON.md            Keep
+ |    +-- LOGGING.md           Keep (update later)
  |    +-- SECURITY-MODEL.md       Keep (update later)
  |    +-- _archive/
  |         +-- ACTOR-MODEL-DESIGN.md

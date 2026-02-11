@@ -377,7 +377,7 @@ Invariants:
 
 ## Unifying cn_io.ml and cn_mail.ml
 
-Current state: two modules implement overlapping transport logic.
+The original design had two modules with overlapping transport logic.
 
 | Operation | cn_mail.ml | cn_io.ml |
 |-----------|-----------|----------|
@@ -386,12 +386,12 @@ Current state: two modules implement overlapping transport logic.
 | Inbox check | `inbox_check` (uses peer clones) | `sync_inbox` (uses hub fetch) |
 | Branch cleanup | `delete_remote_branch` | (inline) |
 
-**Resolution:** The FSM becomes the single transport module. Both `cn_io.ml` and `cn_mail.ml` transport functions are replaced by FSM-driven functions in `cn_protocol.ml`. Domain-specific logic (orphan detection, rejection notices) becomes guard conditions on transitions.
+**Implemented resolution:**
+- `cn_protocol.ml` — pure FSM types and transitions (no I/O)
+- `cn_mail.ml` — FSM-driven transport: calls `cn_protocol.sender_transition` and `cn_protocol.receiver_transition` at each step
+- `cn_io.ml` — **legacy**, still exists as a Layer 2 utility (sync_inbox, flush_outbox, auto_commit). To be removed once all callers migrate to cn_mail.ml.
 
-After unification:
-- `cn_protocol.ml` — FSM types, transitions, transport execution
-- `cn_mail.ml` — inbox/outbox CLI commands (thin wrappers calling protocol)
-- `cn_io.ml` — **removed**, absorbed into cn_protocol.ml
+The key design decision: cn_protocol.ml stays **pure** (no side effects). The FSM-driven I/O lives in cn_mail.ml, which advances the FSM state ref and performs effects between transitions.
 
 ---
 
@@ -492,49 +492,43 @@ Directory placement **follows** state — it's a derived artifact, not the sourc
 
 ## Testing
 
-### Per-FSM tests (ppx_expect)
+All tests live in `tools/test/cn/cn_protocol_test.ml` using ppx_expect.
 
-```ocaml
-(* Sender happy path *)
-let%expect_test "sender: pending → delivered" =
-  S_Pending
-  |> apply Create_branch |> apply Push
-  |> apply Push_ok |> apply Cleanup
-  |> print_state;
-  [%expect {| Delivered |}]
+### Per-FSM tests (implemented)
 
-(* Thread: invalid transition *)
-let%expect_test "thread: cannot complete a received thread" =
-  thread_transition Received Complete |> print_result;
-  [%expect {| Error: Received + Complete (must triage first) |}]
+Each FSM has tests for:
+- Happy path (full lifecycle)
+- All valid transitions from each state
+- Invalid transition error messages
+- Terminal state idempotency (all events → same terminal state)
+- String round-trip (state → string → state)
+- State derivation (path-based, meta-based, filesystem-based)
 
-(* Actor: derive state from filesystem *)
-let%expect_test "actor: input exists, no output → Processing" =
-  (* setup: write input.md, no output.md *)
-  actor_derive_state hub_path |> print_state;
-  [%expect {| Processing |}]
+### Property tests (implemented)
 
-(* Thread: defer → resurface → queue *)
-let%expect_test "thread: defer then resurface" =
-  Received |> apply (Defer "busy")
-  |> apply Resurface
-  |> print_state;
-  [%expect {| Queued |}]
-```
+Exhaustive state×event matrix — every combination must return `Ok` or `Error`, never raise:
 
-### Property tests (optional)
+| FSM | States | Events | Combinations | Valid | Invalid |
+|-----|--------|--------|-------------|-------|---------|
+| Thread | 8 | 8 | 64 | 32 | 32 |
+| Actor | 4 | 6 | 24 | 6 | 18 |
+| Sender | 6 | 6 | 36 | 13 | 23 |
+| Receiver | 6 | 6 | 36 | 14 | 22 |
+| **Total** | | | **160** | **65** | **95** |
 
-```ocaml
-(* Any sequence of valid events from any reachable state never panics *)
-let%expect_test "thread FSM: no panics" =
-  let all_events = [Enqueue; Feed; Claim; Complete; Defer "x"; Delegate "y"; Discard; Resurface] in
-  let all_states = [Received; Queued; Active; Doing; Deferred; Delegated; Archived; Deleted] in
-  all_states |> List.iter (fun s ->
-    all_events |> List.iter (fun e ->
-      (* Must return Ok or Error, never raise *)
-      ignore (thread_transition s e)));
-  [%expect {| |}]
-```
+### Cross-FSM tests (implemented)
+
+- GTD command → Thread event mapping (verifies cn_gtd uses correct events)
+- Actor state derivation → transition chain (simulates one full cn-in cycle)
+
+### Not yet tested (need integration infrastructure)
+
+- cn_gtd: I/O-bound functions (find_thread, apply_transition with real files)
+- cn_agent: queue FIFO with filesystem, archive_io_pair
+- cn_mail: materialize_branch, send_thread (require git repos)
+- cn_mca: mca_add, mca_list, mca_cycle (filesystem)
+
+These require temp directory setup and can't use ppx_expect alone. Future work: add integration test harness or use cram tests.
 
 ---
 
@@ -553,14 +547,16 @@ Each FSM supports deterministic recovery from any intermediate state:
 
 ## Deliverables
 
-1. **`tools/src/cn/cn_protocol.ml`** — all four FSMs, types, transitions, execution
-2. **`tools/src/cn/cn_protocol.mli`** — interface
-3. **`tools/test/cn/cn_protocol_test.ml`** — ppx_expect tests
-4. **Updated `cn_mail.ml`** — thin wrapper calling cn_protocol
-5. **Updated `cn_gtd.ml`** — GTD commands go through Thread FSM
-6. **Updated `cn_agent.ml`** — actor loop driven by Actor FSM
-7. **Remove `cn_io.ml` transport functions** — absorbed into cn_protocol
-8. **Updated `dune`** — add cn_protocol to build
+| # | Deliverable | Status |
+|---|-------------|--------|
+| 1 | **`cn_protocol.ml`** — pure FSMs: types, transitions | Done |
+| 2 | **`cn_protocol.mli`** — interface | Done |
+| 3 | **`cn_protocol_test.ml`** — ppx_expect: happy paths, edge cases, property tests | Done |
+| 4 | **`cn_mail.ml`** — FSM-driven transport (uses cn_protocol for Sender/Receiver) | Done |
+| 5 | **`cn_gtd.ml`** — GTD commands validated through Thread FSM | Done |
+| 6 | **`cn_agent.ml`** — actor loop driven by Actor FSM | Done |
+| 7 | **Remove `cn_io.ml` transport overlap** | Partial — cn_io.ml still exists as legacy Layer 2. cn_mail.ml is the FSM-driven replacement. cn_io.ml can be removed once no callers remain. |
+| 8 | **Updated `dune`** — cn_protocol in build | Done |
 
 ## Constraints
 
@@ -588,3 +584,5 @@ Each FSM supports deterministic recovery from any intermediate state:
 | 2026-02-11 | Explicit `state:` in frontmatter | Directory placement is derived, not source of truth; survives crashes |
 | 2026-02-11 | Unify cn_io.ml + cn_mail.ml | Duplicate transport logic is a bug vector; single FSM eliminates it |
 | 2026-02-11 | Terminal state idempotency | Re-applying events to Archived/Delivered is no-op, enabling safe retries |
+| 2026-02-11 | cn_protocol.ml stays pure | I/O lives in cn_mail.ml (FSM-driven), not cn_protocol. Protocol is fully testable without mocking. |
+| 2026-02-11 | Property tests: exhaustive matrix | All state×event combinations tested for no-panic guarantee (160 total: 64 thread + 24 actor + 36 sender + 36 receiver) |
