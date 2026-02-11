@@ -46,7 +46,7 @@ let%expect_test "parse_rejected_branch: no closing backtick" =
   (match Cn_mail.parse_rejected_branch "Branch `foo" with
    | Some branch -> Printf.printf "Some %s\n" branch
    | None -> print_endline "None");
-  [%expect {| Some foo |}]
+  [%expect {| None |}]
 
 let%expect_test "parse_rejected_branch: empty branch name" =
   (match Cn_mail.parse_rejected_branch "Branch `` rejected" with

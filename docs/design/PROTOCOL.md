@@ -351,8 +351,8 @@ let actor_transition state event =
 | Parameter | Environment Variable | Default | Description |
 |-----------|---------------------|---------|-------------|
 | Cron period | `CN_CRON_PERIOD_MIN` | 5 | Minutes between cron runs |
-| Timeout cycles | `CN_TIMEOUT_CYCLES` | 6 | Cron cycles before timeout |
-| Max processing time | (derived) | 30 min | `cron_period × timeout_cycles` |
+| Timeout cycles | `CN_TIMEOUT_CYCLES` | 3 | Cron cycles before timeout |
+| Max processing time | (derived) | 15 min | `cron_period × timeout_cycles` |
 
 Example: With defaults, if `input.md` is older than 30 minutes (6 × 5 min), the actor transitions to `TimedOut` and archives the input as failed.
 

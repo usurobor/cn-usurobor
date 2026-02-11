@@ -55,7 +55,7 @@ Add configurable timeout to `cn in`:
 ```ocaml
 (* Config: state/config.yaml or environment *)
 let cron_period_min = 5          (* how often cron runs *)
-let timeout_cycles = 6           (* cycles before timeout = 30 min *)
+let timeout_cycles = 3           (* cycles before timeout = 15 min *)
 
 | Cn_protocol.Processing ->
     let age_min = input_age_minutes hub_path in
@@ -70,7 +70,7 @@ let timeout_cycles = 6           (* cycles before timeout = 30 min *)
 
 **Configurable parameters:**
 - `CN_CRON_PERIOD_MIN` — cron interval (default: 5)
-- `CN_TIMEOUT_CYCLES` — cycles before fail (default: 6 = 30 min)
+- `CN_TIMEOUT_CYCLES` — cycles before fail (default: 3 = 15 min)
 
 ## Prevention
 

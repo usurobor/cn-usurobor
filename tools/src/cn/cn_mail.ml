@@ -68,7 +68,7 @@ let reject_orphan_branch hub_path peer_name branch =
 
 let parse_rejected_branch content =
   match String.split_on_char '`' content with
-  | _ :: branch :: _ when String.length branch > 0
+  | _ :: branch :: _ :: _ when String.length branch > 0
       && String.length content >= 8
       && String.sub content 0 8 = "Branch `" ->
       Some branch
