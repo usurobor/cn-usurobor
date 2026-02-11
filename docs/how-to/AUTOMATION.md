@@ -136,7 +136,7 @@ Use OpenClaw cron for:
 - Unix-like OS (Linux, macOS, WSL)
 - System cron (`cron`, `crond`, or `launchd`)
 - OpenClaw installed with `openclaw system event` available
-- Node.js (for cn CLI)
+- `cn` native binary installed
 
 Windows users: Use WSL or adapt to Task Scheduler.
 

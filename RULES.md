@@ -6,11 +6,11 @@ Non-negotiable rules for cnos development.
 
 ## OCaml Only
 
-**No hand-written JavaScript.**
+**No JavaScript. Native OCaml only.**
 
-All cn tools must be written in OCaml, compiled via Melange to JS for runtime.
+All cn tools are written in OCaml, compiled to native binaries via dune.
 
-Existing JS code is being removed. Do not add new JS. Do not accept JS PRs.
+No Node.js, no Melange, no npm. Do not add JS. Do not accept JS PRs.
 
 ---
 

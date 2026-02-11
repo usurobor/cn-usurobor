@@ -1,2 +1,3 @@
 #!/bin/bash
-NO_COLOR=1 exec node /root/.openclaw/workspace/cn-agent/tools/dist/cn.js "$@"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+NO_COLOR=1 exec "$SCRIPT_DIR/../../_build/default/tools/src/cn/cn.exe" "$@"

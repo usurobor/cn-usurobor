@@ -211,11 +211,10 @@ tools/src/cn/
 ### Build
 
 ```bash
-dune build tools/src/cn          # Build with Melange
-npx esbuild ... --bundle         # Bundle to dist/cn.js
+dune build tools/src/cn/cn.exe   # Native OCaml binary
 ```
 
-Installed to `/usr/local/lib/cnos/`, binary at `/usr/local/bin/cn`.
+Installed to `/usr/local/bin/cn`.
 
 ### Exit Codes
 

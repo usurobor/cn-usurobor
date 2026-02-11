@@ -1,12 +1,12 @@
 # OCaml
 
-Write OCaml tools for cnos. Compile via Melange, bundle with esbuild.
+Write native OCaml tools for cnos. Compiled to native binaries via dune.
 
 ## Toolchain
 
 ```bash
 opam switch create cnos 4.14.1
-opam install dune melange melange.ppx ppx_expect
+opam install dune ppx_expect ppxlib mdx
 ```
 
 ## Conventions
@@ -22,43 +22,45 @@ opam install dune melange melange.ppx ppx_expect
 ## Structure
 
 ```
-tools/src/<tool>/
-├── <tool>.ml        # CLI with FFI
-├── <tool>_lib.ml    # Pure functions
-└── dune
+tools/src/cn/
+ +-- cn.ml              Dispatch (~100 lines)
+ +-- cn_lib.ml          Types, parsing (pure)
+ +-- cn_protocol.ml     4 typed FSMs (pure)
+ +-- cn_ffi.ml          System bindings (Unix + stdlib)
+ +-- cn_agent.ml        Agent loop, queue
+ +-- cn_mail.ml         Inbox/outbox transport
+ +-- ...
 
-tools/test/<tool>/
-├── <tool>_test.ml   # ppx_expect tests
-└── dune
-
-dist/<tool>.js       # Bundled output
+tools/test/cn/
+ +-- cn_test.ml         ppx_expect tests
+ +-- dune
 ```
 
 ## Dune
 
 ```dune
-; Library
+; Pure library (no I/O)
 (library
- (name inbox_lib)
- (modules inbox_lib)
- (modes :standard melange))
+ (name cn_lib)
+ (modules cn_lib)
+ (libraries inbox_lib))
 
-; CLI
-(melange.emit
- (target output)
- (alias inbox)
- (modules inbox)
- (libraries inbox_lib)
- (module_systems commonjs)
- (preprocess (pps melange.ppx)))
+; Native binary
+(executable
+ (name cn)
+ (public_name cn)
+ (modules cn)
+ (libraries cn_cmd cn_ffi cn_lib inbox_lib git cn_io))
 ```
 
-## FFI
+## FFI (Native)
 
 ```ocaml
+(* cn_ffi.ml — native system bindings *)
 module Fs = struct
-  external exists_sync : string -> bool = "existsSync" [@@mel.module "fs"]
-  external read_file_sync : string -> string -> string = "readFileSync" [@@mel.module "fs"]
+  let exists path = Sys.file_exists path
+  let read path = In_channel.with_open_text path In_channel.input_all
+  let write path content = Out_channel.with_open_text path (fun oc -> Out_channel.output_string oc content)
 end
 ```
 
@@ -69,25 +71,24 @@ end
 input |> parse |> validate |> output
 match result with Ok x -> x | Error e -> handle e
 List.fold_left (+) 0 items
-match Fs.exists path with true -> Some x | false -> None
+match Cn_ffi.Fs.exists path with true -> Some x | false -> None
 match xs with x :: _ -> x | [] -> default
 
 (* avoid *)
 let x = ref 0
 for i = 0 to n do ... done
-with _ -> None              (* use: exception Js.Exn.Error _ *)
+with _ -> None
 List.hd xs                  (* use: match xs with x :: _ -> *)
 Option.get opt              (* use: match opt with Some v -> *)
-if Fs.exists path then ...  (* use: match on bool *)
+if condition then ...       (* use: match on bool *)
 ```
 
 ## Build
 
 ```bash
 eval $(opam env)
-dune build @<tool>
-npx esbuild _build/default/tools/src/<tool>/output/.../<tool>.js \
-  --bundle --platform=node --outfile=dist/<tool>.js
+dune build tools/src/cn/cn.exe
+dune runtest
 ```
 
 ## Checklist

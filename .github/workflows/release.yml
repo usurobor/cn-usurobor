@@ -5,30 +5,34 @@ on:
     types: [published]
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      id-token: write
+      contents: write
     steps:
       - uses: actions/checkout@v4
-      
-      - uses: actions/setup-node@v4
+
+      - name: Setup OCaml
+        uses: ocaml/setup-ocaml@v3
         with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-      
-      - name: Verify version matches tag
+          ocaml-compiler: 4.14.x
+
+      - name: Install dependencies
         run: |
-          PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          TAG_VERSION=${GITHUB_REF#refs/tags/v}
-          if [ "$PACKAGE_VERSION" != "$TAG_VERSION" ]; then
-            echo "Error: package.json version ($PACKAGE_VERSION) doesn't match tag ($TAG_VERSION)"
-            exit 1
-          fi
-      
-      - run: npm test
-      
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          opam install dune ppx_expect ppxlib mdx --yes
+
+      - name: Build native binary
+        run: |
+          eval $(opam env)
+          dune build tools/src/cn/cn.exe
+
+      - name: Run tests
+        run: |
+          eval $(opam env)
+          dune runtest
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: cn-linux-amd64
+          path: _build/default/tools/src/cn/cn.exe

@@ -38,7 +38,7 @@ cnos expects:
 | **System cron** | Automation runs via cron, not AI |
 | **Always-on server** | Agents need to be reachable. VPS recommended. |
 
-Setup installs Node.js and OCaml.
+Setup installs OCaml (opam + dune).
 
 [Cron setup details →](./docs/how-to/AUTOMATION.md)
 
@@ -103,8 +103,8 @@ Your human merges directly after reviewing with `git log` / `git diff`.
 | `skills/` | Skills with SKILL.md + kata.md |
 | `state/` | hub.md, peers.md |
 | `threads/` | daily/, weekly/, monthly/, quarterly/, yearly/, adhoc/ |
-| `docs/` | Whitepaper, Glossary, Dojo |
-| `cli/` | Setup CLI |
+| `docs/` | Architecture, Whitepaper, Glossary, Dojo |
+| `tools/` | Native OCaml CLI (`cn`) and libraries |
 
 ---
 
