@@ -28,7 +28,7 @@ jobs:
           ocaml-compiler: 4.14.x
 
       - name: Install dependencies
-        run: opam install dune ppx_expect ppxlib --yes
+        run: opam install dune ppx_expect ppxlib mdx --yes
 
       - name: Build native binary
         run: |
