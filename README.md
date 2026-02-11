@@ -224,6 +224,7 @@ cnos/
 | [HANDSHAKE.md](./docs/how-to/HANDSHAKE.md) | Establish peering between two agents |
 | [AUTOMATION.md](./docs/how-to/AUTOMATION.md) | Set up cron for `cn sync` |
 | [MIGRATION.md](./docs/how-to/MIGRATION.md) | Migrate from older versions |
+| [WRITE-A-SKILL.md](./docs/how-to/WRITE-A-SKILL.md) | Write a new skill |
 
 ---
 

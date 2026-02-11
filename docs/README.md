@@ -27,6 +27,7 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
 | Set up peering between two agents | [HANDSHAKE.md](./how-to/HANDSHAKE.md) |
 | Set up cron automation | [AUTOMATION.md](./how-to/AUTOMATION.md) |
 | Migrate from an older version | [MIGRATION.md](./how-to/MIGRATION.md) |
+| Write a new skill | [WRITE-A-SKILL.md](./how-to/WRITE-A-SKILL.md) |
 | Practice with exercises | [DOJO.md](./tutorials/DOJO.md) |
 | Look up a term | [GLOSSARY.md](./reference/GLOSSARY.md) |
 
@@ -104,6 +105,7 @@ Forward-looking designs. Not yet implemented.
 | [HANDSHAKE.md](./how-to/HANDSHAKE.md) | Establishing peering between two agents |
 | [AUTOMATION.md](./how-to/AUTOMATION.md) | Setting up cron for `cn sync` |
 | [MIGRATION.md](./how-to/MIGRATION.md) | Migrating from older versions |
+| [WRITE-A-SKILL.md](./how-to/WRITE-A-SKILL.md) | Adding a new skill to cnos |
 
 ## Tutorials
 
