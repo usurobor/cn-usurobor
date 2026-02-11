@@ -16,19 +16,24 @@
  (modules cn_lib)
  (libraries inbox_lib))
 
+; cn protocol FSMs (pure, no I/O, fully testable)
+(library
+ (name cn_protocol)
+ (modules cn_protocol))
+
 ; Native system bindings (stdlib + Unix)
 (library
  (name cn_ffi)
  (modules cn_ffi)
  (libraries unix))
 
-; CN command modules (all share cn_ffi, cn_lib)
+; CN command modules (all share cn_ffi, cn_lib, cn_protocol)
 (library
  (name cn_cmd)
  (wrapped false)
  (modules cn_fmt cn_hub cn_mail cn_gtd cn_agent cn_mca
           cn_commands cn_system)
- (libraries cn_ffi cn_lib inbox_lib git cn_io unix))
+ (libraries cn_ffi cn_lib cn_protocol inbox_lib git cn_io unix))
 
 ; cn CLI (native OCaml binary)
 (executable
