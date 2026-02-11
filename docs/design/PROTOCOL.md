@@ -281,18 +281,27 @@ The cn scheduler's invocation cycle. One agent turn at a time.
   ┌─────────────┐                        │
   │ Processing  │  agent working         │
   └──────┬──────┘                        │
-         │ output.md appears             │
-         ▼                               │
-  ┌─────────────┐                        │
-  │ OutputReady │                        │
-  └──────┬──────┘                        │
-         │ archive + execute ops         │
-         ▼                               │
-  ┌─────────────┐                        │
-  │  Archiving  │  logs written          │
-  └──────┬──────┘                        │
-         │ auto-save + clear             │
-         └───────────────────────────────┘
+         │                               │
+    ┌────┴────┐                          │
+    │         │                          │
+ output.md  timeout                      │
+ appears   (age > max)                   │
+    │         │                          │
+    ▼         ▼                          │
+  ┌─────────────┐  ┌─────────────┐       │
+  │ OutputReady │  │ TimedOut    │       │
+  └──────┬──────┘  └──────┬──────┘       │
+         │                │              │
+         │ archive        │ archive_timeout
+         │                │              │
+         ▼                ▼              │
+  ┌─────────────┐  ┌─────────────┐       │
+  │  Archiving  │  │  Archiving  │       │
+  └──────┬──────┘  └──────┬──────┘       │
+         │                │              │
+         └────────┬───────┘              │
+                  │ auto-save + clear    │
+                  └──────────────────────┘
 ```
 
 ```ocaml
@@ -301,6 +310,7 @@ type actor_state =
   | InputReady     (* input.md written, agent not yet woken *)
   | Processing     (* agent working, awaiting output.md *)
   | OutputReady    (* output.md exists, ready to archive *)
+  | TimedOut       (* agent exceeded max processing time *)
   | Archiving      (* executing ops, writing logs *)
 
 type actor_event =
@@ -308,6 +318,7 @@ type actor_event =
   | Queue_empty        (* nothing to process *)
   | Wake               (* trigger agent *)
   | Output_received    (* output.md detected *)
+  | Timeout            (* processing exceeded max cycles *)
   | Archive_complete   (* ops executed, logs written *)
   | Archive_fail of string
 
@@ -317,8 +328,10 @@ let actor_transition state event =
   | Idle,         Queue_empty       -> Ok Idle      (* stay idle *)
   | InputReady,   Wake              -> Ok Processing
   | Processing,   Output_received   -> Ok OutputReady
+  | Processing,   Timeout           -> Ok TimedOut   (* supervisor recovery *)
   | OutputReady,  Archive_complete  -> Ok Idle       (* cycle complete *)
   | OutputReady,  Archive_fail _    -> Ok OutputReady  (* retry *)
+  | TimedOut,     Archive_complete  -> Ok Idle       (* timeout recovery complete *)
   | Archiving,    Archive_complete  -> Ok Idle
   | from, ev -> Error { from; ev; reason = "invalid transition" }
 ```
@@ -326,12 +339,22 @@ let actor_transition state event =
 **Maps to current code:** `cn_agent.ml:run_inbound` — currently a 35-line function with nested if/else. With this FSM, each branch becomes a state transition, and crash recovery is deterministic.
 
 **State derivation:**
-| Filesystem | Actor State |
-|------------|-------------|
-| No `input.md`, no `output.md` | `Idle` |
-| `input.md` exists, no `output.md` | `Processing` |
-| `input.md` exists, `output.md` exists | `OutputReady` |
-| Neither (just cleared) | `Idle` |
+| Filesystem | Condition | Actor State |
+|------------|-----------|-------------|
+| No `input.md`, no `output.md` | — | `Idle` |
+| `input.md` exists, no `output.md` | age ≤ max | `Processing` |
+| `input.md` exists, no `output.md` | age > max | `TimedOut` |
+| `input.md` exists, `output.md` exists | — | `OutputReady` |
+| Neither (just cleared) | — | `Idle` |
+
+**Timeout configuration:**
+| Parameter | Environment Variable | Default | Description |
+|-----------|---------------------|---------|-------------|
+| Cron period | `CN_CRON_PERIOD_MIN` | 5 | Minutes between cron runs |
+| Timeout cycles | `CN_TIMEOUT_CYCLES` | 6 | Cron cycles before timeout |
+| Max processing time | (derived) | 30 min | `cron_period × timeout_cycles` |
+
+Example: With defaults, if `input.md` is older than 30 minutes (6 × 5 min), the actor transitions to `TimedOut` and archives the input as failed.
 
 ---
 
@@ -511,10 +534,10 @@ Exhaustive state×event matrix — every combination must return `Ok` or `Error`
 | FSM | States | Events | Combinations | Valid | Invalid |
 |-----|--------|--------|-------------|-------|---------|
 | Thread | 8 | 8 | 64 | 32 | 32 |
-| Actor | 4 | 6 | 24 | 6 | 18 |
+| Actor | 6 | 7 | 42 | 9 | 33 |
 | Sender | 6 | 6 | 36 | 13 | 23 |
 | Receiver | 6 | 6 | 36 | 14 | 22 |
-| **Total** | | | **160** | **65** | **95** |
+| **Total** | | | **178** | **68** | **110** |
 
 ### Cross-FSM tests (implemented)
 
@@ -541,7 +564,7 @@ Each FSM supports deterministic recovery from any intermediate state:
 | **Sender** | If `BranchCreated` but not `Pushed`: retry push. If `Pushed` but not `Delivered`: cleanup. |
 | **Receiver** | If `Materialized` but not `Cleaned`: delete branch. If `Fetched`: re-run materialization. |
 | **Thread** | State in frontmatter survives crash. Re-derive and continue. |
-| **Actor** | Derive from `input.md`/`output.md` existence (table above). Resume from derived state. |
+| **Actor** | Derive from `input.md`/`output.md` existence + age (table above). If `Processing` and age > max, transition to `TimedOut` and archive as failed. Resume from derived state. |
 
 ---
 
