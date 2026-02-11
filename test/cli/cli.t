@@ -27,8 +27,10 @@ Init - create a new hub:
   $ git init -q
   $ git config user.email "test@test.local"
   $ git config user.name "Test"
-  $ $CN init my-hub 2>&1 | head -1
+  $ $CN init my-hub 2>&1 | head -3
   Initializing hub: my-hub
+  ✓ Updated state/runtime.md
+  ✓ Created hub: cn-my-hub
 
 Status - check hub status:
 
