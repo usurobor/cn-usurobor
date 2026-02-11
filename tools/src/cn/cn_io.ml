@@ -69,7 +69,7 @@ module Fs = struct
   let ensure_dir path = if not (exists path) then mkdir_p path
 end
 
-let is_md_file f = String.length f > 3 && String.sub f (String.length f - 3) 3 = ".md"
+let is_md_file f = Filename.check_suffix f ".md"
 
 (* === Types === *)
 
@@ -117,8 +117,9 @@ let materialize_branch ~hub ~inbox_dir ~peer_name ~branch =
     match get_file_content ~hub ~branch ~file with
     | None -> None
     | Some content ->
-        let topic = Path.basename file |> fun s ->
-          if String.length s > 3 then String.sub s 0 (String.length s - 3) else s in
+        let topic = Path.basename file
+          |> Filename.chop_suffix_opt ~suffix:".md"
+          |> Option.value ~default:(Path.basename file) in
         let inbox_name = Printf.sprintf "%s-%s.md" peer_name topic in
         let inbox_path = Path.join inbox_dir inbox_name in
         let archived_path = Path.join (Path.join inbox_dir "_archived") inbox_name in
@@ -165,7 +166,7 @@ let send_thread ~hub:_ ~from_name ~peer ~outbox_dir ~sent_dir ~file =
   | Some clone_path ->
       if not (Fs.exists clone_path) then None
       else begin
-        let topic = if String.length file > 3 then String.sub file 0 (String.length file - 3) else file in
+        let topic = Filename.chop_suffix_opt ~suffix:".md" file |> Option.value ~default:file in
         let branch_name = Printf.sprintf "%s/%s" from_name topic in
         let adhoc_dir = Path.join clone_path "threads/adhoc" in
 
