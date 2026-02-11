@@ -1,6 +1,6 @@
 # Design: cn Protocol as Typed FSMs
 
-**Status:** Proposed (v2 — expanded from transport-only to full system)
+**Status:** Implemented (v2 — `cn_protocol.ml` matches this spec)
 **Author:** Sigma
 **Date:** 2026-02-11
 **Reviewers:** Pi, Axiom
