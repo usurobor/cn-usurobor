@@ -484,8 +484,8 @@ let run_inbound hub_path name =
     | Some s -> (try int_of_string s with _ -> 5)
     | None -> 5 in
   let timeout_cycles = match Sys.getenv_opt "CN_TIMEOUT_CYCLES" with
-    | Some s -> (try int_of_string s with _ -> 6)
-    | None -> 6 in
+    | Some s -> (try int_of_string s with _ -> 3)
+    | None -> 3 in
   let max_age_min = cron_period_min * timeout_cycles in
   
   (* Calculate input.md age in minutes *)
