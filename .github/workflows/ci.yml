@@ -20,7 +20,7 @@ jobs:
       
       - name: Install dependencies
         run: |
-          opam install dune melange ppx_expect ppxlib --yes
+          opam install dune melange ppx_expect ppxlib mdx --yes
       
       - name: Build CLI
         run: |
