@@ -11,6 +11,8 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v2.4.0  | A+  | A+          | A+           | A+               | Typed FSM protocol. All 4 state machines (sender, receiver, thread, actor) enforced at compile time. |
+| v2.3.x  | A+  | A+          | A+           | A                | Native OCaml binary, 10-module refactor. No more Node.js dependency. |
 | v2.2.0  | A+  | A+          | A+           | A+               | First hash consensus. Actor model complete: 5-min cron, input/output protocol, bidirectional messaging, verified sync. |
 | v2.1.x  | A+  | A+          | A+           | A                | Actor model iterations: cn sync/process/queue, auto-commit, wake mechanism fixes. |
 | v2.0.0  | A+  | A+          | A+           | A+               | Everything through cn. CLI v0.1, UX-CLI spec, SYSTEM.md, cn_actions library. Paradigm shift: agent purity enforced. |
@@ -27,6 +29,64 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v2.4.0 (2026-02-11)
+
+**Typed FSM Protocol**
+
+The cn protocol is now modeled as four typed finite state machines with compile-time safety.
+
+### Added
+- **4 typed FSMs** — Transport Sender, Transport Receiver, Thread Lifecycle, Actor Loop
+- **cn_protocol.ml** — unified protocol implementation replacing scattered logic
+- **385 lines of protocol tests** — ppx_expect exhaustive transition testing
+- **ARCHITECTURE.md** — system overview documentation
+- **PROTOCOL.md** — FSM specifications with ASCII diagrams
+- **AUDIT.md** — design audit methodology
+
+### Changed
+- Archived 7 superseded design docs to `docs/design/_archive/`
+- Unified `cn_io.ml` + `cn_mail.ml` transport logic into single FSM
+
+### Fixed
+- Invalid state transitions now caught at compile time, not runtime
+
+---
+
+## v2.3.1 (2026-02-11)
+
+**Branch Cleanup Fix**
+
+### Fixed
+- Delete local branches after inbox sync (MCA cleanup)
+- Skip self-update check if install dir missing
+- CI: add ppx_expect to opam deps
+
+---
+
+## v2.3.0 (2026-02-11)
+
+**Native OCaml Binary**
+
+cn is now a native binary — no Node.js required.
+
+### Added
+- **Native OCaml build** — `dune build` produces standalone binary
+- **Release workflow** — pre-built binaries for Linux/macOS
+- **10-module refactor** — cn.ml split into focused modules:
+  - `cn_agent.ml`, `cn_commands.ml`, `cn_ffi.ml`, `cn_fmt.ml`
+  - `cn_gtd.ml`, `cn_hub.ml`, `cn_mail.ml`, `cn_mca.ml`
+  - `cn_protocol.ml`, `cn_system.ml`
+
+### Changed
+- `cn update` now copies `bin/*` to `/usr/local/bin/` (2.2.28 backport)
+- `cn-cron` now runs `cn in` after sync to wake agent (2.2.27 backport)
+
+### Fixed
+- Filter inbound to `threads/in/` only (2.2.26 backport)
+- Native argv handling (drops 1, not 2 like Node.js)
 
 ---
 
