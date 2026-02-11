@@ -156,6 +156,33 @@ let execute_op hub_path name input_id op =
 let generate_trigger () =
   Cn_hub.sanitize_timestamp (Cn_fmt.now_iso ())
 
+let archive_timeout hub_path _name =
+  let inp = input_path hub_path in
+  let trigger = get_file_id inp |> Option.value ~default:(generate_trigger ()) in
+  
+  if not (Cn_ffi.Fs.exists inp) then begin
+    print_endline (Cn_fmt.warn "No input.md to archive");
+    false
+  end
+  else begin
+    let logs_in = logs_input_dir hub_path in
+    Cn_ffi.Fs.ensure_dir logs_in;
+    
+    let archive_name = trigger ^ "-timeout.md" in
+    let input_content = Cn_ffi.Fs.read inp in
+    
+    (* Prepend timeout marker to archived input *)
+    let timeout_header = Printf.sprintf "---\nstatus: timeout\narchived: %s\n---\n\n" (Cn_fmt.now_iso ()) in
+    Cn_ffi.Fs.write (Cn_ffi.Path.join logs_in archive_name) (timeout_header ^ input_content);
+    
+    (* Clear input.md *)
+    Cn_ffi.Fs.unlink inp;
+    
+    Cn_hub.log_action hub_path "io.timeout" (Printf.sprintf "trigger:%s" trigger);
+    print_endline (Cn_fmt.ok (Printf.sprintf "Archived timeout: %s" archive_name));
+    true
+  end
+
 let archive_io_pair hub_path name =
   let inp = input_path hub_path in
   let outp = output_path hub_path in
@@ -493,7 +520,7 @@ let run_inbound hub_path name =
       (* Agent timed out — archive as failed, proceed to next *)
       print_endline (Cn_fmt.warn (Printf.sprintf "Agent timeout (age=%d min, max=%d min)" input_age_min max_age_min));
       Cn_hub.log_action hub_path "actor.timeout" (Printf.sprintf "age:%d max:%d" input_age_min max_age_min);
-      if archive_io_pair hub_path name then begin
+      if archive_timeout hub_path name then begin
         auto_save hub_path name;
         if feed_next_input hub_path then wake_agent hub_path
       end
