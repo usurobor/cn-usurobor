@@ -1,76 +1,103 @@
 # CN Logging Architecture
 
-**Status:** Implementation  
-**Created:** 2026-02-05
+**Status:** Current
+**Date:** 2026-02-11
+**Author:** Sigma
 
 ---
 
 ## Principle
 
-cn does all effects. cn logs all effects. Agent is traceable without reading git history.
+cn does all effects. All effects are traceable. The agent's work is auditable without reading git history.
 
-## Log Location
+## Log Structure
 
 ```
 logs/
-├── cn.log           ← append-only action log
-├── inbox/           ← per-day inbox logs
-│   └── 20260205.md
-└── outbox/          ← per-day outbox logs
-    └── 20260205.md
+ +-- input/              Archived agent inputs (one file per trigger)
+ |    +-- {trigger}.md
+ +-- output/             Archived agent outputs (one file per trigger)
+ |    +-- {trigger}.md
+ +-- runs/               Per-run directories from cn out commands
+      +-- {timestamp}-{id}/
+           +-- input.md
 ```
 
-## Log Format (cn.log)
+Additionally, system-level logging goes to `/var/log/cn-YYYYMMDD.log` via cron stdout.
 
-Append-only, one JSON line per action:
+## Audit Trail: IO Pairs
 
-```jsonl
-{"ts":"2026-02-05T22:04:00Z","action":"inbox.fetch","peer":"pi","branches":["pi/inbox-outbox-clp"]}
-{"ts":"2026-02-05T22:04:01Z","action":"inbox.materialize","branch":"pi/inbox-outbox-clp","thread":"threads/inbox/pi-inbox-outbox-clp.md"}
-{"ts":"2026-02-05T22:05:00Z","action":"outbox.send","to":"pi","thread":"threads/outbox/review.md","branch":"sigma/review"}
-{"ts":"2026-02-05T22:05:01Z","action":"outbox.push","remote":"cn-pi","branch":"sigma/review","result":"ok"}
+The primary audit mechanism. Every time the actor loop processes agent output, cn archives both sides:
+
+```
+state/input.md   →  logs/input/{trigger}.md    (what the agent saw)
+state/output.md  →  logs/output/{trigger}.md   (what the agent decided)
 ```
 
-## Human-Readable Logs (inbox/outbox dirs)
+Implementation in `cn_agent.ml`:
 
-Daily markdown summaries:
+```ocaml
+(* Archive IO pair before executing *)
+let archive_name = trigger ^ ".md" in
+Cn_ffi.Fs.write (Cn_ffi.Path.join logs_in archive_name) (Cn_ffi.Fs.read inp);
+Cn_ffi.Fs.write (Cn_ffi.Path.join logs_out archive_name) output_content;
 
-```markdown
-# Inbox Log: 2026-02-05
+(* Then parse and execute ops *)
+let ops = extract_ops output_meta in
+ops |> List.iter (fun op -> execute_op hub_path name trigger op);
 
-## 22:04 — Fetched from pi
-- pi/inbox-outbox-clp → threads/inbox/pi-inbox-outbox-clp.md
-
-## 22:15 — Reply detected
-- threads/inbox/pi-inbox-outbox-clp.md has new content
-- Sent response: sigma/inbox-outbox-clp-reply
+(* Then clean up *)
+Cn_ffi.Fs.unlink inp;
+Cn_ffi.Fs.unlink outp;
 ```
 
-## Traceability
+The trigger ID (from input frontmatter or auto-generated) links an input to its output. This gives a complete audit trail: for any past action, you can find what the agent saw and what it decided.
 
-Every effect has:
-- **Timestamp** — when it happened
-- **Action** — what cn did
-- **Input** — what triggered it (branch, thread, etc.)
-- **Output** — what resulted (new file, pushed branch, etc.)
-- **Result** — ok / error + details
+## Audit Trail: cn out Runs
 
-Agent can read logs to understand what happened without touching git.
+When the agent uses `cn out` (structured output), a run directory is created:
 
-## Implementation
-
-```javascript
-function logAction(action, details) {
-  const entry = {
-    ts: new Date().toISOString(),
-    action,
-    ...details
-  };
-  fs.appendFileSync(
-    path.join(hubPath, 'logs', 'cn.log'),
-    JSON.stringify(entry) + '\n'
-  );
-}
+```
+logs/runs/{timestamp}-{id}/
+ +-- input.md            The thread that was being processed
 ```
 
-Called on every cn effect: fetch, materialize, send, push, delete, etc.
+Implementation in `cn_agent.ml`:
+
+```ocaml
+let run_dir = Cn_ffi.Path.join hub_path
+  (Printf.sprintf "logs/runs/%s-%s" run_ts id) in
+Cn_ffi.Fs.mkdir_p run_dir;
+Cn_ffi.Fs.write (Cn_ffi.Path.join run_dir "input.md") input_content;
+```
+
+## Traceability Properties
+
+Every agent action has:
+
+| Property | Source |
+|----------|--------|
+| **What the agent saw** | `logs/input/{trigger}.md` |
+| **What the agent decided** | `logs/output/{trigger}.md` |
+| **When it happened** | Trigger ID contains timestamp |
+| **What cn executed** | Ops extracted from output frontmatter |
+| **System-level log** | `/var/log/cn-YYYYMMDD.log` (cron stdout) |
+
+## What Changed
+
+Hub-level JSONL logging (`logs/cn.log`) was removed. It was redundant with system log + IO pair archives. The `Cn_hub.log_action` function is now a no-op:
+
+```ocaml
+let log_action _hub_path _action _details =
+  (* Removed: hub log redundant with system log + logs/runs/
+     System log: /var/log/cn-YYYYMMDD.log (cron stdout)
+     Audit trail: logs/runs/ (input + output + meta) *)
+  ()
+```
+
+The IO pair archive (`logs/input/` + `logs/output/`) provides richer traceability than JSONL because it preserves full thread content, not just action summaries.
+
+## Related
+
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — directory layout, data flow
+- [SECURITY-MODEL.md](SECURITY-MODEL.md) — audit trail as security mechanism
