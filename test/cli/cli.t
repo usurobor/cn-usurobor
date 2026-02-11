@@ -27,10 +27,8 @@ Init - create a new hub:
   $ git init -q
   $ git config user.email "test@test.local"
   $ git config user.name "Test"
-  $ $CN init my-hub 2>&1 | head -3
+  $ $CN init my-hub 2>&1 | head -1
   Initializing hub: my-hub
-  hint: Using 'master' as the name for the initial branch. This default branch name
-  hint: is subject to change. To configure the initial branch name to use in all
 
 Status - check hub status:
 
