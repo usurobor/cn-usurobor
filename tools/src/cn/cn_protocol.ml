@@ -122,12 +122,17 @@ let dir_of_thread_state = function
 
 type actor_state =
   | Idle           (* no input.md, queue may have items *)
+  | Updating       (* downloading/installing update *)
   | InputReady     (* input.md written, agent not yet woken *)
   | Processing     (* agent working, awaiting output.md *)
   | OutputReady    (* output.md exists, ready to archive *)
   | TimedOut       (* agent exceeded max processing time *)
 
 type actor_event =
+  | Update_available   (* newer version detected *)
+  | Update_complete    (* update installed, will re-exec *)
+  | Update_fail        (* update failed, proceed with current *)
+  | Update_skip        (* no update available or disabled *)
   | Queue_pop
   | Queue_empty
   | Wake
@@ -137,12 +142,26 @@ type actor_event =
   | Archive_fail
 
 let string_of_actor_state = function
-  | Idle -> "idle" | InputReady -> "input_ready"
+  | Idle -> "idle" | Updating -> "updating" | InputReady -> "input_ready"
   | Processing -> "processing" | OutputReady -> "output_ready"
   | TimedOut -> "timed_out"
 
+let string_of_actor_event = function
+  | Update_available -> "update_available" | Update_complete -> "update_complete"
+  | Update_fail -> "update_fail" | Update_skip -> "update_skip"
+  | Queue_pop -> "queue_pop" | Queue_empty -> "queue_empty"
+  | Wake -> "wake" | Output_received -> "output_received"
+  | Timeout -> "timeout"
+  | Archive_complete -> "archive_complete" | Archive_fail -> "archive_fail"
+
 let actor_transition state event =
   match state, event with
+  (* Update transitions — only from Idle *)
+  | Idle,         Update_available  -> Ok Updating
+  | Idle,         Update_skip       -> Ok Idle      (* no update, continue *)
+  | Updating,     Update_complete   -> Ok Idle      (* re-exec; new process starts fresh *)
+  | Updating,     Update_fail       -> Ok Idle      (* fallback to current version *)
+  (* Normal processing transitions *)
   | Idle,         Queue_pop         -> Ok InputReady
   | Idle,         Queue_empty       -> Ok Idle
   | InputReady,   Wake              -> Ok Processing
@@ -152,14 +171,8 @@ let actor_transition state event =
   | OutputReady,  Archive_fail      -> Ok OutputReady  (* retry *)
   | TimedOut,     Archive_complete  -> Ok Idle         (* timeout recovery done *)
   | s, e ->
-      let ev_str = match e with
-        | Queue_pop -> "queue_pop" | Queue_empty -> "queue_empty"
-        | Wake -> "wake" | Output_received -> "output_received"
-        | Timeout -> "timeout"
-        | Archive_complete -> "archive_complete" | Archive_fail -> "archive_fail"
-      in
       Error (Printf.sprintf "invalid actor transition: %s + %s"
-        (string_of_actor_state s) ev_str)
+        (string_of_actor_state s) (string_of_actor_event e))
 
 (* Derive actor state from filesystem *)
 let actor_derive_state ~input_exists ~output_exists =

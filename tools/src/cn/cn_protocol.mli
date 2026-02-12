@@ -54,12 +54,17 @@ val dir_of_thread_state : thread_state -> string
 
 type actor_state =
   | Idle           (** no input.md, queue may have items *)
+  | Updating       (** downloading/installing update *)
   | InputReady     (** input.md written, agent not yet woken *)
   | Processing     (** agent working, awaiting output.md *)
   | OutputReady    (** output.md exists, ready to archive *)
   | TimedOut       (** agent exceeded max processing time *)
 
 type actor_event =
+  | Update_available   (** newer version detected *)
+  | Update_complete    (** update installed, will re-exec *)
+  | Update_fail        (** update failed, proceed with current *)
+  | Update_skip        (** no update available or disabled *)
   | Queue_pop
   | Queue_empty
   | Wake
@@ -69,6 +74,7 @@ type actor_event =
   | Archive_fail
 
 val string_of_actor_state : actor_state -> string
+val string_of_actor_event : actor_event -> string
 
 val actor_transition : actor_state -> actor_event -> (actor_state, string) result
 (** Apply an event to an actor state. Returns [Ok new_state] or [Error reason]. *)
