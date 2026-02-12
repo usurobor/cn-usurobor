@@ -1,189 +1,47 @@
+---
+name: coding
+description: Pre-ship self-review discipline. Use after implementing and before requesting external review. Catches failure modes that confirmation bias misses.
+---
+
 # Coding
 
-Git workflow and code review practices for cnos development.
+Adversarial self-review before shipping.
 
----
+## The Discipline
 
-## TERMS
+After implementing, before pushing:
 
-1. Working on cnos or hub repos
-2. Git available
-3. Collaborating with other agents/humans
+1. Ask: **"5 ways this can fail silently or catastrophically?"**
+2. Check: **Does this repeat a bug we already fixed?**
+3. Run the checklist below
 
----
+## Pattern Recurrence
 
-## Branch Workflow
+When implementing X similar to fixed bug Y, explicitly verify X doesn't have Y's failure mode.
 
-### Default Branch
+**Example:** We fixed infinite-loop timeout bug. Next feature had re-exec that could infinite loop. Same class of bug, different manifestation.
 
-**`main`** — always. Not `master`. (RCA lesson: branch mismatch caused 4-hour failure)
-
-```bash
-git config --global init.defaultBranch main
-```
-
-### Branch Naming
+## Pre-Ship Checklist
 
 ```
-<agent>/<topic>
-
-Examples:
-  sigma/inbox-tool
-  pi/agile-process
-  sigma/rca-skill
+□ "5 ways to fail?" answered
+□ Pattern recurrence check done
+□ Loops bounded (no infinite loop risk)
+□ Re-exec has recursion guard (env var)
+□ External APIs have cooldown
+□ Downloads validated before use
+□ Shell commands use execv, not string interpolation
+□ Version compare uses tuples, not strings
+□ Temp files cleaned up on all paths
 ```
 
-### Creating a Branch
+## Failure Severity
 
-```bash
-git checkout main
-git pull origin main
-git checkout -b sigma/my-feature
-```
+| Type | Action |
+|------|--------|
+| Silent + Catastrophic | MUST FIX |
+| Noisy + Recoverable | Document, fix later |
 
----
+## Reference
 
-## Review Rules
-
-### Never Self-Merge
-
-The author of a change should not merge their own work.
-
-- Push branch
-- Request review (via actor model: push to reviewer's repo)
-- Wait for ACK
-- Reviewer merges
-
-### Always Rebase Before Review
-
-Before requesting review:
-```bash
-git fetch origin
-git rebase origin/main
-git push --force-with-lease
-```
-
-**Reviewer's time > your time.** Clean history, no merge conflicts.
-
-### Review Request Format
-
-Push thread to reviewer's repo:
-```markdown
-# Review Request: [Title]
-
-**From:** [you]
-**Branch:** `agent/topic` (repo)
-**Status:** NEEDS REVIEW
-
-## Summary
-[What changed, why]
-
-## Request
-[Specific questions or just "please review"]
-```
-
----
-
-## Commit Messages
-
-### Format
-
-```
-type: short description
-
-Longer explanation if needed.
-```
-
-### Types
-
-| Type | Use |
-|------|-----|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation |
-| `refactor` | Code change (no new feature/fix) |
-| `test` | Tests |
-| `chore` | Maintenance |
-| `release` | Version release |
-
-### Examples
-
-```
-feat: inbox tool with GTD triage
-
-fix: handle empty branch list
-
-docs: add RCA skill
-
-refactor: command vs action naming
-```
-
----
-
-## Code Review Checklist
-
-When reviewing:
-
-- [ ] Does it solve the stated problem?
-- [ ] Is it the simplest solution? (KISS)
-- [ ] Are there unnecessary additions? (YAGNI)
-- [ ] Are types correct and semantic?
-- [ ] Are edge cases handled?
-- [ ] Is it tested?
-- [ ] Is the commit history clean?
-
-### Review Outcomes
-
-| Verdict | Meaning |
-|---------|---------|
-| **APPROVED** | Ship it |
-| **APPROVED with nit** | Ship it, minor suggestions |
-| **REQUEST CHANGES** | Must fix before merge |
-| **NEEDS DISCUSSION** | Architectural concerns |
-
----
-
-## Merge Protocol
-
-After approval:
-
-1. Reviewer merges (not author)
-2. Delete branch after merge
-3. Author ACKs merge
-
-```bash
-# Reviewer merges
-git checkout main
-git merge --no-ff sigma/feature
-git push origin main
-git push origin --delete sigma/feature
-```
-
----
-
-## Quick Reference
-
-```bash
-# Start work
-git checkout main && git pull
-git checkout -b sigma/topic
-
-# During work
-git add -A && git commit -m "type: message"
-git push -u origin sigma/topic
-
-# Before review
-git fetch origin && git rebase origin/main
-git push --force-with-lease
-
-# Request review
-# (push thread to reviewer's repo)
-```
-
----
-
-## NOTES
-
-- See `skills/ocaml/` for OCaml-specific conventions
-- See `skills/peer/` for actor model coordination
-- See `mindsets/ENGINEERING.md` for higher-level principles
+See `references/auto-update-case.md` for detailed case study (10 issues in one feature).
