@@ -459,13 +459,17 @@ let auto_save hub_path name =
 (* === Auto-Update (when idle) === *)
 
 let auto_update_enabled () =
-  match Sys.getenv_opt "CN_AUTO_UPDATE" with
-  | Some "0" -> false
-  | _ -> true
+  match Sys.getenv_opt "CN_UPDATE_RUNNING" with
+  | Some _ -> false  (* recursion guard: we are already a re-exec'd process *)
+  | None ->
+      match Sys.getenv_opt "CN_AUTO_UPDATE" with
+      | Some "0" -> false
+      | _ -> true
 
 let install_dir = "/usr/local/lib/cnos"
 let bin_path = "/usr/local/bin/cn"
 let repo = "usurobor/cnos"
+let update_cooldown_sec = 3600.0  (* 1 hour between update checks *)
 
 (* Update info returned from check, passed to do_update — avoids mutable ref *)
 type update_info =
@@ -477,6 +481,21 @@ type update_info =
 let has_git_install () =
   Sys.file_exists install_dir &&
   Sys.file_exists (Filename.concat install_dir ".git")
+
+(* Cooldown: don't check more than once per hour.
+   Uses mtime of state/.last-update-check as the timestamp. *)
+let update_check_path hub_path = Cn_ffi.Path.join hub_path "state/.last-update-check"
+
+let should_check_update hub_path =
+  let path = update_check_path hub_path in
+  if not (Sys.file_exists path) then true
+  else
+    let stat = Unix.stat path in
+    (Unix.time () -. stat.Unix.st_mtime) > update_cooldown_sec
+
+let touch_update_check hub_path =
+  let path = update_check_path hub_path in
+  Cn_ffi.Fs.write path (Cn_fmt.now_iso ())
 
 (* Get latest release tag from GitHub API *)
 let get_latest_release_tag () =
@@ -513,28 +532,33 @@ let get_platform_binary () =
   if platform = "" || arch = "" then None
   else Some (Printf.sprintf "cn-%s-%s" platform arch)
 
-(* Check for updates — returns update_info for do_update *)
-let check_for_update () =
+(* Check for updates — returns update_info for do_update.
+   Respects cooldown: skips if checked within the last hour. *)
+let check_for_update hub_path =
   if not (auto_update_enabled ()) then Update_skip
-  else if has_git_install () then begin
-    (* Git-based update *)
-    let fetch_cmd = Printf.sprintf "cd %s && git fetch origin main --quiet 2>/dev/null" install_dir in
-    let _ = Cn_ffi.Child_process.exec fetch_cmd in
-    let version_cmd = Printf.sprintf "cd %s && git show origin/main:tools/src/cn/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*\"\\([^\"]*\\)\".*/\\1/'" install_dir in
-    match Cn_ffi.Child_process.exec version_cmd with
-    | None -> Update_skip
-    | Some latest_raw ->
-        let latest = String.trim latest_raw in
-        (* Issue 5 fix: use semver comparison, not string inequality *)
-        if is_newer_version latest Cn_lib.version then Update_git latest
-        else Update_skip
-  end else begin
-    (* Release binary update *)
-    match get_latest_release_tag () with
-    | None -> Update_skip
-    | Some tag ->
-        if is_newer_version tag Cn_lib.version then Update_binary tag
-        else Update_skip
+  else if not (should_check_update hub_path) then Update_skip
+  else begin
+    (* Record that we checked, regardless of outcome *)
+    touch_update_check hub_path;
+    if has_git_install () then begin
+      (* Git-based update *)
+      let fetch_cmd = Printf.sprintf "cd %s && git fetch origin main --quiet 2>/dev/null" install_dir in
+      let _ = Cn_ffi.Child_process.exec fetch_cmd in
+      let version_cmd = Printf.sprintf "cd %s && git show origin/main:tools/src/cn/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*\"\\([^\"]*\\)\".*/\\1/'" install_dir in
+      match Cn_ffi.Child_process.exec version_cmd with
+      | None -> Update_skip
+      | Some latest_raw ->
+          let latest = String.trim latest_raw in
+          if is_newer_version latest Cn_lib.version then Update_git latest
+          else Update_skip
+    end else begin
+      (* Release binary update *)
+      match get_latest_release_tag () with
+      | None -> Update_skip
+      | Some tag ->
+          if is_newer_version tag Cn_lib.version then Update_binary tag
+          else Update_skip
+    end
   end
 
 (* Perform update — takes update_info from check_for_update *)
@@ -542,33 +566,53 @@ let do_update info =
   match info with
   | Update_skip -> Cn_protocol.Update_skip
   | Update_git _ ->
-      (* Git-based update *)
+      (* Git-based update: pull source then rebuild.
+         git pull alone updates source — OCaml is compiled,
+         so the binary at bin_path is stale until we rebuild. *)
       let pull_cmd = Printf.sprintf "cd %s && git pull --ff-only 2>/dev/null" install_dir in
       (match Cn_ffi.Child_process.exec pull_cmd with
-       | Some _ -> Cn_protocol.Update_complete
-       | None -> Cn_protocol.Update_fail)
+       | None -> Cn_protocol.Update_fail
+       | Some _ ->
+           let build_cmd = Printf.sprintf "cd %s && opam exec -- dune build 2>/dev/null && opam exec -- dune install 2>/dev/null" install_dir in
+           match Cn_ffi.Child_process.exec build_cmd with
+           | Some _ -> Cn_protocol.Update_complete
+           | None -> Cn_protocol.Update_fail)
   | Update_binary tag ->
       (* Release binary update *)
       match get_platform_binary () with
       | None -> Cn_protocol.Update_fail
       | Some binary ->
-          (* Issue 3 fix: clean up stale .new file before download *)
           let new_path = bin_path ^ ".new" in
           if Sys.file_exists new_path then Sys.remove new_path;
           let url = Printf.sprintf "https://github.com/%s/releases/download/%s/%s" repo tag binary in
-          let dl_cmd = Printf.sprintf "curl -fsSL -o '%s' '%s' 2>/dev/null && chmod +x '%s' && mv '%s' '%s'" new_path url new_path new_path bin_path in
+          let dl_cmd = Printf.sprintf "curl -fsSL -o '%s' '%s' 2>/dev/null && chmod +x '%s'" new_path url new_path in
           match Cn_ffi.Child_process.exec dl_cmd with
-          | Some _ -> Cn_protocol.Update_complete
           | None ->
-              (* Clean up on failure *)
               if Sys.file_exists new_path then Sys.remove new_path;
               Cn_protocol.Update_fail
+          | Some _ ->
+              (* Validate binary before replacing: must respond to --version *)
+              let verify_cmd = Printf.sprintf "'%s' --version 2>/dev/null" new_path in
+              match Cn_ffi.Child_process.exec verify_cmd with
+              | None ->
+                  (* Binary is corrupt or wrong platform *)
+                  Sys.remove new_path;
+                  Cn_protocol.Update_fail
+              | Some _ ->
+                  (* Verified — atomic replace *)
+                  let mv_cmd = Printf.sprintf "mv '%s' '%s'" new_path bin_path in
+                  match Cn_ffi.Child_process.exec mv_cmd with
+                  | Some _ -> Cn_protocol.Update_complete
+                  | None ->
+                      if Sys.file_exists new_path then Sys.remove new_path;
+                      Cn_protocol.Update_fail
 
-(* Re-exec with same args — Issue 1 fix: use Unix.execvp, no shell injection *)
+(* Re-exec: replace this process with the updated binary.
+   Uses absolute bin_path, not PATH lookup, to ensure we run the just-updated binary.
+   Sets CN_UPDATE_RUNNING to prevent infinite recursion (see MCA: self-update-recursion). *)
 let re_exec () =
-  let argv = Cn_ffi.Process.argv in
-  (* Replace current process with new cn — no shell, no injection risk *)
-  Unix.execvp "cn" argv
+  Unix.putenv "CN_UPDATE_RUNNING" "1";
+  Unix.execvp bin_path (Cn_ffi.Process.argv)
 
 (* === Inbound (Actor Loop — FSM-driven) === *)
 
@@ -644,7 +688,7 @@ let run_inbound hub_path name =
       print_endline (Cn_fmt.info (Printf.sprintf "Queue depth: %d" (queue_count hub_path)))
   | Cn_protocol.Idle ->
       (* Auto-update check before processing queue — Issue 4: call FSM transitions *)
-      let update_info = check_for_update () in
+      let update_info = check_for_update hub_path in
       (match update_info with
        | Update_skip ->
            (* FSM: Idle + Update_skip → Idle *)
