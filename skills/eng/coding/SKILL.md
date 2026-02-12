@@ -1,47 +1,30 @@
 ---
 name: coding
-description: Pre-ship self-review discipline. Use after implementing and before requesting external review. Catches failure modes that confirmation bias misses.
+description: Pre-ship self-review for failure modes. Use after implementing a feature or fix, before pushing or requesting review. Triggers on "review my code", "check for bugs", "is this safe to ship", or any self-review before commit.
 ---
 
 # Coding
 
-Adversarial self-review before shipping.
+## Process
 
-## The Discipline
+1. Answer: "5 ways this can fail silently or catastrophically?"
+2. Check: Does this repeat a bug we already fixed?
+3. Verify each item in the checklist below
 
-After implementing, before pushing:
+## Checklist
 
-1. Ask: **"5 ways this can fail silently or catastrophically?"**
-2. Check: **Does this repeat a bug we already fixed?**
-3. Run the checklist below
+- [ ] Loops bounded (no infinite loop risk)
+- [ ] Re-exec has recursion guard
+- [ ] External APIs have cooldown
+- [ ] Downloads validated before use
+- [ ] No shell string interpolation (use execv)
+- [ ] Version compare uses tuples
+- [ ] Temp files cleaned on all paths
 
 ## Pattern Recurrence
 
-When implementing X similar to fixed bug Y, explicitly verify X doesn't have Y's failure mode.
-
-**Example:** We fixed infinite-loop timeout bug. Next feature had re-exec that could infinite loop. Same class of bug, different manifestation.
-
-## Pre-Ship Checklist
-
-```
-□ "5 ways to fail?" answered
-□ Pattern recurrence check done
-□ Loops bounded (no infinite loop risk)
-□ Re-exec has recursion guard (env var)
-□ External APIs have cooldown
-□ Downloads validated before use
-□ Shell commands use execv, not string interpolation
-□ Version compare uses tuples, not strings
-□ Temp files cleaned up on all paths
-```
-
-## Failure Severity
-
-| Type | Action |
-|------|--------|
-| Silent + Catastrophic | MUST FIX |
-| Noisy + Recoverable | Document, fix later |
+After fixing bug X, verify new code Y doesn't have same failure mode.
 
 ## Reference
 
-See `references/auto-update-case.md` for detailed case study (10 issues in one feature).
+For case study (10 issues in one feature): read `references/auto-update-case.md`
