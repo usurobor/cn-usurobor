@@ -90,6 +90,33 @@ dune runtest test/bug-123.t  # MUST PASS
 dune runtest && git commit && git push
 ```
 
+## Versioning & Releases
+
+**Tags trigger releases. Only tag minor versions.**
+
+| Version Type | Example | Tag? | Release Build? |
+|--------------|---------|------|----------------|
+| Patch        | 2.4.4   | No   | No             |
+| Minor        | 2.5.0   | Yes  | Yes            |
+| Major        | 3.0.0   | Yes  | Yes            |
+
+- **Patch (2.4.x):** Version bump in code, no tag, no release. Git users get it via pull.
+- **Minor (2.5.0):** Tag → triggers release workflow → binary artifacts built.
+- **Major (3.0.0):** Same as minor, reserved for breaking changes.
+
+```bash
+# Patch — just bump and push
+sed -i 's/2.4.3/2.4.4/' cn_lib.ml
+git commit -am "chore: bump version to 2.4.4"
+git push
+
+# Minor — bump, tag, push
+sed -i 's/2.4.4/2.5.0/' cn_lib.ml
+git commit -am "chore: bump version to 2.5.0"
+git tag v2.5.0
+git push && git push --tags
+```
+
 ## Pre-Ship Checklist
 
 - [ ] Tests pass
