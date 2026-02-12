@@ -1,189 +1,117 @@
-# Coding
-
-Git workflow and code review practices for cnos development.
-
+---
+name: coding
+description: Write reliable code with adversarial self-review. Use when implementing features, fixing bugs, or reviewing your own code before requesting external review.
 ---
 
-## TERMS
+# CODING
 
-1. Working on cnos or hub repos
-2. Git available
-3. Collaborating with other agents/humans
+## Core Principle
 
----
+**Coherent code: every path terminates, every failure is handled.**
 
-## Branch Workflow
+If a code path can loop forever, fail silently, or corrupt state — fix it before shipping.
 
-### Default Branch
+## Coherence at Each Level
 
-**`main`** — always. Not `master`. (RCA lesson: branch mismatch caused 4-hour failure)
+### 1. Loops & Recursion
 
-```bash
-git config --global init.defaultBranch main
-```
+Every loop must terminate. Every recursion must have a base case.
 
-### Branch Naming
+1.1. **Bound all loops**
+  - ❌ `while (condition) { ... }` with no guaranteed exit
+  - ✅ `for (i = 0; i < MAX; i++) { ... }` with explicit bound
 
-```
-<agent>/<topic>
+1.2. **Guard re-exec against infinite loops**
+  - ❌ `re_exec()` that can trigger itself again
+  - ✅ Set env guard before re-exec, check at startup:
+    ```ocaml
+    if Sys.getenv_opt "GUARD" = Some "1" then exit 0;
+    Unix.putenv "GUARD" "1";
+    re_exec ()
+    ```
 
-Examples:
-  sigma/inbox-tool
-  pi/agile-process
-  sigma/rca-skill
-```
+1.3. **Limit retries**
+  - ❌ `while (failed) { retry() }` — retry storm
+  - ✅ `for i = 0 to 3 do if not failed then break done` — bounded
 
-### Creating a Branch
+### 2. External Resources
 
-```bash
-git checkout main
-git pull origin main
-git checkout -b sigma/my-feature
-```
+Network calls fail. APIs rate-limit. Downloads corrupt.
 
----
+2.1. **Add cooldowns to external checks**
+  - ❌ Check API every cron cycle (288 calls/day)
+  - ✅ Track last check time, skip if < N hours
 
-## Review Rules
+2.2. **Validate downloads before using**
+  - ❌ `curl -o file && use file` — file may be truncated
+  - ✅ `curl -o file && validate file && use file`
+    ```ocaml
+    if file_size path < 1_000_000 then fail "truncated"
+    if not (run_version_check path) then fail "invalid"
+    ```
 
-### Never Self-Merge
+2.3. **Clean up on failure**
+  - ❌ Leave `.tmp` files on error path
+  - ✅ Remove temp files in all exit paths
 
-The author of a change should not merge their own work.
+### 3. Shell & Process
 
-- Push branch
-- Request review (via actor model: push to reviewer's repo)
-- Wait for ACK
-- Reviewer merges
+Shell injection is easy to write, hard to spot.
 
-### Always Rebase Before Review
+3.1. **Never interpolate user input into shell**
+  - ❌ `exec (sprintf "cmd %s" user_input)` — shell injection
+  - ✅ `Unix.execv cmd [| arg1; arg2 |]` — no shell
+
+3.2. **Use absolute paths for exec**
+  - ❌ `Unix.execvp "cn" argv` — PATH lookup may find wrong binary
+  - ✅ `Unix.execv "/usr/local/bin/cn" argv` — explicit
+
+3.3. **Preserve error visibility**
+  - ❌ `exec cmd 2>/dev/null` — errors disappear
+  - ✅ Capture stderr, log on failure
+
+### 4. State & Versions
+
+Comparisons lie. State corrupts.
+
+4.1. **Compare versions numerically, not lexically**
+  - ❌ `"2.4.10" > "2.4.9"` → false (string compare)
+  - ✅ `(2,4,10) > (2,4,9)` → true (tuple compare)
+
+4.2. **Atomic writes for state**
+  - ❌ Write directly to `state.json` — crash = corrupt
+  - ✅ Write to `state.json.new`, then `mv` atomically
+
+4.3. **Eliminate mutable refs when possible**
+  - ❌ `let cache = ref None` — hidden state coupling
+  - ✅ Pass value explicitly through function signatures
+
+### 5. Self-Review
+
+Review your own code as an attacker before shipping.
+
+5.1. **Ask the failure question**
+  - ❌ "Does it work?" (confirmation bias)
+  - ✅ "What are 5 ways this can fail silently or catastrophically?"
+
+5.2. **Check for pattern recurrence**
+  - ❌ Fix bug X, write feature Y with same failure mode
+  - ✅ After fixing X, explicitly check: "Can Y fail the same way?"
+
+5.3. **Rate failures by severity**
+  - Silent + Catastrophic = MUST FIX before ship
+  - Noisy + Recoverable = document, fix later
+
+## Pre-Ship Checklist
 
 Before requesting review:
-```bash
-git fetch origin
-git rebase origin/main
-git push --force-with-lease
-```
-
-**Reviewer's time > your time.** Clean history, no merge conflicts.
-
-### Review Request Format
-
-Push thread to reviewer's repo:
-```markdown
-# Review Request: [Title]
-
-**From:** [you]
-**Branch:** `agent/topic` (repo)
-**Status:** NEEDS REVIEW
-
-## Summary
-[What changed, why]
-
-## Request
-[Specific questions or just "please review"]
-```
-
----
-
-## Commit Messages
-
-### Format
 
 ```
-type: short description
-
-Longer explanation if needed.
+□ "5 ways this can fail?"
+□ All loops bounded
+□ No shell injection
+□ External calls have cooldown/validation
+□ Version comparisons use tuples
+□ State writes are atomic
+□ Pattern recurrence check done
 ```
-
-### Types
-
-| Type | Use |
-|------|-----|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation |
-| `refactor` | Code change (no new feature/fix) |
-| `test` | Tests |
-| `chore` | Maintenance |
-| `release` | Version release |
-
-### Examples
-
-```
-feat: inbox tool with GTD triage
-
-fix: handle empty branch list
-
-docs: add RCA skill
-
-refactor: command vs action naming
-```
-
----
-
-## Code Review Checklist
-
-When reviewing:
-
-- [ ] Does it solve the stated problem?
-- [ ] Is it the simplest solution? (KISS)
-- [ ] Are there unnecessary additions? (YAGNI)
-- [ ] Are types correct and semantic?
-- [ ] Are edge cases handled?
-- [ ] Is it tested?
-- [ ] Is the commit history clean?
-
-### Review Outcomes
-
-| Verdict | Meaning |
-|---------|---------|
-| **APPROVED** | Ship it |
-| **APPROVED with nit** | Ship it, minor suggestions |
-| **REQUEST CHANGES** | Must fix before merge |
-| **NEEDS DISCUSSION** | Architectural concerns |
-
----
-
-## Merge Protocol
-
-After approval:
-
-1. Reviewer merges (not author)
-2. Delete branch after merge
-3. Author ACKs merge
-
-```bash
-# Reviewer merges
-git checkout main
-git merge --no-ff sigma/feature
-git push origin main
-git push origin --delete sigma/feature
-```
-
----
-
-## Quick Reference
-
-```bash
-# Start work
-git checkout main && git pull
-git checkout -b sigma/topic
-
-# During work
-git add -A && git commit -m "type: message"
-git push -u origin sigma/topic
-
-# Before review
-git fetch origin && git rebase origin/main
-git push --force-with-lease
-
-# Request review
-# (push thread to reviewer's repo)
-```
-
----
-
-## NOTES
-
-- See `skills/ocaml/` for OCaml-specific conventions
-- See `skills/peer/` for actor model coordination
-- See `mindsets/ENGINEERING.md` for higher-level principles
