@@ -1,0 +1,5 @@
+; cn library (pure functions, testable)
+(library
+ (name cn_lib)
+ (modules cn_lib)
+ (libraries inbox_lib))

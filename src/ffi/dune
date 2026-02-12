@@ -1,0 +1,5 @@
+; Native system bindings (stdlib + Unix)
+(library
+ (name cn_ffi)
+ (modules cn_ffi)
+ (libraries unix))

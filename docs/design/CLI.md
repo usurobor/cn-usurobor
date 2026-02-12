@@ -191,27 +191,35 @@ See [ARCHITECTURE.md](../ARCHITECTURE.md) for full directory layout details.
 ## Implementation
 
 ```
-tools/src/cn/
- +-- cn.ml              CLI dispatch
- +-- cn_lib.ml          Types, parsing, help text (pure)
- +-- cn_agent.ml        Agent loop, queue, out commands
- +-- cn_mail.ml         Inbox/outbox transport
- +-- cn_gtd.ml          GTD commands + thread creation
- +-- cn_mca.ml          MCA commands
- +-- cn_commands.ml     Peer + git commands
- +-- cn_system.ml       Init, setup, update, status, doctor
- +-- cn_hub.ml          Hub discovery, paths
- +-- cn_fmt.ml          Output formatting
- +-- cn_ffi.ml          System bindings
- +-- cn_io.ml           Protocol I/O
- +-- cn_protocol.ml     Typed FSMs
- +-- git.ml             Raw git operations
+src/
+ +-- cli/
+ |    +-- cn.ml              CLI dispatch
+ +-- lib/
+ |    +-- cn_lib.ml          Types, parsing, help text (pure)
+ +-- protocol/
+ |    +-- cn_protocol.ml     Typed FSMs
+ |    +-- cn_protocol.mli    Interface
+ +-- ffi/
+ |    +-- cn_ffi.ml          System bindings
+ +-- transport/
+ |    +-- cn_io.ml           Protocol I/O
+ |    +-- git.ml             Raw git operations
+ |    +-- inbox_lib.ml       Inbox utilities
+ +-- cmd/
+      +-- cn_agent.ml        Agent loop, queue, out commands
+      +-- cn_mail.ml         Inbox/outbox transport
+      +-- cn_gtd.ml          GTD commands + thread creation
+      +-- cn_mca.ml          MCA commands
+      +-- cn_commands.ml     Peer + git commands
+      +-- cn_system.ml       Init, setup, update, status, doctor
+      +-- cn_hub.ml          Hub discovery, paths
+      +-- cn_fmt.ml          Output formatting
 ```
 
 ### Build
 
 ```bash
-dune build tools/src/cn/cn.exe   # Native OCaml binary
+dune build src/cli/cn.exe   # Native OCaml binary
 ```
 
 Installed to `/usr/local/bin/cn`.

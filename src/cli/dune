@@ -1,0 +1,6 @@
+; cn CLI (native OCaml binary)
+(executable
+ (name cn)
+ (public_name cn)
+ (modules cn)
+ (libraries cn_cmd cn_ffi cn_lib inbox_lib git cn_io))
