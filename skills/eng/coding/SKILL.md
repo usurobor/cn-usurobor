@@ -1,30 +1,57 @@
 ---
 name: coding
-description: Pre-ship self-review for failure modes. Use after implementing a feature or fix, before pushing or requesting review. Triggers on "review my code", "check for bugs", "is this safe to ship", or any self-review before commit.
+description: Ship code that handles failure, not just success. Use before implementing features, during review, or when asked "is this safe to ship". Triggers on coding tasks, implementation, pre-ship review, or "check for bugs".
 ---
 
 # Coding
 
+**Coherent code: handles not just success but how it fails.**
+
+Incoherent code works in testing, breaks in production — infinite loops, corrupt state, silent degradation.
+
 ## Process
 
-1. Answer: "5 ways this can fail silently or catastrophically?"
-2. Check: Does this repeat a bug we already fixed?
-3. Verify each item in the checklist below
+1. **Before implementing:** "5 ways this fails silently or catastrophically?"
+2. **During implementing:** Add guards for each failure mode
+3. **Before shipping:** Test garbage inputs, not just valid ones
 
-## Checklist
+## Rules
 
-- [ ] Loops bounded (no infinite loop risk)
-- [ ] Re-exec has recursion guard
-- [ ] External APIs have cooldown
-- [ ] Downloads validated before use
-- [ ] No shell string interpolation (use execv)
-- [ ] Version compare uses tuples
-- [ ] Temp files cleaned on all paths
+### 1. Enumerate failure modes before implementing
 
-## Pattern Recurrence
+- ❌ Implement → "it works"
+- ✅ "What if the API returns HTML? What if this re-execs itself?"
 
-After fixing bug X, verify new code Y doesn't have same failure mode.
+### 2. Validate before destructive operations
+
+- ❌ `curl ... && mv new old`
+- ✅ `curl ... && ./new --version && mv new old`
+
+### 3. Guard recursive/re-entrant paths
+
+- ❌ `re_exec()` with no loop guard
+- ✅ Set `ALREADY_RUNNING=1` before exec, check on entry
+
+### 4. Clean up on all failure paths
+
+- ❌ Download fails, `.new` file left behind
+- ✅ `if exists new_path then remove new_path` on every exit
+
+### 5. Add cooldowns for external APIs
+
+- ❌ Check GitHub releases on every heartbeat
+- ✅ Skip if checked within 1 hour (use mtime of state file)
+
+### 6. Test garbage inputs
+
+- ❌ "2.4.3 parses correctly" (happy path)
+- ✅ "garbage, empty string, HTML blob all return None/false safely"
+
+### 7. Explain ordering when it matters
+
+- ❌ Tests in arbitrary order
+- ✅ "CN_UPDATE_RUNNING test last — no Unix.unsetenv in OCaml"
 
 ## Reference
 
-For case study (10 issues in one feature): read `references/auto-update-case.md`
+For case study (auto-update with 5 failure modes): `references/auto-update-case.md`
