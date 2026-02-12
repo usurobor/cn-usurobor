@@ -262,6 +262,28 @@ let%expect_test "actor: idle + timeout is invalid" =
   show_actor Idle Timeout;
   [%expect {| ERROR: invalid actor transition: idle + timeout |}]
 
+(* --- Update transitions --- *)
+
+let%expect_test "actor: idle + update_available → updating" =
+  show_actor Idle Update_available;
+  [%expect {| idle → updating |}]
+
+let%expect_test "actor: idle + update_skip → idle" =
+  show_actor Idle Update_skip;
+  [%expect {| idle → idle |}]
+
+let%expect_test "actor: updating + update_complete → idle" =
+  show_actor Updating Update_complete;
+  [%expect {| updating → idle |}]
+
+let%expect_test "actor: updating + update_fail → idle" =
+  show_actor Updating Update_fail;
+  [%expect {| updating → idle |}]
+
+let%expect_test "actor: processing + update_available is invalid" =
+  show_actor Processing Update_available;
+  [%expect {| ERROR: invalid actor transition: processing + update_available |}]
+
 (* --- State derivation from filesystem --- *)
 
 let%expect_test "actor: derive_state" =
@@ -451,18 +473,18 @@ let%expect_test "property: thread FSM — valid/invalid counts" =
   Printf.printf "valid=%d invalid=%d total=%d\n" !valid !invalid (!valid + !invalid);
   [%expect {| valid=32 invalid=32 total=64 |}]
 
-let%expect_test "property: actor FSM — no panics (35 combinations)" =
-  let all_states = [Idle; InputReady; Processing; OutputReady; TimedOut] in
-  let all_events = [Queue_pop; Queue_empty; Wake; Output_received; Timeout; Archive_complete; Archive_fail] in
+let%expect_test "property: actor FSM — no panics (66 combinations)" =
+  let all_states = [Idle; Updating; InputReady; Processing; OutputReady; TimedOut] in
+  let all_events = [Update_available; Update_complete; Update_fail; Update_skip; Queue_pop; Queue_empty; Wake; Output_received; Timeout; Archive_complete; Archive_fail] in
   all_states |> List.iter (fun s ->
     all_events |> List.iter (fun e ->
       ignore (actor_transition s e)));
-  print_endline "35 combinations: no panics";
-  [%expect {| 35 combinations: no panics |}]
+  print_endline "66 combinations: no panics";
+  [%expect {| 66 combinations: no panics |}]
 
 let%expect_test "property: actor FSM — valid/invalid counts" =
-  let all_states = [Idle; InputReady; Processing; OutputReady; TimedOut] in
-  let all_events = [Queue_pop; Queue_empty; Wake; Output_received; Timeout; Archive_complete; Archive_fail] in
+  let all_states = [Idle; Updating; InputReady; Processing; OutputReady; TimedOut] in
+  let all_events = [Update_available; Update_complete; Update_fail; Update_skip; Queue_pop; Queue_empty; Wake; Output_received; Timeout; Archive_complete; Archive_fail] in
   let valid = ref 0 in
   let invalid = ref 0 in
   all_states |> List.iter (fun s ->
@@ -471,7 +493,7 @@ let%expect_test "property: actor FSM — valid/invalid counts" =
       | Ok _ -> incr valid
       | Error _ -> incr invalid));
   Printf.printf "valid=%d invalid=%d total=%d\n" !valid !invalid (!valid + !invalid);
-  [%expect {| valid=8 invalid=27 total=35 |}]
+  [%expect {| valid=12 invalid=54 total=66 |}]
 
 let%expect_test "property: sender FSM — no panics (36 combinations)" =
   let all_states = [S_Pending; S_BranchCreated; S_Pushing; S_Pushed; S_Failed; S_Delivered] in

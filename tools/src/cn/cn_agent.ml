@@ -456,6 +456,41 @@ let auto_save hub_path name =
            print_endline (Cn_fmt.warn "Auto-commit failed"))
   | _ -> ()
 
+(* === Auto-Update (when idle) === *)
+
+let auto_update_enabled () =
+  match Sys.getenv_opt "CN_AUTO_UPDATE" with
+  | Some "0" -> false
+  | _ -> true
+
+let install_dir = "/usr/local/lib/cnos"
+
+let check_for_update () =
+  if not (auto_update_enabled ()) then Cn_protocol.Update_skip
+  else if not (Sys.file_exists install_dir) then Cn_protocol.Update_skip
+  else
+    let fetch_cmd = Printf.sprintf "cd %s && git fetch origin main --quiet 2>/dev/null" install_dir in
+    let _ = Cn_ffi.Child_process.exec fetch_cmd in
+    let version_cmd = Printf.sprintf "cd %s && git show origin/main:tools/src/cn/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*\"\\([^\"]*\\)\".*/\\1/'" install_dir in
+    match Cn_ffi.Child_process.exec version_cmd with
+    | None -> Cn_protocol.Update_skip
+    | Some latest_raw ->
+        let latest = String.trim latest_raw in
+        if latest <> Cn_lib.version && latest <> "" then Cn_protocol.Update_available
+        else Cn_protocol.Update_skip
+
+let do_update () =
+  let pull_cmd = Printf.sprintf "cd %s && git pull --ff-only 2>/dev/null" install_dir in
+  match Cn_ffi.Child_process.exec pull_cmd with
+  | Some _ -> Cn_protocol.Update_complete
+  | None -> Cn_protocol.Update_fail
+
+let re_exec () =
+  let args = Cn_ffi.Process.argv |> Array.to_list in
+  let args_str = args |> List.tl |> String.concat " " in
+  let _ = Cn_ffi.Child_process.exec (Printf.sprintf "cn %s" args_str) in
+  Cn_ffi.Process.exit 0
+
 (* === Inbound (Actor Loop — FSM-driven) === *)
 
 let run_inbound hub_path name =
@@ -529,8 +564,28 @@ let run_inbound hub_path name =
       print_endline (Cn_fmt.info (Printf.sprintf "Agent working (%d/%d min)" input_age_min max_age_min));
       print_endline (Cn_fmt.info (Printf.sprintf "Queue depth: %d" (queue_count hub_path)))
   | Cn_protocol.Idle ->
-      (* Nothing active — try to feed from queue *)
-      if feed_next_input hub_path then wake_agent hub_path
+      (* Auto-update check before processing queue *)
+      let update_event = check_for_update () in
+      (match update_event with
+       | Cn_protocol.Update_available ->
+           print_endline (Cn_fmt.info (Printf.sprintf "Update available (current: %s)" Cn_lib.version));
+           Cn_hub.log_action hub_path "actor.update" "checking";
+           let result = do_update () in
+           (match result with
+            | Cn_protocol.Update_complete ->
+                Cn_hub.log_action hub_path "actor.update" "complete";
+                print_endline (Cn_fmt.ok "Update installed, re-executing...");
+                re_exec ()
+            | Cn_protocol.Update_fail ->
+                Cn_hub.log_action hub_path "actor.update" "failed";
+                print_endline (Cn_fmt.warn "Update failed, continuing with current version");
+                if feed_next_input hub_path then wake_agent hub_path
+            | _ -> ())
+       | Cn_protocol.Update_skip | _ ->
+           if feed_next_input hub_path then wake_agent hub_path)
+  | Cn_protocol.Updating ->
+      (* Transient state — should not be derived from filesystem *)
+      print_endline (Cn_fmt.warn "Unexpected Updating state in actor loop")
   | Cn_protocol.InputReady ->
       (* input.md written but agent not woken — wake it *)
       wake_agent hub_path
