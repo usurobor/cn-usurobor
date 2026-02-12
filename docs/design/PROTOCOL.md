@@ -271,6 +271,19 @@ The cn scheduler's invocation cycle. One agent turn at a time.
     ┌───────┐
     │ Idle  │ ←──────────────────────────┐
     └───┬───┘                            │
+        │                                │
+        │ [update check: if outdated]    │
+        ▼                                │
+  ┌──────────┐                           │
+  │ Updating │ ─── update_fail ──────────┤
+  └────┬─────┘                           │
+       │ update_complete                 │
+       │ (re-exec with new version)      │
+       ╳ (process terminates)            │
+                                         │
+    ┌───────┐                            │
+    │ Idle  │ [no update needed]         │
+    └───┬───┘                            │
         │ queue_pop (items exist)        │
         ▼                                │
   ┌────────────┐                         │
@@ -304,9 +317,12 @@ The cn scheduler's invocation cycle. One agent turn at a time.
                   └──────────────────────┘
 ```
 
+**Auto-update behavior:** When in `Idle` state (no `input.md`, no `output.md`), cn checks for available updates before processing the queue. If an update is available, it downloads and re-execs with the new version. This ensures updates only happen when safe (no active processing) and the system self-heals to the latest version.
+
 ```ocaml
 type actor_state =
   | Idle           (* no input.md, queue may have items *)
+  | Updating       (* downloading/installing update *)
   | InputReady     (* input.md written, agent not yet woken *)
   | Processing     (* agent working, awaiting output.md *)
   | OutputReady    (* output.md exists, ready to archive *)
@@ -314,6 +330,10 @@ type actor_state =
   | Archiving      (* executing ops, writing logs *)
 
 type actor_event =
+  | Update_available   (* newer version detected *)
+  | Update_complete    (* update installed, will re-exec *)
+  | Update_fail        (* update failed, proceed with current *)
+  | Update_skip        (* no update available or not idle *)
   | Queue_pop          (* dequeue item → input.md *)
   | Queue_empty        (* nothing to process *)
   | Wake               (* trigger agent *)
@@ -324,6 +344,12 @@ type actor_event =
 
 let actor_transition state event =
   match state, event with
+  (* Update transitions — only from Idle *)
+  | Idle,         Update_available  -> Ok Updating
+  | Idle,         Update_skip       -> Ok Idle      (* no update, continue *)
+  | Updating,     Update_complete   -> Ok Idle      (* re-exec; new process starts fresh *)
+  | Updating,     Update_fail       -> Ok Idle      (* fallback to current version *)
+  (* Normal processing transitions *)
   | Idle,         Queue_pop         -> Ok InputReady
   | Idle,         Queue_empty       -> Ok Idle      (* stay idle *)
   | InputReady,   Wake              -> Ok Processing
@@ -334,6 +360,20 @@ let actor_transition state event =
   | TimedOut,     Archive_complete  -> Ok Idle       (* timeout recovery complete *)
   | Archiving,    Archive_complete  -> Ok Idle
   | from, ev -> Error { from; ev; reason = "invalid transition" }
+```
+
+**Update check logic:**
+```ocaml
+let check_for_update () =
+  (* Fetch remote version without downloading *)
+  let remote_ver = git_ls_remote_version () in
+  if remote_ver > local_version then Update_available
+  else Update_skip
+
+let do_update () =
+  match git_pull_and_rebuild () with
+  | Ok ()  -> Update_complete  (* caller should re-exec *)
+  | Error _ -> Update_fail     (* proceed with current *)
 ```
 
 **Maps to current code:** `cn_agent.ml:run_inbound` — currently a 35-line function with nested if/else. With this FSM, each branch becomes a state transition, and crash recovery is deterministic.
@@ -355,6 +395,13 @@ let actor_transition state event =
 | Max processing time | (derived) | 15 min | `cron_period × timeout_cycles` |
 
 Example: With defaults, if `input.md` is older than 15 minutes (3 × 5 min), the actor transitions to `TimedOut` and archives the input as failed.
+
+**Auto-update configuration:**
+| Parameter | Environment Variable | Default | Description |
+|-----------|---------------------|---------|-------------|
+| Auto-update enabled | `CN_AUTO_UPDATE` | `1` | Set to `0` to disable |
+
+When enabled, cn checks for updates at the start of each cron cycle. Updates only proceed when the actor is `Idle` (no `input.md`, no `output.md`). After a successful update, cn re-execs itself so the new version handles the current cycle.
 
 ---
 
