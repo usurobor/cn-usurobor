@@ -467,6 +467,12 @@ let install_dir = "/usr/local/lib/cnos"
 let bin_path = "/usr/local/bin/cn"
 let repo = "usurobor/cnos"
 
+(* Update info returned from check, passed to do_update — avoids mutable ref *)
+type update_info =
+  | Update_skip
+  | Update_git of string     (* remote version *)
+  | Update_binary of string  (* release tag *)
+
 (* Check if git-based install exists *)
 let has_git_install () =
   Sys.file_exists install_dir &&
@@ -507,57 +513,62 @@ let get_platform_binary () =
   if platform = "" || arch = "" then None
   else Some (Printf.sprintf "cn-%s-%s" platform arch)
 
-(* Latest release tag, cached for do_update *)
-let latest_tag = ref ""
-
+(* Check for updates — returns update_info for do_update *)
 let check_for_update () =
-  if not (auto_update_enabled ()) then Cn_protocol.Update_skip
+  if not (auto_update_enabled ()) then Update_skip
   else if has_git_install () then begin
     (* Git-based update *)
     let fetch_cmd = Printf.sprintf "cd %s && git fetch origin main --quiet 2>/dev/null" install_dir in
     let _ = Cn_ffi.Child_process.exec fetch_cmd in
     let version_cmd = Printf.sprintf "cd %s && git show origin/main:tools/src/cn/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*\"\\([^\"]*\\)\".*/\\1/'" install_dir in
     match Cn_ffi.Child_process.exec version_cmd with
-    | None -> Cn_protocol.Update_skip
+    | None -> Update_skip
     | Some latest_raw ->
         let latest = String.trim latest_raw in
-        if latest <> Cn_lib.version && latest <> "" then Cn_protocol.Update_available
-        else Cn_protocol.Update_skip
+        (* Issue 5 fix: use semver comparison, not string inequality *)
+        if is_newer_version latest Cn_lib.version then Update_git latest
+        else Update_skip
   end else begin
     (* Release binary update *)
     match get_latest_release_tag () with
-    | None -> Cn_protocol.Update_skip
+    | None -> Update_skip
     | Some tag ->
-        if is_newer_version tag Cn_lib.version then begin
-          latest_tag := tag;
-          Cn_protocol.Update_available
-        end else Cn_protocol.Update_skip
+        if is_newer_version tag Cn_lib.version then Update_binary tag
+        else Update_skip
   end
 
-let do_update () =
-  if has_git_install () then begin
-    (* Git-based update *)
-    let pull_cmd = Printf.sprintf "cd %s && git pull --ff-only 2>/dev/null" install_dir in
-    match Cn_ffi.Child_process.exec pull_cmd with
-    | Some _ -> Cn_protocol.Update_complete
-    | None -> Cn_protocol.Update_fail
-  end else begin
-    (* Release binary update *)
-    match get_platform_binary () with
-    | None -> Cn_protocol.Update_fail
-    | Some binary ->
-        let url = Printf.sprintf "https://github.com/%s/releases/download/%s/%s" repo !latest_tag binary in
-        let dl_cmd = Printf.sprintf "curl -fsSL -o '%s.new' '%s' 2>/dev/null && chmod +x '%s.new' && mv '%s.new' '%s'" bin_path url bin_path bin_path bin_path in
-        match Cn_ffi.Child_process.exec dl_cmd with
-        | Some _ -> Cn_protocol.Update_complete
-        | None -> Cn_protocol.Update_fail
-  end
+(* Perform update — takes update_info from check_for_update *)
+let do_update info =
+  match info with
+  | Update_skip -> Cn_protocol.Update_skip
+  | Update_git _ ->
+      (* Git-based update *)
+      let pull_cmd = Printf.sprintf "cd %s && git pull --ff-only 2>/dev/null" install_dir in
+      (match Cn_ffi.Child_process.exec pull_cmd with
+       | Some _ -> Cn_protocol.Update_complete
+       | None -> Cn_protocol.Update_fail)
+  | Update_binary tag ->
+      (* Release binary update *)
+      match get_platform_binary () with
+      | None -> Cn_protocol.Update_fail
+      | Some binary ->
+          (* Issue 3 fix: clean up stale .new file before download *)
+          let new_path = bin_path ^ ".new" in
+          if Sys.file_exists new_path then Sys.remove new_path;
+          let url = Printf.sprintf "https://github.com/%s/releases/download/%s/%s" repo tag binary in
+          let dl_cmd = Printf.sprintf "curl -fsSL -o '%s' '%s' 2>/dev/null && chmod +x '%s' && mv '%s' '%s'" new_path url new_path new_path bin_path in
+          match Cn_ffi.Child_process.exec dl_cmd with
+          | Some _ -> Cn_protocol.Update_complete
+          | None ->
+              (* Clean up on failure *)
+              if Sys.file_exists new_path then Sys.remove new_path;
+              Cn_protocol.Update_fail
 
+(* Re-exec with same args — Issue 1 fix: use Unix.execvp, no shell injection *)
 let re_exec () =
-  let args = Cn_ffi.Process.argv |> Array.to_list in
-  let args_str = args |> List.tl |> String.concat " " in
-  let _ = Cn_ffi.Child_process.exec (Printf.sprintf "cn %s" args_str) in
-  Cn_ffi.Process.exit 0
+  let argv = Cn_ffi.Process.argv in
+  (* Replace current process with new cn — no shell, no injection risk *)
+  Unix.execvp "cn" argv
 
 (* === Inbound (Actor Loop — FSM-driven) === *)
 
@@ -632,28 +643,41 @@ let run_inbound hub_path name =
       print_endline (Cn_fmt.info (Printf.sprintf "Agent working (%d/%d min)" input_age_min max_age_min));
       print_endline (Cn_fmt.info (Printf.sprintf "Queue depth: %d" (queue_count hub_path)))
   | Cn_protocol.Idle ->
-      (* Auto-update check before processing queue *)
-      let update_event = check_for_update () in
-      (match update_event with
-       | Cn_protocol.Update_available ->
-           print_endline (Cn_fmt.info (Printf.sprintf "Update available (current: %s)" Cn_lib.version));
-           Cn_hub.log_action hub_path "actor.update" "checking";
-           let result = do_update () in
-           (match result with
-            | Cn_protocol.Update_complete ->
-                Cn_hub.log_action hub_path "actor.update" "complete";
-                print_endline (Cn_fmt.ok "Update installed, re-executing...");
-                re_exec ()
-            | Cn_protocol.Update_fail ->
-                Cn_hub.log_action hub_path "actor.update" "failed";
-                print_endline (Cn_fmt.warn "Update failed, continuing with current version");
-                if feed_next_input hub_path then wake_agent hub_path
-            | _ -> ())
-       | Cn_protocol.Update_skip | _ ->
-           if feed_next_input hub_path then wake_agent hub_path)
+      (* Auto-update check before processing queue — Issue 4: call FSM transitions *)
+      let update_info = check_for_update () in
+      (match update_info with
+       | Update_skip ->
+           (* FSM: Idle + Update_skip → Idle *)
+           let _ = Cn_protocol.actor_transition Cn_protocol.Idle Cn_protocol.Update_skip in
+           if feed_next_input hub_path then wake_agent hub_path
+       | Update_git ver | Update_binary ver ->
+           (* FSM: Idle + Update_available → Updating *)
+           (match Cn_protocol.actor_transition Cn_protocol.Idle Cn_protocol.Update_available with
+            | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "FSM error: %s" e))
+            | Ok Cn_protocol.Updating ->
+                print_endline (Cn_fmt.info (Printf.sprintf "Update available: %s → %s" Cn_lib.version ver));
+                Cn_hub.log_action hub_path "actor.update" (Printf.sprintf "checking:%s" ver);
+                let result = do_update update_info in
+                (match result with
+                 | Cn_protocol.Update_complete ->
+                     (* FSM: Updating + Update_complete → Idle (but we re-exec) *)
+                     let _ = Cn_protocol.actor_transition Cn_protocol.Updating Cn_protocol.Update_complete in
+                     Cn_hub.log_action hub_path "actor.update" (Printf.sprintf "complete:%s" ver);
+                     print_endline (Cn_fmt.ok (Printf.sprintf "Updated to %s, re-executing..." ver));
+                     re_exec ()
+                 | Cn_protocol.Update_fail ->
+                     (* FSM: Updating + Update_fail → Idle *)
+                     let _ = Cn_protocol.actor_transition Cn_protocol.Updating Cn_protocol.Update_fail in
+                     Cn_hub.log_action hub_path "actor.update" "failed";
+                     print_endline (Cn_fmt.warn "Update failed, continuing with current version");
+                     if feed_next_input hub_path then wake_agent hub_path
+                 | _ -> ())
+            | Ok _ -> ()))
   | Cn_protocol.Updating ->
-      (* Transient state — should not be derived from filesystem *)
-      print_endline (Cn_fmt.warn "Unexpected Updating state in actor loop")
+      (* Transient state — should not be derived from filesystem.
+         Included for FSM exhaustiveness; the Updating state only exists
+         during the update flow within a single run_inbound call. *)
+      ()
   | Cn_protocol.InputReady ->
       (* input.md written but agent not woken — wake it *)
       wake_agent hub_path
