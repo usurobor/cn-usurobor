@@ -1,13 +1,13 @@
 ---
 name: coding
-description: Ship code that handles failure and is well-structured. Use before implementing features, during review, or when asked "is this safe to ship". Triggers on coding tasks, implementation, pre-ship review, or "check for bugs".
+description: Ship code that's clear, well-structured, and handles failure. Use before implementing features, during review, or when asked "is this safe to ship". Triggers on coding tasks, implementation, pre-ship review, or "check for bugs".
 ---
 
 # Coding
 
-**Coherent code: well-structured and handles how it fails.**
+**Coherent code: clear, well-structured, handles how it fails.**
 
-Incoherent code works in testing, breaks in production — or works but is fragile, coupled, hard to change.
+Incoherent code works in testing but breaks in production, or works but no one can read it, or is fragile and hard to change.
 
 ## Process
 
@@ -95,6 +95,45 @@ Incoherent code works in testing, breaks in production — or works but is fragi
 
 ---
 
+## C. Clarity
+
+### C.1. Name functions for what they return
+
+- ❌ `process_version()` — what does it return?
+- ✅ `version_to_tuple()` — input → output is clear
+
+### C.2. Comments explain why, not what
+
+- ❌ `(* increment counter *)` — obvious from code
+- ✅ `(* test last — no Unix.unsetenv in OCaml stdlib *)` — non-obvious constraint
+
+### C.3. Error messages include context
+
+- ❌ `"Parse error"`
+- ✅ `"Parse error: expected semver, got 'garbage' in version_to_tuple"`
+
+### C.4. Helper functions live near usage
+
+- ❌ `show_tuple` defined 500 lines from its tests
+- ✅ `show_tuple` defined immediately before test group that uses it
+
+### C.5. One level of abstraction per function
+
+- ❌ Mix of `Unix.putenv` and `check_for_update` in same function
+- ✅ High-level orchestration calls low-level primitives, not mixed
+
+### C.6. Module docstring states scope and limits
+
+- ❌ No header, reader guesses what's tested
+- ✅ `(** Tests pure functions from cn_cmd. I/O functions need integration tests. *)`
+
+### C.7. Group by domain, not by type
+
+- ❌ All types at top, all functions below
+- ✅ `version_to_tuple` type + function + tests together, then next group
+
+---
+
 ## Reference
 
-For case study (auto-update with 10 issues across both sections): `references/auto-update-case.md`
+For case study (auto-update with issues across all sections): `references/auto-update-case.md`
