@@ -464,11 +464,56 @@ let auto_update_enabled () =
   | _ -> true
 
 let install_dir = "/usr/local/lib/cnos"
+let bin_path = "/usr/local/bin/cn"
+let repo = "usurobor/cnos"
+
+(* Check if git-based install exists *)
+let has_git_install () =
+  Sys.file_exists install_dir &&
+  Sys.file_exists (Filename.concat install_dir ".git")
+
+(* Get latest release tag from GitHub API *)
+let get_latest_release_tag () =
+  let cmd = Printf.sprintf "curl -fsSL 'https://api.github.com/repos/%s/releases/latest' 2>/dev/null | grep '\"tag_name\"' | sed -E 's/.*\"([^\"]+)\".*/\\1/'" repo in
+  match Cn_ffi.Child_process.exec cmd with
+  | Some tag -> Some (String.trim tag)
+  | None -> None
+
+(* Compare version strings: v2.4.3 > v2.4.2 etc *)
+let version_to_tuple v =
+  let v = if String.length v > 0 && v.[0] = 'v' then String.sub v 1 (String.length v - 1) else v in
+  match String.split_on_char '.' v with
+  | [maj; min; patch] ->
+      (try Some (int_of_string maj, int_of_string min, int_of_string patch)
+       with _ -> None)
+  | _ -> None
+
+let is_newer_version remote local =
+  match version_to_tuple remote, version_to_tuple local with
+  | Some (r1, r2, r3), Some (l1, l2, l3) ->
+      (r1, r2, r3) > (l1, l2, l3)
+  | _ -> false
+
+(* Detect platform for binary download *)
+let get_platform_binary () =
+  let os = match Cn_ffi.Child_process.exec "uname -s" with
+    | Some s -> String.trim s | None -> "" in
+  let arch = match Cn_ffi.Child_process.exec "uname -m" with
+    | Some s -> String.trim s | None -> "" in
+  let platform = match os with
+    | "Linux" -> "linux" | "Darwin" -> "macos" | _ -> "" in
+  let arch = match arch with
+    | "x86_64" -> "x64" | "aarch64" | "arm64" -> "arm64" | _ -> "" in
+  if platform = "" || arch = "" then None
+  else Some (Printf.sprintf "cn-%s-%s" platform arch)
+
+(* Latest release tag, cached for do_update *)
+let latest_tag = ref ""
 
 let check_for_update () =
   if not (auto_update_enabled ()) then Cn_protocol.Update_skip
-  else if not (Sys.file_exists install_dir) then Cn_protocol.Update_skip
-  else
+  else if has_git_install () then begin
+    (* Git-based update *)
     let fetch_cmd = Printf.sprintf "cd %s && git fetch origin main --quiet 2>/dev/null" install_dir in
     let _ = Cn_ffi.Child_process.exec fetch_cmd in
     let version_cmd = Printf.sprintf "cd %s && git show origin/main:tools/src/cn/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*\"\\([^\"]*\\)\".*/\\1/'" install_dir in
@@ -478,12 +523,35 @@ let check_for_update () =
         let latest = String.trim latest_raw in
         if latest <> Cn_lib.version && latest <> "" then Cn_protocol.Update_available
         else Cn_protocol.Update_skip
+  end else begin
+    (* Release binary update *)
+    match get_latest_release_tag () with
+    | None -> Cn_protocol.Update_skip
+    | Some tag ->
+        if is_newer_version tag Cn_lib.version then begin
+          latest_tag := tag;
+          Cn_protocol.Update_available
+        end else Cn_protocol.Update_skip
+  end
 
 let do_update () =
-  let pull_cmd = Printf.sprintf "cd %s && git pull --ff-only 2>/dev/null" install_dir in
-  match Cn_ffi.Child_process.exec pull_cmd with
-  | Some _ -> Cn_protocol.Update_complete
-  | None -> Cn_protocol.Update_fail
+  if has_git_install () then begin
+    (* Git-based update *)
+    let pull_cmd = Printf.sprintf "cd %s && git pull --ff-only 2>/dev/null" install_dir in
+    match Cn_ffi.Child_process.exec pull_cmd with
+    | Some _ -> Cn_protocol.Update_complete
+    | None -> Cn_protocol.Update_fail
+  end else begin
+    (* Release binary update *)
+    match get_platform_binary () with
+    | None -> Cn_protocol.Update_fail
+    | Some binary ->
+        let url = Printf.sprintf "https://github.com/%s/releases/download/%s/%s" repo !latest_tag binary in
+        let dl_cmd = Printf.sprintf "curl -fsSL -o '%s.new' '%s' 2>/dev/null && chmod +x '%s.new' && mv '%s.new' '%s'" bin_path url bin_path bin_path bin_path in
+        match Cn_ffi.Child_process.exec dl_cmd with
+        | Some _ -> Cn_protocol.Update_complete
+        | None -> Cn_protocol.Update_fail
+  end
 
 let re_exec () =
   let args = Cn_ffi.Process.argv |> Array.to_list in
