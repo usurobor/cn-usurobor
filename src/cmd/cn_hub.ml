@@ -43,16 +43,15 @@ let slugify ?max_len s =
   in
   let s = String.lowercase_ascii s in
   let buf = Buffer.create (String.length s) in
-  let last_was_sep = ref true in
-  String.iter (fun c ->
-    if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') then begin
-      Buffer.add_char buf c;
-      last_was_sep := false
-    end else if not !last_was_sep then begin
-      Buffer.add_char buf '-';
-      last_was_sep := true
-    end
-  ) s;
+  let _last_was_sep =
+    String.fold_left (fun was_sep c ->
+      if (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') then begin
+        Buffer.add_char buf c; false
+      end else if not was_sep then begin
+        Buffer.add_char buf '-'; true
+      end else was_sep
+    ) true s
+  in
   let result = Buffer.contents buf in
   let len = String.length result in
   if len > 0 && result.[len-1] = '-' then String.sub result 0 (len-1)
@@ -84,8 +83,8 @@ let mca_dir hub = Cn_ffi.Path.join hub "state/mca"
 
 let timestamp_slug () =
   let iso = Cn_fmt.now_iso () in
-  let date = String.sub iso 0 10 |> remove_char '-' in
-  let time = String.sub iso 11 8 |> remove_char ':' in
+  let date = Cn_fmt.date_of_iso iso |> remove_char '-' in
+  let time = Cn_fmt.time_of_iso iso |> remove_char ':' in
   Printf.sprintf "%s-%s" date time
 
 let make_thread_filename slug =

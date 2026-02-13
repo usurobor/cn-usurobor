@@ -277,23 +277,14 @@ let feed_next_input hub_path =
 
 (* === Wake agent === *)
 
-let shell_escape s =
-  let buf = Buffer.create (String.length s * 2) in
-  String.iter (fun c ->
-    if c = '\'' then Buffer.add_string buf "'\\''"
-    else Buffer.add_char buf c
-  ) s;
-  Buffer.contents buf
-
 let wake_agent hub_path =
   let inp = input_path hub_path in
   if not (Cn_ffi.Fs.exists inp) then begin
     print_endline (Cn_fmt.warn "No input.md to wake with");
   end else begin
     let content = Cn_ffi.Fs.read inp in
-    let escaped = shell_escape content in
     print_endline (Cn_fmt.info "Triggering OpenClaw wake with input content...");
-    let wake_cmd = Printf.sprintf "openclaw system event --text '%s' --mode now 2>/dev/null" escaped in
+    let wake_cmd = Printf.sprintf "openclaw system event --text %s --mode now 2>/dev/null" (Filename.quote content) in
     match Cn_ffi.Child_process.exec wake_cmd with
     | Some _ -> print_endline (Cn_fmt.ok "Wake triggered with input content")
     | None -> print_endline (Cn_fmt.warn "Wake trigger failed - is OpenClaw running?")
@@ -441,7 +432,7 @@ let auto_save hub_path name =
   match Cn_ffi.Child_process.exec_in ~cwd:hub_path "git status --porcelain" with
   | Some status when String.trim status <> "" ->
       let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git add -A" in
-      let msg = Printf.sprintf "%s: auto-save %s" name (String.sub (Cn_fmt.now_iso ()) 0 10) in
+      let msg = Printf.sprintf "%s: auto-save %s" name (Cn_fmt.date_of_iso (Cn_fmt.now_iso ())) in
       (match Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m %s" (Filename.quote msg)) with
        | Some _ ->
            Cn_hub.log_action hub_path "auto-save.commit" msg;
@@ -630,10 +621,10 @@ let run_inbound hub_path name =
   
   (* Timeout config: read from env or use defaults *)
   let cron_period_min = match Sys.getenv_opt "CN_CRON_PERIOD_MIN" with
-    | Some s -> (try int_of_string s with _ -> 5)
+    | Some s -> (try int_of_string s with Failure _ -> 5)
     | None -> 5 in
   let timeout_cycles = match Sys.getenv_opt "CN_TIMEOUT_CYCLES" with
-    | Some s -> (try int_of_string s with _ -> 3)
+    | Some s -> (try int_of_string s with Failure _ -> 3)
     | None -> 3 in
   let max_age_min = cron_period_min * timeout_cycles in
   

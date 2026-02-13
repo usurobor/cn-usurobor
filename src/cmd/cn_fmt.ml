@@ -14,6 +14,12 @@ let now_iso () =
     (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday
     tm.tm_hour tm.tm_min tm.tm_sec
 
+(* Safe ISO timestamp extractors — bounds-checked String.sub *)
+let date_of_iso iso =
+  if String.length iso >= 10 then String.sub iso 0 10 else iso
+let time_of_iso iso =
+  if String.length iso >= 19 then String.sub iso 11 8 else "000000"
+
 let no_color = Cn_ffi.Process.getenv_opt "NO_COLOR" |> Option.is_some
 
 let color code s = if no_color then s else Printf.sprintf "\027[%sm%s\027[0m" code s
