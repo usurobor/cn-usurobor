@@ -1,4 +1,7 @@
-(* inbox_lib: Pure functions for inbox tool (no FFI, testable) *)
+(** inbox_lib.ml — Pure inbox/triage types and parsing (no I/O)
+
+    GTD triage model, atomic actions, thread materialization.
+    Used by cn_lib for type re-exports. Fully testable with ppx_expect. *)
 
 (* === CLI Commands (type-safe, exhaustive) === *)
 

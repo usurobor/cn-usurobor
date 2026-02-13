@@ -88,7 +88,7 @@ let run_commit hub_path name msg =
   | _ ->
       let message = match msg with
         | Some m -> m
-        | None -> Printf.sprintf "%s: auto-commit %s" name (String.sub (Cn_fmt.now_iso ()) 0 10)
+        | None -> Printf.sprintf "%s: auto-commit %s" name (Cn_fmt.date_of_iso (Cn_fmt.now_iso ()))
       in
       let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git add -A" in
       (* 1.2: Filename.quote for proper shell escaping, not hand-rolled char replacement *)
