@@ -217,9 +217,10 @@ let run_update () =
       Cn_ffi.Process.exit 1
   | Some latest_raw ->
       let latest = String.trim latest_raw in
-      match latest = version with
-      | true -> print_endline (Cn_fmt.ok "Already up to date")
-      | false ->
+      (* 1.1: semantic version comparison, not string equality *)
+      match Cn_agent.is_newer_version latest version with
+      | false -> print_endline (Cn_fmt.ok "Already up to date")
+      | true ->
           print_endline (Cn_fmt.info (Printf.sprintf "New version available: %s" latest));
           print_endline (Cn_fmt.info "Updating via git...");
           (* 2.9: validate before destroy — pull, build, verify *)
