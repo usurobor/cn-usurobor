@@ -288,14 +288,8 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
           print_endline (Cn_fmt.fail (Printf.sprintf "No clone path for peer: %s" to_name));
           None
       | Some { clone = Some _clone_path; _ } ->
-          (* Sender FSM: Pending → BranchCreated → Pushing → Pushed → Delivered *)
-          let fsm_state = ref Cn_protocol.S_Pending in
-          let advance event =
-            match Cn_protocol.sender_transition !fsm_state event with
-            | Ok s -> fsm_state := s; true
-            | Error e ->
-                print_endline (Cn_fmt.fail (Printf.sprintf "Sender FSM: %s" e)); false
-          in
+          (* Sender FSM: state flows via let*, errors short-circuit *)
+          let ( let* ) = Result.bind in
 
           let thread_name = Cn_ffi.Path.basename_ext file ".md" in
           let branch_name = Printf.sprintf "%s/%s" to_name thread_name in
@@ -310,45 +304,56 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
               print_endline (Cn_fmt.fail (Printf.sprintf "Failed to send %s" file));
               None
           | Some _ ->
-              (* Create branch *)
-              let bq = Filename.quote branch_name in
-              let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git checkout -b %s 2>/dev/null || git checkout %s" bq bq) in
-              let thread_dir = Cn_ffi.Path.join hub_path "threads/in" in
-              Cn_ffi.Fs.ensure_dir thread_dir;
-              Cn_ffi.Fs.write (Cn_ffi.Path.join thread_dir file) content;
-              let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git add %s" (Filename.quote (Printf.sprintf "threads/in/%s" file))) in
-              let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m %s" (Filename.quote (Printf.sprintf "%s: %s" name thread_name))) in
-              let _ = advance Cn_protocol.SE_CreateBranch in
+              let send_result =
+                (* Create branch *)
+                let bq = Filename.quote branch_name in
+                let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git checkout -b %s 2>/dev/null || git checkout %s" bq bq) in
+                let thread_dir = Cn_ffi.Path.join hub_path "threads/in" in
+                Cn_ffi.Fs.ensure_dir thread_dir;
+                Cn_ffi.Fs.write (Cn_ffi.Path.join thread_dir file) content;
+                let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git add %s" (Filename.quote (Printf.sprintf "threads/in/%s" file))) in
+                let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m %s" (Filename.quote (Printf.sprintf "%s: %s" name thread_name))) in
+                let* s = Cn_protocol.sender_transition Cn_protocol.S_Pending Cn_protocol.SE_CreateBranch in
 
-              (* Push *)
-              let _ = advance Cn_protocol.SE_Push in
-              (match Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git push -u origin %s -f" (Filename.quote branch_name)) with
-               | Some _ ->
-                   let _ = advance Cn_protocol.SE_PushOk in
-                   ()
-               | None ->
-                   let _ = advance Cn_protocol.SE_PushFail in
-                   ());
-              let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git checkout main 2>/dev/null || git checkout master" in
+                (* Push *)
+                let* s = Cn_protocol.sender_transition s Cn_protocol.SE_Push in
+                let push_ok = Cn_ffi.Child_process.exec_in ~cwd:hub_path
+                  (Printf.sprintf "git push -u origin %s -f" (Filename.quote branch_name))
+                  |> Option.is_some in
+                let* s = Cn_protocol.sender_transition s
+                  (if push_ok then Cn_protocol.SE_PushOk else Cn_protocol.SE_PushFail) in
 
-              (* Cleanup: move to sent *)
-              if !fsm_state = Cn_protocol.S_Pushed then begin
-                Cn_ffi.Fs.write (Cn_ffi.Path.join sent_dir file)
-                  (update_frontmatter content [("state", "sent"); ("sent", Cn_fmt.now_iso ())]);
-                Cn_ffi.Fs.unlink file_path;
-                let _ = advance Cn_protocol.SE_Cleanup in
+                (* Return to main before cleanup *)
+                let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git checkout main 2>/dev/null || git checkout master" in
 
-                Cn_hub.log_action hub_path "outbox.send" (Printf.sprintf "to:%s thread:%s branch:%s state:%s" to_name file branch_name
-                  (Cn_protocol.string_of_sender_state !fsm_state));
-                print_endline (Cn_fmt.ok (Printf.sprintf "Sent to %s: %s" to_name file));
-                Some file
-              end else begin
-                Cn_hub.log_action hub_path "outbox.send" (Printf.sprintf "to:%s thread:%s state:%s" to_name file
-                  (Cn_protocol.string_of_sender_state !fsm_state));
-                print_endline (Cn_fmt.fail (Printf.sprintf "Send failed for %s (state: %s)" file
-                  (Cn_protocol.string_of_sender_state !fsm_state)));
-                None
-              end
+                (* Cleanup: move to sent if pushed *)
+                match s with
+                | Cn_protocol.S_Pushed ->
+                    Cn_ffi.Fs.write (Cn_ffi.Path.join sent_dir file)
+                      (update_frontmatter content [("state", "sent"); ("sent", Cn_fmt.now_iso ())]);
+                    Cn_ffi.Fs.unlink file_path;
+                    let* s = Cn_protocol.sender_transition s Cn_protocol.SE_Cleanup in
+                    Ok (s, Some file)
+                | _ ->
+                    Ok (s, None)
+              in
+              (match send_result with
+               | Ok (s, result) ->
+                   let state_str = Cn_protocol.string_of_sender_state s in
+                   (match result with
+                    | Some _ ->
+                        Cn_hub.log_action hub_path "outbox.send"
+                          (Printf.sprintf "to:%s thread:%s branch:%s state:%s" to_name file branch_name state_str);
+                        print_endline (Cn_fmt.ok (Printf.sprintf "Sent to %s: %s" to_name file))
+                    | None ->
+                        Cn_hub.log_action hub_path "outbox.send"
+                          (Printf.sprintf "to:%s thread:%s state:%s" to_name file state_str);
+                        print_endline (Cn_fmt.fail (Printf.sprintf "Send failed for %s (state: %s)" file state_str)));
+                   result
+               | Error e ->
+                   let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git checkout main 2>/dev/null || git checkout master" in
+                   print_endline (Cn_fmt.fail (Printf.sprintf "Sender FSM: %s" e));
+                   None)
 
 let outbox_flush hub_path name =
   let outbox_dir = Cn_hub.threads_mail_outbox hub_path in
