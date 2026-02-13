@@ -11,7 +11,7 @@ open Cn_lib
 let delete_remote_branch hub_path branch =
   if Cn_fmt.would (Printf.sprintf "delete remote branch %s" branch) then true
   else begin
-    let cmd = Printf.sprintf "git push origin --delete %s 2>/dev/null" branch in
+    let cmd = Printf.sprintf "git push origin --delete %s 2>/dev/null" (Filename.quote branch) in
     match Cn_ffi.Child_process.exec_in ~cwd:hub_path cmd with
     | Some _ ->
         Cn_hub.log_action hub_path "branch.delete" branch;
@@ -23,13 +23,14 @@ let delete_remote_branch hub_path branch =
 (* === Orphan Branch Detection === *)
 
 let is_orphan_branch hub_path branch =
-  let cmd = Printf.sprintf "git merge-base main origin/%s 2>/dev/null || git merge-base master origin/%s 2>/dev/null" branch branch in
+  let b = Filename.quote branch in
+  let cmd = Printf.sprintf "git merge-base main origin/%s 2>/dev/null || git merge-base master origin/%s 2>/dev/null" b b in
   match Cn_ffi.Child_process.exec_in ~cwd:hub_path cmd with
   | Some _ -> false
   | None -> true
 
 let get_branch_author hub_path branch =
-  let cmd = Printf.sprintf "git log -1 --format='%%an <%%ae>' origin/%s 2>/dev/null" branch in
+  let cmd = Printf.sprintf "git log -1 --format='%%an <%%ae>' origin/%s 2>/dev/null" (Filename.quote branch) in
   Cn_ffi.Child_process.exec_in ~cwd:hub_path cmd
   |> Option.map String.trim
   |> Option.value ~default:"unknown"
@@ -75,7 +76,7 @@ let parse_rejected_branch content =
   | _ -> None
 
 let cleanup_rejected_branch hub_path branch =
-  let cmd = Printf.sprintf "git branch -D %s 2>/dev/null" branch in
+  let cmd = Printf.sprintf "git branch -D %s 2>/dev/null" (Filename.quote branch) in
   match Cn_ffi.Child_process.exec_in ~cwd:hub_path cmd with
   | Some _ ->
       Cn_hub.log_action hub_path "rejection.cleanup" (Printf.sprintf "deleted local branch %s" branch);
@@ -95,7 +96,7 @@ let process_rejection_cleanup hub_path content =
 type branch_info = { peer: string; branch: string }
 
 let get_inbound_branches clone_path my_name =
-  Printf.sprintf "git branch -r | grep 'origin/%s/' | sed 's/.*origin\\///'" my_name
+  Printf.sprintf "git branch -r | grep 'origin/%s/' | sed 's/.*origin\\///'" (Filename.quote my_name)
   |> Cn_ffi.Child_process.exec_in ~cwd:clone_path
   |> Option.map Cn_hub.split_lines
   |> Option.value ~default:[]
@@ -173,7 +174,8 @@ let materialize_branch ~clone_path ~hub_path ~inbox_dir ~peer_name ~branch =
     else begin
       let _ = advance Cn_protocol.RE_IsNew in
 
-      let diff_cmd = Printf.sprintf "git diff main...origin/%s --name-only 2>/dev/null || git diff master...origin/%s --name-only" branch branch in
+      let bq = Filename.quote branch in
+      let diff_cmd = Printf.sprintf "git diff main...origin/%s --name-only 2>/dev/null || git diff master...origin/%s --name-only" bq bq in
       let files = Cn_ffi.Child_process.exec_in ~cwd:clone_path diff_cmd
         |> Option.map Cn_hub.split_lines
         |> Option.value ~default:[]
@@ -183,7 +185,7 @@ let materialize_branch ~clone_path ~hub_path ~inbox_dir ~peer_name ~branch =
              Cn_hub.is_md_file f) in
 
       let trigger =
-        Cn_ffi.Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git rev-parse origin/%s" branch)
+        Cn_ffi.Child_process.exec_in ~cwd:clone_path (Printf.sprintf "git rev-parse origin/%s" (Filename.quote branch))
         |> Option.map String.trim
         |> Option.value ~default:"unknown" in
 
@@ -191,7 +193,7 @@ let materialize_branch ~clone_path ~hub_path ~inbox_dir ~peer_name ~branch =
       let inbox_path = Cn_ffi.Path.join inbox_dir inbox_file in
 
       let result = files |> List.filter_map (fun file ->
-        let show_cmd = Printf.sprintf "git show origin/%s:%s" branch file in
+        let show_cmd = Printf.sprintf "git show %s" (Filename.quote (Printf.sprintf "origin/%s:%s" branch file)) in
         match Cn_ffi.Child_process.exec_in ~cwd:clone_path show_cmd with
         | None -> None
         | Some content ->
@@ -309,7 +311,8 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
               None
           | Some _ ->
               (* Create branch *)
-              let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git checkout -b %s 2>/dev/null || git checkout %s" branch_name branch_name) in
+              let bq = Filename.quote branch_name in
+              let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git checkout -b %s 2>/dev/null || git checkout %s" bq bq) in
               let thread_dir = Cn_ffi.Path.join hub_path "threads/in" in
               Cn_ffi.Fs.ensure_dir thread_dir;
               Cn_ffi.Fs.write (Cn_ffi.Path.join thread_dir file) content;
@@ -319,7 +322,7 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
 
               (* Push *)
               let _ = advance Cn_protocol.SE_Push in
-              (match Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git push -u origin %s -f" branch_name) with
+              (match Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git push -u origin %s -f" (Filename.quote branch_name)) with
                | Some _ ->
                    let _ = advance Cn_protocol.SE_PushOk in
                    ()
@@ -414,7 +417,7 @@ let inbox_flush hub_path _name =
         match List.find_map (fun (k, v) -> if k = "branch" then Some v else None) meta with
         | None -> None
         | Some branch ->
-            let delete_cmd = Printf.sprintf "git push origin --delete %s 2>/dev/null || true" branch in
+            let delete_cmd = Printf.sprintf "git push origin --delete %s 2>/dev/null || true" (Filename.quote branch) in
             let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path delete_cmd in
 
             let archived_dir = Cn_ffi.Path.join hub_path "threads/archived" in

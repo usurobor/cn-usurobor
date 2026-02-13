@@ -15,33 +15,21 @@ module Fs = struct
 
   let read path =
     let ic = open_in path in
-    try
+    Fun.protect ~finally:(fun () -> close_in_noerr ic) (fun () ->
       let n = in_channel_length ic in
       let s = Bytes.create n in
       really_input ic s 0 n;
-      close_in ic;
-      Bytes.to_string s
-    with e ->
-      close_in_noerr ic;
-      raise e
+      Bytes.to_string s)
 
   let write path content =
     let oc = open_out path in
-    try
-      output_string oc content;
-      close_out oc
-    with e ->
-      close_out_noerr oc;
-      raise e
+    Fun.protect ~finally:(fun () -> close_out_noerr oc) (fun () ->
+      output_string oc content)
 
   let append path content =
     let oc = open_out_gen [Open_append; Open_creat; Open_text] 0o644 path in
-    try
-      output_string oc content;
-      close_out oc
-    with e ->
-      close_out_noerr oc;
-      raise e
+    Fun.protect ~finally:(fun () -> close_out_noerr oc) (fun () ->
+      output_string oc content)
 
   let readdir path = Sys.readdir path |> Array.to_list
 
