@@ -44,8 +44,8 @@ let add_all ~cwd =
   Child_process.exec_in ~cwd "git add -A" |> Option.is_some
 
 let commit ~cwd ~msg =
-  let escaped = String.map (fun c -> if c = '"' then '\'' else c) msg in
-  Child_process.exec_in ~cwd (Printf.sprintf "git commit -m \"%s\"" escaped) |> Option.is_some
+  (* 1.2: Filename.quote for proper shell escaping *)
+  Child_process.exec_in ~cwd (Printf.sprintf "git commit -m %s" (Filename.quote msg)) |> Option.is_some
 
 let push ~cwd =
   Child_process.exec_in ~cwd "git push origin HEAD" |> Option.is_some
