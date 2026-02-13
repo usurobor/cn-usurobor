@@ -271,7 +271,9 @@ let self_update_check () =
     | None -> ()
     | Some latest_raw ->
         let latest = String.trim latest_raw in
-        if latest <> version && latest <> "" then begin
+        (* 1.1: semantic version comparison, not string inequality.
+           String cmp would trigger "update" to an older version. *)
+        if Cn_agent.is_newer_version latest version then begin
           print_endline (Cn_fmt.info (Printf.sprintf "Updating cn %s → %s..." version latest));
           let pull_cmd = Printf.sprintf "cd %s && git pull --ff-only 2>/dev/null" install_dir in
           match Cn_ffi.Child_process.exec pull_cmd with
