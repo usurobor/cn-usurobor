@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+# cn - Coherent Network agent CLI (native OCaml binary)
+
+# Resolve symlinks to find actual script location
+SCRIPT="$0"
+while [ -L "$SCRIPT" ]; do
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT")" && pwd)"
+  SCRIPT="$(readlink "$SCRIPT")"
+  [ "${SCRIPT%${SCRIPT#?}}" != "/" ] && SCRIPT="$SCRIPT_DIR/$SCRIPT"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT")" && pwd)"
+ROOT="$SCRIPT_DIR/../.."
+
+BIN="$ROOT/_build/default/src/cli/cn.exe"
+
+if [ ! -f "$BIN" ]; then
+  echo "Error: cn binary not found."
+  echo "Build with: dune build src/cli/cn.exe"
+  exit 1
+fi
+
+exec "$BIN" "$@"

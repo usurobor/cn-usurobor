@@ -562,7 +562,7 @@ Directory placement **follows** state — it's a derived artifact, not the sourc
 
 ## Testing
 
-All tests live in `tools/test/cn/cn_protocol_test.ml` using ppx_expect.
+All tests live in `test/protocol/cn_protocol_test.ml` using ppx_expect.
 
 ### Per-FSM tests (implemented)
 

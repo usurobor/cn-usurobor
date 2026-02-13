@@ -112,7 +112,7 @@ Do **not** use GitHub PRs, Issues, or Discussions.
 
 ## The cn CLI
 
-Native OCaml binary. Built with `dune build tools/src/cn/cn.exe`.
+Native OCaml binary. Built with `dune build src/cli/cn.exe`.
 
 ### Agent decisions (GTD)
 
