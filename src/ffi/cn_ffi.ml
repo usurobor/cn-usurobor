@@ -65,26 +65,28 @@ module Path = struct
 end
 
 module Child_process = struct
+  let read_all ic =
+    let buf = Buffer.create 1024 in
+    (try while true do Buffer.add_char buf (input_char ic) done
+     with End_of_file -> ());
+    Buffer.contents buf
+
   let exec_in ~cwd cmd =
     let full_cmd = Printf.sprintf "cd %s && %s" (Filename.quote cwd) cmd in
     try
       let ic = Unix.open_process_in full_cmd in
-      let buf = Buffer.create 1024 in
-      (try while true do Buffer.add_char buf (input_char ic) done
-       with End_of_file -> ());
+      let output = read_all ic in
       match Unix.close_process_in ic with
-      | Unix.WEXITED 0 -> Some (Buffer.contents buf)
+      | Unix.WEXITED 0 -> Some output
       | _ -> None
-    with _ -> None
+    with Unix.Unix_error _ | Sys_error _ -> None
 
   let exec cmd =
     try
       let ic = Unix.open_process_in cmd in
-      let buf = Buffer.create 1024 in
-      (try while true do Buffer.add_char buf (input_char ic) done
-       with End_of_file -> ());
+      let output = read_all ic in
       match Unix.close_process_in ic with
-      | Unix.WEXITED 0 -> Some (Buffer.contents buf)
+      | Unix.WEXITED 0 -> Some output
       | _ -> None
-    with _ -> None
+    with Unix.Unix_error _ | Sys_error _ -> None
 end

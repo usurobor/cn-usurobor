@@ -428,7 +428,7 @@ let derive_name hub_path =
   hub_path
   |> String.split_on_char '/'
   |> List.rev
-  |> List.hd  (* safe: split always returns at least one element *)
+  |> (function base :: _ -> base | [] -> "hub")
   |> fun base -> strip_prefix ~prefix:"cn-" base |> Option.value ~default:base
 
 (* === Frontmatter (pure parsing) === *)
@@ -608,3 +608,19 @@ Actor Model:
 |}
 
 let version = "2.4.4"
+
+(* === Version Comparison (pure, semantic) === *)
+
+let version_to_tuple v =
+  let v = if String.length v > 0 && v.[0] = 'v' then String.sub v 1 (String.length v - 1) else v in
+  match String.split_on_char '.' v with
+  | [maj; min; patch] ->
+      (try Some (int_of_string maj, int_of_string min, int_of_string patch)
+       with Failure _ -> None)
+  | _ -> None
+
+let is_newer_version remote local =
+  match version_to_tuple remote, version_to_tuple local with
+  | Some (r1, r2, r3), Some (l1, l2, l3) ->
+      (r1, r2, r3) > (l1, l2, l3)
+  | _ -> false

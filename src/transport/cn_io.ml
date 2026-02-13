@@ -8,6 +8,7 @@
       cn_io.ml  → Protocol execution (THIS FILE)
       cn_lib.ml → Pure types, parsing (no I/O)
       git.ml    → Raw git operations
+      cn_ffi.ml → System bindings (Path, Fs, Child_process)
 
     Why separate from cn_lib?
     - cn_lib.ml is PURE (no I/O) — fully testable with ppx_expect
@@ -25,49 +26,9 @@
     - Materialization = branch content → local .md file
 *)
 
-module Path = struct
-  let join = Filename.concat
-  let basename = Filename.basename
-end
-
-module Fs = struct
-  let exists = Sys.file_exists
-
-  let read path =
-    let ic = open_in path in
-    try
-      let n = in_channel_length ic in
-      let s = Bytes.create n in
-      really_input ic s 0 n;
-      close_in ic;
-      Bytes.to_string s
-    with e ->
-      close_in_noerr ic;
-      raise e
-
-  let write path content =
-    let oc = open_out path in
-    try
-      output_string oc content;
-      close_out oc
-    with e ->
-      close_out_noerr oc;
-      raise e
-
-  let readdir path = Sys.readdir path |> Array.to_list
-  let readdir_list = readdir
-
-  let unlink = Sys.remove
-
-  let rec mkdir_p path =
-    if path <> "" && path <> "/" && not (Sys.file_exists path) then begin
-      mkdir_p (Filename.dirname path);
-      try Unix.mkdir path 0o755
-      with Unix.Unix_error (Unix.EEXIST, _, _) -> ()
-    end
-
-  let ensure_dir path = if not (exists path) then mkdir_p path
-end
+(* Use Cn_ffi for all system operations — single source of truth *)
+module Path = Cn_ffi.Path
+module Fs = Cn_ffi.Fs
 
 let is_md_file f = Filename.check_suffix f ".md"
 
@@ -200,7 +161,7 @@ let flush_outbox ~hub ~from_name ~peers =
   if not (Fs.exists outbox_dir) then 0
   else begin
     Fs.ensure_dir sent_dir;
-    let threads = Fs.readdir_list outbox_dir |> List.filter is_md_file in
+    let threads = Fs.readdir outbox_dir |> List.filter is_md_file in
 
     threads |> List.filter_map (fun file ->
       let file_path = Path.join outbox_dir file in

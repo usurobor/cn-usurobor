@@ -506,20 +506,9 @@ let get_latest_release_tag () =
   | Some tag -> Some (String.trim tag)
   | None -> None
 
-(* Compare version strings: v2.4.3 > v2.4.2 etc *)
-let version_to_tuple v =
-  let v = if String.length v > 0 && v.[0] = 'v' then String.sub v 1 (String.length v - 1) else v in
-  match String.split_on_char '.' v with
-  | [maj; min; patch] ->
-      (try Some (int_of_string maj, int_of_string min, int_of_string patch)
-       with _ -> None)
-  | _ -> None
-
-let is_newer_version remote local =
-  match version_to_tuple remote, version_to_tuple local with
-  | Some (r1, r2, r3), Some (l1, l2, l3) ->
-      (r1, r2, r3) > (l1, l2, l3)
-  | _ -> false
+(* Semantic version comparison — defined in cn_lib, re-exported for tests *)
+let version_to_tuple = Cn_lib.version_to_tuple
+let is_newer_version = Cn_lib.is_newer_version
 
 (* Detect platform for binary download *)
 let get_platform_binary () =
