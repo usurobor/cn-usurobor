@@ -222,11 +222,15 @@ let run_update () =
       | false ->
           print_endline (Cn_fmt.info (Printf.sprintf "New version available: %s" latest));
           print_endline (Cn_fmt.info "Updating via git...");
-          let install_dir = "/usr/local/lib/cnos" in
+          (* 2.9: validate before destroy — pull, build, verify *)
           let pull_cmd = Printf.sprintf "cd %s && git pull --ff-only 2>&1" install_dir in
           match Cn_ffi.Child_process.exec pull_cmd with
-          | Some _ -> print_endline (Cn_fmt.ok (Printf.sprintf "Updated to v%s" latest))
           | None -> print_endline (Cn_fmt.fail "Update failed. Try: cd /usr/local/lib/cnos && git pull")
+          | Some _ ->
+              let build_cmd = Printf.sprintf "cd %s && opam exec -- dune build 2>/dev/null && opam exec -- dune install 2>/dev/null" install_dir in
+              match Cn_ffi.Child_process.exec build_cmd with
+              | Some _ -> print_endline (Cn_fmt.ok (Printf.sprintf "Updated to v%s" latest))
+              | None -> print_endline (Cn_fmt.fail "Build failed after pull. Source updated but binary is stale.")
 
 let run_update_with_cron hub_path =
   run_update ();
