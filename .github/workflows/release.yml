@@ -33,7 +33,7 @@ jobs:
       - name: Build native binary
         run: |
           eval $(opam env)
-          dune build tools/src/cn/cn.exe
+          dune build src/cli/cn.exe
 
       - name: Run tests
         run: |
@@ -43,7 +43,7 @@ jobs:
       - name: Package binary
         run: |
           mkdir -p dist
-          cp _build/default/tools/src/cn/cn.exe dist/cn-${{ matrix.target }}
+          cp _build/default/src/cli/cn.exe dist/cn-${{ matrix.target }}
           chmod +x dist/cn-${{ matrix.target }}
 
       - name: Upload artifact

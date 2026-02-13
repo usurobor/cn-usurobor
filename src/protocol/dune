@@ -1,0 +1,4 @@
+; cn protocol FSMs (pure, no I/O, fully testable)
+(library
+ (name cn_protocol)
+ (modules cn_protocol))
