@@ -313,16 +313,16 @@ let string_of_atomic_action = function
 
 (* Actual shell command for git actions (testable, pure) *)
 let git_cmd_of_action ~hub_path = function
-  | Git_checkout b -> 
-      Some (Printf.sprintf "cd %s && git checkout %s" hub_path b)
-  | Git_merge b -> 
-      Some (Printf.sprintf "cd %s && git merge %s" hub_path b)
-  | Git_push (r, b) -> 
-      Some (Printf.sprintf "cd %s && git push %s %s" hub_path r b)
-  | Git_branch_delete b -> 
-      Some (Printf.sprintf "cd %s && git branch -d %s" hub_path b)
-  | Git_remote_delete (r, b) -> 
-      Some (Printf.sprintf "cd %s && git push %s --delete %s" hub_path r b)
+  | Git_checkout b ->
+      Some (Printf.sprintf "cd %s && git checkout %s" (Filename.quote hub_path) (Filename.quote b))
+  | Git_merge b ->
+      Some (Printf.sprintf "cd %s && git merge %s" (Filename.quote hub_path) (Filename.quote b))
+  | Git_push (r, b) ->
+      Some (Printf.sprintf "cd %s && git push %s %s" (Filename.quote hub_path) (Filename.quote r) (Filename.quote b))
+  | Git_branch_delete b ->
+      Some (Printf.sprintf "cd %s && git branch -d %s" (Filename.quote hub_path) (Filename.quote b))
+  | Git_remote_delete (r, b) ->
+      Some (Printf.sprintf "cd %s && git push %s --delete %s" (Filename.quote hub_path) (Filename.quote r) (Filename.quote b))
   | File_write _ | Dir_create _ | Log_append _ ->
       None  (* handled via Cn_ffi.Fs, not shell *)
 

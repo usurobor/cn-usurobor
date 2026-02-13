@@ -16,16 +16,24 @@ let queue_add hub_path id from content =
   let dir = queue_dir hub_path in
   Cn_ffi.Fs.ensure_dir dir;
 
-  let ts = Cn_hub.sanitize_timestamp (Cn_fmt.now_iso ()) in
-  let file_name = Printf.sprintf "%s-%s-%s.md" ts from id in
-  let file_path = Cn_ffi.Path.join dir file_name in
+  (* 2.8: idempotent — skip if already queued with same id *)
+  let already_queued =
+    Cn_ffi.Fs.readdir dir
+    |> List.exists (fun f -> Cn_lib.ends_with ~suffix:(Printf.sprintf "-%s-%s.md" from id) f) in
+  if already_queued then
+    Printf.sprintf "(already queued: %s)" id
+  else begin
+    let ts = Cn_hub.sanitize_timestamp (Cn_fmt.now_iso ()) in
+    let file_name = Printf.sprintf "%s-%s-%s.md" ts from id in
+    let file_path = Cn_ffi.Path.join dir file_name in
 
-  let queued_content = Printf.sprintf "---\nid: %s\nfrom: %s\nqueued: %s\n---\n\n%s"
-    id from (Cn_fmt.now_iso ()) content in
-  Cn_ffi.Fs.write file_path queued_content;
+    let queued_content = Printf.sprintf "---\nid: %s\nfrom: %s\nqueued: %s\n---\n\n%s"
+      id from (Cn_fmt.now_iso ()) content in
+    Cn_ffi.Fs.write file_path queued_content;
 
-  Cn_hub.log_action hub_path "queue.add" (Printf.sprintf "id:%s from:%s" id from);
-  file_name
+    Cn_hub.log_action hub_path "queue.add" (Printf.sprintf "id:%s from:%s" id from);
+    file_name
+  end
 
 let queue_pop hub_path =
   let dir = queue_dir hub_path in

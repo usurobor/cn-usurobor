@@ -178,8 +178,8 @@ let run_setup hub_path =
   Cn_ffi.Fs.write logrotate_path logrotate_config;
   print_endline (Cn_fmt.ok (Printf.sprintf "Created %s" logrotate_path));
 
-  let cron_line = Printf.sprintf "*/5 * * * * cn-cron %s" hub_path in
-  let cmd = Printf.sprintf "echo '%s' | crontab -" cron_line in
+  let cron_line = Printf.sprintf "*/5 * * * * cn-cron %s" (Filename.quote hub_path) in
+  let cmd = Printf.sprintf "echo %s | crontab -" (Filename.quote cron_line) in
   (match Cn_ffi.Child_process.exec cmd with
    | Some _ -> print_endline (Cn_fmt.ok "Crontab configured")
    | None -> print_endline (Cn_fmt.warn "Crontab update failed - configure manually"));
@@ -189,16 +189,16 @@ let run_setup hub_path =
   print_endline "";
   print_endline "Configured:";
   print_endline (Printf.sprintf "  • Logrotate: %s" logrotate_path);
-  print_endline (Printf.sprintf "  • Cron: */5 * * * * cn-cron %s" hub_path);
+  print_endline (Printf.sprintf "  • Cron: %s" cron_line);
   print_endline "";
   print_endline "Logs will be written to: /var/log/cn-YYYYMMDD.log"
 
 (* === Update === *)
 
 let update_cron hub_path =
-  let cron_line = Printf.sprintf "*/5 * * * * cn-cron %s" hub_path in
+  let cron_line = Printf.sprintf "*/5 * * * * cn-cron %s" (Filename.quote hub_path) in
   print_endline (Cn_fmt.info "Updating crontab (5 min intervals)...");
-  let cmd = Printf.sprintf "echo '%s' | crontab -" cron_line in
+  let cmd = Printf.sprintf "echo %s | crontab -" (Filename.quote cron_line) in
   match Cn_ffi.Child_process.exec cmd with
   | Some _ -> print_endline (Cn_fmt.ok "Crontab updated")
   | None -> print_endline (Cn_fmt.warn "Crontab update failed - update manually")

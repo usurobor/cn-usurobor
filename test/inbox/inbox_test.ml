@@ -392,11 +392,11 @@ let%expect_test "git_cmd_of_action with hub_path" =
     | Some cmd -> print_endline cmd
     | None -> print_endline "NONE");
   [%expect {|
-    cd /path/to/hub && git checkout main
-    cd /path/to/hub && git merge pi/feature
-    cd /path/to/hub && git push origin main
-    cd /path/to/hub && git branch -d pi/old
-    cd /path/to/hub && git push origin --delete pi/old
+    cd '/path/to/hub' && git checkout 'main'
+    cd '/path/to/hub' && git merge 'pi/feature'
+    cd '/path/to/hub' && git push 'origin' 'main'
+    cd '/path/to/hub' && git branch -d 'pi/old'
+    cd '/path/to/hub' && git push 'origin' --delete 'pi/old'
   |}]
 
 let%expect_test "git_cmd_of_action file actions return None" =

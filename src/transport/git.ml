@@ -40,7 +40,7 @@ let push ~cwd =
 
 let push_branch ~cwd ~branch ~force =
   let force_flag = if force then "-f " else "" in
-  exec ~cwd (Printf.sprintf "git push %s-u origin %s" force_flag branch) |> Option.is_some
+  exec ~cwd (Printf.sprintf "git push %s-u origin %s" force_flag (Filename.quote branch)) |> Option.is_some
 
 let pull_ff ~cwd =
   exec ~cwd "git pull --ff-only" |> Option.is_some
@@ -52,22 +52,23 @@ let current_branch ~cwd =
   |> Option.map String.trim
 
 let remote_branches ~cwd ~prefix =
-  let cmd = Printf.sprintf "git branch -r | grep 'origin/%s/' | sed 's/.*origin\\///'" prefix in
+  let cmd = Printf.sprintf "git branch -r | grep 'origin/%s/' | sed 's/.*origin\\///'" (Filename.quote prefix) in
   exec ~cwd cmd
   |> Option.map split_lines
   |> Option.value ~default:[]
 
 let checkout ~cwd ~branch =
-  exec ~cwd (Printf.sprintf "git checkout %s" branch) |> Option.is_some
+  exec ~cwd (Printf.sprintf "git checkout %s" (Filename.quote branch)) |> Option.is_some
 
 let checkout_create ~cwd ~branch =
-  exec ~cwd (Printf.sprintf "git checkout -b %s 2>/dev/null || git checkout %s" branch branch) |> Option.is_some
+  let bq = Filename.quote branch in
+  exec ~cwd (Printf.sprintf "git checkout -b %s 2>/dev/null || git checkout %s" bq bq) |> Option.is_some
 
 let checkout_main ~cwd =
   exec ~cwd "git checkout main 2>/dev/null || git checkout master" |> Option.is_some
 
 let delete_local_branch ~cwd ~branch =
-  exec ~cwd (Printf.sprintf "git branch -D %s 2>/dev/null" branch) |> Option.is_some
+  exec ~cwd (Printf.sprintf "git branch -D %s 2>/dev/null" (Filename.quote branch)) |> Option.is_some
 
 (* === Query Operations === *)
 
@@ -80,16 +81,16 @@ let is_dirty ~cwd =
   status_porcelain ~cwd <> ""
 
 let show ~cwd ~ref ~path =
-  exec ~cwd (Printf.sprintf "git show %s:%s" ref path)
+  exec ~cwd (Printf.sprintf "git show %s" (Filename.quote (ref ^ ":" ^ path)))
 
 let diff_files ~cwd ~base ~head =
-  let cmd = Printf.sprintf "git diff %s...%s --name-only 2>/dev/null" base head in
+  let cmd = Printf.sprintf "git diff %s...%s --name-only 2>/dev/null" (Filename.quote base) (Filename.quote head) in
   exec ~cwd cmd
   |> Option.map split_lines
   |> Option.value ~default:[]
 
 let rev_parse ~cwd ~ref =
-  exec ~cwd (Printf.sprintf "git rev-parse --short %s 2>/dev/null" ref)
+  exec ~cwd (Printf.sprintf "git rev-parse --short %s 2>/dev/null" (Filename.quote ref))
   |> Option.map String.trim
 
 let log_oneline ~cwd ~count =
@@ -103,4 +104,4 @@ let init ~cwd =
   exec ~cwd "git init -b main" |> Option.is_some
 
 let clone ~url ~dest =
-  exec ~cwd:"." (Printf.sprintf "git clone %s %s" url dest) |> Option.is_some
+  exec ~cwd:"." (Printf.sprintf "git clone %s %s" (Filename.quote url) (Filename.quote dest)) |> Option.is_some

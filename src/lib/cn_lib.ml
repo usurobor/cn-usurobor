@@ -144,40 +144,37 @@ let string_of_agent_op = function
   | Delete id -> "delete:" ^ id
   | Surface desc -> "surface:" ^ desc
 
+(* Split on first '|' — bounds-checked, no partial String.sub *)
+let split_pipe s =
+  match String.index_opt s '|' with
+  | None -> (s, None)
+  | Some i ->
+      (String.sub s 0 i,
+       Some (String.sub s (i + 1) (String.length s - i - 1)))
+
 (* Parse agent_op from frontmatter key-value pairs *)
 let parse_agent_op key value =
   match key with
   | "ack" -> Some (Ack value)
   | "done" -> Some (Done value)
-  | "fail" -> 
-      (match String.index_opt value '|' with
-       | Some i -> Some (Fail (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
-       | None -> Some (Fail (value, "unspecified")))
+  | "fail" ->
+      let (id, rest) = split_pipe value in
+      Some (Fail (id, Option.value rest ~default:"unspecified"))
   | "reply" ->
-      (match String.index_opt value '|' with
-       | Some i -> Some (Reply (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
-       | None -> None)
+      let (id, rest) = split_pipe value in
+      rest |> Option.map (fun msg -> Reply (id, msg))
   | "send" ->
-      (match String.index_opt value '|' with
-       | Some i -> 
-           let peer = String.sub value 0 i in
-           let rest = String.sub value (i+1) (String.length value - i - 1) in
-           (* Check for second pipe (body) *)
-           (match String.index_opt rest '|' with
-            | Some j -> 
-                let message = String.sub rest 0 j in
-                let body = String.sub rest (j+1) (String.length rest - j - 1) in
-                Some (Send (peer, message, Some body))
-            | None -> Some (Send (peer, rest, None)))
-       | None -> None)
+      (match split_pipe value with
+       | (_, None) -> None
+       | (peer, Some rest) ->
+           let (message, body) = split_pipe rest in
+           Some (Send (peer, message, body)))
   | "delegate" ->
-      (match String.index_opt value '|' with
-       | Some i -> Some (Delegate (String.sub value 0 i, String.sub value (i+1) (String.length value - i - 1)))
-       | None -> None)
+      let (id, rest) = split_pipe value in
+      rest |> Option.map (fun peer -> Delegate (id, peer))
   | "defer" ->
-      (match String.index_opt value '|' with
-       | Some i -> Some (Defer (String.sub value 0 i, Some (String.sub value (i+1) (String.length value - i - 1))))
-       | None -> Some (Defer (value, None)))
+      let (id, until) = split_pipe value in
+      Some (Defer (id, until))
   | "delete" -> Some (Delete value)
   | "surface" -> Some (Surface value)
   | "mca" -> Some (Surface value)  (* alias *)

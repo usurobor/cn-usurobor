@@ -105,7 +105,7 @@ let run_push hub_path =
   | None -> print_endline (Cn_fmt.fail "Could not determine current branch")
   | Some branch ->
       let branch = String.trim branch in
-      match Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git push origin %s" branch) with
+      match Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git push origin %s" (Filename.quote branch)) with
       | Some _ ->
           Cn_hub.log_action hub_path "push" branch;
           print_endline (Cn_fmt.ok (Printf.sprintf "Pushed to origin/%s" branch))
