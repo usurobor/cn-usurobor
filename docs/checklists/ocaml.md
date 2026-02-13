@@ -12,3 +12,5 @@ From `skills/ocaml/SKILL.md`
 | ppx_expect tests exist | B |
 | Bundled `.js` committed | C |
 | README in tool directory | A |
+| `Filename.quote` for shell interpolation (not hand-rolled) | C |
+| Semantic version cmp (not string cmp) | C |
