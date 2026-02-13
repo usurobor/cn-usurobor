@@ -377,7 +377,7 @@ Agents and repos this hub communicates with.
   update_runtime hub_dir;
 
   let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_dir "git add -A" in
-  let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_dir (Printf.sprintf "git commit -m 'Initialize %s hub'" hub_name) in
+  let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_dir (Printf.sprintf "git commit -m %s" (Filename.quote (Printf.sprintf "Initialize %s hub" hub_name))) in
 
   print_endline (Cn_fmt.ok (Printf.sprintf "Created hub: %s" hub_dir));
   print_endline (Cn_fmt.info "Next steps:");

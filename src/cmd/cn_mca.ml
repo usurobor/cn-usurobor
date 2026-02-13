@@ -147,8 +147,8 @@ If you can do it now, do it. Otherwise, explain why not.
   let system_dir = Cn_ffi.Path.join hub_path "threads/system" in
   Cn_ffi.Fs.ensure_dir system_dir;
   Cn_ffi.Fs.write (Cn_ffi.Path.join hub_path event_file) body;
-  let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git add '%s'" event_file) in
-  let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m '%s: system event mca-review'" name) in
+  let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git add %s" (Filename.quote event_file)) in
+  let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m %s" (Filename.quote (Printf.sprintf "%s: system event mca-review" name))) in
 
   let trigger =
     Cn_ffi.Child_process.exec_in ~cwd:hub_path "git rev-parse HEAD"

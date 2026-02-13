@@ -429,8 +429,10 @@ created: %s
   Cn_hub.log_action hub_path "out" (Printf.sprintf "id:%s gtd:%s run:%s" id gtd_type run_dir);
   print_endline (Cn_fmt.ok (Printf.sprintf "Run complete: %s (%s)" gtd_type id));
 
+  (* 1.2: Filename.quote for shell safety — id could contain quotes *)
+  let commit_msg = Filename.quote (Printf.sprintf "run: %s %s" gtd_type id) in
   let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path
-    (Printf.sprintf "git add -A && git commit -m 'run: %s %s'" gtd_type id) in
+    (Printf.sprintf "git add -A && git commit -m %s" commit_msg) in
   print_endline (Cn_fmt.ok "Committed run")
 
 (* === Auto-save === *)
@@ -440,7 +442,7 @@ let auto_save hub_path name =
   | Some status when String.trim status <> "" ->
       let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git add -A" in
       let msg = Printf.sprintf "%s: auto-save %s" name (String.sub (Cn_fmt.now_iso ()) 0 10) in
-      (match Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m \"%s\"" msg) with
+      (match Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m %s" (Filename.quote msg)) with
        | Some _ ->
            Cn_hub.log_action hub_path "auto-save.commit" msg;
            print_endline (Cn_fmt.ok "Auto-committed changes");

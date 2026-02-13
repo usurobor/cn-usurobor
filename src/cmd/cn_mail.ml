@@ -313,8 +313,8 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
               let thread_dir = Cn_ffi.Path.join hub_path "threads/in" in
               Cn_ffi.Fs.ensure_dir thread_dir;
               Cn_ffi.Fs.write (Cn_ffi.Path.join thread_dir file) content;
-              let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git add 'threads/in/%s'" file) in
-              let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m '%s: %s'" name thread_name) in
+              let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git add %s" (Filename.quote (Printf.sprintf "threads/in/%s" file))) in
+              let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m %s" (Filename.quote (Printf.sprintf "%s: %s" name thread_name))) in
               let _ = advance Cn_protocol.SE_CreateBranch in
 
               (* Push *)
