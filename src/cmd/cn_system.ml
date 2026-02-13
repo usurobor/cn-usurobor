@@ -25,7 +25,8 @@ let update_runtime hub_path =
     | Some c -> String.trim c
     | None -> "unknown"
   in
-  let cn_commit = match Cn_ffi.Child_process.exec "git -C $(npm root -g)/cnagent rev-parse --short HEAD 2>/dev/null" with
+  (* 1.2/1.4: explicit path to cnos install dir, not npm — cn is native OCaml *)
+  let cn_commit = match Cn_ffi.Child_process.exec "git -C /usr/local/lib/cnos rev-parse --short HEAD 2>/dev/null" with
     | Some c -> String.trim c
     | None -> "unknown"
   in
