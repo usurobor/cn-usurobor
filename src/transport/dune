@@ -1,14 +1,14 @@
-; git module (pure git operations)
+; git module (raw git operations, no CN semantics)
 (library
  (name git)
  (modules git)
- (libraries unix))
+ (libraries cn_ffi))
 
 ; cn_io module (CN protocol over git)
 (library
  (name cn_io)
  (modules cn_io)
- (libraries git unix))
+ (libraries git cn_ffi))
 
 ; inbox library (pure functions, used by cn_lib)
 (library

@@ -156,9 +156,9 @@ let daily_log_header date_str =
 
 let format_log_row entry =
   (* Extract time from ISO timestamp *)
-  let time = 
-    try String.sub entry.timestamp 11 5  (* HH:MM *)
-    with _ -> entry.timestamp 
+  let time =
+    if String.length entry.timestamp >= 16 then String.sub entry.timestamp 11 5  (* HH:MM *)
+    else entry.timestamp
   in
   Printf.sprintf "| %s | %s | %s/%s | `%s` |"
     time
@@ -320,8 +320,8 @@ let git_cmd_of_action ~hub_path = function
       Some (Printf.sprintf "cd %s && git branch -d %s" hub_path b)
   | Git_remote_delete (r, b) -> 
       Some (Printf.sprintf "cd %s && git push %s --delete %s" hub_path r b)
-  | File_write _ | Dir_create _ | Log_append _ -> 
-      None  (* handled via Node.js fs, not shell *)
+  | File_write _ | Dir_create _ | Log_append _ ->
+      None  (* handled via Cn_ffi.Fs, not shell *)
 
 (* Generate actions for a triage decision on an inbound branch.
    Inbound branches are always remote-only (pushed by peer). 
@@ -377,8 +377,9 @@ let format_action_plan actions =
 
 (* Materialize an inbound branch as a thread file for agent review *)
 let materialize_thread_actions ~threads_dir ~branch ~peer ~content =
-  let thread_path = Printf.sprintf "%s/inbox/%s-%s.md" threads_dir peer 
-    (branch |> String.split_on_char '/' |> List.rev |> List.hd) in
+  let topic = match branch |> String.split_on_char '/' |> List.rev with
+    | part :: _ -> part | [] -> branch in
+  let thread_path = Printf.sprintf "%s/inbox/%s-%s.md" threads_dir peer topic in
   [
     Dir_create (Printf.sprintf "%s/inbox" threads_dir);
     File_write (thread_path, content);
