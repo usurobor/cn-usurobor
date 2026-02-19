@@ -42,6 +42,11 @@ dune runtest
 let version = "2.5.0"
 ```
 
+Verify:
+```bash
+grep "let version" src/lib/cn_lib.ml
+```
+
 ### 2. Update CHANGELOG
 
 Add entry to `CHANGELOG.md` with version, date, changes.
@@ -69,20 +74,6 @@ gh release view v2.5.0 -R usurobor/cnos
 ```
 
 Or: https://github.com/usurobor/cnos/releases
-
-## Binary Storage
-
-Binaries are **not** stored in the git repo.
-
-| What | Where |
-|------|-------|
-| Source code | Git repo |
-| Built binaries | GitHub Releases (blob storage) |
-
-**Why:**
-- Binaries are ~2MB × 3 platforms = 6MB per release
-- Git isn't designed for binary versioning
-- Releases API is the standard pattern
 
 ## User Installation
 
@@ -144,13 +135,15 @@ jobs:
 
 Semver: `MAJOR.MINOR.PATCH`
 
-| Type | Tag? | Release? | Example |
-|------|------|----------|---------|
-| Patch | No | No | 2.4.3 → 2.4.4 |
-| Minor | Yes | Yes | 2.4.4 → 2.5.0 |
-| Major | Yes | Yes | 2.5.0 → 3.0.0 |
+All releases get tags. Binary releases for minor/major only.
 
-Patches are git-only (users pull source). Minor/major get binary releases.
+| Change type | Tag | Binary release | Who gets it |
+|-------------|-----|----------------|-------------|
+| Patch (bugfix) | Yes | No | Source builders |
+| Minor (features) | Yes | Yes | All users |
+| Major (breaking) | Yes | Yes | All users |
+
+Users on `install.sh` receive minor/major updates automatically. Patch releases require building from source or waiting for the next minor.
 
 ## Troubleshooting
 
@@ -176,3 +169,19 @@ Check install.sh platform detection:
 uname -s  # OS
 uname -m  # Arch
 ```
+
+---
+
+## Background: Binary Storage
+
+Binaries are **not** stored in the git repo.
+
+| What | Where |
+|------|-------|
+| Source code | Git repo |
+| Built binaries | GitHub Releases (blob storage) |
+
+**Why:**
+- Binaries are ~2MB × 3 platforms = 6MB per release
+- Git isn't designed for binary versioning
+- Releases API is the standard pattern
