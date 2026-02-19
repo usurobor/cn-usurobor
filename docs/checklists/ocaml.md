@@ -36,4 +36,3 @@ From `skills/ocaml/SKILL.md` + hardening rounds (2026-02-18)
 | Item | Severity |
 |------|----------|
 | ppx_expect tests exist | B |
-| Bundled `.js` committed (if Melange) | C |
