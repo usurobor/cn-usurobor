@@ -307,7 +307,7 @@ The composed pipeline is itself a CTB program — verifiable, total, and determi
 
 **M1: Reference interpreter.** A minimal tree-walking evaluator that can run the existing four examples and validate pattern matching, overlap safety, and TOTAL mode. This is the critical path — without it, everything else is theoretical.
 
-Target: a single-file implementation in JavaScript (Node.js), matching cnos's existing CLI language and zero-dependency philosophy.
+Target: a single-file implementation in OCaml, matching cnos's native binary philosophy.
 
 **M2: Effect schema.** Define the convention for encoding effects as tris. Start with the minimum: MkDir, Write, Read, Delete, GitAdd, GitCommit, Seq, Noop. Publish as a normative document alongside the CTB spec.
 

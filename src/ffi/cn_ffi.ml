@@ -1,7 +1,7 @@
 (** cn_ffi.ml — Native OCaml system bindings
 
-    Replaces Node.js FFI with stdlib + Unix.
-    Single source of truth for all system interop used by CN modules. *)
+    Single source of truth for all system interop used by CN modules.
+    Uses stdlib + Unix only. *)
 
 module Process = struct
   let argv = Sys.argv

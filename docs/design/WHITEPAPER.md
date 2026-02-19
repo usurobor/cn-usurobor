@@ -340,7 +340,7 @@ This section is **informative (non-normative)** and reflects a snapshot as of th
 | Feature | Location | Notes |
 |---------|----------|-------|
 | CN repo template | `cnos/` | Template with spec/, mindsets/, skills/, docs/ |
-| CLI hub creation | `cli/index.js` | Prompts for name/owner/visibility, scaffolds hub, runs `gh repo create` |
+| CLI hub creation | `cn init` | Prompts for name/owner/visibility, scaffolds hub, runs `gh repo create` |
 | Self-cohere skill | `skills/self-cohere/SKILL.md` | Agent-side onboarding; receives hub URL as input |
 | Two-repo model | CLI + `AGENTS.md` | Hub (personal) + template (shared); clean separation |
 | COHERENCE mindset | `mindsets/COHERENCE.md` | TSC + tsc-practice grounding; loaded first |

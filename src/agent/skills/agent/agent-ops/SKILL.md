@@ -140,7 +140,7 @@ When assigning work or escalating issues:
 
 **Example:**
 - ❌ "Version string bug. Sigma to investigate." (passing as I)
-- ✅ "Version string bug. I found: dist/cn.js has 2.1.21, package.json has 2.1.22. Root cause: cn_lib.ml not bumped. Fix: bump + rebuild + republish." (owned as A, then delegated with context)
+- ✅ "Version string bug. I found: binary reports 2.1.21, dune-project has 2.1.22. Root cause: cn_lib.ml not bumped. Fix: bump + rebuild + republish." (owned as A, then delegated with context)
 
 ## Branch Lifecycle
 
