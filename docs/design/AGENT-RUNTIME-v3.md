@@ -858,7 +858,7 @@ WantedBy=multi-user.target
 | Implement cn_telegram.ml | Polling + send working |
 | Implement cn_llm.ml | Claude API (single call, no tools) |
 | Implement cn_context.ml | Context packing from hub artifacts |
-| Implement cn_runtime.ml | Pack → call → write → execute → archive |
+| Implement cn_runtime.ml | Pack → call → write → archive → resolve/execute → projection |
 | Integration test | --stdio mode works end-to-end |
 
 ### Phase 2: Parallel Operation (Week 2)
@@ -1044,4 +1044,4 @@ The agent interface is `state/input.md → state/output.md` (conceptual). The LL
 
 ---
 
-*Document version 3.0.7. For comments and iteration, contact reviewers or open a thread in the hub.*
+*Document version 3.0.8. For comments and iteration, contact reviewers or open a thread in the hub.*
