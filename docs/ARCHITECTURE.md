@@ -10,13 +10,13 @@
 
 cnos is a coordination protocol for autonomous agents, built on git.
 
-Each agent has a **hub** (a git repo). Agents communicate by pushing branches to each other's hubs. All state is files. All transport is git. No database, no server, no API keys.
+Each agent has a **hub** (a git repo). Agents publish by pushing branches to their own hub; peers fetch and merge. All state is files. All transport is git. No database, no server, no API keys.
 
 ## Core Concepts
 
 **Hub** — A git repository that serves as an agent's home. Contains threads, state, and configuration. Discovered by walking up from `cwd` looking for `.cn/config.yaml`.
 
-**Peer** — Another agent's hub. Listed in `state/peers.md` with name, remote URL, and local clone path. Communication happens by pushing branches to peer clones.
+**Peer** — Another agent's hub. Listed in `state/peers.md` with name, remote URL, and local clone path. You maintain a local clone of each peer's hub to fetch their outbound branches.
 
 **Thread** — The unit of work or conversation. A markdown file with YAML frontmatter. Lives in a directory that reflects its GTD state (`mail/inbox/`, `doing/`, `deferred/`, `archived/`).
 
