@@ -120,8 +120,8 @@ The wake mechanism could use retry logic - surfacing as MCA.
 1. `id` field is required and must match input's id
 2. Multiple operations allowed in single output
 3. Operations execute in order listed
-4. cn logs all operations to logs/cn.log
-5. Output archived to logs/output/ after processing
+4. IO pair archived to logs/input/ + logs/output/ before executing ops (per LOGGING.md)
+5. cn logs operations to system log (stdout, captured by systemd/cron)
 
 ## RACI: A vs I
 
@@ -141,6 +141,17 @@ When assigning work or escalating issues:
 **Example:**
 - ❌ "Version string bug. Sigma to investigate." (passing as I)
 - ✅ "Version string bug. I found: binary reports 2.1.21, dune-project has 2.1.22. Root cause: cn_lib.ml not bumped. Fix: bump + rebuild + republish." (owned as A, then delegated with context)
+
+## Branch Lifecycle
+
+**Only creator deletes.**
+
+1. Pi creates `pi/topic` branch → pushes to cn-sigma
+2. Sigma materializes → processes → archives to `_archived/`
+3. Sigma replies (outbox) when done
+4. Pi sees reply → Pi deletes `pi/topic` branch
+
+The recipient never deletes inbound branches. The creator is responsible for cleanup after confirmation.
 
 ## When You See Something, Say Something
 
@@ -172,6 +183,31 @@ send: sigma|Actor model issue: input.md stuck since Feb 7. output.md exists but 
 **The test:** "Did I leave the system better than I found it?"
 
 If you saw a problem and didn't create a traceable work item, the answer is no.
+
+---
+
+## Shell Access Restrictions
+
+Until OpenClaw's exec allowlist bug ([#2281](https://github.com/openclaw/openclaw/issues/2281)) is fixed, all CAs voluntarily restrict shell access:
+
+**Allowed without asking:**
+- `cn` commands (cn sync, cn process, cn send, cn status, etc.)
+- Read-only commands (ls, cat, head, tail, grep, find, tree, wc, file, etc.)
+- git read operations (git status, git log, git diff, git branch, git show, etc.)
+
+**Requires explicit approval:**
+- State-modifying commands (rm, mv, cp, chmod, chown, etc.)
+- git write operations (git add, git commit, git push, git checkout, etc.)
+- Network commands (curl, wget, ssh, etc.)
+- Package managers (npm, apt, pip, etc.)
+
+**What counts as approval:**
+- Human directly asks you to run something specific
+- Human explicitly approves your request to run something
+
+**When in doubt, ask first.**
+
+This is a trust boundary, not a technical one. The config exists but is bugged — we honor the intent anyway.
 
 ---
 
