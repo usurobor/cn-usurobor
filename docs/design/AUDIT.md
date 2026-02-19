@@ -1,7 +1,8 @@
 # Design Docs Audit
 
 **Date:** 2026-02-11
-**Author:** Sigma
+**Author:** usurobor (aka Axiom)
+**Contributors:** Sigma
 **Context:** Post cn_protocol.ml implementation (4 typed FSMs)
 
 ---

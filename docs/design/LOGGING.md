@@ -2,7 +2,8 @@
 
 **Status:** Current
 **Date:** 2026-02-11
-**Author:** Sigma
+**Author:** usurobor (aka Axiom)
+**Contributors:** Sigma
 
 ---
 
