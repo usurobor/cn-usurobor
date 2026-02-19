@@ -1,28 +1,92 @@
 # PM: Open Issue
 
-## When to Use
+Open issues that enable action without author involvement.
 
-When you discover a problem that needs engineering attention.
+## Core Principle
 
-## PM Role
+**Coherent issue: engineer can act without asking clarifying questions.**
 
-**Open the issue. Don't solve it.**
+---
 
-1. **Report symptoms** — What's broken? What's the impact?
-2. **Set urgency** — P0/P1/P2 based on impact
-3. **Define acceptance** — What does "fixed" look like? (outcome-based)
-4. **Hand off** — Engineers investigate root cause and propose fix
+## 1. Define
 
-## Issue Template
+1.1. **Identify the parts**
+  - Symptoms (what's broken)
+  - Impact (who cares, how bad)
+  - Acceptance (what "fixed" looks like)
+  - ❌ Just a title: "cn sync broken"
+  - ✅ All three parts present and specific
+
+1.2. **Articulate how they fit**
+  - Symptoms ground the problem in reality
+  - Impact justifies priority
+  - Acceptance defines done — engineer knows when to stop
+  - ❌ "Fix cn sync" (no acceptance)
+  - ✅ "27 messages reach input.md within 5 minutes of send" (testable outcome)
+
+1.3. **Name the failure mode**
+  - Incoherent issue: requires back-and-forth to clarify
+  - ❌ "It doesn't work" (what doesn't? for whom?)
+  - ✅ "Daily threads written to workspace/ not hub/ — not git-backed"
+
+---
+
+## 2. Unfold
+
+2.1. **Symptoms first**
+  - What's actually happening vs what should happen
+  - Observable, not interpreted
+  - ❌ "The system is slow" (interpretation)
+  - ✅ "Response takes 12s, expected <2s" (observable)
+
+2.2. **Impact second**
+  - Who is affected, severity, urgency
+  - Justifies priority (P0/P1/P2)
+  - ❌ "This is bad"
+  - ✅ "Agent memory not backed up — data loss on crash"
+
+2.3. **Acceptance last**
+  - Outcome-based, not implementation-based
+  - Engineer chooses how; PM defines what
+  - ❌ "Add a symlink" (implementation)
+  - ✅ "Daily threads persist across restarts" (outcome)
+
+---
+
+## 3. Rules
+
+3.1. **State symptoms, not causes**
+  - PM reports what's broken; engineer investigates why
+  - ❌ "The cache invalidation is wrong"
+  - ✅ "Stale data appears after update"
+
+3.2. **Set priority by impact, not effort**
+  - P0: system down, blocking
+  - P1: major feature broken, workaround exists
+  - P2: minor, not blocking
+  - ❌ "P0 because it's a quick fix"
+  - ✅ "P2 — not blocking, but data should persist"
+
+3.3. **Write acceptance as testable outcomes**
+  - Someone else can verify without asking you
+  - ❌ "Works correctly"
+  - ✅ "Messages sent before 5pm appear in inbox by 5:05pm"
+
+3.4. **Don't propose implementation**
+  - PM owns what; engineer owns how
+  - ❌ "Fix by adding retry logic"
+  - ✅ "Transient failures shouldn't lose messages"
+
+3.5. **One issue, one problem**
+  - Split compound issues
+  - ❌ "Sync is slow and sometimes drops messages"
+  - ✅ Two issues: performance, reliability
+
+---
+
+## 4. Template
 
 ```markdown
----
-to: {engineer}
-type: issue
-priority: P{0|1|2}
-created: {timestamp}
----
-
 # {Short problem description}
 
 ## Expected
@@ -39,73 +103,25 @@ created: {timestamp}
 
 ## Acceptance Criteria
 
-- [ ] {Outcome 1}
-- [ ] {Outcome 2}
+- [ ] {Testable outcome 1}
+- [ ] {Testable outcome 2}
 ```
-
-## Core Rule
-
-**PM raises problems. Eng solves them.**
-
-- PM states: expected vs actual
-- PM defines: what "fixed" looks like
-- Eng investigates: why it broke
-- Eng proposes: how to fix it
-
-## After Handoff
-
-1. **Stakeholder in RCA** — Engineers lead, PM participates
-2. **Verify understanding** — Ask until you understand:
-   - How exactly the problem happened
-   - How exactly the proposed solution resolves it
-3. **Don't accept hand-wavy fixes** — "We'll refactor" is not a root cause
-
-## Anti-Patterns
-
-| Wrong | Right |
-|-------|-------|
-| PM writes root cause analysis | Engineer writes, PM reviews |
-| PM proposes implementation | PM defines outcome, engineer proposes how |
-| "Fix cn sync" (vague) | "27 messages reach input.md" (outcome) |
-| Accepting fix without understanding | Ask questions until it clicks |
-
-## MCA
-
-The minimum issue contains:
-1. What's broken (symptoms)
-2. How bad (impact/priority)
-3. What success looks like (acceptance)
-
-Everything else is engineering's job.
 
 ---
 
-## Asking Humans for Decisions
+## 5. After Handoff
 
-When escalating to or asking a human for a decision:
+5.1. **Stay stakeholder, not driver**
+  - Engineer leads investigation and fix
+  - ❌ PM writes root cause analysis
+  - ✅ PM reviews, asks questions
 
-**Know your MCA. Do it. Only ask if genuinely uncertain.**
+5.2. **Verify you understand the fix**
+  - Don't accept hand-wavy explanations
+  - ❌ "We'll refactor it"
+  - ✅ "The race condition happens when X; fix adds lock at Y"
 
-❌ **Wrong:** "What should I do?"
-❌ **Wrong:** "Should I do X or Y?"
-❌ **Wrong:** "My MCA is X. Agree?" (still asking permission)
-✅ **Right:** Just do it.
-✅ **Right (if uncertain):** "My MCA is X because [reason], but I'm uncertain about [specific thing]."
-
-**Default behavior:** Act on your MCA. Human will correct if needed.
-
-**Only ask when:**
-- Stakes are high (irreversible, external-facing, security-sensitive)
-- You're genuinely uncertain and can articulate why
-- You lack context you can't get yourself
-
-**Example (certain):**
-> "Sigma delivered P1 fix. Reviewed, looks sound. Merging now."
-> *(Then merge. Don't wait for approval.)*
-
-**Example (uncertain):**
-> "Option A is safer, Option B is faster. I'd lean A but this is your risk tolerance call."
-> *(Genuine uncertainty — asking is appropriate.)*
-
-If you don't know enough to have an MCA, say what's missing:
-> "Can't form an MCA — I need to know [X] first."
+5.3. **Ask until it clicks**
+  - Your job is to understand, not to pretend
+  - ❌ Nod along to jargon
+  - ✅ "Walk me through how this prevents the failure"
