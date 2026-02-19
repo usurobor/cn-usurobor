@@ -1,9 +1,9 @@
 # CN CLI Reference
 
-**Status:** Current
-**Date:** 2026-02-11
-**Author:** usurobor (aka Axiom)
-**Contributors:** Sigma
+**Status:** Current  
+**Date:** 2026-02-11  
+**Author:** usurobor (aka Axiom)  
+**Contributors:** Sigma  
 
 ---
 
