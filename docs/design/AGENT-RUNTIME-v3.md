@@ -215,6 +215,13 @@ If the LLM needs information not in the packed context, that's a signal to impro
 
 The industry has three main patterns for giving LLMs access to context:
 
+**Assumptions (illustrative):**
+
+- Packed context ≈ 6.5K tokens (see [Context Packing estimate](#context-packing) below)
+- Output body ≈ 0.5–1.0K tokens typical
+- Tool-loop token growth depends on number/size of tool results and whether the platform supports caching for stable prefixes
+- Latency ranges are estimates based on typical API response times, not benchmarks
+
 #### 1. Tool Loop (OpenAI's Push)
 
 ```
@@ -289,13 +296,29 @@ Pre-load everything relevant
 | **API calls** | 2-5 | **1** |
 | **Latency** | 2-10s (serial) | **1-3s** |
 
-**Anthropic's direction:** They built 200K context windows and prompt caching specifically to enable context stuffing. From their guidance:
+**Platform capabilities that enable this design:**
 
-> "For many use cases, simply providing more context upfront leads to better results than complex retrieval systems."
+- **Model capability trend:** Larger context windows make single-shot context packing feasible for bounded domains. Claude supports a 200K-token context window ([Claude API — Messages](https://docs.anthropic.com/en/api/messages)), far exceeding cnos's ~6.5K packed context.
+- **Cost/latency lever:** Prompt caching allows reuse of an identical prompt prefix to reduce processing time and cost. Anthropic documents cache-read pricing at a significant discount, with a default TTL of 5 minutes ([Prompt Caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)).
+- **cnos implication:** Because cnos context is bounded and predictable, we prefer eager context packing + single LLM call over multi-turn retrieval loops. For larger or unbounded corpora, just-in-time retrieval remains the better fit.
 
-Prompt caching can reduce costs by up to 90% for repeated context — making eager loading economically competitive with lazy loading.
+**Decision:** Tool loops emerged when GPT-3.5 had 4K context — lazy loading was mandatory. With 200K context and prompt caching, stuffing is simpler, faster, and often cheaper. For cnos's bounded, predictable context needs, context stuffing is the right choice.
 
-**Decision:** Tool loops emerged when GPT-3.5 had 4K context — lazy loading was mandatory. With 200K context and caching, stuffing is simpler, faster, and often cheaper. For cnos's bounded, predictable context needs, context stuffing is the right choice.
+#### Prompt Caching Plan
+
+cnos context packing produces a predictable prefix that is mostly stable across invocations:
+
+| Segment | Stability | Cache? |
+|---------|-----------|--------|
+| SOUL, USER, skills, op format spec | Stable across calls | **Yes** — cache as prefix |
+| Hub state (hub.md, peers, reflections) | Changes on writes only | **Yes** — cache; invalidated on hub mutation |
+| Inbound message + recent conversation | Changes every call | **No** — dynamic tail |
+
+**Implementation notes:**
+- Use Anthropic's `cache_control` breakpoint after the stable prefix to mark the cache boundary
+- Default TTL is 5 minutes; cnos's cron cadence (1–5 min) fits within this window
+- Cache-read pricing is discounted vs. fresh input processing — for a ~5K stable prefix, this yields meaningful savings on repeated invocations
+- Monitor cache hit rate via `cache_creation_input_tokens` / `cache_read_input_tokens` in API responses
 
 ---
 
@@ -1040,8 +1063,11 @@ The agent interface is `state/input.md → state/output.md` (conceptual). The LL
 ### External
 - [Telegram Bot API — getUpdates](https://core.telegram.org/bots/api#getupdates)
 - [Anthropic Claude API — Messages](https://docs.anthropic.com/en/api/messages)
+- [Anthropic Claude API — Models (context windows)](https://docs.anthropic.com/en/docs/about-claude/models)
+- [Anthropic Claude API — Prompt Caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)
+- [Anthropic Cookbook — Prompt Caching](https://github.com/anthropics/anthropic-cookbook/blob/main/misc/prompt_caching.ipynb)
 - [systemd Service Units](https://www.freedesktop.org/software/systemd/man/systemd.service.html)
 
 ---
 
-*Document version 3.0.8. For comments and iteration, contact reviewers or open a thread in the hub.*
+*Document version 3.0.9. For comments and iteration, contact reviewers or open a thread in the hub.*
