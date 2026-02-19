@@ -1,10 +1,10 @@
 # Agent Runtime: Native cnos Agent
 
 **Version:** 3.1
-**Authors:** Sigma (original), Pi (revision, CLP)
+**Author:** usurobor (aka Axiom)
+**Contributors:** Sigma (draft), Pi (CLP)
 **Date:** 2026-02-19
 **Status:** Draft
-**Reviewers:** usurobor, external
 
 ---
 
