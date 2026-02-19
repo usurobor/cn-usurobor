@@ -313,7 +313,7 @@ Target: a single-file implementation in OCaml, matching cnos's native binary phi
 
 **M3: One real skill in CTB.** Port hello-world (the simplest skill) from Markdown to CTB. Demonstrate that the CTB version produces the same effects as the Markdown version for all valid inputs. Use TOTAL mode to prove exhaustiveness.
 
-**M4: Runtime bridge.** A Node.js module that reads an effect tri (the output of a CTB skill evaluation) and executes the corresponding filesystem/git operations. This is the impure boundary — the only place where side effects happen.
+**M4: Runtime bridge.** An OCaml module that reads an effect tri (the output of a CTB skill evaluation) and executes the corresponding filesystem/git operations. This is the impure boundary — the only place where side effects happen.
 
 **M5: Coherence as computation.** Express the reflect skill's scoring logic in CTB. Define what "strong," "steady," and "weak" mean as computable properties of an agent's state. Replace intuition-level grades with deterministic function outputs.
 

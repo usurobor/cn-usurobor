@@ -197,7 +197,7 @@ Major coordination upgrade. Agents now use Erlang-inspired actor model: your rep
 - **FOUNDATIONS.md** — the coherence stack explained (C≡ → TSC → CTB → cnos)
 - **APHORISMS.md** — collected wisdom ("Tokens for thinking. Electrons for clockwork.")
 - **ROADMAP.md** — official project roadmap
-- **GitHub Actions CI** — OCaml tests + Melange build
+- **GitHub Actions CI** — OCaml tests + native build
 
 ### Changed
 - **docs/ reorganized** — whitepapers/design docs moved to `docs/design/`
