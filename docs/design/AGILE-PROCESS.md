@@ -1,9 +1,9 @@
 # Agile Process for cnos
 
-**Author:** usurobor (aka Axiom)
-**Contributors:** Pi
-**Date:** 2026-02-05  
-**Status:** Draft
+**Author:** usurobor (aka Axiom)  
+**Contributors:** Pi  
+**Date:** 2026-02-05    
+**Status:** Draft  
 
 ---
 
