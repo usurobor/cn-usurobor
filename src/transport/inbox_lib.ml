@@ -154,8 +154,13 @@ let daily_log_path date_str =
   Printf.sprintf "%s/%s.md" log_dir date_str
 
 let daily_log_header date_str =
+  let formatted =
+    if String.length date_str >= 8 then
+      String.sub date_str 0 4 ^ "-" ^ String.sub date_str 4 2 ^ "-" ^ String.sub date_str 6 2
+    else date_str
+  in
   Printf.sprintf "# Inbox Log: %s\n\n| Time | Actor | Source | Decision |\n|------|-------|--------|----------|"
-    (String.sub date_str 0 4 ^ "-" ^ String.sub date_str 4 2 ^ "-" ^ String.sub date_str 6 2)
+    formatted
 
 let format_log_row entry =
   (* Extract time from ISO timestamp *)
