@@ -26,8 +26,8 @@ Write documentation that describes reality, not intentions.
 1.3. **Name the failure mode**
   - Drift: docs say one thing, code does another
   - Propagation: copying stale claims between docs
-  - ❌ "Agents push to each other's hubs" (copied from intro, never verified)
-  - ✅ "Code shows push-to-self; fixed all docs that said otherwise"
+  - ❌ "Messages are encrypted at rest" (copied from old README, never verified)
+  - ✅ "Code shows plaintext storage; fixed all docs that claimed encryption"
 
 ---
 
@@ -44,7 +44,7 @@ Write documentation that describes reality, not intentions.
   - README claims about behavior → check code
   - Architecture claims about protocol → check spec
   - ❌ "The transport works by..." (from memory)
-  - ✅ `grep -n "git push" cn_mail.ml` → write what code actually does
+  - ✅ `grep -n "send\|push" src/` → write what code actually does
 
 2.3. **Verify after editing**
   - Cross-check related docs for consistency
@@ -58,8 +58,8 @@ Write documentation that describes reality, not intentions.
 
 3.1. **Trace every claim to source**
   - If you can't point to code or spec, don't write it
-  - ❌ "Agents are pure functions that read input.md"
-  - ✅ "Agent receives input, produces output — `cn` handles file I/O" (verified against cn_agent.ml)
+  - ❌ "The system reads config from ~/.config" (assumed)
+  - ✅ "Config loaded from `$XDG_CONFIG_HOME`" (verified in config.ml:42)
 
 3.2. **Don't copy between docs without verifying**
   - Other docs may be stale; copying propagates drift
@@ -73,7 +73,7 @@ Write documentation that describes reality, not intentions.
 
 3.4. **Version and date normative docs**
   - Specs need versions; readers need to know what's current
-  - ❌ WHITEPAPER.md with no version header
+  - ❌ Spec doc with no version header
   - ✅ `**Version:** 2.0.4` at top, updated on every normative change
 
 3.5. **Examples must run**
@@ -102,20 +102,18 @@ Before committing doc changes:
 
 ## 5. Structure
 
-| Doc | Purpose | Source of truth |
-|-----|---------|-----------------|
-| README.md | Entry point, quick start | Code (commands, behavior) |
-| ARCHITECTURE.md | System overview | Code (modules, flow) |
-| WHITEPAPER.md | Protocol spec | Itself (normative) |
-| CHANGELOG.md | Version history | Git commits |
-| skills/*.md | How-to guides | Code (procedures) |
-| mindsets/*.md | Principles | Themselves (normative) |
+| Doc type | Purpose | Source of truth |
+|----------|---------|-----------------|
+| README | Entry point, quick start | Code (commands, behavior) |
+| Architecture docs | System overview | Code (modules, flow) |
+| Specs / RFCs | Protocol or design spec | Themselves (normative) |
+| Changelog | Version history | Git commits |
+| How-to guides | Procedures | Code (steps must work) |
+| Principles / values | Guiding rules | Themselves (normative) |
 
 ---
 
 ## 6. Style
-
-From `mindsets/WRITING.md`:
 
 6.1. **Short, direct sentences**
   - ❌ "It should be noted that the agent is responsible for..."
