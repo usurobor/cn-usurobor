@@ -682,8 +682,9 @@ let run_inbound hub_path name =
       (match update_info with
        | Update_skip ->
            (* FSM: Idle + Update_skip → Idle *)
-           let _ = Cn_protocol.actor_transition Cn_protocol.Idle Cn_protocol.Update_skip in
-           if feed_next_input hub_path then wake_agent hub_path
+           (match Cn_protocol.actor_transition Cn_protocol.Idle Cn_protocol.Update_skip with
+            | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "FSM error: %s" e))
+            | Ok _ -> if feed_next_input hub_path then wake_agent hub_path)
        | Update_git ver | Update_binary ver ->
            (* FSM: Idle + Update_available → Updating *)
            (match Cn_protocol.actor_transition Cn_protocol.Idle Cn_protocol.Update_available with
@@ -695,16 +696,20 @@ let run_inbound hub_path name =
                 (match result with
                  | Cn_protocol.Update_complete ->
                      (* FSM: Updating + Update_complete → Idle (but we re-exec) *)
-                     let _ = Cn_protocol.actor_transition Cn_protocol.Updating Cn_protocol.Update_complete in
-                     Cn_hub.log_action hub_path "actor.update" (Printf.sprintf "complete:%s" ver);
-                     print_endline (Cn_fmt.ok (Printf.sprintf "Updated to %s, re-executing..." ver));
-                     re_exec ()
+                     (match Cn_protocol.actor_transition Cn_protocol.Updating Cn_protocol.Update_complete with
+                      | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "FSM error: %s" e))
+                      | Ok _ ->
+                          Cn_hub.log_action hub_path "actor.update" (Printf.sprintf "complete:%s" ver);
+                          print_endline (Cn_fmt.ok (Printf.sprintf "Updated to %s, re-executing..." ver));
+                          re_exec ())
                  | Cn_protocol.Update_fail ->
                      (* FSM: Updating + Update_fail → Idle *)
-                     let _ = Cn_protocol.actor_transition Cn_protocol.Updating Cn_protocol.Update_fail in
-                     Cn_hub.log_action hub_path "actor.update" "failed";
-                     print_endline (Cn_fmt.warn "Update failed, continuing with current version");
-                     if feed_next_input hub_path then wake_agent hub_path
+                     (match Cn_protocol.actor_transition Cn_protocol.Updating Cn_protocol.Update_fail with
+                      | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "FSM error: %s" e))
+                      | Ok _ ->
+                          Cn_hub.log_action hub_path "actor.update" "failed";
+                          print_endline (Cn_fmt.warn "Update failed, continuing with current version");
+                          if feed_next_input hub_path then wake_agent hub_path)
                  | _ -> ())
             | Ok _ -> ()))
   | Cn_protocol.Updating ->
