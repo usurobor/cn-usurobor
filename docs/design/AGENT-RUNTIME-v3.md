@@ -1,9 +1,9 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.0  
-**Authors:** Sigma (original), Pi (revision)  
-**Date:** 2026-02-19  
-**Status:** Draft  
+**Version:** 3.1
+**Authors:** Sigma (original), Pi (revision, CLP)
+**Date:** 2026-02-19
+**Status:** Draft
 **Reviewers:** usurobor, external
 
 ---
@@ -187,7 +187,7 @@ let match_skills message skills =
   skills
   |> List.map (fun s -> (s, keyword_overlap msg_words s.description))
   |> List.sort (fun (_, a) (_, b) -> compare b a)
-  |> List.take 3
+  |> List.filteri (fun i _ -> i < 3)
 ```
 
 This is intentionally simple. Semantic skill matching is a v2 consideration.
@@ -202,10 +202,11 @@ This is intentionally simple. Semantic skill matching is a v2 consideration.
 |--------|----------------|--------------|
 | `cn_daemon.ml` | Telegram polling loop | ~50 |
 | `cn_telegram.ml` | Telegram API client | ~150 |
-| `cn_llm.ml` | Claude API client, tool parsing | ~300 |
+| `cn_llm.ml` | Claude API client, response parsing | ~300 |
 | `cn_context.ml` | Context builder | ~150 |
-| `cn_runtime.ml` | Tool dispatch, main loop | ~200 |
-| **Total** | | **~850** |
+| `cn_tools.ml` | Tool dispatch (pure: `tool_call → tool_action`) | ~100 |
+| `cn_runtime.ml` | Agentic loop (effectful: call LLM → dispatch → loop) | ~150 |
+| **Total** | | **~900** |
 
 ### Types
 
@@ -239,12 +240,19 @@ type update = {
 }
 
 (* ============================================================
-   cn_llm.ml — LLM Types  
+   cn_llm.ml — LLM Types
    ============================================================ *)
 
-type model = 
-  | Claude_sonnet_4
-  | Claude_opus_4
+(* Model ID validated at config parse — not an enum because
+   Anthropic ships new model IDs quarterly *)
+type model_id = string  (* e.g. "claude-sonnet-4-20250514" *)
+
+type role = User | Assistant
+
+type llm_message = {
+  role : role;
+  content : string;
+}
 
 type tool_param = {
   name : string;
@@ -269,20 +277,31 @@ type content_block =
   | Text of string
   | ToolUse of tool_call
 
+type stop_reason =
+  | End_turn
+  | Tool_use
+  | Max_tokens
+  | Stop_sequence
+
+type usage = {
+  input_tokens : int;
+  output_tokens : int;
+}
+
 type response = {
   id : string;
   content : content_block list;
-  stop_reason : string;
-  usage : int * int;  (* input, output tokens *)
+  stop_reason : stop_reason;
+  usage : usage;
 }
 
 (* ============================================================
    cn_context.ml — Context Types
    ============================================================ *)
 
-type context = {
+type api_request = {
   system_prompt : string;
-  messages : message list;
+  messages : llm_message list;   (* LLM conversation, not Telegram *)
   tools : tool_def list;
 }
 
@@ -292,7 +311,7 @@ type loaded_context = {
   daily_threads : string list;    (* last 3 days *)
   weekly_thread : string option;
   skills : string list;           (* matched, max 3 *)
-  conversation : message list;    (* last 10 *)
+  conversation : llm_message list;  (* last 10, role + content *)
 }
 
 (* ============================================================
@@ -305,7 +324,7 @@ type tool_result =
 
 type agent_config = {
   telegram : config;
-  model : model;
+  model : model_id;
   api_key : string;
   hub_path : string;
 }
@@ -373,7 +392,7 @@ EXAMPLES:
 │                                                             │
 │  POST https://api.anthropic.com/v1/messages                 │
 │  {                                                          │
-│    "model": "claude-sonnet-4-20250514",                     │
+│    "model": <model_id from config>,                     │
 │    "system": <system_prompt>,                               │
 │    "messages": <conversation>,                              │
 │    "tools": <tool_definitions>,                             │
@@ -402,15 +421,73 @@ EXAMPLES:
 
 | Tool | Description | Maps to |
 |------|-------------|---------|
-| `read_file` | Read contents of a file | `cat` / `Cn_ffi.read` |
-| `write_file` | Write content to a file | `Cn_ffi.write` |
-| `exec` | Execute a shell command | `Cn_ffi.exec` |
-| `list_files` | List directory contents | `ls` / `Cn_ffi.readdir` |
+| `read_file` | Read contents of a file | `Cn_ffi.Fs.read` |
+| `write_file` | Write content to a file | `Cn_ffi.Fs.write` |
+| `list_files` | List directory contents | `Cn_ffi.Fs.readdir` |
 | `search_memory` | Search reflections (grep) | `grep -r` over threads/ |
+| `run_cn` | Execute a cn subcommand | `Cn_ffi.Child_process.exec` |
 | `send_peer` | Send message to CN peer | `cn send` |
 | `create_thread` | Create adhoc thread | `cn adhoc` |
 
-Tool execution follows the security model defined in `SOUL.md` — the agent self-enforces restrictions on state-modifying commands.
+**No raw `exec` tool.** The LLM cannot execute arbitrary shell commands. Tool dispatch is a closed variant:
+
+```ocaml
+type tool_action =
+  | Read_file of string             (* path *)
+  | Write_file of string * string   (* path, content *)
+  | List_files of string            (* dir *)
+  | Search_memory of string         (* query *)
+  | Run_cn of string list           (* cn subcommand argv *)
+  | Send_peer of string * string    (* peer, content *)
+  | Create_thread of string * string  (* title, body *)
+
+let dispatch_tool hub_path = function
+  | Read_file path -> Ok (Cn_ffi.Fs.read (Cn_ffi.Path.join hub_path path))
+  | Run_cn argv -> Ok (Cn_ffi.Child_process.exec (String.concat " " (List.map Filename.quote argv)))
+  | ...
+```
+
+This makes invalid tool calls (arbitrary shell, network, rm) unrepresentable at the type level. `SOUL.md` remains the behavioral contract, but the type boundary enforces it.
+
+---
+
+### FSM Integration
+
+The runtime reuses the existing `cn_protocol.ml` actor FSM — no new state machine. The daemon-to-processor handoff maps directly onto actor transitions:
+
+```
+cn agent --daemon                    cn agent --process
+─────────────────                    ──────────────────
+
+poll → message arrives
+  write state/input.json
+  ─── Queue_pop ──→ InputReady
+  exec --process ─── Wake ──→ Processing
+                                       load context
+                                       call LLM
+                                       dispatch tools (loop)
+                                       write response
+                                     ─── Output_received ──→ OutputReady
+                                       archive input + output
+                                     ─── Archive_complete ──→ Idle
+```
+
+The processor is a single `Idle → InputReady → Processing → OutputReady → Idle` pass. Errors surface via `Result.t` from `actor_transition` — the same pattern already enforced in `cn_agent.ml`. No new FSM types are needed; the runtime is a new caller of the existing protocol.
+
+```ocaml
+(* cn_runtime.ml — agentic loop entry point *)
+let process hub_path =
+  let ( let* ) = Result.bind in
+  let* _s = Cn_protocol.actor_transition Cn_protocol.Idle Cn_protocol.Queue_pop in
+  let* s = Cn_protocol.actor_transition Cn_protocol.InputReady Cn_protocol.Wake in
+  (* s = Processing *)
+  let result = run_agent_loop hub_path in
+  let* s = Cn_protocol.actor_transition s Cn_protocol.Output_received in
+  (* s = OutputReady *)
+  archive_conversation hub_path;
+  let* _s = Cn_protocol.actor_transition s Cn_protocol.Archive_complete in
+  Ok ()
+```
 
 ---
 
@@ -426,7 +503,7 @@ telegram:
 
 llm:
   provider: anthropic
-  model: claude-sonnet-4-20250514
+  model: claude-sonnet-4-latest    # validated at startup, not compiled in
   api_key: ${ANTHROPIC_KEY}
   max_tokens: 8192
 
@@ -540,6 +617,18 @@ v1 targets functional parity with minimal scope. v2 features are explicitly defe
 
 ---
 
+## Alternatives Considered
+
+| Option | Pros | Cons | Decision |
+|--------|------|------|----------|
+| **Keep OpenClaw** | Zero effort, already working | No ownership, coupling, opacity, fragility | Rejected — core dependency without auditability |
+| **Fork OpenClaw** | Existing codebase, faster start | Python runtime, large surface area, still not native | Rejected — violates constraint 1 (pure OCaml) |
+| **Wrap OC via HTTP relay** | Minimal code, OC does the work | Still dependent, extra latency, two failure domains | Rejected — adds complexity without removing dependency |
+| **Native OCaml runtime** | Full ownership, single binary, reuses cn infrastructure | Must build Telegram + LLM clients | **Accepted** — tractable (~850 lines), aligns with all constraints |
+| **Shell script orchestrator** | Very fast to build | Fragile, no types, hard to test, grows into a mess | Rejected — violates constraint 3 (single binary) |
+
+---
+
 ## Open Questions
 
 ### 1. Conversation Persistence
@@ -640,4 +729,4 @@ Still single native binary with zero runtime dependencies.
 
 ---
 
-*Document version 3.0. For comments and iteration, contact reviewers or open a thread in the hub.*
+*Document version 3.1. For comments and iteration, contact reviewers or open a thread in the hub.*
