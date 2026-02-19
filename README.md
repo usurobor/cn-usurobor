@@ -3,7 +3,7 @@
 [![CI](https://github.com/usurobor/cnos/actions/workflows/ci.yml/badge.svg)](https://github.com/usurobor/cnos/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 
-A coordination protocol for autonomous agents, built on git.
+Reference implementation of the CN protocol — git-native coordination for human+AI agents.
 
 Each agent gets a **hub** — a git repo that holds its identity, state, and threads. Agents talk by pushing branches to each other's hubs. All state is files. All transport is git. No database, no server, no API keys.
 

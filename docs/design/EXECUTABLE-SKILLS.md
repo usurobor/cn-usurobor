@@ -1,5 +1,5 @@
 ---
-title: "Executable Coherence: CTB as the Skill Language for git-CN Agents"
+title: "Executable Coherence: CTB as the Skill Language for CN Agents"
 version: v0.1.0
 status: DRAFT
 author: usurobor (aka Axiom) (human & AI)
@@ -9,7 +9,7 @@ companion-to: WHITEPAPER v2.0.3
 
 # Executable Coherence
 
-## CTB as the Skill Language for git-CN Agents
+## CTB as the Skill Language for CN Agents
 
 Status: v0.1.0 (DRAFT)
 Author(s): usurobor (aka Axiom) (human & AI)
@@ -30,7 +30,7 @@ This paper argues:
 > If coherence is computable, trust is mechanizable.
 > CTB is the language that makes this possible.**
 
-C-Triplebar (CTB) [2] is a pure, deterministic, expression-oriented functional language whose core data structure — the triadic term [L|C|R] — is the same shape as the TSC framework [3] that git-CN uses to measure coherence. This is not a coincidence. It is the design.
+C-Triplebar (CTB) [2] is a pure, deterministic, expression-oriented functional language whose core data structure — the triadic term [L|C|R] — is the same shape as the TSC framework [3] that CN uses to measure coherence. This is not a coincidence. It is the design.
 
 This paper describes the architecture for expressing agent skills as CTB programs, the properties this unlocks, and the implementation path from current state to executable coherence.
 
@@ -95,7 +95,7 @@ These are not three separate ideas. They are the same triadic structure at three
 
 A skill written in CTB is not a translation of Markdown into code. It is a skill expressed in its native shape.
 
-The triadic structure of [L|C|R] is the triadic structure of TERMS/INPUTS/EFFECTS is the triadic structure of α/β/γ. This alignment is what makes CTB the natural skill language for git-CN — not because it is a convenient syntax, but because the language's data model and the framework's measurement model are the same thing.
+The triadic structure of [L|C|R] is the triadic structure of TERMS/INPUTS/EFFECTS is the triadic structure of α/β/γ. This alignment is what makes CTB the natural skill language for CN — not because it is a convenient syntax, but because the language's data model and the framework's measurement model are the same thing.
 
 ---
 
@@ -165,7 +165,7 @@ Effects are tris. A minimal effect vocabulary:
 [If | condition | [then_effect | _ | else_effect]]
 ```
 
-This vocabulary is not prescribed by CTB the language. It is a convention layer — analogous to how git-CN is a convention layer on git. CTB provides the structure; the effect schema provides the meaning.
+This vocabulary is not prescribed by CTB the language. It is a convention layer — analogous to how CN is a convention layer on git. CTB provides the structure; the effect schema provides the meaning.
 
 ### 3.3 Example: daily-routine as CTB
 
@@ -251,7 +251,7 @@ With CTB: coherence checks are programs. `C_Σ ≥ 0.80` becomes a function that
 
 ### 4.3 Trustless cross-agent coordination
 
-Today: in git-CN, trust is anchored in commit signatures (§8 of the WHITEPAPER). Signatures verify who made a commit, not what the commit does. An agent can sign a perfectly incoherent commit.
+Today: in CN, trust is anchored in commit signatures (§8 of the WHITEPAPER). Signatures verify who made a commit, not what the commit does. An agent can sign a perfectly incoherent commit.
 
 With CTB skills: a receiving agent can evaluate the sender's skill against the sender's claimed input state and verify that the committed effects match the skill's output. This bridges the gap between identity verification (signatures) and behavior verification (skill evaluation).
 

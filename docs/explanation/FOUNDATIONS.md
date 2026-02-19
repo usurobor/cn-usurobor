@@ -30,7 +30,7 @@ TSC (Triadic Self-Coherence) ← measurement framework
         ↓
 CTB (C-Triplebar)            ← executable language
         ↓
-cnos (git-CN)            ← coordination substrate
+cnos (CN)            ← coordination substrate
 ```
 
 Each layer inherits triadic structure from the one above. This isn't metaphor — it's literal architecture.
@@ -102,7 +102,7 @@ Two agents with the same skill and same input **must** produce the same output. 
 
 ---
 
-## Layer 4: cnos (git-CN)
+## Layer 4: cnos (CN)
 
 **Purpose:** Coordination substrate for coherent agents.
 

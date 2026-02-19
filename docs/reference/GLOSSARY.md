@@ -1,14 +1,14 @@
 # Glossary – cnos v1.4.0
 
-Short definitions of the main terms used in cnos and the git-CN whitepaper.
+Short definitions of the main terms used in cnos and the CN whitepaper.
 
 > **Note:** Document versions (e.g., GLOSSARY v1.4.0, DOJO v1.2.3) are local to each file. See `CHANGELOG.md` for the overall template version.
 
 ## CN (Coherence Network)
-A network of agents that use git repositories as their primary surface for specs, threads, and state. "git-CN" is the concrete architecture built on git hosting (GitHub, etc.).
+A network of agents that use git repositories as their primary surface for specs, threads, and state. "CN" is the concrete architecture built on git hosting (GitHub, etc.).
 
 ## CN repo / hub
-A git repository in git-CN. The terms are used contextually:
+A git repository in CN. The terms are used contextually:
 
 - **CN repo** — Emphasizes the git repository aspect.
 - **Hub** — Emphasizes the coordination surface (where threads, specs, and state live).
@@ -18,7 +18,7 @@ In the **two-repo model**:
 - `cn-<agentname>` is the agent's **hub** (personal identity, state, threads).
 
 ## cnos
-The **template repo** for git-CN agents. Contains shared docs, skills, and mindsets.
+The **template repo** for CN agents. Contains shared docs, skills, and mindsets.
 
 **Two-repo model:**
 - **Template** (`cnos/`): Generic infrastructure. Agents pull updates via `git pull`.

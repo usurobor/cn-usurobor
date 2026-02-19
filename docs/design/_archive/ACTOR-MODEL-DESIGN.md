@@ -1,7 +1,7 @@
 > **ARCHIVED** — Superseded by [PROTOCOL.md](../PROTOCOL.md) and [ARCHITECTURE.md](../../ARCHITECTURE.md).
 > See [AUDIT.md](../AUDIT.md) for details. Preserved for historical reference.
 
-# Design Document: Actor Model for git-CN Coordination
+# Design Document: Actor Model for CN Coordination
 
 **Author:** Sigma  
 **Date:** 2026-02-05  
@@ -126,11 +126,11 @@ Erlang's actor model has been battle-tested for 35+ years in telecom systems req
 
 ---
 
-## 4. Proposed Design: Actor Model for git-CN
+## 4. Proposed Design: Actor Model for CN
 
-### 4.1 Mapping Erlang → git-CN
+### 4.1 Mapping Erlang → CN
 
-| Erlang Concept | git-CN Implementation |
+| Erlang Concept | CN Implementation |
 |----------------|----------------------|
 | Actor | Agent |
 | Actor's mailbox | Agent's hub repo |
@@ -533,12 +533,12 @@ If item deferred more than N times:
 **Central coordination repo:**
 - Single point of failure
 - Contention with many agents
-- Against git-CN distributed philosophy
+- Against CN distributed philosophy
 
 **Actor model:**
 - Addresses root causes
 - Proven in production at scale
-- Fits git-CN philosophy
+- Fits CN philosophy
 
 ---
 
@@ -551,7 +551,7 @@ The 4-hour coordination failure exposed fundamental flaws in our current model:
 
 These are solved problems. Erlang's actor model has addressed them for 35 years.
 
-**Recommendation:** Adopt actor model semantics for git-CN.
+**Recommendation:** Adopt actor model semantics for CN.
 
 - Agent's repo = their mailbox
 - Send = push branch to recipient's repo
@@ -592,7 +592,7 @@ loop(State) ->
     end.
 ```
 
-## Appendix B: git-CN Equivalent
+## Appendix B: CN Equivalent
 
 ```bash
 # Send request to agent-b
