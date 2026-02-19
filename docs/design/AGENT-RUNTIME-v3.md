@@ -222,7 +222,7 @@ The industry has three main patterns for giving LLMs access to context:
 - Tool-loop token growth depends on number/size of tool results and whether the platform supports caching for stable prefixes
 - Latency ranges are estimates based on typical API response times, not benchmarks
 
-#### 1. Tool Loop (OpenAI's Push)
+#### 1. Tool Loop (Multi-Turn Tool-Calling)
 
 ```
 System prompt + user message
@@ -298,7 +298,7 @@ Pre-load everything relevant
 
 **Platform capabilities that enable this design:**
 
-- **Model capability trend:** Larger context windows make single-shot context packing feasible for bounded domains. Claude supports a 200K-token context window ([Claude API — Messages](https://docs.anthropic.com/en/api/messages)), far exceeding cnos's ~6.5K packed context.
+- **Model capability trend:** Larger context windows make single-shot context packing feasible for bounded domains. Claude supports a 200K-token context window (and 1M-token beta for eligible orgs) ([Context Windows](https://docs.anthropic.com/en/docs/build-with-claude/context-windows)), far exceeding cnos's ~6.5K packed context.
 - **Cost/latency lever:** Prompt caching allows reuse of an identical prompt prefix to reduce processing time and cost. Anthropic documents cache-read pricing at a significant discount, with a default TTL of 5 minutes ([Prompt Caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)).
 - **cnos implication:** Because cnos context is bounded and predictable, we prefer eager context packing + single LLM call over multi-turn retrieval loops. For larger or unbounded corpora, just-in-time retrieval remains the better fit.
 
@@ -1063,7 +1063,7 @@ The agent interface is `state/input.md → state/output.md` (conceptual). The LL
 ### External
 - [Telegram Bot API — getUpdates](https://core.telegram.org/bots/api#getupdates)
 - [Anthropic Claude API — Messages](https://docs.anthropic.com/en/api/messages)
-- [Anthropic Claude API — Models (context windows)](https://docs.anthropic.com/en/docs/about-claude/models)
+- [Anthropic Claude — Context Windows](https://docs.anthropic.com/en/docs/build-with-claude/context-windows)
 - [Anthropic Claude API — Prompt Caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)
 - [Anthropic Cookbook — Prompt Caching](https://github.com/anthropics/anthropic-cookbook/blob/main/misc/prompt_caching.ipynb)
 - [systemd Service Units](https://www.freedesktop.org/software/systemd/man/systemd.service.html)
