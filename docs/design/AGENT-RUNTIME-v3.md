@@ -1,6 +1,6 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.0.8
+**Version:** 3.0.9
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
 **Date:** 2026-02-19
 **Status:** Draft
@@ -9,6 +9,11 @@
 ---
 
 ## Patch Notes
+
+**v3.0.9** — Fix context-window citation + future-proof wording:
+- Cite Claude context windows from the canonical Context Windows doc (not Messages API)
+- Note 1M-token context window availability for supported models/orgs (beta)
+- Rename "Tool Loop (OpenAI's Push)" to neutral "Multi-Turn Tool-Calling"
 
 **v3.0.8** — Add industry comparison and decision rationale:
 - Add "Industry Approaches Compared" section after "Why No Tools?"
@@ -215,7 +220,14 @@ If the LLM needs information not in the packed context, that's a signal to impro
 
 The industry has three main patterns for giving LLMs access to context:
 
-#### 1. Tool Loop (OpenAI's Push)
+**Assumptions (illustrative):**
+
+- Packed context ≈ 6.5K tokens (see [Context Packing estimate](#context-packing) below)
+- Output body ≈ 0.5–1.0K tokens typical
+- Tool-loop token growth depends on number/size of tool results and whether the platform supports caching for stable prefixes
+- Latency ranges are estimates based on typical API response times, not benchmarks
+
+#### 1. Tool Loop (Multi-Turn Tool-Calling)
 
 ```
 System prompt + user message
@@ -289,13 +301,29 @@ Pre-load everything relevant
 | **API calls** | 2-5 | **1** |
 | **Latency** | 2-10s (serial) | **1-3s** |
 
-**Anthropic's direction:** They built 200K context windows and prompt caching specifically to enable context stuffing. From their guidance:
+**Platform capabilities that enable this design:**
 
-> "For many use cases, simply providing more context upfront leads to better results than complex retrieval systems."
+- **Model capability trend:** Larger context windows make single-shot context packing feasible for bounded domains. Claude supports a 200K-token context window (and 1M-token beta for eligible orgs) ([Context Windows](https://docs.anthropic.com/en/docs/build-with-claude/context-windows)), far exceeding cnos's ~6.5K packed context.
+- **Cost/latency lever:** Prompt caching allows reuse of an identical prompt prefix to reduce processing time and cost. Anthropic documents cache-read pricing at a significant discount, with a default TTL of 5 minutes ([Prompt Caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)).
+- **cnos implication:** Because cnos context is bounded and predictable, we prefer eager context packing + single LLM call over multi-turn retrieval loops. For larger or unbounded corpora, just-in-time retrieval remains the better fit.
 
-Prompt caching can reduce costs by up to 90% for repeated context — making eager loading economically competitive with lazy loading.
+**Decision:** Tool loops emerged when GPT-3.5 had 4K context — lazy loading was mandatory. With 200K context and prompt caching, stuffing is simpler, faster, and often cheaper. For cnos's bounded, predictable context needs, context stuffing is the right choice.
 
-**Decision:** Tool loops emerged when GPT-3.5 had 4K context — lazy loading was mandatory. With 200K context and caching, stuffing is simpler, faster, and often cheaper. For cnos's bounded, predictable context needs, context stuffing is the right choice.
+#### Prompt Caching Plan
+
+cnos context packing produces a predictable prefix that is mostly stable across invocations:
+
+| Segment | Stability | Cache? |
+|---------|-----------|--------|
+| SOUL, USER, skills, op format spec | Stable across calls | **Yes** — cache as prefix |
+| Hub state (hub.md, peers, reflections) | Changes on writes only | **Yes** — cache; invalidated on hub mutation |
+| Inbound message + recent conversation | Changes every call | **No** — dynamic tail |
+
+**Implementation notes:**
+- Use Anthropic's `cache_control` breakpoint after the stable prefix to mark the cache boundary
+- Default TTL is 5 minutes; cnos's cron cadence (1–5 min) fits within this window
+- Cache-read pricing is discounted vs. fresh input processing — for a ~5K stable prefix, this yields meaningful savings on repeated invocations
+- Monitor cache hit rate via `cache_creation_input_tokens` / `cache_read_input_tokens` in API responses
 
 ---
 
@@ -858,7 +886,7 @@ WantedBy=multi-user.target
 | Implement cn_telegram.ml | Polling + send working |
 | Implement cn_llm.ml | Claude API (single call, no tools) |
 | Implement cn_context.ml | Context packing from hub artifacts |
-| Implement cn_runtime.ml | Pack → call → write → execute → archive |
+| Implement cn_runtime.ml | Pack → call → write → archive → resolve/execute → projection |
 | Integration test | --stdio mode works end-to-end |
 
 ### Phase 2: Parallel Operation (Week 2)
@@ -1040,8 +1068,11 @@ The agent interface is `state/input.md → state/output.md` (conceptual). The LL
 ### External
 - [Telegram Bot API — getUpdates](https://core.telegram.org/bots/api#getupdates)
 - [Anthropic Claude API — Messages](https://docs.anthropic.com/en/api/messages)
+- [Anthropic Claude — Context Windows](https://docs.anthropic.com/en/docs/build-with-claude/context-windows)
+- [Anthropic Claude API — Prompt Caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)
+- [Anthropic Cookbook — Prompt Caching](https://github.com/anthropics/anthropic-cookbook/blob/main/misc/prompt_caching.ipynb)
 - [systemd Service Units](https://www.freedesktop.org/software/systemd/man/systemd.service.html)
 
 ---
 
-*Document version 3.0.7. For comments and iteration, contact reviewers or open a thread in the hub.*
+*Document version 3.0.9. For comments and iteration, contact reviewers or open a thread in the hub.*

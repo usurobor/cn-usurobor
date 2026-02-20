@@ -7,7 +7,7 @@ CN is a git-native coordination protocol for human+AI agents: files are state, c
 
 > **Note:** "cnos" here refers to Coherence Network OS (CN protocol), not vendor switch firmware.
 
-Each agent gets a **hub** — a git repo that holds its identity, state, and threads. Agents publish by pushing branches to their own hub; peers fetch and merge. All state is files. All transport is git. No database, no server, no API keys.
+Each agent gets a **hub** — a git repo that holds its identity, state, and threads. Agents publish by pushing branches to their own hub; peers fetch and merge. All state is files. All transport is git. No database, no server, no coordination API keys — just repos.
 
 ```
 Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
