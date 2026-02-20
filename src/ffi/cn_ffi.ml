@@ -13,12 +13,14 @@ module Process = struct
     let argv = Array.of_list (prog :: args) in
     let stdin_r, stdin_w = Unix.pipe ~cloexec:true () in
     let stdout_r, stdout_w = Unix.pipe ~cloexec:true () in
-    let stderr_r, stderr_w = Unix.pipe ~cloexec:true () in
-    let pid = Unix.create_process prog argv stdin_r stdout_w stderr_w in
+    (* Merge stderr into stdout — avoids deadlock from sequential reads
+       on two pipes. Callers that need stderr separately can use a
+       different primitive; for curl, --show-error puts errors on stderr
+       which we merge so everything arrives on one fd. *)
+    let pid = Unix.create_process prog argv stdin_r stdout_w stdout_w in
     (* Parent closes child-side fds *)
     Unix.close stdin_r;
     Unix.close stdout_w;
-    Unix.close stderr_w;
     (* Write stdin_data, then close to signal EOF *)
     if stdin_data <> "" then begin
       let b = Bytes.of_string stdin_data in
@@ -31,27 +33,25 @@ module Process = struct
       write_all 0
     end;
     Unix.close stdin_w;
-    (* Read stdout and stderr *)
-    let read_fd fd =
-      let buf = Buffer.create 4096 in
-      let tmp = Bytes.create 4096 in
-      let rec loop () =
-        match Unix.read fd tmp 0 4096 with
-        | 0 -> ()
-        | n -> Buffer.add_subbytes buf tmp 0 n; loop ()
-        | exception Unix.Unix_error (Unix.EINTR, _, _) -> loop ()
-      in
-      loop (); Unix.close fd; Buffer.contents buf
+    (* Read merged stdout+stderr *)
+    let buf = Buffer.create 4096 in
+    let tmp = Bytes.create 4096 in
+    let rec loop () =
+      match Unix.read stdout_r tmp 0 4096 with
+      | 0 -> ()
+      | n -> Buffer.add_subbytes buf tmp 0 n; loop ()
+      | exception Unix.Unix_error (Unix.EINTR, _, _) -> loop ()
     in
-    let stdout_s = read_fd stdout_r in
-    let stderr_s = read_fd stderr_r in
+    loop ();
+    Unix.close stdout_r;
+    let output = Buffer.contents buf in
     let _, status = Unix.waitpid [] pid in
     let code = match status with
       | Unix.WEXITED c -> c
       | Unix.WSIGNALED s -> 128 + s
       | Unix.WSTOPPED s -> 128 + s
     in
-    (code, stdout_s, stderr_s)
+    (code, output)
 end
 
 module Fs = struct
@@ -153,18 +153,20 @@ module Http = struct
         (Printf.sprintf "header = \"%s: %s\"\n" (curl_quote k) (curl_quote v))
     ) headers;
     (match body with
-     | Some b -> Buffer.add_string buf (Printf.sprintf "data = \"%s\"\n" (curl_quote b))
+     | Some b -> Buffer.add_string buf (Printf.sprintf "data-raw = \"%s\"\n" (curl_quote b))
      | None -> ());
+    Buffer.add_string buf "connect-timeout = 10\n";
+    Buffer.add_string buf "max-time = 120\n";
     Buffer.add_string buf "silent\n";
     Buffer.add_string buf "show-error\n";
     Buffer.add_string buf "fail\n";
     let config = Buffer.contents buf in
-    let code, stdout_s, stderr_s =
+    let code, output =
       Process.exec_args ~prog:"curl" ~args:["--config"; "-"]
         ~stdin_data:config ()
     in
-    if code = 0 then Ok stdout_s
-    else Error (Printf.sprintf "curl exit %d: %s" code (String.trim stderr_s))
+    if code = 0 then Ok output
+    else Error (Printf.sprintf "curl exit %d: %s" code (String.trim output))
 
   let post ~url ~headers ~body =
     request ~meth:"POST" ~url ~headers ~body:(Some body)
