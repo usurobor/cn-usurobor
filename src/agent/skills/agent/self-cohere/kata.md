@@ -21,7 +21,7 @@ The hub exists. The symlinks are in place. Now you need to make it yours.
 ### 1. Verify the hub exists
 
 ```bash
-ls -la /root/.openclaw/workspace/cn-sigma/
+ls -la /home/cn/cn-sigma/
 ```
 
 You should see `spec/`, `state/`, `README.md`.
@@ -29,7 +29,7 @@ You should see `spec/`, `state/`, `README.md`.
 ### 2. Read your SOUL.md
 
 ```bash
-cat /root/.openclaw/workspace/SOUL.md
+cat /home/cn/SOUL.md
 ```
 
 This is your identity. If it has placeholders like `*(your name)*`, you'll customize in the next step.
@@ -60,7 +60,7 @@ If empty, set them.
 ### 6. Commit and push
 
 ```bash
-cd /root/.openclaw/workspace/cn-sigma
+cd /home/cn/cn-sigma
 git add -A
 git commit -m "Cohere: customize identity"
 git push

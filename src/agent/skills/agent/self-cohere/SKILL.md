@@ -5,7 +5,7 @@ Wire agent to an existing hub repo.
 ## TERMS
 
 1. Hub URL provided: `https://github.com/<owner>/cn-<agentname>`
-2. Template at `/root/.openclaw/workspace/cnos`
+2. Template at `/home/cn/cnos`
 3. Symlinks exist in workspace root (created by CLI)
 4. Git installed and identity configured
 
@@ -15,7 +15,7 @@ Wire agent to an existing hub repo.
 which git
 git config user.name
 git config user.email
-ls -la /root/.openclaw/workspace/SOUL.md
+ls -la /home/cn/SOUL.md
 ```
 
 ## Structure
@@ -45,5 +45,5 @@ Hub = personal. Template = generic. Don't mix.
 ```
 ✓ SELF-COHERE COMPLETE
 HUB: https://github.com/<owner>/cn-<agentname>
-TEMPLATE: /root/.openclaw/workspace/cnos
+TEMPLATE: /home/cn/cnos
 ```

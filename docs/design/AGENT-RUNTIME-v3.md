@@ -1,6 +1,6 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.1.0
+**Version:** 3.1.1
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
 **Date:** 2026-02-19
 **Status:** Draft
@@ -9,6 +9,11 @@
 ---
 
 ## Patch Notes
+
+**v3.1.1** — Align dependency story + remove premature config knobs:
+- Appendix A: replace OCaml HTTP stack with curl-backed HTTP rationale
+- Constraint #3: "zero runtime deps" → "minimal system deps (git + curl)"
+- Remove `runtime.context` knobs from config (fixed defaults in v3.1.x)
 
 **v3.1.0** — Align config + CLI with implementation plan:
 - Config: `.cn/agent.yaml` → `.cn/config.json` (reuses `cn_json.ml`, matches hub discovery)
@@ -135,7 +140,7 @@ The missing pieces are:
 
 1. **Pure OCaml** — No Python, JavaScript, or external runtimes
 2. **Minimal dependencies** — Prefer stdlib; add only essential libraries
-3. **Single binary** — Native executable, zero runtime dependencies
+3. **Single binary + minimal system deps** — Native executable; requires only `git` and `curl` at runtime (no opam deps, no OCaml HTTP stack)
 4. **Agent purity** — LLM = pure function, cn = all effects (per SECURITY-MODEL.md)
 5. **Backward compatible** — Existing hub structure unchanged, existing ops unchanged
 6. **CN-native** — Reuses IO-pair archival, actor FSM, op execution — not a parallel system
@@ -850,18 +855,14 @@ CN_MODEL          Model override (default: claude-sonnet-4-latest)
     "allowed_users": [498316684],
     "poll_interval": 1,
     "poll_timeout": 30,
-    "max_tokens": 8192,
-    "context": {
-      "daily_threads": 3,
-      "weekly_thread": true,
-      "max_skills": 3,
-      "conversation_limit": 10
-    }
+    "max_tokens": 8192
   }
 }
 ```
 
 Hub discovery already checks for `.cn/config.json` (see `cn_hub.ml:find_hub_path`). Parsed via `cn_json.ml` — the same parser used for API responses and conversation history. No YAML dependency.
+
+Context packing limits (last 3 daily reflections, top 3 skills, last 10 conversation messages) are fixed defaults in v3.1.x. Configurable knobs may be added in a future version if operational experience warrants it.
 
 ### systemd Unit
 
@@ -1010,24 +1011,31 @@ v1 targets functional parity with minimal scope. v2 features are explicitly defe
 
 ## Appendix A: Dependency Audit
 
-### Required OCaml Libraries
+### Approach: curl-backed HTTP (no OCaml HTTP stack)
 
-| Library | Purpose | Notes |
-|---------|---------|-------|
-| `cohttp-lwt-unix` | HTTP client | Telegram + Claude API calls |
-| `yojson` | JSON parsing | API payloads |
-| `lwt` | Async I/O | Non-blocking network |
-| `tls` + `ca-certs` | HTTPS | Secure connections |
+The runtime uses `curl` as an explicit system dependency for all HTTPS calls (Telegram Bot API, Anthropic Messages API). JSON is parsed by a hand-rolled `cn_json.ml` module (~200 lines).
+
+**Rejected alternative:** `cohttp-lwt-unix` + `yojson` + `lwt` + `tls` + `ca-certs` would add ~4 opam dependencies and pull in the Lwt async runtime. This was rejected to keep the build trivial (stdlib + Unix only) and avoid opam dependency management.
+
+### System Dependencies
+
+| Dependency | Purpose | Check |
+|------------|---------|-------|
+| `git` | Transport, hub storage | `cn doctor` (existing) |
+| `curl` | HTTPS for Telegram + Claude APIs | `cn doctor` (new) |
+
+### Security
+
+API keys and request bodies are passed to `curl` via stdin (`curl --config -`), never on the command line. See `Cn_ffi.Http` module. JSON request bodies are guaranteed single-line to prevent curl-config directive injection.
 
 ### Build Impact
 
 | Metric | Current | With Agent |
 |--------|---------|------------|
-| Binary size | 2.1 MB | ~4 MB |
-| Dependencies | 12 | 16 |
-| Compile time | 8s | ~12s |
-
-Still single native binary with zero runtime dependencies.
+| Binary size | 2.1 MB | ~2.5 MB |
+| OCaml dependencies | 0 (stdlib + Unix) | 0 (unchanged) |
+| System dependencies | `git` | `git` + `curl` |
+| Compile time | 8s | ~10s |
 
 ---
 
@@ -1086,4 +1094,4 @@ The agent interface is `state/input.md → state/output.md` (conceptual). The LL
 
 ---
 
-*Document version 3.1.0. For comments and iteration, contact reviewers or open a thread in the hub.*
+*Document version 3.1.1. For comments and iteration, contact reviewers or open a thread in the hub.*

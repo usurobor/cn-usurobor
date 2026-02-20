@@ -284,19 +284,11 @@ let feed_next_input hub_path =
       true
 
 (* === Wake agent === *)
+(* DEPRECATED: OpenClaw removed. Will be replaced by Cn_runtime.process_one.
+   Kept as a stub so run_inbound compiles until cn_runtime.ml lands. *)
 
-let wake_agent hub_path =
-  let inp = input_path hub_path in
-  if not (Cn_ffi.Fs.exists inp) then begin
-    print_endline (Cn_fmt.warn "No input.md to wake with");
-  end else begin
-    let content = Cn_ffi.Fs.read inp in
-    print_endline (Cn_fmt.info "Triggering OpenClaw wake with input content...");
-    let wake_cmd = Printf.sprintf "openclaw system event --text %s --mode now 2>/dev/null" (Filename.quote content) in
-    match Cn_ffi.Child_process.exec wake_cmd with
-    | Some _ -> print_endline (Cn_fmt.ok "Wake triggered with input content")
-    | None -> print_endline (Cn_fmt.warn "Wake trigger failed - is OpenClaw running?")
-  end
+let wake_agent _hub_path =
+  print_endline (Cn_fmt.warn "wake_agent: OpenClaw removed. Native runtime not yet wired (see PLAN.md Step 8-9)")
 
 (* === Queue Commands === *)
 

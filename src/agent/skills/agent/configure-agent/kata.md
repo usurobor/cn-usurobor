@@ -60,7 +60,7 @@ Ask: "Does this look right?"
 ### 6. Commit and push
 
 ```bash
-cd /root/.openclaw/workspace/cn-<name>
+cd /home/cn/cn-<name>
 git add spec/
 git commit -m "Configure: personalize identity and preferences"
 git push
