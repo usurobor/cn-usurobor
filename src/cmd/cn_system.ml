@@ -87,6 +87,15 @@ let run_doctor hub_path =
      | Some v -> { name = "git user.email"; passed = true; value = String.trim v }
      | None -> { name = "git user.email"; passed = false; value = "not set" });
 
+    (match Cn_ffi.Child_process.exec "curl --version" with
+     | Some v ->
+         let line = match String.split_on_char '\n' (String.trim v) with
+           | first :: _ -> first | [] -> v in
+         let value = match String.split_on_char ' ' line with
+           | _ :: ver :: _ -> ver | _ -> String.trim v in
+         { name = "curl"; passed = true; value }
+     | None -> { name = "curl"; passed = false; value = "not installed (required for agent runtime)" });
+
     { name = "hub directory"; passed = Cn_ffi.Fs.exists hub_path;
       value = if Cn_ffi.Fs.exists hub_path then "exists" else "not found" };
 
