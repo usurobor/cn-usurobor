@@ -100,9 +100,10 @@ Add `exec_args` that uses `Unix.create_process` (argv array, no shell):
 module Process : sig
   (* ... existing ... *)
   val exec_args : prog:string -> args:string list -> ?stdin_data:string -> unit
-                  -> (int * string * string)
+                  -> (int * string)
   (** Run [prog] with [args]. Passes [stdin_data] on stdin if provided.
-      Returns (exit_code, stdout, stderr). No shell interpretation. *)
+      Returns (exit_code, output). Stderr is merged into stdout to avoid
+      pipe deadlocks. No shell interpretation. *)
 end
 ```
 
@@ -119,7 +120,7 @@ end
 
 Implementation: builds a curl config string (url, headers, body) and pipes it to `curl --config -` via `exec_args ~stdin_data`. API keys and request bodies never appear on the command line.
 
-**Curl config injection hardening:** The JSON request body must be serialized as single-line JSON with all newlines escaped before embedding in the curl config `data` directive. This prevents user-provided text (e.g., Telegram messages containing newlines) from producing new curl-config directives. `Cn_json.to_string` must guarantee single-line output.
+**Curl config injection hardening:** The JSON request body must be serialized as single-line JSON with all newlines escaped before embedding in the curl config `data-raw` directive (not `data`, which interprets a leading `@` as a file path). Default timeouts (`connect-timeout = 10`, `max-time = 120`) bound network stalls. `Cn_json.to_string` must guarantee single-line output.
 
 Also add a `curl` availability check for `cn doctor`.
 

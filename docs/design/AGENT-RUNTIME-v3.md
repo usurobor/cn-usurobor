@@ -1,6 +1,6 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.1.1
+**Version:** 3.1.2
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
 **Date:** 2026-02-19
 **Status:** Draft
@@ -9,6 +9,11 @@
 ---
 
 ## Patch Notes
+
+**v3.1.2** — Harden curl-backed HTTP + safe exec:
+- Use `data-raw` (not `data`) to prevent curl `@file` body interpretation
+- Add default timeouts (`connect-timeout = 10`, `max-time = 120`) to bound stalls
+- Merge stderr into stdout in `exec_args` to avoid pipe deadlocks; returns `(code, output)`
 
 **v3.1.1** — Align dependency story + remove premature config knobs:
 - Appendix A: replace OCaml HTTP stack with curl-backed HTTP rationale
@@ -1026,7 +1031,7 @@ The runtime uses `curl` as an explicit system dependency for all HTTPS calls (Te
 
 ### Security
 
-API keys and request bodies are passed to `curl` via stdin (`curl --config -`), never on the command line. See `Cn_ffi.Http` module. JSON request bodies are guaranteed single-line to prevent curl-config directive injection.
+API keys and request bodies are passed to `curl` via stdin (`curl --config -`), never on the command line. The `data-raw` directive is used (not `data`, which interprets a leading `@` as a file path). JSON request bodies are guaranteed single-line to prevent curl-config directive injection. Default timeouts (`connect-timeout = 10`, `max-time = 120`) bound network stalls. See `Cn_ffi.Http` module.
 
 ### Build Impact
 
