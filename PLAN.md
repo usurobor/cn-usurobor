@@ -7,16 +7,56 @@ Replace OpenClaw dependency with a native OCaml runtime. After this, `cn agent -
 ## Current State
 
 - **Already implemented:** Queue FIFO, actor FSM loop (`run_inbound`), op execution (`execute_op`), archive IO pairs, GTD lifecycle, all 4 FSMs, `cn_ffi.ml` system bindings
-- **Missing:** Claude API client, Telegram client, context packer, config parser, `extract_body` helper
+- **Missing:** Claude API client, Telegram client, context packer, config loader, `extract_body` helper
 - **To modify:** `wake_agent` (currently shells out to OpenClaw), `run_inbound` (needs to integrate native runtime)
+- **To purge:** OpenClaw references in `cn_agent.ml` and `cn_system.ml` (runtime status), plus stale OpenClaw paths in skill kata files
 
 ## Dependency Decision
 
 The codebase currently has **zero external OCaml dependencies** (stdlib + Unix only). The design doc suggests `cohttp-lwt-unix`, `yojson`, `lwt`, `tls`, `ca-certs`. This is a major dependency cliff.
 
-**Plan:** Stay dependency-free. Use `Unix` sockets + hand-rolled HTTP for the two API endpoints we need (Telegram Bot API, Anthropic Messages API). Both are simple JSON-over-HTTPS POST/GET calls. This matches the codebase philosophy — `cn_ffi.ml` already wraps `Unix`, and `git.ml` already shells out to `curl` isn't needed either since we can use the existing `Cn_ffi.Child_process.exec` to call `curl` for HTTPS (avoiding TLS library dependency entirely).
+**Plan:** Stay dependency-free. Use `curl` as an explicit system dependency for HTTPS calls to Telegram and Anthropic APIs. Parse JSON with a minimal hand-rolled module. This keeps the build trivial and avoids opam dependency management.
 
-**Pragmatic approach:** Use `curl` via `Cn_ffi.Child_process.exec` for HTTPS calls (same pattern as `git.ml` shelling out to `git`). Parse JSON with a minimal hand-rolled parser or a lightweight single-file JSON module. This keeps the build trivial and avoids opam dependency management.
+**curl is an explicit dependency** — not implicitly present. Git may bundle libcurl internally without exposing the `curl` CLI. We must:
+- Check for `curl` in `cn doctor`
+- Document `curl` as a prerequisite in `install.sh`
+- Fail early with an actionable error if `curl` is not found
+
+**Security: secrets never appear on argv.** The current `Cn_ffi.Child_process.exec` runs shell strings via `Unix.open_process_in`. API keys and untrusted Telegram text must never be interpolated into shell command strings. Before any HTTP work, we add a safe process runner that uses `Unix.create_process` (argv array, no shell interpretation) and passes request bodies + headers via stdin using `curl --config -`.
+
+## Daemon vs Cron Stance
+
+The repo's public framing is cron-driven ("core loop driven by cn on a cron cycle"). AGENT-RUNTIME v3 also documents daemon mode for Telegram ingress.
+
+**Canonical stance:** Cron is the default deployment. `--daemon` is an optional Telegram bridge (projection adapter) for real-time interaction. Both modes use the same `cn_runtime.ml` processing pipeline.
+
+- `cn agent` (no flags) — existing cron-driven `run_inbound` loop (unchanged)
+- `cn agent --process` — single-shot processing (called by cron or daemon)
+- `cn agent --daemon` — optional Telegram long-poll bridge
+- `cn agent --stdio` — interactive testing mode
+
+## Config: `.cn/config.yaml` (not `agent.yaml`)
+
+Hub discovery already looks for `.cn/config.yaml` (in `cn_hub.ml:find_hub_path`). We keep one config file. Agent runtime settings go under a new `runtime:` key in the existing config structure.
+
+Config is env-var-first (simpler, more Unixy), with `.cn/config.yaml` for non-secret settings:
+
+**Environment variables (secrets + overrides):**
+- `TELEGRAM_TOKEN` — Telegram bot token
+- `ANTHROPIC_KEY` — Claude API key
+- `CN_MODEL` — model ID (default: `claude-sonnet-4-latest`)
+
+**`.cn/config.yaml` (non-secrets):**
+```yaml
+runtime:
+  allowed_users:
+    - 498316684
+  poll_interval: 1
+  poll_timeout: 30
+  max_tokens: 8192
+```
+
+Since we avoid a YAML parser dep, we parse only the flat subset of YAML actually used (key: value lines + simple lists). No nested objects, no anchors, no flow syntax.
 
 ## Architecture (fits existing layer model)
 
@@ -29,15 +69,56 @@ Layer 3  cn_agent.ml — modify wake_agent + run_inbound
 Layer 2  cn_context.ml (NEW) — load hub artifacts, pack input.md
          cn_telegram.ml (NEW) — getUpdates, sendMessage via curl
          cn_llm.ml (NEW) — Claude Messages API via curl
-         cn_config.ml (NEW) — parse agent.yaml (simple key-value, no YAML lib)
+         cn_config.ml (NEW) — env + .cn/config.yaml loader
          |
-Layer 1  cn_lib.ml — add extract_body
-         cn_ffi.ml — add curl helper (exec_json_post, exec_json_get)
+Layer 1  cn_lib.ml — add extract_body, resolve_payload
+         cn_json.ml (NEW) — minimal JSON parser/emitter (pure)
+         cn_ffi.ml — add safe exec_args + Http module (curl via stdin)
 ```
 
 ## Implementation Steps
 
-### Step 1: Add `extract_body` to `cn_lib.ml`
+### Step 0: Purge OpenClaw references
+
+Remove all OpenClaw fingerprints so "dependency removed" is true both functionally and cosmetically.
+
+Files to clean:
+- `src/cmd/cn_agent.ml` — `wake_agent` (replaced in Step 9)
+- `src/cmd/cn_system.ml` — `openclaw --version` in runtime status (line 19), `openclaw_version` output (line 50)
+- `src/agent/skills/agent/self-cohere/SKILL.md` — stale `/root/.openclaw/` paths
+- `src/agent/skills/agent/self-cohere/kata.md` — stale `/root/.openclaw/` paths
+- `src/agent/skills/agent/configure-agent/kata.md` — stale `/root/.openclaw/` paths
+
+### Step 1: Add safe process execution to `cn_ffi.ml`
+
+Add `exec_args` that uses `Unix.create_process` (argv array, no shell):
+
+```ocaml
+module Process : sig
+  (* ... existing ... *)
+  val exec_args : prog:string -> args:string list -> ?stdin_data:string -> unit
+                  -> (int * string * string)
+  (** Run [prog] with [args]. Passes [stdin_data] on stdin if provided.
+      Returns (exit_code, stdout, stderr). No shell interpretation. *)
+end
+```
+
+Then build the `Http` module on top:
+
+```ocaml
+module Http : sig
+  val post : url:string -> headers:(string * string) list -> body:string
+             -> (string, string) result
+  val get : url:string -> headers:(string * string) list
+            -> (string, string) result
+end
+```
+
+Implementation: builds a curl config string (url, headers, body) and pipes it to `curl --config -` via `exec_args ~stdin_data`. API keys and request bodies never appear on the command line.
+
+Also add a `curl` availability check for `cn doctor`.
+
+### Step 2: Add `extract_body` and `resolve_payload` to `cn_lib.ml`
 
 Add the body extraction helper specified in the design doc. Pure function, no deps.
 
@@ -51,28 +132,26 @@ let extract_body content =
   | _ -> None
 ```
 
-Also add `resolve_payload` for body consumption rules.
+Add `resolve_payload` for body consumption rules:
+
+```ocaml
+let resolve_payload body = function
+  | Reply (id, msg) -> Reply (id, Option.value body ~default:msg)
+  | Send (peer, msg, None) -> Send (peer, msg, body)
+  | op -> op
+```
 
 **Test:** Add cases to `test/lib/cn_test.ml`.
 
-### Step 2: Add HTTP helpers to `cn_ffi.ml`
-
-Add `curl`-based HTTP helpers. Two functions:
-
-- `Http.post_json ~url ~headers ~body` → `string option` (shells out to curl)
-- `Http.get_json ~url ~headers` → `string option`
-
-Uses `curl -s -X POST -H "..." -d '...'` — same exec pattern as `git.ml`.
-
 ### Step 3: Add minimal JSON module (`cn_json.ml` in `src/lib/`)
 
-Minimal JSON parser/emitter (~150 lines). Types:
+Minimal JSON parser/emitter (~200 lines). Types:
 
 ```ocaml
 type t = Null | Bool of bool | Int of int | Float of float | String of string
        | Array of t list | Object of (string * t) list
 
-val parse : string -> t
+val parse : string -> (t, string) result
 val to_string : t -> string
 val get : string -> t -> t option
 val get_string : string -> t -> string option
@@ -80,30 +159,38 @@ val get_int : string -> t -> int option
 val get_list : string -> t -> t list option
 ```
 
-Only needs to handle the subset of JSON that Telegram and Anthropic APIs return. No streaming, no unicode escapes beyond `\n\t\"\\`.
+**Must handle:**
+- Standard escape sequences: `\" \\ \/ \b \f \n \r \t`
+- Unicode escapes: `\uXXXX` (Telegram sends these for emoji/non-ASCII)
+- Nested objects and arrays (Anthropic response has `content[0].text`)
+- Unknown fields ignored (forward compatibility)
+- UTF-8 passthrough (don't decode/re-encode)
+
+**Test corpus:** Include real captured responses from Telegram `getUpdates` and Anthropic `/v1/messages` as test fixtures. Test `\uXXXX` handling, escaped quotes in message text, and cache metric fields (`cache_creation_input_tokens`, `cache_read_input_tokens`) being optional.
 
 ### Step 4: Create `cn_config.ml` (Layer 2, `src/cmd/`)
 
-Parse `.cn/agent.yaml` — but since we avoid YAML deps, use a simple line-oriented format or parse the subset of YAML that agent.yaml uses (flat key-value with env var expansion).
-
-Alternatively: read config from environment variables only (simpler, more Unixy):
-- `TELEGRAM_TOKEN` — already specified in design doc
-- `ANTHROPIC_KEY` — already specified in design doc
-- `CN_MODEL` — default `claude-sonnet-4-latest`
-- `CN_POLL_INTERVAL` — default 1
-- `CN_ALLOWED_USERS` — comma-separated user IDs
+Load config from env vars + `.cn/config.yaml`:
 
 ```ocaml
 type config = {
-  telegram_token : string;
+  telegram_token : string option;  (* None = no Telegram *)
   anthropic_key : string;
   model : string;
   poll_interval : int;
+  poll_timeout : int;
+  max_tokens : int;
   allowed_users : int list;
   hub_path : string;
 }
-val load : hub_path:string -> config
+
+val load : hub_path:string -> (config, string) result
 ```
+
+- Secrets from env only (never from files)
+- Non-secrets from `.cn/config.yaml` under `runtime:` key, with env overrides
+- `ANTHROPIC_KEY` required for `--process` / `--daemon`; error if missing
+- `TELEGRAM_TOKEN` required only for `--daemon`
 
 ### Step 5: Create `cn_llm.ml` (Layer 2, `src/cmd/`)
 
@@ -115,16 +202,17 @@ type response = {
   stop_reason : string;
   input_tokens : int;
   output_tokens : int;
-  cache_creation_input_tokens : int;
-  cache_read_input_tokens : int;
+  cache_creation_input_tokens : int;  (* 0 if not in response *)
+  cache_read_input_tokens : int;      (* 0 if not in response *)
 }
 
-val call : api_key:string -> model:string -> content:string -> (response, string) result
+val call : api_key:string -> model:string -> max_tokens:int -> content:string
+           -> (response, string) result
 ```
 
-Implementation: Build JSON request body, POST to `https://api.anthropic.com/v1/messages`, parse JSON response. Uses `Cn_ffi.Http.post_json`. No tools, no streaming — single user message in, single text response out.
+Implementation: Build JSON request body, POST to `https://api.anthropic.com/v1/messages`, parse JSON response via `Cn_json`. No tools, no streaming — single user message in, single text response out.
 
-Retry: 3x with exponential backoff (1s, 2s, 4s) on 5xx/timeout.
+Retry: 3x with exponential backoff (1s, 2s, 4s) on 5xx/timeout. Non-retryable errors (4xx) fail immediately.
 
 ### Step 6: Create `cn_telegram.ml` (Layer 2, `src/cmd/`)
 
@@ -141,11 +229,11 @@ type message = {
   update_id : int;
 }
 
-val get_updates : token:string -> offset:int -> timeout:int -> message list
+val get_updates : token:string -> offset:int -> timeout:int -> (message list, string) result
 val send_message : token:string -> chat_id:int -> text:string -> (unit, string) result
 ```
 
-Uses long-polling `getUpdates` with `timeout` param. Filters by `allowed_users`.
+Uses long-polling `getUpdates` with `timeout` param. Filters by `allowed_users` in the caller (cn_runtime), not here.
 
 ### Step 7: Create `cn_context.ml` (Layer 2, `src/cmd/`)
 
@@ -187,11 +275,12 @@ Pipeline:
 2. **Pack** — `Cn_context.pack` → write `state/input.md`
 3. **Call** — `Cn_llm.call` with packed content
 4. **Write** — write `state/output.md`
-5. **Archive** — copy input+output to `logs/` (BEFORE effects)
+5. **Archive** — copy input+output to `logs/` (**BEFORE effects**)
 6. **Parse** — `Cn_lib.parse_frontmatter` + `Cn_lib.extract_ops` + `Cn_lib.extract_body`
-7. **Resolve** — apply body consumption rules
+7. **Resolve** — apply body consumption rules via `Cn_lib.resolve_payload`
 8. **Execute** — `Cn_agent.execute_op` for each op
 9. **Project** — if from Telegram, `Cn_telegram.send_message` with full payload
+10. **Conversation** — append exchange to `state/conversation.json`
 
 FSM transitions at each step via `Cn_protocol.actor_transition`.
 
@@ -208,12 +297,13 @@ let wake_agent hub_path config =
 
 Update `run_inbound` to pass config through.
 
-### Step 10: Add daemon mode to `cn.ml`
+### Step 10: Add CLI modes to `cn.ml`
 
-Add `--daemon` flag routing:
-- `cn agent --daemon` → `Cn_telegram.poll_loop` (long-running)
-- `cn agent --process` → `Cn_runtime.process` (single-shot, existing path)
+Add routing for agent subcommand modes:
+- `cn agent --daemon` → Telegram long-poll loop (requires `TELEGRAM_TOKEN`)
+- `cn agent --process` → single-shot `Cn_runtime.process`
 - `cn agent --stdio` → interactive mode (read stdin, process, print output)
+- `cn agent` (no flags) → existing `run_inbound` cron path (unchanged)
 
 ### Step 11: Update dune files
 
@@ -236,15 +326,18 @@ Add `state/conversation.json` management:
 - `cn_context.ml` reads last 10 entries when packing
 - Simple append-only JSON array file
 
-### Step 13: Update `ARCHITECTURE.md`
+### Step 13: Update docs
 
-Add new modules to the module structure diagram and dependency layers.
+- `ARCHITECTURE.md` — add new modules to structure diagram and dependency layers
+- `install.sh` — add `curl` prerequisite check
+- `cn doctor` — add `curl --version` health check
 
 ### Step 14: Tests
 
-- `test/lib/cn_test.ml` — add `extract_body` tests, JSON parser tests
+- `test/lib/cn_test.ml` — add `extract_body` tests, `resolve_payload` tests
+- `test/lib/cn_json_test.ml` — JSON parser tests with real API response fixtures
 - `test/cmd/cn_cmd_test.ml` — add config loading tests
-- New `test/cmd/cn_runtime_test.ml` — test resolve_payload, context packing logic (mock the LLM call)
+- New `test/cmd/cn_runtime_test.ml` — test context packing logic, pipeline sequencing
 
 ## File Change Summary
 
@@ -253,35 +346,39 @@ Add new modules to the module structure diagram and dependency layers.
 | `src/lib/cn_lib.ml` | Edit — add `extract_body`, `resolve_payload` | +30 |
 | `src/lib/cn_json.ml` | **New** — minimal JSON parser/emitter | ~200 |
 | `src/lib/dune` | Edit — add `cn_json` module | +1 |
-| `src/ffi/cn_ffi.ml` | Edit — add `Http.post_json`, `Http.get_json` | +30 |
-| `src/cmd/cn_config.ml` | **New** — env-based config loading | ~60 |
-| `src/cmd/cn_llm.ml` | **New** — Claude API client via curl | ~120 |
-| `src/cmd/cn_telegram.ml` | **New** — Telegram Bot API client via curl | ~130 |
+| `src/ffi/cn_ffi.ml` | Edit — add `exec_args` + `Http` module | +60 |
+| `src/cmd/cn_config.ml` | **New** — env + config.yaml loader | ~80 |
+| `src/cmd/cn_llm.ml` | **New** — Claude API client via curl stdin | ~120 |
+| `src/cmd/cn_telegram.ml` | **New** — Telegram Bot API client via curl stdin | ~130 |
 | `src/cmd/cn_context.ml` | **New** — context packer | ~180 |
-| `src/cmd/cn_runtime.ml` | **New** — orchestrator pipeline | ~120 |
+| `src/cmd/cn_runtime.ml` | **New** — orchestrator pipeline | ~130 |
 | `src/cmd/cn_agent.ml` | Edit — replace `wake_agent`, update `run_inbound` | ~30 changed |
+| `src/cmd/cn_system.ml` | Edit — remove OpenClaw version check | ~10 changed |
 | `src/cmd/dune` | Edit — add new modules | +2 |
 | `src/cli/cn.ml` | Edit — add `--daemon`/`--stdio` routing | ~20 |
-| `docs/ARCHITECTURE.md` | Edit — add new modules to diagram | ~10 |
+| `docs/ARCHITECTURE.md` | Edit — add new modules to diagram | ~15 |
 | `test/lib/cn_test.ml` | Edit — add tests | +40 |
-| **Total new code** | | **~900 lines** |
+| `test/lib/cn_json_test.ml` | **New** — JSON parser tests with fixtures | ~100 |
+| **Total new code** | | **~1000 lines** |
 
 ## Order of Implementation
 
-1. `cn_json.ml` + `cn_lib.ml` additions (pure, testable immediately)
-2. `cn_ffi.ml` HTTP helpers (curl-based, can test manually)
-3. `cn_config.ml` (env-based, simple)
-4. `cn_llm.ml` (depends on 1-3)
-5. `cn_telegram.ml` (depends on 1-3)
-6. `cn_context.ml` (depends on 1, uses cn_ffi for file reads)
-7. `cn_runtime.ml` (depends on 4-6, ties everything together)
-8. `cn_agent.ml` + `cn.ml` modifications (depends on 7)
-9. Tests + docs
-10. dune file updates (can be done incrementally)
+1. **Step 0:** Purge OpenClaw references (clean slate)
+2. **Step 1:** `cn_ffi.ml` safe exec + Http module (security foundation)
+3. **Steps 2-3:** `cn_lib.ml` additions + `cn_json.ml` (pure, testable immediately)
+4. **Step 4:** `cn_config.ml` (env-based, simple)
+5. **Step 5:** `cn_llm.ml` (depends on 1-3)
+6. **Step 6:** `cn_telegram.ml` (depends on 1-3)
+7. **Step 7:** `cn_context.ml` (depends on 2, uses cn_ffi for file reads)
+8. **Step 8:** `cn_runtime.ml` (depends on 5-7, ties everything together)
+9. **Step 9:** `cn_agent.ml` wake_agent replacement (depends on 8)
+10. **Step 10:** `cn.ml` CLI routing (depends on 8-9)
+11. **Steps 11-14:** dune files, docs, tests (incremental)
 
 ## Risk Mitigation
 
-- **No OCaml toolchain in CI env:** Code will be written and committed; build verification happens in the real dev environment
-- **curl dependency:** Already implicitly required (git uses HTTPS). Document in install.sh
-- **JSON parser correctness:** Keep it minimal — only parse what Telegram/Anthropic APIs return. Test with real API response examples
-- **Backward compatibility:** `cn agent` without flags still works (existing `run_inbound` path). New flags are additive
+- **Secrets on argv:** Mitigated by `exec_args` + `curl --config -` pattern. API keys and untrusted text never appear in process argv or shell strings
+- **curl availability:** Explicit dependency — checked in `cn doctor`, documented in `install.sh`, fail-early in `Http.post`/`Http.get`
+- **JSON parser correctness:** Test with real captured API responses. Handle `\uXXXX` escapes. Unknown fields ignored. Cache metric fields optional
+- **Backward compatibility:** `cn agent` without flags still works (existing `run_inbound` path). New flags are additive. Config changes are additive (new `runtime:` key in existing config)
+- **Daemon vs cron:** Daemon is opt-in via `--daemon` flag. Cron remains the default documented deployment. No breaking change to existing cron users
