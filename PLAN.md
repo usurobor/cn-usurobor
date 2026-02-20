@@ -35,18 +35,18 @@ The repo's public framing is cron-driven ("core loop driven by cn on a cron cycl
 - `cn agent --daemon` — optional Telegram long-poll bridge
 - `cn agent --stdio` — interactive testing mode
 
-## Config: `.cn/config.yaml` (not `agent.yaml`)
+## Config: `.cn/config.json` (not `agent.yaml`)
 
-Hub discovery already looks for `.cn/config.yaml` (in `cn_hub.ml:find_hub_path`). We keep one config file. Agent runtime settings go under a new `runtime:` key in the existing config structure.
+Hub discovery already looks for `.cn/config.json` and `.cn/config.json` (in `cn_hub.ml:find_hub_path`). We use `.cn/config.json` — it reuses `cn_json.ml` and avoids a YAML parser dep. Agent runtime settings go under a new `runtime` key.
 
-Config is env-var-first (simpler, more Unixy), with `.cn/config.yaml` for non-secret settings:
+Config is env-var-first (simpler, more Unixy), with `.cn/config.json` for non-secret settings:
 
 **Environment variables (secrets + overrides):**
 - `TELEGRAM_TOKEN` — Telegram bot token
 - `ANTHROPIC_KEY` — Claude API key
 - `CN_MODEL` — model ID (default: `claude-sonnet-4-latest`)
 
-**`.cn/config.yaml` (non-secrets):**
+**`.cn/config.json` (non-secrets):**
 ```yaml
 runtime:
   allowed_users:
@@ -56,7 +56,20 @@ runtime:
   max_tokens: 8192
 ```
 
-Since we avoid a YAML parser dep, we parse only the flat subset of YAML actually used (key: value lines + simple lists). No nested objects, no anchors, no flow syntax.
+Since we avoid a YAML parser dep and hub discovery already checks for `.cn/config.json`, we use JSON for config:
+
+```json
+{
+  "runtime": {
+    "allowed_users": [498316684],
+    "poll_interval": 1,
+    "poll_timeout": 30,
+    "max_tokens": 8192
+  }
+}
+```
+
+This reuses `cn_json.ml` (Step 3) — one parser for config, API responses, and conversation history. No YAML parsing needed.
 
 ## Architecture (fits existing layer model)
 
@@ -69,7 +82,7 @@ Layer 3  cn_agent.ml — modify wake_agent + run_inbound
 Layer 2  cn_context.ml (NEW) — load hub artifacts, pack input.md
          cn_telegram.ml (NEW) — getUpdates, sendMessage via curl
          cn_llm.ml (NEW) — Claude Messages API via curl
-         cn_config.ml (NEW) — env + .cn/config.yaml loader
+         cn_config.ml (NEW) — env + .cn/config.json loader
          |
 Layer 1  cn_lib.ml — add extract_body, resolve_payload
          cn_json.ml (NEW) — minimal JSON parser/emitter (pure)
@@ -170,7 +183,7 @@ val get_list : string -> t -> t list option
 
 ### Step 4: Create `cn_config.ml` (Layer 2, `src/cmd/`)
 
-Load config from env vars + `.cn/config.yaml`:
+Load config from env vars + `.cn/config.json` (parsed via `Cn_json`):
 
 ```ocaml
 type config = {
@@ -187,10 +200,11 @@ type config = {
 val load : hub_path:string -> (config, string) result
 ```
 
-- Secrets from env only (never from files)
-- Non-secrets from `.cn/config.yaml` under `runtime:` key, with env overrides
+- Secrets from env only (never from config file)
+- Non-secrets from `.cn/config.json` under `runtime` key, with env overrides
 - `ANTHROPIC_KEY` required for `--process` / `--daemon`; error if missing
 - `TELEGRAM_TOKEN` required only for `--daemon`
+- Uses `Cn_json.parse` to read config — same parser as API responses
 
 ### Step 5: Create `cn_llm.ml` (Layer 2, `src/cmd/`)
 
@@ -235,6 +249,12 @@ val send_message : token:string -> chat_id:int -> text:string -> (unit, string) 
 
 Uses long-polling `getUpdates` with `timeout` param. Filters by `allowed_users` in the caller (cn_runtime), not here.
 
+**Offset persistence (daemon correctness):**
+- Persist last `update_id` to `state/telegram.offset` (single integer, overwritten atomically)
+- On daemon start: read offset; if missing or unparseable, start from 0
+- After successfully enqueuing messages: write `offset = max(update_id) + 1`
+- Without this, daemon restarts reprocess old updates
+
 ### Step 7: Create `cn_context.ml` (Layer 2, `src/cmd/`)
 
 Context packer. Loads hub artifacts and assembles `state/input.md`.
@@ -267,10 +287,17 @@ Missing files degrade gracefully (skip, don't error).
 The orchestrator. Implements the full pipeline:
 
 ```ocaml
-val process : config:Cn_config.config -> hub_path:string -> (unit, string) result
+val process_one : config:Cn_config.config -> hub_path:string -> name:string
+                  -> (unit, string) result
+(** Dequeue one item, pack context, call LLM, archive, execute, project.
+    Returns Ok () if processed, Error if queue empty or failure. *)
+
+val run_cron : config:Cn_config.config -> hub_path:string -> name:string -> unit
+(** Cron entry point. Queues inbox items, checks MCA cycle, processes one item.
+    Replaces the current run_inbound. *)
 ```
 
-Pipeline:
+**`process_one` pipeline:**
 1. **Dequeue** — `Cn_agent.queue_pop`
 2. **Pack** — `Cn_context.pack` → write `state/input.md`
 3. **Call** — `Cn_llm.call` with packed content
@@ -284,26 +311,41 @@ Pipeline:
 
 FSM transitions at each step via `Cn_protocol.actor_transition`.
 
-### Step 9: Modify `cn_agent.ml` — replace `wake_agent`
+**`run_cron` replaces `run_inbound`:**
+1. Queue inbox items (existing `queue_inbox_items`)
+2. Check MCA review cycle (existing logic)
+3. Derive actor state from filesystem (existing FSM)
+4. If `OutputReady` — archive previous IO pair, auto-save, then `process_one`
+5. If `TimedOut` — archive timeout, auto-save, then `process_one`
+6. If `Idle` — check for updates, then `process_one`
+7. If `Processing` — show progress (agent is mid-call)
+8. If `InputReady` — resume: read existing `state/input.md`, call LLM, continue from step 3
 
-Replace the OpenClaw shell-out with a call to `Cn_runtime.process`:
+This eliminates the current split where `feed_next_input` dequeues/writes `state/input.md` and `wake_agent` shells out to OpenClaw. The runtime owns the entire pipeline: dequeue → pack → call → write → archive → execute → project. No more two-function dance.
 
-```ocaml
-let wake_agent hub_path config =
-  match Cn_runtime.process ~config ~hub_path with
-  | Ok () -> print_endline (Cn_fmt.ok "Agent processed input")
-  | Error e -> print_endline (Cn_fmt.fail ("Agent processing failed: " ^ e))
-```
+**Why this replaces `run_inbound` (not wraps it):**
+The current `run_inbound` calls `feed_next_input` (dequeue + write raw queue content to `state/input.md`) then `wake_agent` (shell to OpenClaw). If we made `wake_agent` call `process_one` (which also dequeues), we'd double-dequeue or overwrite `state/input.md`. Option A avoids this: `run_cron` is the new canonical cron entry point, and `process_one` owns the full dequeue-to-project pipeline. `run_inbound` and `feed_next_input` and `wake_agent` become dead code.
 
-Update `run_inbound` to pass config through.
+### Step 9: Modify `cn_agent.ml` — deprecate `run_inbound`
+
+Mark `run_inbound`, `feed_next_input`, and `wake_agent` as deprecated. They are replaced by `Cn_runtime.run_cron` and `Cn_runtime.process_one`.
+
+Keep them in the file for one release cycle (they're still called by existing cron setups), but the CLI routing in Step 10 will point to the new runtime.
+
+Expose existing helpers that `cn_runtime.ml` needs:
+- `queue_pop`, `queue_add`, `queue_count`, `queue_inbox_items` (already public)
+- `archive_io_pair`, `archive_timeout` (already public)
+- `execute_op` (already public)
+- `auto_save` (already public)
+- `input_path`, `output_path` (already public)
 
 ### Step 10: Add CLI modes to `cn.ml`
 
 Add routing for agent subcommand modes:
+- `cn agent` (no flags) → `Cn_runtime.run_cron` (replaces `run_inbound`)
+- `cn agent --process` → single-shot `Cn_runtime.process_one`
 - `cn agent --daemon` → Telegram long-poll loop (requires `TELEGRAM_TOKEN`)
-- `cn agent --process` → single-shot `Cn_runtime.process`
 - `cn agent --stdio` → interactive mode (read stdin, process, print output)
-- `cn agent` (no flags) → existing `run_inbound` cron path (unchanged)
 
 ### Step 11: Update dune files
 
@@ -347,19 +389,19 @@ Add `state/conversation.json` management:
 | `src/lib/cn_json.ml` | **New** — minimal JSON parser/emitter | ~200 |
 | `src/lib/dune` | Edit — add `cn_json` module | +1 |
 | `src/ffi/cn_ffi.ml` | Edit — add `exec_args` + `Http` module | +60 |
-| `src/cmd/cn_config.ml` | **New** — env + config.yaml loader | ~80 |
+| `src/cmd/cn_config.ml` | **New** — env + config.json loader (reuses cn_json) | ~80 |
 | `src/cmd/cn_llm.ml` | **New** — Claude API client via curl stdin | ~120 |
 | `src/cmd/cn_telegram.ml` | **New** — Telegram Bot API client via curl stdin | ~130 |
 | `src/cmd/cn_context.ml` | **New** — context packer | ~180 |
-| `src/cmd/cn_runtime.ml` | **New** — orchestrator pipeline | ~130 |
-| `src/cmd/cn_agent.ml` | Edit — replace `wake_agent`, update `run_inbound` | ~30 changed |
+| `src/cmd/cn_runtime.ml` | **New** — orchestrator: `process_one` + `run_cron` (replaces `run_inbound`) | ~200 |
+| `src/cmd/cn_agent.ml` | Edit — deprecate `wake_agent`/`run_inbound`/`feed_next_input` | ~10 changed |
 | `src/cmd/cn_system.ml` | Edit — remove OpenClaw version check | ~10 changed |
 | `src/cmd/dune` | Edit — add new modules | +2 |
 | `src/cli/cn.ml` | Edit — add `--daemon`/`--stdio` routing | ~20 |
 | `docs/ARCHITECTURE.md` | Edit — add new modules to diagram | ~15 |
 | `test/lib/cn_test.ml` | Edit — add tests | +40 |
 | `test/lib/cn_json_test.ml` | **New** — JSON parser tests with fixtures | ~100 |
-| **Total new code** | | **~1000 lines** |
+| **Total new code** | | **~1100 lines** |
 
 ## Order of Implementation
 
@@ -380,5 +422,5 @@ Add `state/conversation.json` management:
 - **Secrets on argv:** Mitigated by `exec_args` + `curl --config -` pattern. API keys and untrusted text never appear in process argv or shell strings
 - **curl availability:** Explicit dependency — checked in `cn doctor`, documented in `install.sh`, fail-early in `Http.post`/`Http.get`
 - **JSON parser correctness:** Test with real captured API responses. Handle `\uXXXX` escapes. Unknown fields ignored. Cache metric fields optional
-- **Backward compatibility:** `cn agent` without flags still works (existing `run_inbound` path). New flags are additive. Config changes are additive (new `runtime:` key in existing config)
+- **Backward compatibility:** `cn agent` still works but now routes to `Cn_runtime.run_cron` (same behavior, native LLM). Old `run_inbound` kept as deprecated for one release. Config uses `.cn/config.json` (already recognized by hub discovery)
 - **Daemon vs cron:** Daemon is opt-in via `--daemon` flag. Cron remains the default documented deployment. No breaking change to existing cron users
