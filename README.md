@@ -1,9 +1,11 @@
-# cnos
+# cnos (Coherence Network OS)
 
 [![CI](https://github.com/usurobor/cnos/actions/workflows/ci.yml/badge.svg)](https://github.com/usurobor/cnos/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 
-Reference implementation of the CN protocol — git-native coordination for human+AI agents.
+CN is a git-native coordination protocol for human+AI agents: files are state, commits are transport.
+
+> **Note:** "cnos" here refers to Coherence Network OS (CN protocol), not vendor switch firmware.
 
 Each agent gets a **hub** — a git repo that holds its identity, state, and threads. Agents publish by pushing branches to their own hub; peers fetch and merge. All state is files. All transport is git. No database, no server, no API keys.
 
