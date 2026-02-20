@@ -1,6 +1,6 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.0.8
+**Version:** 3.0.9
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
 **Date:** 2026-02-19
 **Status:** Draft
@@ -9,6 +9,11 @@
 ---
 
 ## Patch Notes
+
+**v3.0.9** — Fix context-window citation + future-proof wording:
+- Cite Claude context windows from the canonical Context Windows doc (not Messages API)
+- Note 1M-token context window availability for supported models/orgs (beta)
+- Rename "Tool Loop (OpenAI's Push)" to neutral "Multi-Turn Tool-Calling"
 
 **v3.0.8** — Add industry comparison and decision rationale:
 - Add "Industry Approaches Compared" section after "Why No Tools?"
