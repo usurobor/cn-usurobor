@@ -244,8 +244,9 @@ Uses long-polling `getUpdates` with `timeout` param. Filters by `allowed_users` 
 **Offset persistence (daemon correctness):**
 - Persist last `update_id` to `state/telegram.offset` (single integer, overwritten atomically)
 - On daemon start: read offset; if missing or unparseable, start from 0
-- After successfully enqueuing messages: write `offset = max(update_id) + 1`
-- Without this, daemon restarts reprocess old updates
+- Advance offset only after successful processing + Telegram reply send (not after enqueue)
+- This matches the design doc's idempotence contract: if `process_one` crashes mid-pipeline, the daemon re-fetches and reprocesses the same update on next poll
+- The local queue uses destructive dequeue (`queue_pop` unlinks), so Telegram's `update_id` is the retry source of truth
 
 ### Step 7: Create `cn_context.ml` (Layer 2, `src/cmd/`)
 
