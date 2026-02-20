@@ -1,6 +1,6 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.0.9
+**Version:** 3.1.0
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
 **Date:** 2026-02-19
 **Status:** Draft
@@ -9,6 +9,13 @@
 ---
 
 ## Patch Notes
+
+**v3.1.0** — Align config + CLI with implementation plan:
+- Config: `.cn/agent.yaml` → `.cn/config.json` (reuses `cn_json.ml`, matches hub discovery)
+- Secrets: env-vars only (`TELEGRAM_TOKEN`, `ANTHROPIC_KEY`, `CN_MODEL`); never in config file
+- CLI: `--process` now means "dequeue one item + full pipeline" (not "process existing input.md")
+- CLI: `cn agent` (default, no flags) is the canonical cron entry point
+- CLI: `--config` default changed to `.cn/config.json`
 
 **v3.0.9** — Fix context-window citation + future-proof wording:
 - Cite Claude context windows from the canonical Context Windows doc (not Messages API)
@@ -608,26 +615,31 @@ type agent_config = {
 cn agent [MODE] [OPTIONS]
 
 MODES:
+  (default)         Cron entry point — queue inbox, check MCA, process one item
+  --process         Process one queued item (dequeue, pack, call LLM, execute)
   --daemon          Run as Telegram polling daemon (long-running)
-  --process         Process single message from state/input.md
   --stdio           Interactive mode for testing (read stdin, write stdout)
 
 OPTIONS:
-  --config <path>   Config file path (default: .cn/agent.yaml)
+  --config <path>   Config file path (default: .cn/config.json)
   --hub <path>      Hub directory (default: current directory)
   --dry-run         Process without sending response (for testing)
   --verbose         Enable debug logging
 
 ENVIRONMENT:
   TELEGRAM_TOKEN    Bot token (required for --daemon)
-  ANTHROPIC_KEY     Claude API key (required for --process)
+  ANTHROPIC_KEY     Claude API key (required for --process, --daemon)
+  CN_MODEL          Model override (default: claude-sonnet-4-latest)
 
 EXAMPLES:
-  # Start daemon (systemd calls this)
-  cn agent --daemon
+  # Cron calls this every minute
+  cn agent
 
-  # Process a message (daemon calls this)
+  # Process one item directly (also used by daemon internally)
   cn agent --process
+
+  # Start Telegram bridge (optional, systemd-managed)
+  cn agent --daemon
 
   # Interactive testing
   echo "Hello" | cn agent --stdio
@@ -822,35 +834,34 @@ Note: The existing `Cn_agent.archive_io_pair` already archives before executing 
 
 ## Configuration
 
-```yaml
-# .cn/agent.yaml
+**Secrets: environment variables only (never in config files).**
 
-telegram:
-  token: ${TELEGRAM_TOKEN}
-  allowed_users:
-    - 498316684  # usurobor
-
-llm:
-  provider: anthropic
-  model: claude-sonnet-4-latest    # validated at startup, not compiled in
-  api_key: ${ANTHROPIC_KEY}
-  max_tokens: 8192
-
-context:
-  daily_threads: 3          # Load last N daily threads
-  weekly_thread: true       # Load current weekly
-  max_skills: 3             # Max skills to inject
-  conversation_limit: 10    # Max messages in history
-
-daemon:
-  poll_interval: 1          # Seconds between polls
-  poll_timeout: 30          # Long-polling timeout
-
-logging:
-  level: info
-  # IO-pair audit: logs/input/ + logs/output/ (per LOGGING.md)
-  # System log: stdout (captured by systemd journal)
 ```
+TELEGRAM_TOKEN    Bot token (required for --daemon)
+ANTHROPIC_KEY     Claude API key (required for --process)
+CN_MODEL          Model override (default: claude-sonnet-4-latest)
+```
+
+**Non-secrets: `.cn/config.json`.**
+
+```json
+{
+  "runtime": {
+    "allowed_users": [498316684],
+    "poll_interval": 1,
+    "poll_timeout": 30,
+    "max_tokens": 8192,
+    "context": {
+      "daily_threads": 3,
+      "weekly_thread": true,
+      "max_skills": 3,
+      "conversation_limit": 10
+    }
+  }
+}
+```
+
+Hub discovery already checks for `.cn/config.json` (see `cn_hub.ml:find_hub_path`). Parsed via `cn_json.ml` — the same parser used for API responses and conversation history. No YAML dependency.
 
 ### systemd Unit
 
@@ -1075,4 +1086,4 @@ The agent interface is `state/input.md → state/output.md` (conceptual). The LL
 
 ---
 
-*Document version 3.0.9. For comments and iteration, contact reviewers or open a thread in the hub.*
+*Document version 3.1.0. For comments and iteration, contact reviewers or open a thread in the hub.*

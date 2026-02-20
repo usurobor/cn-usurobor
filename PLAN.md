@@ -30,14 +30,14 @@ The repo's public framing is cron-driven ("core loop driven by cn on a cron cycl
 
 **Canonical stance:** Cron is the default deployment. `--daemon` is an optional Telegram bridge (projection adapter) for real-time interaction. Both modes use the same `cn_runtime.ml` processing pipeline.
 
-- `cn agent` (no flags) — existing cron-driven `run_inbound` loop (unchanged)
-- `cn agent --process` — single-shot processing (called by cron or daemon)
+- `cn agent` (no flags) — `Cn_runtime.run_cron` (replaces `run_inbound`)
+- `cn agent --process` — single-shot: dequeue one item, pack, call LLM, archive, execute, project
 - `cn agent --daemon` — optional Telegram long-poll bridge
 - `cn agent --stdio` — interactive testing mode
 
 ## Config: `.cn/config.json` (not `agent.yaml`)
 
-Hub discovery already looks for `.cn/config.json` and `.cn/config.json` (in `cn_hub.ml:find_hub_path`). We use `.cn/config.json` — it reuses `cn_json.ml` and avoids a YAML parser dep. Agent runtime settings go under a new `runtime` key.
+Hub discovery already looks for `.cn/config.json` and `.cn/config.yaml` (in `cn_hub.ml:find_hub_path`). We use `.cn/config.json` — it reuses `cn_json.ml` and avoids a YAML parser dep. Agent runtime settings go under a new `runtime` key.
 
 Config is env-var-first (simpler, more Unixy), with `.cn/config.json` for non-secret settings:
 
@@ -47,16 +47,6 @@ Config is env-var-first (simpler, more Unixy), with `.cn/config.json` for non-se
 - `CN_MODEL` — model ID (default: `claude-sonnet-4-latest`)
 
 **`.cn/config.json` (non-secrets):**
-```yaml
-runtime:
-  allowed_users:
-    - 498316684
-  poll_interval: 1
-  poll_timeout: 30
-  max_tokens: 8192
-```
-
-Since we avoid a YAML parser dep and hub discovery already checks for `.cn/config.json`, we use JSON for config:
 
 ```json
 {
@@ -128,6 +118,8 @@ end
 ```
 
 Implementation: builds a curl config string (url, headers, body) and pipes it to `curl --config -` via `exec_args ~stdin_data`. API keys and request bodies never appear on the command line.
+
+**Curl config injection hardening:** The JSON request body must be serialized as single-line JSON with all newlines escaped before embedding in the curl config `data` directive. This prevents user-provided text (e.g., Telegram messages containing newlines) from producing new curl-config directives. `Cn_json.to_string` must guarantee single-line output.
 
 Also add a `curl` availability check for `cn doctor`.
 
@@ -322,6 +314,13 @@ FSM transitions at each step via `Cn_protocol.actor_transition`.
 8. If `InputReady` — resume: read existing `state/input.md`, call LLM, continue from step 3
 
 This eliminates the current split where `feed_next_input` dequeues/writes `state/input.md` and `wake_agent` shells out to OpenClaw. The runtime owns the entire pipeline: dequeue → pack → call → write → archive → execute → project. No more two-function dance.
+
+**Single-instance lock (cron + daemon safety):**
+
+Cron overlaps and daemon-spawned `--process` calls can race `state/input.md`, `state/output.md`, and queue files. Guard with an atomic lock:
+- `process_one` creates `state/agent.lock` using `Unix.openfile` with `O_CREAT|O_EXCL` (atomic, fails if exists)
+- If lock exists → exit early with "already running" message (not an error — normal for cron overlap)
+- Remove lock on exit (normal path) and best-effort remove on crash (stale lock detection: if lock file is older than `max_age_min`, delete and proceed)
 
 **Why this replaces `run_inbound` (not wraps it):**
 The current `run_inbound` calls `feed_next_input` (dequeue + write raw queue content to `state/input.md`) then `wake_agent` (shell to OpenClaw). If we made `wake_agent` call `process_one` (which also dequeues), we'd double-dequeue or overwrite `state/input.md`. Option A avoids this: `run_cron` is the new canonical cron entry point, and `process_one` owns the full dequeue-to-project pipeline. `run_inbound` and `feed_next_input` and `wake_agent` become dead code.
