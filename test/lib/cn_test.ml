@@ -185,3 +185,97 @@ let%expect_test "update_frontmatter no existing" =
     ---
     # Just content
   |}]
+
+(* === Extract Body === *)
+
+let%expect_test "extract_body with frontmatter and body" =
+  let content = {|---
+reply: thread-1|hello
+---
+
+Here is my detailed response.
+
+It spans multiple lines.|} in
+  (match extract_body content with
+   | Some b -> print_endline b
+   | None -> print_endline "NONE");
+  [%expect {|
+    Here is my detailed response.
+
+    It spans multiple lines.
+  |}]
+
+let%expect_test "extract_body with frontmatter, no body" =
+  let content = {|---
+ack: thread-1
+---|} in
+  (match extract_body content with
+   | Some b -> print_endline b
+   | None -> print_endline "NONE");
+  [%expect {| NONE |}]
+
+let%expect_test "extract_body with frontmatter, blank lines only" =
+  let content = "---\nack: thread-1\n---\n\n   \n" in
+  (match extract_body content with
+   | Some b -> print_endline b
+   | None -> print_endline "NONE");
+  [%expect {| NONE |}]
+
+let%expect_test "extract_body no frontmatter" =
+  let content = "Just plain text content" in
+  (match extract_body content with
+   | Some b -> print_endline b
+   | None -> print_endline "NONE");
+  [%expect {| Just plain text content |}]
+
+let%expect_test "extract_body empty string" =
+  (match extract_body "" with
+   | Some b -> print_endline b
+   | None -> print_endline "NONE");
+  [%expect {| NONE |}]
+
+(* === Resolve Payload === *)
+
+let%expect_test "resolve_payload reply with body" =
+  let op = Reply ("t1", "short notification") in
+  let resolved = resolve_payload (Some "Full detailed reply body") op in
+  print_endline (string_of_agent_op resolved);
+  (match resolved with Reply (_, msg) -> print_endline msg | _ -> ());
+  [%expect {|
+    reply:t1
+    Full detailed reply body
+  |}]
+
+let%expect_test "resolve_payload reply without body" =
+  let op = Reply ("t1", "frontmatter message") in
+  let resolved = resolve_payload None op in
+  (match resolved with Reply (_, msg) -> print_endline msg | _ -> ());
+  [%expect {| frontmatter message |}]
+
+let%expect_test "resolve_payload send with body" =
+  let op = Send ("pi", "notification", None) in
+  let resolved = resolve_payload (Some "Full letter body") op in
+  print_endline (string_of_agent_op resolved);
+  (match resolved with Send (_, _, Some b) -> print_endline b | _ -> print_endline "NO BODY");
+  [%expect {|
+    send:pi
+    Full letter body
+  |}]
+
+let%expect_test "resolve_payload send without body" =
+  let op = Send ("pi", "notification", Some "existing body") in
+  let resolved = resolve_payload None op in
+  (match resolved with Send (_, _, Some b) -> print_endline b | _ -> print_endline "NO BODY");
+  [%expect {| existing body |}]
+
+let%expect_test "resolve_payload non-reply/send ops unchanged" =
+  let ops = [Ack "t1"; Done "t1"; Surface "mca-desc"; Defer ("t1", None)] in
+  ops |> List.iter (fun op ->
+    let resolved = resolve_payload (Some "body text") op in
+    print_endline (string_of_agent_op resolved));
+  [%expect {|
+    ack:t1
+    done:t1
+    surface:mca-desc
+    defer:t1
+  |}]

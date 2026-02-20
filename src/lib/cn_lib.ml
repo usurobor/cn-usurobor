@@ -448,6 +448,26 @@ let parse_frontmatter content =
               if key = "" then None else Some (key, value))
   | _ -> []
 
+(** Extract the markdown body below the frontmatter closing fence.
+    Returns None if there is no frontmatter or the body is blank. *)
+let extract_body content =
+  match String.split_on_char '\n' content with
+  | "---" :: rest ->
+      let rec skip = function "---" :: r -> r | _ :: r -> skip r | [] -> [] in
+      let body = String.concat "\n" (skip rest) |> String.trim in
+      if body = "" then None else Some body
+  | _ ->
+      let trimmed = String.trim content in
+      if trimmed = "" then None else Some trimmed
+
+(** Apply body consumption rules: markdown body wins over frontmatter
+    notification for reply and send ops. *)
+let resolve_payload body op =
+  match body, op with
+  | Some b, Reply (id, _msg) -> Reply (id, b)
+  | Some b, Send (peer, msg, _) -> Send (peer, msg, Some b)
+  | _, op -> op
+
 let update_frontmatter content updates =
   let existing = parse_frontmatter content in
   let merged = 
