@@ -268,6 +268,12 @@ let%expect_test "resolve_payload send without body" =
   (match resolved with Send (_, _, Some b) -> print_endline b | _ -> print_endline "NO BODY");
   [%expect {| existing body |}]
 
+let%expect_test "resolve_payload send explicit body wins over markdown body" =
+  let op = Send ("pi", "notification", Some "explicit body") in
+  let resolved = resolve_payload (Some "markdown body") op in
+  (match resolved with Send (_, _, Some b) -> print_endline b | _ -> print_endline "NO BODY");
+  [%expect {| explicit body |}]
+
 let%expect_test "resolve_payload non-reply/send ops unchanged" =
   let ops = [Ack "t1"; Done "t1"; Surface "mca-desc"; Defer ("t1", None)] in
   ops |> List.iter (fun op ->

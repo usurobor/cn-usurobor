@@ -449,7 +449,8 @@ let parse_frontmatter content =
   | _ -> []
 
 (** Extract the markdown body below the frontmatter closing fence.
-    Returns None if there is no frontmatter or the body is blank. *)
+    Returns None if the body is blank. If there is no frontmatter,
+    returns the trimmed content (or None if empty). *)
 let extract_body content =
   match String.split_on_char '\n' content with
   | "---" :: rest ->
@@ -465,7 +466,7 @@ let extract_body content =
 let resolve_payload body op =
   match body, op with
   | Some b, Reply (id, _msg) -> Reply (id, b)
-  | Some b, Send (peer, msg, _) -> Send (peer, msg, Some b)
+  | Some b, Send (peer, msg, None) -> Send (peer, msg, Some b)
   | _, op -> op
 
 let update_frontmatter content updates =
