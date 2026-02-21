@@ -13,7 +13,7 @@ type config = {
   poll_interval : int;
   poll_timeout : int;
   max_tokens : int;
-  allowed_users : int list;
+  allowed_users : int list;  (* [] = deny all Telegram users *)
   hub_path : string;
 }
 
@@ -27,20 +27,29 @@ let load ~hub_path =
   let anthropic_key = Cn_ffi.Process.getenv_opt "ANTHROPIC_KEY" in
   let telegram_token = Cn_ffi.Process.getenv_opt "TELEGRAM_TOKEN" in
   let env_model = Cn_ffi.Process.getenv_opt "CN_MODEL" in
-  (* Load config file if it exists *)
+  (* Load config file — surface parse errors, tolerate missing file *)
   let config_path = Cn_ffi.Path.join hub_path ".cn/config.json" in
-  let runtime =
+  let file_json =
     if Cn_ffi.Fs.exists config_path then
       match Cn_ffi.Fs.read config_path |> Cn_json.parse with
-      | Ok obj -> Cn_json.get "runtime" obj
-      | Error _ -> None
-    else None
+      | Ok obj -> Ok (Some obj)
+      | Error msg -> Error (Printf.sprintf "%s: %s" config_path msg)
+    else Ok None
+  in
+  match file_json with
+  | Error msg -> Error msg
+  | Ok file_obj ->
+  let runtime = match file_obj with
+    | Some obj -> Cn_json.get "runtime" obj
+    | None -> None
   in
   (* Extract non-secret settings from runtime config, with defaults *)
-  let get_int key default =
-    match runtime with
-    | Some r -> (match Cn_json.get_int key r with Some i -> i | None -> default)
-    | None -> default
+  let get_int key default min_val =
+    let raw = match runtime with
+      | Some r -> (match Cn_json.get_int key r with Some i -> i | None -> default)
+      | None -> default
+    in
+    max raw min_val
   in
   let allowed_users =
     match runtime with
@@ -66,9 +75,9 @@ let load ~hub_path =
         telegram_token;
         anthropic_key = key;
         model;
-        poll_interval = get_int "poll_interval" default_poll_interval;
-        poll_timeout = get_int "poll_timeout" default_poll_timeout;
-        max_tokens = get_int "max_tokens" default_max_tokens;
+        poll_interval = get_int "poll_interval" default_poll_interval 1;
+        poll_timeout = get_int "poll_timeout" default_poll_timeout 0;
+        max_tokens = get_int "max_tokens" default_max_tokens 1;
         allowed_users;
         hub_path;
       }
