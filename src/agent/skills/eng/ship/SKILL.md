@@ -125,6 +125,25 @@ git push && git push --tags
 - [ ] No unresolved comments
 - [ ] **Features verified working** — don't assume, test it yourself
 
+## Deprecation Checklist
+
+When deprecating infrastructure (cron jobs, skills, commands, protocols):
+
+- [ ] **Replacement is running** — verify new system works before disabling old
+- [ ] **Atomic switch** — disable old and enable new in same change
+- [ ] **Monitoring exists** — something will alert if replacement fails
+- [ ] **Rollback plan** — can re-enable old if new breaks
+
+**Never disable old until new is verified running.**
+
+| ❌ Non-atomic | ✅ Atomic |
+|---------------|-----------|
+| Disable old cron | Verify new cron runs successfully |
+| "Will create replacement later" | Create replacement in same PR |
+| Mark DEPRECATED, move on | DEPRECATED + replacement + verification |
+
+From RCA `2026-02-20-pi-peer-sync-disabled`: Pi's `peer-sync-check` was disabled without replacement. Inbound mail broken for 11 days. No alert.
+
 ## Principle
 
 **Don't assume features work — test them.** Before shipping, verify the feature actually works. Before using a new feature, verify it's implemented. Assumptions cause stale state, silent failures, and RCAs.
