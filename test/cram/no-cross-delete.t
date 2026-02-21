@@ -89,12 +89,12 @@ Run sync — should materialize the message:
 
   $ $CN sync 2>&1 | grep -E "(Materialized|From pi)"
   ⚠ From pi: 1 inbound
-  ✓ Materialized: 20260221-111649-pi-hello-from-pi.md
+  ✓ Materialized: 20260221-121722-pi-hello-from-pi.md
 
 Verify message was materialized in inbox:
 
   $ ls threads/mail/inbox/ | grep "pi-hello-from-pi"
-  20260221-111649-pi-hello-from-pi.md
+  20260221-121722-pi-hello-from-pi.md
 
 CRITICAL: Verify sender's branch was NOT deleted from pi-origin:
 

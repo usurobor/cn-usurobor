@@ -609,7 +609,7 @@ Actor Model:
   Agent reads input.md, processes, deletes when done.
 |}
 
-let version = "2.5.1"
+let version = "2.5.2"
 let cnos_commit = Cn_build_info.cnos_commit
 
 (* === Version Comparison (pure, semantic) === *)
