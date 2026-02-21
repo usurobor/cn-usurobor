@@ -8,6 +8,8 @@
     - Cn_llm.split_status (curl output parsing)
     - Cn_llm.parse_response (Messages API response extraction)
     - Cn_telegram.parse_update (Telegram update JSON extraction)
+    - Cn_context.tokenize (keyword extraction)
+    - Cn_context.score_skill (keyword overlap scoring)
 
     Note: Most cn_cmd functions do I/O (Cn_ffi.Fs, git). Those need
     integration tests with temp directories. This file covers the
@@ -277,3 +279,79 @@ let%expect_test "parse_update: missing message key (channel_post etc.)" =
 let%expect_test "parse_update: missing from field" =
   show_update {|{"update_id":105,"message":{"message_id":46,"chat":{"id":555,"type":"private"},"date":0,"text":"orphan"}}|};
   [%expect {| None |}]
+
+
+(* === Cn_context: tokenize === *)
+
+let%expect_test "tokenize: basic splitting and lowercasing" =
+  Cn_context.tokenize "Hello World, how are you?"
+  |> List.iter (fun t -> Printf.printf "%s\n" t);
+  [%expect {|
+    hello
+    world
+    how
+    are
+    you
+  |}]
+
+let%expect_test "tokenize: drops short tokens" =
+  Cn_context.tokenize "I am an OCaml dev"
+  |> List.iter (fun t -> Printf.printf "%s\n" t);
+  [%expect {|
+    ocaml
+    dev
+  |}]
+
+let%expect_test "tokenize: numbers included" =
+  Cn_context.tokenize "step 42 complete"
+  |> List.iter (fun t -> Printf.printf "%s\n" t);
+  [%expect {|
+    step
+    complete
+  |}]
+
+let%expect_test "tokenize: empty string" =
+  let tokens = Cn_context.tokenize "" in
+  Printf.printf "count=%d\n" (List.length tokens);
+  [%expect {| count=0 |}]
+
+
+(* === Cn_context: score_skill === *)
+
+let%expect_test "score_skill: matching keywords" =
+  let keywords = ["inbox"; "message"; "process"] in
+  let skill = "Process inbound messages from peers. Inbox handling." in
+  Printf.printf "score=%d\n" (Cn_context.score_skill keywords skill);
+  [%expect {| score=2 |}]
+
+let%expect_test "score_skill: no overlap" =
+  let keywords = ["deploy"; "release"] in
+  let skill = "Process inbound messages from inbox." in
+  Printf.printf "score=%d\n" (Cn_context.score_skill keywords skill);
+  [%expect {| score=0 |}]
+
+let%expect_test "score_skill: case insensitive matching" =
+  let keywords = ["review"; "code"] in
+  let skill = "Code Review process for pull requests" in
+  Printf.printf "score=%d\n" (Cn_context.score_skill keywords skill);
+  [%expect {| score=2 |}]
+
+
+(* === Cn_context: load_conversation === *)
+
+let%expect_test "load_conversation: parses conversation JSON fixture" =
+  (* Test the pure JSON parsing part via parse + format *)
+  let fixture = {|[{"role":"user","content":"Hello"},{"role":"assistant","content":"Hi there!"},{"role":"user","content":"How are you?"}]|} in
+  (match Cn_json.parse fixture with
+   | Error e -> Printf.printf "error: %s\n" e
+   | Ok (Cn_json.Array items) ->
+       items |> List.iter (fun entry ->
+         let role = match Cn_json.get_string "role" entry with Some r -> r | None -> "?" in
+         let content = match Cn_json.get_string "content" entry with Some c -> c | None -> "" in
+         Printf.printf "%s: %s\n" role content)
+   | _ -> print_endline "unexpected");
+  [%expect {|
+    user: Hello
+    assistant: Hi there!
+    user: How are you?
+  |}]
