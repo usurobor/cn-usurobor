@@ -291,6 +291,86 @@ let self_update_check () =
               print_endline (Cn_fmt.warn "Self-update failed - continuing with current version")
         end
 
+(* === Release === *)
+
+let run_release hub_path version_override =
+  let ver = match version_override with
+    | Some v -> v
+    | None -> Cn_lib.version
+  in
+  let tag = "v" ^ ver in
+  let install_dir = Cn_agent.install_dir in
+
+  (* Ensure we're on main *)
+  let branch = Git.current_branch ~cwd:install_dir |> Option.value ~default:"" in
+  if branch <> "main" && branch <> "master" then begin
+    print_endline (Cn_fmt.fail (Printf.sprintf "Must be on main branch (currently on %s)" branch));
+    Cn_ffi.Process.exit 1
+  end;
+
+  (* Check if tag already exists *)
+  let tag_exists =
+    Cn_ffi.Child_process.exec_in ~cwd:install_dir
+      (Printf.sprintf "git tag -l %s" (Filename.quote tag))
+    |> Option.map (fun s -> String.length (String.trim s) > 0)
+    |> Option.value ~default:false
+  in
+  if tag_exists then begin
+    print_endline (Cn_fmt.fail (Printf.sprintf "Tag %s already exists" tag));
+    Cn_ffi.Process.exit 1
+  end;
+
+  (* Create tag *)
+  let tag_ok =
+    Cn_ffi.Child_process.exec_in ~cwd:install_dir
+      (Printf.sprintf "git tag %s" (Filename.quote tag))
+    |> Option.is_some
+  in
+  if not tag_ok then begin
+    print_endline (Cn_fmt.fail "Failed to create tag");
+    Cn_ffi.Process.exit 1
+  end;
+
+  (* Push tag *)
+  let push_ok =
+    Cn_ffi.Child_process.exec_in ~cwd:install_dir
+      (Printf.sprintf "git push origin %s" (Filename.quote tag))
+    |> Option.is_some
+  in
+  if not push_ok then begin
+    print_endline (Cn_fmt.fail "Failed to push tag");
+    Cn_ffi.Process.exit 1
+  end;
+
+  (* Verify tag on remote *)
+  let verified =
+    Cn_ffi.Child_process.exec_in ~cwd:install_dir
+      (Printf.sprintf "git ls-remote origin refs/tags/%s" (Filename.quote tag))
+    |> Option.map (fun s -> String.length (String.trim s) > 0)
+    |> Option.value ~default:false
+  in
+  if not verified then begin
+    print_endline (Cn_fmt.fail (Printf.sprintf "Tag %s not found on remote after push" tag));
+    Cn_ffi.Process.exit 1
+  end;
+
+  (* Create GitHub release via gh CLI *)
+  let gh_ok =
+    Cn_ffi.Child_process.exec_in ~cwd:install_dir
+      (Printf.sprintf "gh release create %s --title %s --notes %s --verify-tag 2>/dev/null"
+        (Filename.quote tag)
+        (Filename.quote (Printf.sprintf "cn %s" ver))
+        (Filename.quote (Printf.sprintf "cn %s\n\nSee CHANGELOG or `git log` for details." ver)))
+    |> Option.is_some
+  in
+  if gh_ok then begin
+    print_endline (Cn_fmt.ok (Printf.sprintf "Released %s" tag));
+    Cn_hub.log_action hub_path "release" (Printf.sprintf "tag:%s version:%s" tag ver)
+  end else begin
+    print_endline (Cn_fmt.warn (Printf.sprintf "Tag %s pushed but GitHub release failed — create manually or install gh CLI" tag));
+    Cn_hub.log_action hub_path "release" (Printf.sprintf "tag:%s version:%s gh_release:failed" tag ver)
+  end
+
 (* === Init === *)
 
 let run_init name =
