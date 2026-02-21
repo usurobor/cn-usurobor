@@ -293,13 +293,13 @@ let self_update_check () =
 
 (* === Release === *)
 
-let run_release hub_path version_override =
+let run_release hub_path_opt version_override =
   let ver = match version_override with
     | Some v -> v
     | None -> Cn_lib.version
   in
   let tag = "v" ^ ver in
-  let install_dir = Cn_agent.install_dir in
+  let install_dir = Cn_ffi.Process.cwd () in
 
   (* Ensure we're on main *)
   let branch = Git.current_branch ~cwd:install_dir |> Option.value ~default:"" in
@@ -365,10 +365,10 @@ let run_release hub_path version_override =
   in
   if gh_ok then begin
     print_endline (Cn_fmt.ok (Printf.sprintf "Released %s" tag));
-    Cn_hub.log_action hub_path "release" (Printf.sprintf "tag:%s version:%s" tag ver)
+    (match hub_path_opt with Some hp -> Cn_hub.log_action hp "release" (Printf.sprintf "tag:%s version:%s" tag ver) | None -> ())
   end else begin
     print_endline (Cn_fmt.warn (Printf.sprintf "Tag %s pushed but GitHub release failed — create manually or install gh CLI" tag));
-    Cn_hub.log_action hub_path "release" (Printf.sprintf "tag:%s version:%s gh_release:failed" tag ver)
+    (match hub_path_opt with Some hp -> Cn_hub.log_action hp "release" (Printf.sprintf "tag:%s version:%s gh_release:failed" tag ver) | None -> ())
   end
 
 (* === Init === *)

@@ -47,9 +47,8 @@ let () =
        | Some hub_path -> Cn_system.run_update_with_cron hub_path
        | None -> Cn_system.run_update ())
   | Some (Release v) ->
-      (match Cn_hub.find_hub_path (Cn_ffi.Process.cwd ()) with
-       | Some hub_path -> Cn_system.run_release hub_path v
-       | None -> print_endline (Cn_fmt.fail "Not in a cn hub."); Cn_ffi.Process.exit 1)
+      let hub_path_opt = Cn_hub.find_hub_path (Cn_ffi.Process.cwd ()) in
+      Cn_system.run_release hub_path_opt v
   | Some (Init name) -> Cn_system.run_init name
   | Some cmd ->
       match Cn_hub.find_hub_path (Cn_ffi.Process.cwd ()) with
