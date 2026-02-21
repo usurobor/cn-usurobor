@@ -7,6 +7,7 @@
     - Cn_agent.auto_update_enabled (recursion guard + kill switch)
     - Cn_llm.split_status (curl output parsing)
     - Cn_llm.parse_response (Messages API response extraction)
+    - Cn_telegram.parse_update (Telegram update JSON extraction)
 
     Note: Most cn_cmd functions do I/O (Cn_ffi.Fs, git). Those need
     integration tests with temp directories. This file covers the
@@ -237,3 +238,42 @@ let%expect_test "parse_response: empty content array" =
 let%expect_test "parse_response: invalid JSON" =
   show_parse "not json";
   [%expect {| Error: JSON parse error: unexpected char 'n' at pos 0 |}]
+
+
+(* === Cn_telegram: parse_update === *)
+
+let show_update json_str =
+  match Cn_json.parse json_str with
+  | Error e -> Printf.printf "parse error: %s\n" e
+  | Ok json ->
+      match Cn_telegram.parse_update json with
+      | None -> print_endline "None"
+      | Some m ->
+          Printf.printf "update_id=%d msg_id=%d chat=%d user=%d user=%s text=%S date=%d\n"
+            m.update_id m.message_id m.chat_id m.user_id
+            (match m.username with Some u -> u | None -> "<none>")
+            m.text m.date
+
+let%expect_test "parse_update: standard text message" =
+  show_update {|{"update_id":100,"message":{"message_id":42,"from":{"id":12345,"is_bot":false,"first_name":"Test","username":"testuser"},"chat":{"id":12345,"type":"private"},"date":1700000000,"text":"Hello"}}|};
+  [%expect {| update_id=100 msg_id=42 chat=12345 user=12345 user=testuser text="Hello" date=1700000000 |}]
+
+let%expect_test "parse_update: message with emoji via unicode escape" =
+  show_update {|{"update_id":101,"message":{"message_id":43,"from":{"id":999,"is_bot":false,"first_name":"U"},"chat":{"id":999,"type":"private"},"date":1700000001,"text":"Hi \uD83D\uDE00"}}|};
+  [%expect {| update_id=101 msg_id=43 chat=999 user=999 user=<none> text="Hi \240\159\152\128" date=1700000001 |}]
+
+let%expect_test "parse_update: no username" =
+  show_update {|{"update_id":102,"message":{"message_id":44,"from":{"id":555,"is_bot":false,"first_name":"Anon"},"chat":{"id":555,"type":"private"},"date":1700000002,"text":"hi"}}|};
+  [%expect {| update_id=102 msg_id=44 chat=555 user=555 user=<none> text="hi" date=1700000002 |}]
+
+let%expect_test "parse_update: no text field (photo message)" =
+  show_update {|{"update_id":103,"message":{"message_id":45,"from":{"id":555,"is_bot":false,"first_name":"Anon"},"chat":{"id":555,"type":"private"},"date":1700000003}}|};
+  [%expect {| update_id=103 msg_id=45 chat=555 user=555 user=<none> text="" date=1700000003 |}]
+
+let%expect_test "parse_update: missing message key (channel_post etc.)" =
+  show_update {|{"update_id":104,"channel_post":{"message_id":1,"chat":{"id":-100},"date":0,"text":"x"}}|};
+  [%expect {| None |}]
+
+let%expect_test "parse_update: missing from field" =
+  show_update {|{"update_id":105,"message":{"message_id":46,"chat":{"id":555,"type":"private"},"date":0,"text":"orphan"}}|};
+  [%expect {| None |}]
