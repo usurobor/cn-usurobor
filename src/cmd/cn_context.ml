@@ -70,12 +70,15 @@ let load_skills ~hub_path ~message ~n =
     let keywords = tokenize message in
     if keywords = [] then []
     else
-      (* Walk skill directories, find SKILL.md files *)
+      (* Walk skill directories, find SKILL.md files.
+         Sort entries for deterministic traversal across filesystems. *)
       let rec walk dir =
         if not (Cn_ffi.Fs.exists dir) then []
         else
           try
-            Cn_ffi.Fs.readdir dir |> List.concat_map (fun entry ->
+            Cn_ffi.Fs.readdir dir
+            |> List.sort String.compare
+            |> List.concat_map (fun entry ->
               let path = Cn_ffi.Path.join dir entry in
               let skill_path = Cn_ffi.Path.join path "SKILL.md" in
               if Cn_ffi.Fs.exists skill_path then
@@ -91,7 +94,10 @@ let load_skills ~hub_path ~message ~n =
       all_skills
       |> List.map (fun (path, content) -> (path, content, score_skill keywords content))
       |> List.filter (fun (_, _, score) -> score > 0)
-      |> List.sort (fun (_, _, a) (_, _, b) -> compare b a)
+      (* Sort by score desc, then path asc for stable tie-breaking.
+         Deterministic order matters for prompt caching effectiveness. *)
+      |> List.sort (fun (p1, _, s1) (p2, _, s2) ->
+           match compare s2 s1 with 0 -> String.compare p1 p2 | c -> c)
       |> (fun lst -> if List.length lst > n then List.filteri (fun i _ -> i < n) lst else lst)
       |> List.map (fun (_, content, _) -> content)
 
