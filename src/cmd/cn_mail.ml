@@ -8,8 +8,17 @@ open Cn_lib
 
 (* === Branch Operations === *)
 
-let delete_remote_branch hub_path branch =
-  if Cn_fmt.would (Printf.sprintf "delete remote branch %s" branch) then true
+let delete_remote_branch hub_path ~my_name branch =
+  (* Hard rule: only delete branches you own (your prefix) *)
+  let prefix = my_name ^ "/" in
+  let owns_branch = String.length branch > String.length prefix &&
+    String.sub branch 0 (String.length prefix) = prefix in
+  if not owns_branch then begin
+    print_endline (Cn_fmt.fail (Printf.sprintf "BLOCKED: refusing to delete %s (not owned by %s)" branch my_name));
+    Cn_hub.log_action hub_path "branch.delete.blocked" (Printf.sprintf "%s owner_check_failed" branch);
+    false
+  end
+  else if Cn_fmt.would (Printf.sprintf "delete remote branch %s" branch) then true
   else begin
     let cmd = Printf.sprintf "git push origin --delete %s 2>/dev/null" (Filename.quote branch) in
     match Cn_ffi.Child_process.exec_in ~cwd:hub_path cmd with

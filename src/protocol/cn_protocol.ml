@@ -9,6 +9,10 @@
     All transitions are total. Invalid = Error, not exception.
     Terminal states are idempotent.
 
+    INVARIANT: Branch ownership — only the creator deletes their branches.
+    Sigma deletes sigma/* branches. Pi deletes pi/* branches.
+    Enforced at runtime in delete_remote_branch via prefix check.
+
     Pure module: no I/O, no side effects, fully testable. *)
 
 (* === FSM 1: Thread Lifecycle === *)
