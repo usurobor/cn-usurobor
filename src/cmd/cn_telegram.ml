@@ -20,8 +20,10 @@ type message = {
 let api_base = "https://api.telegram.org"
 
 (** Build curl config for Telegram API. Same pattern as cn_llm:
-    omit --fail, use write-out for HTTP status on last line. *)
-let build_config ~url ~body_opt =
+    omit --fail, use write-out for HTTP status on last line.
+    max_time should exceed Telegram's long-poll timeout to avoid
+    curl killing the connection before the server responds. *)
+let build_config ~url ~body_opt ~max_time =
   let q = Cn_ffi.Http.curl_quote in
   let buf = Buffer.create 256 in
   Buffer.add_string buf (Printf.sprintf "url = \"%s\"\n" (q url));
@@ -33,8 +35,7 @@ let build_config ~url ~body_opt =
        Buffer.add_string buf (Printf.sprintf "data-raw = \"%s\"\n" (q body))
    | None -> ());
   Buffer.add_string buf "connect-timeout = 10\n";
-  (* Long timeout for long-polling getUpdates *)
-  Buffer.add_string buf "max-time = 120\n";
+  Buffer.add_string buf (Printf.sprintf "max-time = %d\n" max_time);
   Buffer.add_string buf "silent\n";
   Buffer.add_string buf "show-error\n";
   Buffer.add_string buf "write-out = \"\\n%{http_code}\"\n";
@@ -56,8 +57,8 @@ let split_status output =
 let is_retryable status = status >= 500 || status = 0
 
 (** Execute a Telegram API request with retry logic. *)
-let request ~url ~body_opt =
-  let config = build_config ~url ~body_opt in
+let request ~url ~body_opt ~max_time =
+  let config = build_config ~url ~body_opt ~max_time in
   let max_retries = 3 in
   let rec attempt n =
     let code, output =
@@ -91,7 +92,9 @@ let request ~url ~body_opt =
   attempt 0
 
 (** Parse a single update object into a message.
-    Returns None for updates without a text message (edits, photos, etc.). *)
+    Returns None for updates without a message/from/chat structure
+    (channel_post, edited_message, etc.). Non-text messages (photos,
+    stickers) return text="". *)
 let parse_update update =
   match Cn_json.get_int "update_id" update with
   | None -> None
@@ -126,7 +129,8 @@ let get_updates ~token ~offset ~timeout =
     "timeout", Cn_json.Int timeout;
     "allowed_updates", Cn_json.Array [Cn_json.String "message"];
   ]) in
-  match request ~url ~body_opt:(Some body) with
+  (* curl max-time must exceed Telegram's long-poll timeout *)
+  match request ~url ~body_opt:(Some body) ~max_time:(timeout + 10) with
   | Error msg -> Error msg
   | Ok resp_body ->
       match Cn_json.parse resp_body with
@@ -151,7 +155,7 @@ let send_message ~token ~chat_id ~text =
     "chat_id", Cn_json.Int chat_id;
     "text", Cn_json.String text;
   ]) in
-  match request ~url ~body_opt:(Some body) with
+  match request ~url ~body_opt:(Some body) ~max_time:60 with
   | Error msg -> Error msg
   | Ok resp_body ->
       match Cn_json.parse resp_body with
