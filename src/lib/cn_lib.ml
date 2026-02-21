@@ -610,6 +610,7 @@ Actor Model:
 |}
 
 let version = "2.5.0"
+let cnos_commit = Cn_build_info.cnos_commit
 
 (* === Version Comparison (pure, semantic) === *)
 
