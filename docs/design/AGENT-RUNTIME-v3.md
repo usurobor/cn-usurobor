@@ -1,6 +1,6 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.0.9
+**Version:** 3.1.2
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
 **Date:** 2026-02-19
 **Status:** Draft
@@ -9,6 +9,23 @@
 ---
 
 ## Patch Notes
+
+**v3.1.2** — Harden curl-backed HTTP + safe exec:
+- Use `data-raw` (not `data`) to prevent curl `@file` body interpretation
+- Add default timeouts (`connect-timeout = 10`, `max-time = 120`) to bound stalls
+- Merge stderr into stdout in `exec_args` to avoid pipe deadlocks; returns `(code, output)`
+
+**v3.1.1** — Align dependency story + remove premature config knobs:
+- Appendix A: replace OCaml HTTP stack with curl-backed HTTP rationale
+- Constraint #3: "zero runtime deps" → "minimal system deps (git + curl)"
+- Remove `runtime.context` knobs from config (fixed defaults in v3.1.x)
+
+**v3.1.0** — Align config + CLI with implementation plan:
+- Config: `.cn/agent.yaml` → `.cn/config.json` (reuses `cn_json.ml`, matches hub discovery)
+- Secrets: env-vars only (`TELEGRAM_TOKEN`, `ANTHROPIC_KEY`, `CN_MODEL`); never in config file
+- CLI: `--process` now means "dequeue one item + full pipeline" (not "process existing input.md")
+- CLI: `cn agent` (default, no flags) is the canonical cron entry point
+- CLI: `--config` default changed to `.cn/config.json`
 
 **v3.0.9** — Fix context-window citation + future-proof wording:
 - Cite Claude context windows from the canonical Context Windows doc (not Messages API)
@@ -128,7 +145,7 @@ The missing pieces are:
 
 1. **Pure OCaml** — No Python, JavaScript, or external runtimes
 2. **Minimal dependencies** — Prefer stdlib; add only essential libraries
-3. **Single binary** — Native executable, zero runtime dependencies
+3. **Single binary + minimal system deps** — Native executable; requires only `git` and `curl` at runtime (no opam deps, no OCaml HTTP stack)
 4. **Agent purity** — LLM = pure function, cn = all effects (per SECURITY-MODEL.md)
 5. **Backward compatible** — Existing hub structure unchanged, existing ops unchanged
 6. **CN-native** — Reuses IO-pair archival, actor FSM, op execution — not a parallel system
@@ -608,26 +625,31 @@ type agent_config = {
 cn agent [MODE] [OPTIONS]
 
 MODES:
+  (default)         Cron entry point — queue inbox, check MCA, process one item
+  --process         Process one queued item (dequeue, pack, call LLM, execute)
   --daemon          Run as Telegram polling daemon (long-running)
-  --process         Process single message from state/input.md
   --stdio           Interactive mode for testing (read stdin, write stdout)
 
 OPTIONS:
-  --config <path>   Config file path (default: .cn/agent.yaml)
+  --config <path>   Config file path (default: .cn/config.json)
   --hub <path>      Hub directory (default: current directory)
   --dry-run         Process without sending response (for testing)
   --verbose         Enable debug logging
 
 ENVIRONMENT:
   TELEGRAM_TOKEN    Bot token (required for --daemon)
-  ANTHROPIC_KEY     Claude API key (required for --process)
+  ANTHROPIC_KEY     Claude API key (required for --process, --daemon)
+  CN_MODEL          Model override (default: claude-sonnet-4-latest)
 
 EXAMPLES:
-  # Start daemon (systemd calls this)
-  cn agent --daemon
+  # Cron calls this every minute
+  cn agent
 
-  # Process a message (daemon calls this)
+  # Process one item directly (also used by daemon internally)
   cn agent --process
+
+  # Start Telegram bridge (optional, systemd-managed)
+  cn agent --daemon
 
   # Interactive testing
   echo "Hello" | cn agent --stdio
@@ -822,35 +844,30 @@ Note: The existing `Cn_agent.archive_io_pair` already archives before executing 
 
 ## Configuration
 
-```yaml
-# .cn/agent.yaml
+**Secrets: environment variables only (never in config files).**
 
-telegram:
-  token: ${TELEGRAM_TOKEN}
-  allowed_users:
-    - 498316684  # usurobor
-
-llm:
-  provider: anthropic
-  model: claude-sonnet-4-latest    # validated at startup, not compiled in
-  api_key: ${ANTHROPIC_KEY}
-  max_tokens: 8192
-
-context:
-  daily_threads: 3          # Load last N daily threads
-  weekly_thread: true       # Load current weekly
-  max_skills: 3             # Max skills to inject
-  conversation_limit: 10    # Max messages in history
-
-daemon:
-  poll_interval: 1          # Seconds between polls
-  poll_timeout: 30          # Long-polling timeout
-
-logging:
-  level: info
-  # IO-pair audit: logs/input/ + logs/output/ (per LOGGING.md)
-  # System log: stdout (captured by systemd journal)
 ```
+TELEGRAM_TOKEN    Bot token (required for --daemon)
+ANTHROPIC_KEY     Claude API key (required for --process)
+CN_MODEL          Model override (default: claude-sonnet-4-latest)
+```
+
+**Non-secrets: `.cn/config.json`.**
+
+```json
+{
+  "runtime": {
+    "allowed_users": [498316684],
+    "poll_interval": 1,
+    "poll_timeout": 30,
+    "max_tokens": 8192
+  }
+}
+```
+
+Hub discovery already checks for `.cn/config.json` (see `cn_hub.ml:find_hub_path`). Parsed via `cn_json.ml` — the same parser used for API responses and conversation history. No YAML dependency.
+
+Context packing limits (last 3 daily reflections, top 3 skills, last 10 conversation messages) are fixed defaults in v3.1.x. Configurable knobs may be added in a future version if operational experience warrants it.
 
 ### systemd Unit
 
@@ -999,24 +1016,31 @@ v1 targets functional parity with minimal scope. v2 features are explicitly defe
 
 ## Appendix A: Dependency Audit
 
-### Required OCaml Libraries
+### Approach: curl-backed HTTP (no OCaml HTTP stack)
 
-| Library | Purpose | Notes |
-|---------|---------|-------|
-| `cohttp-lwt-unix` | HTTP client | Telegram + Claude API calls |
-| `yojson` | JSON parsing | API payloads |
-| `lwt` | Async I/O | Non-blocking network |
-| `tls` + `ca-certs` | HTTPS | Secure connections |
+The runtime uses `curl` as an explicit system dependency for all HTTPS calls (Telegram Bot API, Anthropic Messages API). JSON is parsed by a hand-rolled `cn_json.ml` module (~200 lines).
+
+**Rejected alternative:** `cohttp-lwt-unix` + `yojson` + `lwt` + `tls` + `ca-certs` would add ~4 opam dependencies and pull in the Lwt async runtime. This was rejected to keep the build trivial (stdlib + Unix only) and avoid opam dependency management.
+
+### System Dependencies
+
+| Dependency | Purpose | Check |
+|------------|---------|-------|
+| `git` | Transport, hub storage | `cn doctor` (existing) |
+| `curl` | HTTPS for Telegram + Claude APIs | `cn doctor` (new) |
+
+### Security
+
+API keys and request bodies are passed to `curl` via stdin (`curl --config -`), never on the command line. The `data-raw` directive is used (not `data`, which interprets a leading `@` as a file path). JSON request bodies are guaranteed single-line to prevent curl-config directive injection. Default timeouts (`connect-timeout = 10`, `max-time = 120`) bound network stalls. See `Cn_ffi.Http` module.
 
 ### Build Impact
 
 | Metric | Current | With Agent |
 |--------|---------|------------|
-| Binary size | 2.1 MB | ~4 MB |
-| Dependencies | 12 | 16 |
-| Compile time | 8s | ~12s |
-
-Still single native binary with zero runtime dependencies.
+| Binary size | 2.1 MB | ~2.5 MB |
+| OCaml dependencies | 0 (stdlib + Unix) | 0 (unchanged) |
+| System dependencies | `git` | `git` + `curl` |
+| Compile time | 8s | ~10s |
 
 ---
 
@@ -1075,4 +1099,4 @@ The agent interface is `state/input.md → state/output.md` (conceptual). The LL
 
 ---
 
-*Document version 3.0.9. For comments and iteration, contact reviewers or open a thread in the hub.*
+*Document version 3.1.1. For comments and iteration, contact reviewers or open a thread in the hub.*
