@@ -129,6 +129,12 @@ Constrain what external interactions can occur.
   - ❌ `curl $url` — hangs forever on stall
   - ✅ `curl --connect-timeout 10 --max-time 120`
 
+4.8. **Verify side effects — don't trust exit codes**
+  - ❌ `git push` returns 0 → assume branch landed
+  - ✅ `git push` then `git ls-remote` to confirm branch exists on remote
+  - Rule: if the side effect matters, verify it independently
+  - From RCA `2026-02-21`: `git push` returned exit code 0 but branches never landed on GitHub. FSM marked messages as "sent". Silent data loss for 9 messages.
+
 ## Reference
 
 Case study: `references/auto-update-case.md`
