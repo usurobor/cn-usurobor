@@ -5,6 +5,8 @@
     - Cn_agent.version_to_tuple (version string parsing)
     - Cn_agent.is_newer_version (semver comparison)
     - Cn_agent.auto_update_enabled (recursion guard + kill switch)
+    - Cn_llm.split_status (curl output parsing)
+    - Cn_llm.parse_response (Messages API response extraction)
 
     Note: Most cn_cmd functions do I/O (Cn_ffi.Fs, git). Those need
     integration tests with temp directories. This file covers the
@@ -169,3 +171,69 @@ let%expect_test "auto_update_enabled: CN_UPDATE_RUNNING blocks re-exec loop" =
   Unix.putenv "CN_UPDATE_RUNNING" "1";
   Printf.printf "%b\n" (Cn_agent.auto_update_enabled ());
   [%expect {| false |}]
+
+
+(* === Cn_llm: split_status === *)
+
+let show_split output =
+  let body, code = Cn_llm.split_status output in
+  Printf.printf "(%d, %S)\n" code body
+
+let%expect_test "split_status: normal 200 response" =
+  show_split "{\"id\":\"msg_123\"}\n200";
+  [%expect {| (200, "{\"id\":\"msg_123\"}") |}]
+
+let%expect_test "split_status: 500 server error" =
+  show_split "{\"error\":\"overloaded\"}\n500";
+  [%expect {| (500, "{\"error\":\"overloaded\"}") |}]
+
+let%expect_test "split_status: multiline body with 200" =
+  show_split "line1\nline2\n200";
+  [%expect {| (200, "line1\nline2") |}]
+
+let%expect_test "split_status: garbage (no newline)" =
+  show_split "garbage";
+  [%expect {| (0, "garbage") |}]
+
+let%expect_test "split_status: only status code" =
+  show_split "200";
+  [%expect {| (200, "") |}]
+
+let%expect_test "split_status: empty string" =
+  show_split "";
+  [%expect {| (0, "") |}]
+
+
+(* === Cn_llm: parse_response === *)
+
+let show_parse body =
+  match Cn_llm.parse_response body with
+  | Ok r ->
+      Printf.printf "content=%S stop=%s in=%d out=%d cache_create=%d cache_read=%d\n"
+        r.content r.stop_reason r.input_tokens r.output_tokens
+        r.cache_creation_input_tokens r.cache_read_input_tokens
+  | Error msg -> Printf.printf "Error: %s\n" msg
+
+let%expect_test "parse_response: single text block" =
+  show_parse {|{"content":[{"type":"text","text":"Hello!"}],"stop_reason":"end_turn","usage":{"input_tokens":10,"output_tokens":5}}|};
+  [%expect {| content="Hello!" stop=end_turn in=10 out=5 cache_create=0 cache_read=0 |}]
+
+let%expect_test "parse_response: multiple text blocks" =
+  show_parse {|{"content":[{"type":"text","text":"First"},{"type":"text","text":"Second"}],"stop_reason":"end_turn","usage":{"input_tokens":10,"output_tokens":8}}|};
+  [%expect {| content="First\n\nSecond" stop=end_turn in=10 out=8 cache_create=0 cache_read=0 |}]
+
+let%expect_test "parse_response: thinking block then text" =
+  show_parse {|{"content":[{"type":"thinking","thinking":"hmm"},{"type":"text","text":"Answer"}],"stop_reason":"end_turn","usage":{"input_tokens":20,"output_tokens":15}}|};
+  [%expect {| content="Answer" stop=end_turn in=20 out=15 cache_create=0 cache_read=0 |}]
+
+let%expect_test "parse_response: with cache metrics" =
+  show_parse {|{"content":[{"type":"text","text":"cached"}],"stop_reason":"end_turn","usage":{"input_tokens":10,"output_tokens":3,"cache_creation_input_tokens":100,"cache_read_input_tokens":50}}|};
+  [%expect {| content="cached" stop=end_turn in=10 out=3 cache_create=100 cache_read=50 |}]
+
+let%expect_test "parse_response: empty content array" =
+  show_parse {|{"content":[],"stop_reason":"end_turn","usage":{"input_tokens":5,"output_tokens":0}}|};
+  [%expect {| content="" stop=end_turn in=5 out=0 cache_create=0 cache_read=0 |}]
+
+let%expect_test "parse_response: invalid JSON" =
+  show_parse "not json";
+  [%expect {| Error: JSON parse error: unexpected char 'n' at pos 0 |}]

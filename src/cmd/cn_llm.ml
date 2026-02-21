@@ -73,12 +73,19 @@ let parse_response body =
   match Cn_json.parse body with
   | Error msg -> Error (Printf.sprintf "JSON parse error: %s" msg)
   | Ok json ->
-      (* Extract first text content block *)
+      (* Extract all type=text blocks, concatenate.
+         Handles multi-block responses and skips non-text blocks
+         (e.g. thinking, tool_use) so future features don't break. *)
       let content =
         match Cn_json.get_list "content" json with
-        | Some (first :: _) ->
-            (match Cn_json.get_string "text" first with Some t -> t | None -> "")
-        | _ -> ""
+        | Some blocks ->
+            let texts = blocks |> List.filter_map (fun block ->
+              match Cn_json.get_string "type" block with
+              | Some "text" -> Cn_json.get_string "text" block
+              | _ -> None
+            ) in
+            String.concat "\n\n" texts
+        | None -> ""
       in
       let stop_reason =
         match Cn_json.get_string "stop_reason" json with Some s -> s | None -> ""
