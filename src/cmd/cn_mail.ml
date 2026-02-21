@@ -144,8 +144,7 @@ let materialize_branch ~clone_path ~hub_path ~inbox_dir ~peer_name ~branch =
   if is_orphan_branch clone_path branch then begin
     let _ = advance Cn_protocol.RE_IsOrphan in
     reject_orphan_branch hub_path peer_name branch;
-    let _ = delete_remote_branch clone_path branch in
-    let _ = advance Cn_protocol.RE_DeleteBranch in
+    (* Don't delete sender's branch — only sender deletes their own branches *)
     []
   end
   else begin
@@ -162,8 +161,8 @@ let materialize_branch ~clone_path ~hub_path ~inbox_dir ~peer_name ~branch =
 
     if already_exists || already_archived then begin
       let _ = advance Cn_protocol.RE_IsDuplicate in
-      let _ = delete_remote_branch clone_path branch in
-      let _ = advance Cn_protocol.RE_DeleteBranch in
+      (* Don't delete sender's branch — only sender deletes their own branches *)
+      print_endline (Cn_fmt.dim (Printf.sprintf "  Skipping duplicate: %s" branch));
       []
     end
     else if !(Cn_fmt.dry_run_mode) then begin
@@ -204,11 +203,10 @@ let materialize_branch ~clone_path ~hub_path ~inbox_dir ~peer_name ~branch =
             process_rejection_cleanup hub_path content;
             Some inbox_file)
       in
-      (* Transition: Materializing → Materialized → Cleaned *)
+      (* Transition: Materializing → Materialized *)
       if result <> [] then begin
         let _ = advance Cn_protocol.RE_WriteOk in
-        let _ = delete_remote_branch clone_path branch in
-        let _ = advance Cn_protocol.RE_DeleteBranch in
+        (* Don't delete sender's branch — only sender deletes their own branches *)
         ()
       end else begin
         let _ = advance Cn_protocol.RE_WriteFail in
@@ -426,17 +424,15 @@ let inbox_flush hub_path _name =
       else begin
         match List.find_map (fun (k, v) -> if k = "branch" then Some v else None) meta with
         | None -> None
-        | Some branch ->
-            let delete_cmd = Printf.sprintf "git push origin --delete %s 2>/dev/null || true" (Filename.quote branch) in
-            let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path delete_cmd in
-
+        | Some _branch ->
+            (* Don't delete sender's branch — only sender deletes their own branches *)
             let archived_dir = Cn_ffi.Path.join hub_path "threads/archived" in
             Cn_ffi.Fs.ensure_dir archived_dir;
             Cn_ffi.Fs.write (Cn_ffi.Path.join archived_dir file)
               (update_frontmatter content [("flushed", Cn_fmt.now_iso ())]);
             Cn_ffi.Fs.unlink file_path;
 
-            Cn_hub.log_action hub_path "inbox.flush" (Printf.sprintf "branch:%s file:%s" branch file);
+            Cn_hub.log_action hub_path "inbox.flush" (Printf.sprintf "file:%s" file);
             print_endline (Cn_fmt.ok (Printf.sprintf "Flushed: %s" file));
             Some file
       end
