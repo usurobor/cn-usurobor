@@ -82,8 +82,21 @@ end
 input |> parse |> validate |> output
 match result with Ok x -> x | Error e -> handle e
 List.fold_left (+) 0 items
+List.filter_map extract items        (* filter + map in one pass *)
 match Cn_ffi.Fs.exists path with true -> Some x | false -> None
 match xs with x :: _ -> x | [] -> default
+
+(* RAII cleanup *)
+Fun.protect ~finally:(fun () -> close_in_noerr ic) (fun () ->
+  really_input_string ic (in_channel_length ic))
+
+(* Result-based parsing — explicit errors, no exceptions *)
+let parse s : (value, string) result =
+  ... Ok v | Error (Printf.sprintf "expected X at pos %d" pos)
+
+(* Localized mutable state — API is pure *)
+type state = { src: string; mutable pos: int }
+let parse s = let st = { src = s; pos = 0 } in parse_value st
 
 (* avoid *)
 let x = ref 0
@@ -92,6 +105,7 @@ with _ -> None
 List.hd xs                  (* use: match xs with x :: _ -> *)
 Option.get opt              (* use: match opt with Some v -> *)
 if condition then ...       (* use: match on bool *)
+raise Parse_error           (* use: Result.error *)
 ```
 
 ## Build

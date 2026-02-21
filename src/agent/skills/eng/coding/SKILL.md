@@ -113,6 +113,22 @@ Constrain what external interactions can occur.
   - ❌ Implement → "works"
   - ✅ "What if API returns HTML?"
 
+4.4. **Pass data via stdin, not args**
+  - ❌ `exec (sprintf "curl -d '%s'" body)` — injection risk
+  - ✅ `exec_args ~prog:"curl" ~args:["--config"; "-"] ~stdin_data:config`
+
+4.5. **Use `data-raw` not `data` for curl**
+  - ❌ `--data` — curl interprets `@filename` as file read
+  - ✅ `--data-raw` — literal bytes, no interpretation
+
+4.6. **Merge stderr into stdout for subprocesses**
+  - ❌ Read stdout then stderr — deadlock if buffer fills
+  - ✅ `create_process prog argv stdin_r stdout_w stdout_w`
+
+4.7. **Default timeouts on all external calls**
+  - ❌ `curl $url` — hangs forever on stall
+  - ✅ `curl --connect-timeout 10 --max-time 120`
+
 ## Reference
 
 Case study: `references/auto-update-case.md`
