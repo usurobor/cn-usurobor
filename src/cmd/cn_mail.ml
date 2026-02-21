@@ -315,13 +315,18 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
                 let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path (Printf.sprintf "git commit -m %s" (Filename.quote (Printf.sprintf "%s: %s" name thread_name))) in
                 let* s = Cn_protocol.sender_transition Cn_protocol.S_Pending Cn_protocol.SE_CreateBranch in
 
-                (* Push *)
+                (* Push + verify *)
                 let* s = Cn_protocol.sender_transition s Cn_protocol.SE_Push in
-                let push_ok = Cn_ffi.Child_process.exec_in ~cwd:hub_path
+                let push_exit_ok = Cn_ffi.Child_process.exec_in ~cwd:hub_path
                   (Printf.sprintf "git push -u origin %s -f" (Filename.quote branch_name))
                   |> Option.is_some in
+                let push_verified = push_exit_ok &&
+                  (Cn_ffi.Child_process.exec_in ~cwd:hub_path
+                    (Printf.sprintf "git ls-remote origin refs/heads/%s" (Filename.quote branch_name))
+                   |> Option.map (fun s -> String.length (String.trim s) > 0)
+                   |> Option.value ~default:false) in
                 let* s = Cn_protocol.sender_transition s
-                  (if push_ok then Cn_protocol.SE_PushOk else Cn_protocol.SE_PushFail) in
+                  (if push_verified then Cn_protocol.SE_PushOk else Cn_protocol.SE_PushFail) in
 
                 (* Return to main before cleanup *)
                 let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git checkout main 2>/dev/null || git checkout master" in
