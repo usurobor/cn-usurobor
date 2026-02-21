@@ -5,3 +5,10 @@
  (libraries cn_lib)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+(library
+ (name cn_json_test)
+ (modules cn_json_test)
+ (libraries cn_lib)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
