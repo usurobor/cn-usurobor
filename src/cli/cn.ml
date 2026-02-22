@@ -5,7 +5,12 @@
 
     Layering (deliberate):
       cn.ml         → Dispatch (THIS FILE — ~100 lines)
-      cn_agent.ml   → Agent I/O, queue, execution
+      cn_runtime.ml → Agent runtime orchestrator (dequeue → LLM → execute)
+      cn_context.ml → Context packer (skills, conversation, artifacts)
+      cn_llm.ml     → Claude API client (curl-backed)
+      cn_telegram.ml→ Telegram Bot API client
+      cn_config.ml  → Config loader (env vars + .cn/config.json)
+      cn_agent.ml   → Agent I/O, queue, execution (legacy: run_inbound deprecated)
       cn_mail.ml    → Inbox/outbox mail transport
       cn_gtd.ml     → Thread lifecycle + creation
       cn_mca.ml     → Managed Concern Aggregation
@@ -14,9 +19,8 @@
       cn_hub.ml     → Hub discovery, paths, helpers
       cn_fmt.ml     → Output formatting
       cn_ffi.ml     → Native system bindings (stdlib + Unix)
-      cn_io.ml      → Protocol I/O (sync, flush, archive)
       cn_lib.ml     → Types, parsing (pure)
-      git.ml        → Raw git operations *)
+      cn_json.ml    → JSON parser/emitter (pure) *)
 
 open Cn_lib
 
@@ -68,7 +72,17 @@ let () =
           | Outbox Outbox.Flush -> Cn_mail.outbox_flush hub_path name
           | Sync -> Cn_system.run_sync hub_path name
           | Next -> Cn_mail.run_next hub_path
-          | Inbound -> Cn_agent.run_inbound hub_path name
+          | Agent mode ->
+              (match Cn_config.load hub_path with
+               | Error msg ->
+                   print_endline (Cn_fmt.fail (Printf.sprintf "Config error: %s" msg));
+                   Cn_ffi.Process.exit 1
+               | Ok config ->
+                   match mode with
+                   | Agent.Cron -> Cn_runtime.run_cron ~config ~hub_path ~name
+                   | Agent.Process -> ignore (Cn_runtime.process_one ~config ~hub_path ~name)
+                   | Agent.Daemon -> Cn_runtime.run_daemon ~config ~hub_path ~name
+                   | Agent.Stdio -> Cn_runtime.run_stdio ~config ~hub_path ~name)
           | Read t -> Cn_gtd.run_read hub_path t
           | Reply (t, m) -> Cn_commands.run_reply hub_path t m
           | Send (p, m) -> Cn_commands.run_send hub_path p m

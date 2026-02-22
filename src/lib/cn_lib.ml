@@ -80,6 +80,10 @@ module Mca = struct
   type cmd = List | Add of string
 end
 
+module Agent = struct
+  type mode = Cron | Process | Daemon | Stdio
+end
+
 module Gtd = struct
   type cmd =
     | Delete of string
@@ -205,7 +209,7 @@ type command =
   | Commit of string option
   | Push
   | Save of string option
-  | Inbound  (* was: Process *)
+  | Agent of Agent.mode  (* replaces Inbound — Step 10 *)
   | Update
   | Adhoc of string  (* Create adhoc thread *)
   | Daily            (* Create/open daily reflection *)
@@ -256,7 +260,10 @@ let string_of_command = function
   | Push -> "push"
   | Save None -> "save"
   | Save (Some m) -> "save " ^ m
-  | Inbound -> "in"
+  | Agent Agent.Cron -> "agent"
+  | Agent Agent.Process -> "agent --process"
+  | Agent Agent.Daemon -> "agent --daemon"
+  | Agent Agent.Stdio -> "agent --stdio"
   | Update -> "update"
   | Adhoc t -> "adhoc " ^ t
   | Daily -> "daily"
@@ -301,6 +308,13 @@ let parse_queue_cmd = function
 let parse_mca_cmd = function
   | [] | ["list"] -> Some Mca.List
   | "add" :: rest when rest <> [] -> Some (Mca.Add (String.concat " " rest))
+  | _ -> None
+
+let parse_agent_mode = function
+  | [] -> Some Agent.Cron
+  | ["--process"] -> Some Agent.Process
+  | ["--daemon"] -> Some Agent.Daemon
+  | ["--stdio"] -> Some Agent.Stdio
   | _ -> None
 
 let parse_gtd_cmd = function
@@ -371,7 +385,8 @@ let rec parse_command = function
   | "mca" :: rest -> parse_mca_cmd rest |> Option.map (fun c -> Mca c)
   | ["sync"] -> Some Sync
   | ["next"] -> Some Next
-  | ["in"] | ["inbound"] | ["process"] -> Some Inbound  (* inbound/process are aliases *)
+  | "agent" :: rest -> parse_agent_mode rest |> Option.map (fun m -> Agent m)
+  | ["in"] | ["inbound"] | ["process"] -> Some (Agent Agent.Cron)  (* aliases for agent *)
   | ["read"; t] -> Some (Read t)
   | "reply" :: t :: rest -> Some (Reply (t, String.concat " " rest))
   | "send" :: p :: rest -> Some (Send (p, String.concat " " rest))
@@ -583,8 +598,11 @@ Commands:
   send <peer> <msg>   Message to peer (or self)
   
   # cn operations (orchestrator)
+  agent               Run one cycle: dequeue → LLM → execute (alias: in, inbound)
+  agent --process     Single-shot: process one queued item
+  agent --daemon      Telegram long-poll loop (requires TELEGRAM_TOKEN)
+  agent --stdio       Interactive mode (stdin → LLM → stdout)
   sync                Fetch inbound + send outbound
-  in                  Queue inbox → input.md → wake agent (alias: inbound, process)
   queue [list|clear]  View or clear the task queue
   mca [list|add <desc>] Surface MCAs for community pickup
   inbox               List inbox threads
@@ -618,11 +636,12 @@ Flags:
   --quiet, -q         Minimal output
   --dry-run           Show what would happen
 
-Actor Model:
-  cn runs on cron (every 5 min). It:
-  1. Syncs peers → queues new inbox items to state/queue/
-  2. If input.md empty → pops from queue → writes input.md → wakes agent
-  Agent reads input.md, processes, deletes when done.
+Runtime:
+  cn agent runs on cron (every 5 min). It:
+  1. Queues inbox items to state/queue/
+  2. Pops from queue → packs context → calls LLM → executes ops
+  All state mutation under atomic lock. Recovery handles crash at any point.
+  Daemon mode (--daemon) replaces cron with Telegram long-poll.
 |}
 
 let version = "2.4.4"

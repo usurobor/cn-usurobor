@@ -378,3 +378,94 @@ let run_cron ~(config : Cn_config.config) ~hub_path ~name =
 
   (* process_one handles inbox queueing + all recovery states under lock *)
   ignore (process_one ~config ~hub_path ~name)
+
+(* === Telegram daemon === *)
+
+(** Enqueue a Telegram message to state/queue/ with chat_id in frontmatter.
+    Idempotent: skips if a file with the same trigger ID already exists. *)
+let enqueue_telegram hub_path (msg : Cn_telegram.message) =
+  let dir = Cn_ffi.Path.join hub_path "state/queue" in
+  Cn_ffi.Fs.ensure_dir dir;
+  let trigger_id = Printf.sprintf "tg-%d" msg.update_id in
+  let already = Cn_ffi.Fs.readdir dir
+    |> List.exists (fun f ->
+         ends_with ~suffix:(Printf.sprintf "-telegram-%s.md" trigger_id) f) in
+  if not already then begin
+    let ts = Cn_hub.sanitize_timestamp (Cn_fmt.now_iso ()) in
+    let file_name = Printf.sprintf "%s-telegram-%s.md" ts trigger_id in
+    let file_path = Cn_ffi.Path.join dir file_name in
+    let content = Printf.sprintf
+      "---\nid: %s\nfrom: telegram\nchat_id: %d\ndate: %d\nqueued: %s\n---\n\n%s"
+      trigger_id msg.chat_id msg.date (Cn_fmt.now_iso ()) msg.text in
+    Cn_ffi.Fs.write file_path content;
+    Cn_hub.log_action hub_path "daemon.enqueue"
+      (Printf.sprintf "id:%s chat_id:%d" trigger_id msg.chat_id)
+  end
+
+(** Telegram long-poll daemon. Polls for updates, enqueues accepted
+    messages, then processes one queued item per cycle. Loops forever. *)
+let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
+  match config.telegram_token with
+  | None ->
+      print_endline (Cn_fmt.fail "Daemon mode requires TELEGRAM_TOKEN");
+      Cn_ffi.Process.exit 1
+  | Some token ->
+      print_endline (Cn_fmt.ok (Printf.sprintf
+        "Telegram daemon started (poll=%ds timeout=%ds)"
+        config.poll_interval config.poll_timeout));
+      Cn_hub.log_action hub_path "daemon.start" "telegram";
+      let offset = ref 0 in
+      while true do
+        match Cn_telegram.get_updates ~token ~offset:!offset
+                ~timeout:config.poll_timeout with
+        | Error msg ->
+            print_endline (Cn_fmt.warn (Printf.sprintf "Poll error: %s" msg));
+            Unix.sleepf (float_of_int config.poll_interval)
+        | Ok messages ->
+            messages |> List.iter (fun (msg : Cn_telegram.message) ->
+              (* Always advance offset — even for rejected users *)
+              offset := max !offset (msg.update_id + 1);
+              if config.allowed_users = []
+                 || List.mem msg.user_id config.allowed_users then
+                enqueue_telegram hub_path msg
+              else
+                Cn_hub.log_action hub_path "daemon.rejected"
+                  (Printf.sprintf "user_id:%d" msg.user_id));
+            (* Process one item per poll cycle *)
+            ignore (process_one ~config ~hub_path ~name)
+      done
+
+(* === Interactive stdio mode === *)
+
+(** Interactive mode: read from stdin, enqueue, process, print response.
+    Each line is a separate message. Ctrl-D to exit. *)
+let run_stdio ~(config : Cn_config.config) ~hub_path ~name =
+  print_endline (Cn_fmt.info "Interactive mode (stdin -> LLM -> stdout)");
+  print_endline (Cn_fmt.dim "Type a message and press Enter. Ctrl-D to exit.");
+  let conv_path = conversation_path hub_path in
+  try while true do
+    print_string "> ";
+    flush stdout;
+    let line = input_line stdin in
+    if String.trim line <> "" then begin
+      let trigger_id = Printf.sprintf "stdio-%s"
+        (Cn_hub.sanitize_timestamp (Cn_fmt.now_iso ())) in
+      ignore (Cn_agent.queue_add hub_path trigger_id "stdio" line);
+      match process_one ~config ~hub_path ~name with
+      | Ok () ->
+          (* Print the last assistant message from conversation *)
+          if Cn_ffi.Fs.exists conv_path then
+            (match Cn_ffi.Fs.read conv_path |> Cn_json.parse with
+             | Ok (Cn_json.Array items) ->
+                 (match List.rev items with
+                  | last :: _ ->
+                      (match Cn_json.get_string "content" last with
+                       | Some text -> print_endline text
+                       | None -> ())
+                  | [] -> ())
+             | _ -> ())
+      | Error msg ->
+          print_endline (Cn_fmt.fail msg)
+    end
+  done with End_of_file ->
+    print_endline ""
