@@ -76,7 +76,7 @@ let () =
           | Sync -> Cn_system.run_sync hub_path name
           | Next -> Cn_mail.run_next hub_path
           | Agent mode ->
-              (match Cn_config.load hub_path with
+              (match Cn_config.load ~hub_path with
                | Error msg ->
                    print_endline (Cn_fmt.fail (Printf.sprintf "Config error: %s" msg));
                    Cn_ffi.Process.exit 1

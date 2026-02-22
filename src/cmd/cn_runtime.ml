@@ -83,7 +83,7 @@ let telegram_payload (ops : agent_op list) body =
   | Some b -> b
   | None ->
       (* Look for a Reply op with a message *)
-      let reply_msg = ops |> List.find_map (fun op ->
+      let reply_msg = ops |> List.find_map (fun (op : agent_op) ->
         match op with Reply (_, msg) -> Some msg | _ -> None) in
       match reply_msg with
       | Some msg -> msg

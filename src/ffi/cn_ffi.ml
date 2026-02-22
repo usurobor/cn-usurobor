@@ -124,13 +124,11 @@ module Child_process = struct
 end
 
 module Http = struct
-  (** Escape a string for use as a curl --config quoted value.
-      Curl config values are enclosed in double quotes. Inside:
-      - backslash must be doubled: \ → \\
-      - double quote must be escaped: " → \"
-      - literal newlines are forbidden (would terminate the directive)
-      We replace CR/LF with spaces as a safety net — callers should
-      already guarantee single-line JSON bodies. *)
+  (** Escape a string for use as a curl config quoted value.
+      Config values are enclosed in double quotes. Inside them,
+      backslash must be doubled and double-quote must be escaped.
+      Literal newlines are forbidden (would terminate the directive).
+      We replace CR/LF with spaces as a safety net. *)
   let curl_quote s =
     let buf = Buffer.create (String.length s + 16) in
     String.iter (fun c ->

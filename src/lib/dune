@@ -1,6 +1,7 @@
 ; cn library (pure functions, testable)
 (library
  (name cn_lib)
+ (wrapped false)
  (modules cn_lib cn_json cn_build_info)
  (libraries inbox_lib))
 

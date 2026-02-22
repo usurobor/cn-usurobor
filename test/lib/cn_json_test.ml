@@ -55,7 +55,8 @@ let%expect_test "parse string escapes" =
   (match parse input with
    | Ok (String s) -> print_endline s
    | _ -> print_endline "FAIL");
-  [%expect {| line1
+  [%expect {|
+line1
 line2	tab\back"quote/slash |}]
 
 let%expect_test "parse unicode BMP escape" =

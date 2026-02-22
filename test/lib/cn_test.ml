@@ -16,7 +16,7 @@ let%expect_test "parse_command basic" =
     doctor
     sync
     next
-    in
+    agent
   |}]
 
 let%expect_test "parse_command inbox subcommands" =
@@ -237,7 +237,7 @@ let%expect_test "extract_body empty string" =
 (* === Resolve Payload === *)
 
 let%expect_test "resolve_payload reply with body" =
-  let op = Reply ("t1", "short notification") in
+  let op : agent_op = Reply ("t1", "short notification") in
   let resolved = resolve_payload (Some "Full detailed reply body") op in
   print_endline (string_of_agent_op resolved);
   (match resolved with Reply (_, msg) -> print_endline msg | _ -> ());
@@ -247,13 +247,13 @@ let%expect_test "resolve_payload reply with body" =
   |}]
 
 let%expect_test "resolve_payload reply without body" =
-  let op = Reply ("t1", "frontmatter message") in
+  let op : agent_op = Reply ("t1", "frontmatter message") in
   let resolved = resolve_payload None op in
   (match resolved with Reply (_, msg) -> print_endline msg | _ -> ());
   [%expect {| frontmatter message |}]
 
 let%expect_test "resolve_payload send with body" =
-  let op = Send ("pi", "notification", None) in
+  let op : agent_op = Send ("pi", "notification", None) in
   let resolved = resolve_payload (Some "Full letter body") op in
   print_endline (string_of_agent_op resolved);
   (match resolved with Send (_, _, Some b) -> print_endline b | _ -> print_endline "NO BODY");
@@ -263,19 +263,19 @@ let%expect_test "resolve_payload send with body" =
   |}]
 
 let%expect_test "resolve_payload send without body" =
-  let op = Send ("pi", "notification", Some "existing body") in
+  let op : agent_op = Send ("pi", "notification", Some "existing body") in
   let resolved = resolve_payload None op in
   (match resolved with Send (_, _, Some b) -> print_endline b | _ -> print_endline "NO BODY");
   [%expect {| existing body |}]
 
 let%expect_test "resolve_payload send explicit body wins over markdown body" =
-  let op = Send ("pi", "notification", Some "explicit body") in
+  let op : agent_op = Send ("pi", "notification", Some "explicit body") in
   let resolved = resolve_payload (Some "markdown body") op in
   (match resolved with Send (_, _, Some b) -> print_endline b | _ -> print_endline "NO BODY");
   [%expect {| explicit body |}]
 
 let%expect_test "resolve_payload non-reply/send ops unchanged" =
-  let ops = [Ack "t1"; Done "t1"; Surface "mca-desc"; Defer ("t1", None)] in
+  let ops : agent_op list = [Ack "t1"; Done "t1"; Surface "mca-desc"; Defer ("t1", None)] in
   ops |> List.iter (fun op ->
     let resolved = resolve_payload (Some "body text") op in
     print_endline (string_of_agent_op resolved));

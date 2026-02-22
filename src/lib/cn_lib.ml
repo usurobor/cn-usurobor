@@ -482,7 +482,7 @@ let extract_body content =
 
 (** Apply body consumption rules: markdown body wins over frontmatter
     notification for reply and send ops. *)
-let resolve_payload body op =
+let resolve_payload body (op : agent_op) : agent_op =
   match body, op with
   | Some b, Reply (id, _msg) -> Reply (id, b)
   | Some b, Send (peer, msg, None) -> Send (peer, msg, Some b)
