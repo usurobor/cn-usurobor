@@ -649,7 +649,7 @@ Runtime:
   Daemon mode (--daemon) replaces cron with Telegram long-poll.
 |}
 
-let version = "2.5.2"
+let version = "3.0.0"
 let cnos_commit = Cn_build_info.cnos_commit
 
 (* === Version Comparison (pure, semantic) === *)
