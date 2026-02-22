@@ -13,17 +13,18 @@
     - Cn_runtime.extract_inbound_message (message slicing from packed context)
     - Cn_runtime.telegram_payload (Telegram reply fallback chain)
     - Cn_config.load (config loading: defaults, env override, clamping, errors)
+    - Cn_runtime.is_in_flight (frontmatter id matching in state/input.md|output.md)
+    - Cn_runtime.is_queued (filename suffix matching in state/queue/)
+    - Cn_runtime.enqueue_telegram (idempotent queue insertion)
 
     Note: Most cn_cmd functions do I/O (Cn_ffi.Fs, git). Those need
     integration tests with temp directories. This file covers the
-    pure subset that can be tested with ppx_expect.
+    pure subset that can be tested with ppx_expect, plus filesystem
+    tests that use temp hub directories for config and daemon helpers.
 
     Cn_config tests use temp directories for .cn/config.json fixtures.
-
-    ENV VAR ORDERING: OCaml has no unsetenv. Tests that require
-    ANTHROPIC_KEY to be absent MUST come before any test that sets it.
-    Similarly, CN_MODEL override test sets it permanently. Tests are
-    ordered accordingly — do not reorder. *)
+    Each config test calls reset_config_env() to clear env vars
+    (Cn_config treats "" as unset, so tests run in any order). *)
 
 (* === Cn_mail: parse_rejected_branch === *)
 
@@ -460,10 +461,8 @@ let%expect_test "telegram_payload: body=Some empty string still wins" =
 (* === Cn_config: load ===
 
    Uses temp directories with real .cn/config.json files.
-   IMPORTANT: Tests are ordered by env var dependencies:
-   1. "missing ANTHROPIC_KEY" — MUST come first (before any test sets it)
-   2. All other tests set ANTHROPIC_KEY before calling load
-   3. CN_MODEL override test — sets CN_MODEL permanently *)
+   Cn_config.non_empty_env treats "" as unset, so putenv "" is safe
+   cleanup — no ordering constraints between tests. *)
 
 let with_temp_hub ?config_json f =
   let tmp = Filename.temp_dir "cn_config_test" "" in
@@ -478,6 +477,12 @@ let with_temp_hub ?config_json f =
     (try Unix.rmdir tmp with _ -> ()))
     (fun () -> f tmp)
 
+(* Reset env to baseline before each config test *)
+let reset_config_env () =
+  Unix.putenv "ANTHROPIC_KEY" "";
+  Unix.putenv "CN_MODEL" "";
+  Unix.putenv "TELEGRAM_TOKEN" ""
+
 let show_config hub_path =
   match Cn_config.load ~hub_path with
   | Error msg -> Printf.printf "Error: %s\n" msg
@@ -488,54 +493,69 @@ let show_config hub_path =
         (match c.telegram_token with Some _ -> "set" | None -> "unset")
 
 let%expect_test "config: missing ANTHROPIC_KEY → Error" =
-  (* MUST be first config test — before any test sets ANTHROPIC_KEY *)
+  reset_config_env ();
   with_temp_hub (fun hub_path ->
     show_config hub_path);
   [%expect {| Error: ANTHROPIC_KEY not set (required for agent runtime) |}]
 
 let%expect_test "config: defaults with no config file" =
+  reset_config_env ();
   Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
   with_temp_hub (fun hub_path ->
     show_config hub_path);
   [%expect {| model=claude-sonnet-4-latest poll=1 timeout=30 max=8192 users=[] tg=unset |}]
 
 let%expect_test "config: runtime key overrides defaults" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
   with_temp_hub
     ~config_json:{|{"runtime":{"model":"claude-haiku-4-latest","poll_interval":5,"poll_timeout":60,"max_tokens":4096}}|}
     (fun hub_path -> show_config hub_path);
   [%expect {| model=claude-haiku-4-latest poll=5 timeout=60 max=4096 users=[] tg=unset |}]
 
 let%expect_test "config: allowed_users parsed as int list" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
   with_temp_hub
     ~config_json:{|{"runtime":{"allowed_users":[111,222,333]}}|}
     (fun hub_path -> show_config hub_path);
   [%expect {| model=claude-sonnet-4-latest poll=1 timeout=30 max=8192 users=[111,222,333] tg=unset |}]
 
 let%expect_test "config: empty allowed_users means deny all" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
   with_temp_hub
     ~config_json:{|{"runtime":{"allowed_users":[]}}|}
     (fun hub_path -> show_config hub_path);
   [%expect {| model=claude-sonnet-4-latest poll=1 timeout=30 max=8192 users=[] tg=unset |}]
 
 let%expect_test "config: integer clamping — poll_interval < 1 clamped to 1" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
   with_temp_hub
     ~config_json:{|{"runtime":{"poll_interval":0}}|}
     (fun hub_path -> show_config hub_path);
   [%expect {| model=claude-sonnet-4-latest poll=1 timeout=30 max=8192 users=[] tg=unset |}]
 
 let%expect_test "config: integer clamping — poll_timeout < 0 clamped to 0" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
   with_temp_hub
     ~config_json:{|{"runtime":{"poll_timeout":-5}}|}
     (fun hub_path -> show_config hub_path);
   [%expect {| model=claude-sonnet-4-latest poll=1 timeout=0 max=8192 users=[] tg=unset |}]
 
 let%expect_test "config: integer clamping — max_tokens < 1 clamped to 1" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
   with_temp_hub
     ~config_json:{|{"runtime":{"max_tokens":0}}|}
     (fun hub_path -> show_config hub_path);
   [%expect {| model=claude-sonnet-4-latest poll=1 timeout=30 max=1 users=[] tg=unset |}]
 
 let%expect_test "config: invalid JSON → Error with path" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
   with_temp_hub
     ~config_json:"not valid json {"
     (fun hub_path ->
@@ -554,16 +574,213 @@ let%expect_test "config: invalid JSON → Error with path" =
   [%expect {| has_path=true suffix=/.cn/config.json: unexpected char 'n' at pos 0 |}]
 
 let%expect_test "config: no runtime key in JSON → defaults" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
   with_temp_hub
     ~config_json:{|{"other_key":"value"}|}
     (fun hub_path -> show_config hub_path);
   [%expect {| model=claude-sonnet-4-latest poll=1 timeout=30 max=8192 users=[] tg=unset |}]
 
 let%expect_test "config: CN_MODEL env overrides config file model" =
-  (* Sets CN_MODEL — putenv "" is not unsetenv, so model="" would
-     leak into any later config tests. Keep this LAST. *)
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
   Unix.putenv "CN_MODEL" "claude-opus-4";
   with_temp_hub
     ~config_json:{|{"runtime":{"model":"claude-haiku-4-latest"}}|}
     (fun hub_path -> show_config hub_path);
   [%expect {| model=claude-opus-4 poll=1 timeout=30 max=8192 users=[] tg=unset |}]
+
+
+(* === Cn_runtime: daemon helpers (filesystem) ===
+
+   Tests is_in_flight, is_queued, and enqueue_telegram using
+   real temp hub directories with state/input.md, state/output.md,
+   and state/queue/ files. *)
+
+let with_daemon_hub f =
+  let tmp = Filename.temp_dir "cn_daemon_test" "" in
+  let state_dir = Filename.concat tmp "state" in
+  let queue_dir = Filename.concat state_dir "queue" in
+  Cn_ffi.Fs.mkdir_p queue_dir;
+  Fun.protect ~finally:(fun () ->
+    (* Best-effort cleanup *)
+    let rm_files dir =
+      if Sys.file_exists dir then
+        Sys.readdir dir |> Array.iter (fun f ->
+          try Sys.remove (Filename.concat dir f) with _ -> ())
+    in
+    rm_files queue_dir;
+    rm_files state_dir;
+    (try Unix.rmdir queue_dir with _ -> ());
+    (try Unix.rmdir state_dir with _ -> ());
+    (try Unix.rmdir tmp with _ -> ()))
+    (fun () -> f tmp)
+
+(* --- is_in_flight --- *)
+
+let%expect_test "is_in_flight: false when no input.md or output.md" =
+  with_daemon_hub (fun hub_path ->
+    Printf.printf "%b\n" (Cn_runtime.is_in_flight hub_path "tg-100"));
+  [%expect {| false |}]
+
+let%expect_test "is_in_flight: true when input.md has matching id" =
+  with_daemon_hub (fun hub_path ->
+    Cn_ffi.Fs.write (Cn_agent.input_path hub_path)
+      "---\nid: tg-100\nfrom: telegram\n---\n\nHello";
+    Printf.printf "%b\n" (Cn_runtime.is_in_flight hub_path "tg-100"));
+  [%expect {| true |}]
+
+let%expect_test "is_in_flight: false when input.md has different id" =
+  with_daemon_hub (fun hub_path ->
+    Cn_ffi.Fs.write (Cn_agent.input_path hub_path)
+      "---\nid: tg-99\nfrom: telegram\n---\n\nOther message";
+    Printf.printf "%b\n" (Cn_runtime.is_in_flight hub_path "tg-100"));
+  [%expect {| false |}]
+
+let%expect_test "is_in_flight: true when output.md has matching id" =
+  with_daemon_hub (fun hub_path ->
+    Cn_ffi.Fs.write (Cn_agent.output_path hub_path)
+      "---\nid: tg-100\nfrom: telegram\n---\n\nReply text";
+    Printf.printf "%b\n" (Cn_runtime.is_in_flight hub_path "tg-100"));
+  [%expect {| true |}]
+
+let%expect_test "is_in_flight: checks both input.md and output.md" =
+  with_daemon_hub (fun hub_path ->
+    (* input.md has different id, output.md has matching id *)
+    Cn_ffi.Fs.write (Cn_agent.input_path hub_path)
+      "---\nid: tg-50\nfrom: telegram\n---\n\nOld";
+    Cn_ffi.Fs.write (Cn_agent.output_path hub_path)
+      "---\nid: tg-100\nfrom: telegram\n---\n\nReply";
+    Printf.printf "%b\n" (Cn_runtime.is_in_flight hub_path "tg-100"));
+  [%expect {| true |}]
+
+(* --- is_queued --- *)
+
+let%expect_test "is_queued: false when queue is empty" =
+  with_daemon_hub (fun hub_path ->
+    Printf.printf "%b\n" (Cn_runtime.is_queued hub_path "tg-100"));
+  [%expect {| false |}]
+
+let%expect_test "is_queued: true when queue has matching file" =
+  with_daemon_hub (fun hub_path ->
+    let queue_dir = Cn_ffi.Path.join hub_path "state/queue" in
+    Cn_ffi.Fs.write (Cn_ffi.Path.join queue_dir "2026-02-22T10-00-00Z-telegram-tg-100.md")
+      "---\nid: tg-100\n---\n\nHello";
+    Printf.printf "%b\n" (Cn_runtime.is_queued hub_path "tg-100"));
+  [%expect {| true |}]
+
+let%expect_test "is_queued: false when queue has different trigger" =
+  with_daemon_hub (fun hub_path ->
+    let queue_dir = Cn_ffi.Path.join hub_path "state/queue" in
+    Cn_ffi.Fs.write (Cn_ffi.Path.join queue_dir "2026-02-22T10-00-00Z-telegram-tg-99.md")
+      "---\nid: tg-99\n---\n\nOther";
+    Printf.printf "%b\n" (Cn_runtime.is_queued hub_path "tg-100"));
+  [%expect {| false |}]
+
+let%expect_test "is_queued: finds correct file among multiple queue items" =
+  with_daemon_hub (fun hub_path ->
+    let queue_dir = Cn_ffi.Path.join hub_path "state/queue" in
+    Cn_ffi.Fs.write (Cn_ffi.Path.join queue_dir "2026-02-22T09-00-00Z-telegram-tg-98.md")
+      "---\nid: tg-98\n---\n\nFirst";
+    Cn_ffi.Fs.write (Cn_ffi.Path.join queue_dir "2026-02-22T10-00-00Z-telegram-tg-100.md")
+      "---\nid: tg-100\n---\n\nTarget";
+    Cn_ffi.Fs.write (Cn_ffi.Path.join queue_dir "2026-02-22T11-00-00Z-telegram-tg-101.md")
+      "---\nid: tg-101\n---\n\nThird";
+    Printf.printf "%b\n" (Cn_runtime.is_queued hub_path "tg-100"));
+  [%expect {| true |}]
+
+(* --- enqueue_telegram --- *)
+
+let%expect_test "enqueue_telegram: creates queue file with correct content" =
+  with_daemon_hub (fun hub_path ->
+    let msg : Cn_telegram.message = {
+      message_id = 42; chat_id = 12345; user_id = 12345;
+      username = Some "testuser"; text = "Hello agent";
+      date = 1700000000; update_id = 100;
+    } in
+    Cn_runtime.enqueue_telegram hub_path msg;
+    (* Verify file was created *)
+    let queue_dir = Cn_ffi.Path.join hub_path "state/queue" in
+    let files = Cn_ffi.Fs.readdir queue_dir in
+    Printf.printf "count=%d\n" (List.length files);
+    (* Verify filename suffix *)
+    let has_suffix = files |> List.exists (fun f ->
+      Cn_lib.ends_with ~suffix:"-telegram-tg-100.md" f) in
+    Printf.printf "suffix=%b\n" has_suffix;
+    (* Verify content has frontmatter with trigger id *)
+    let content = files |> List.hd |> fun f ->
+      Cn_ffi.Fs.read (Cn_ffi.Path.join queue_dir f) in
+    let meta = Cn_lib.parse_frontmatter content in
+    let id = meta |> List.find_map (fun (k, v) ->
+      if k = "id" then Some v else None) in
+    let chat = meta |> List.find_map (fun (k, v) ->
+      if k = "chat_id" then Some v else None) in
+    Printf.printf "id=%s chat=%s\n"
+      (Option.value ~default:"none" id)
+      (Option.value ~default:"none" chat));
+  [%expect {|
+    count=1
+    suffix=true
+    id=tg-100 chat=12345
+  |}]
+
+let%expect_test "enqueue_telegram: idempotent — second enqueue is no-op" =
+  with_daemon_hub (fun hub_path ->
+    let msg : Cn_telegram.message = {
+      message_id = 42; chat_id = 12345; user_id = 12345;
+      username = Some "testuser"; text = "Hello agent";
+      date = 1700000000; update_id = 200;
+    } in
+    Cn_runtime.enqueue_telegram hub_path msg;
+    Cn_runtime.enqueue_telegram hub_path msg;
+    let queue_dir = Cn_ffi.Path.join hub_path "state/queue" in
+    let files = Cn_ffi.Fs.readdir queue_dir in
+    Printf.printf "count=%d\n" (List.length files));
+  [%expect {| count=1 |}]
+
+let%expect_test "enqueue_telegram: skips when already in-flight" =
+  with_daemon_hub (fun hub_path ->
+    (* Place trigger in state/input.md *)
+    Cn_ffi.Fs.write (Cn_agent.input_path hub_path)
+      "---\nid: tg-300\nfrom: telegram\n---\n\nIn progress";
+    let msg : Cn_telegram.message = {
+      message_id = 43; chat_id = 12345; user_id = 12345;
+      username = None; text = "Hello";
+      date = 1700000001; update_id = 300;
+    } in
+    Cn_runtime.enqueue_telegram hub_path msg;
+    let queue_dir = Cn_ffi.Path.join hub_path "state/queue" in
+    let files = Cn_ffi.Fs.readdir queue_dir in
+    Printf.printf "count=%d\n" (List.length files));
+  [%expect {| count=0 |}]
+
+(* --- post-ack guard: combined predicate behavior --- *)
+
+let%expect_test "post-ack guard: queued → should NOT advance offset" =
+  with_daemon_hub (fun hub_path ->
+    let queue_dir = Cn_ffi.Path.join hub_path "state/queue" in
+    Cn_ffi.Fs.write (Cn_ffi.Path.join queue_dir "2026-02-22T10-00-00Z-telegram-tg-400.md")
+      "---\nid: tg-400\n---\n\nPending";
+    let should_advance =
+      not (Cn_runtime.is_queued hub_path "tg-400")
+      && not (Cn_runtime.is_in_flight hub_path "tg-400") in
+    Printf.printf "advance=%b\n" should_advance);
+  [%expect {| advance=false |}]
+
+let%expect_test "post-ack guard: in-flight → should NOT advance offset" =
+  with_daemon_hub (fun hub_path ->
+    Cn_ffi.Fs.write (Cn_agent.input_path hub_path)
+      "---\nid: tg-400\nfrom: telegram\n---\n\nProcessing";
+    let should_advance =
+      not (Cn_runtime.is_queued hub_path "tg-400")
+      && not (Cn_runtime.is_in_flight hub_path "tg-400") in
+    Printf.printf "advance=%b\n" should_advance);
+  [%expect {| advance=false |}]
+
+let%expect_test "post-ack guard: neither queued nor in-flight → advance" =
+  with_daemon_hub (fun hub_path ->
+    let should_advance =
+      not (Cn_runtime.is_queued hub_path "tg-400")
+      && not (Cn_runtime.is_in_flight hub_path "tg-400") in
+    Printf.printf "advance=%b\n" should_advance);
+  [%expect {| advance=true |}]

@@ -22,11 +22,16 @@ let default_poll_interval = 1
 let default_poll_timeout = 30
 let default_max_tokens = 8192
 
+let non_empty_env key =
+  match Cn_ffi.Process.getenv_opt key with
+  | Some "" | None -> None
+  | some -> some
+
 let load ~hub_path =
-  (* Secrets from env only *)
-  let anthropic_key = Cn_ffi.Process.getenv_opt "ANTHROPIC_KEY" in
-  let telegram_token = Cn_ffi.Process.getenv_opt "TELEGRAM_TOKEN" in
-  let env_model = Cn_ffi.Process.getenv_opt "CN_MODEL" in
+  (* Secrets from env only — empty string treated as unset *)
+  let anthropic_key = non_empty_env "ANTHROPIC_KEY" in
+  let telegram_token = non_empty_env "TELEGRAM_TOKEN" in
+  let env_model = non_empty_env "CN_MODEL" in
   (* Load config file — surface parse errors, tolerate missing file *)
   let config_path = Cn_ffi.Path.join hub_path ".cn/config.json" in
   let file_json =
