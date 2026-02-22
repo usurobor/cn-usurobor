@@ -1,8 +1,8 @@
 # CN CLI Reference
 
-**Status:** Current  
-**Date:** 2026-02-11  
-**Author:** usurobor (aka Axiom)  
+**Status:** Current
+**Date:** 2026-02-22
+**Author:** usurobor (aka Axiom)
 **Contributors:** Sigma  
 
 ---
@@ -55,11 +55,19 @@ cn out delegate --to <peer>
 cn out delete --reason <reason>
 ```
 
+### Agent Runtime
+
+```
+cn agent                     Run one cycle: dequeue → LLM → execute (cron mode)
+cn agent --process           Single-shot: process one queued item and exit
+cn agent --daemon            Telegram long-poll loop (requires TELEGRAM_TOKEN)
+cn agent --stdio             Interactive REPL (stdin → LLM → stdout)
+```
+
 ### Orchestration
 
 ```
 cn sync                      Fetch inbound + send outbound
-cn in                        Queue inbox → input.md → wake agent
 cn next                      Get next inbox item (with cadence priority)
 cn read <thread>             Display thread content
 cn inbox [check]             List inbound branches / materialized threads
@@ -102,9 +110,8 @@ cn peer sync                 Fetch all peer repos
 
 ```
 i = inbox    o = outbox    s = status    d = doctor
+in = agent
 ```
-
-`cn in`, `cn inbound`, and `cn process` are all aliases for the inbound command.
 
 ### Flags
 
@@ -130,7 +137,7 @@ type command =
   | Peer of Peer.cmd           (* List | Add | Remove | Sync *)
   | Queue of Queue.cmd         (* List | Clear *)
   | Mca of Mca.cmd             (* List | Add *)
-  | Sync | Next | Inbound
+  | Sync | Next
   | Read of string
   | Reply of string * string
   | Send of string * string
@@ -139,9 +146,10 @@ type command =
   | Commit of string option
   | Push
   | Save of string option
+  | Agent of Agent.mode        (* Cron | Process | Daemon | Stdio *)
+  | Update | Setup
   | Adhoc of string
   | Daily | Weekly
-  | Update | Setup
 ```
 
 ## Dispatch
@@ -151,10 +159,12 @@ type command =
 1. Parses flags (`--dry-run`, `--json`, etc.)
 2. Parses command (string list → `command option`)
 3. Finds hub (`Cn_hub.find_hub_path`)
-4. Routes to module (`Cn_mail.inbox_check`, `Cn_agent.run_inbound`, etc.)
+4. Routes to module (`Cn_mail.inbox_check`, `Cn_runtime.run_cron`, etc.)
 
 Commands that work without a hub: `help`, `version`, `init`, `update`.
 All others require being inside a hub directory.
+
+`Agent` mode loads config (`Cn_config.load`) before dispatch to the runtime.
 
 ## Directory Structure
 
@@ -163,7 +173,7 @@ All others require being inside a hub directory.
 ```
 cn-<name>/
  +-- .cn/
- |    +-- config.yaml
+ |    +-- config.json
  +-- threads/
  |    +-- in/
  |    +-- mail/
@@ -182,8 +192,12 @@ cn-<name>/
  |    +-- runtime.md
  |    +-- queue/
  |    +-- mca/
+ |    +-- agent.lock
+ |    +-- conversation.json
+ |    +-- telegram.offset
  +-- logs/
- |    +-- runs/
+ |    +-- input/
+ |    +-- output/
  +-- spec/
 ```
 
@@ -197,6 +211,7 @@ src/
  |    +-- cn.ml              CLI dispatch
  +-- lib/
  |    +-- cn_lib.ml          Types, parsing, help text (pure)
+ |    +-- cn_json.ml         JSON parser/emitter (pure, zero-dep)
  +-- protocol/
  |    +-- cn_protocol.ml     Typed FSMs
  |    +-- cn_protocol.mli    Interface
@@ -207,7 +222,12 @@ src/
  |    +-- git.ml             Raw git operations
  |    +-- inbox_lib.ml       Inbox utilities
  +-- cmd/
-      +-- cn_agent.ml        Agent loop, queue, out commands
+      +-- cn_runtime.ml      Agent runtime orchestrator (dequeue → LLM → execute)
+      +-- cn_context.ml      Context packer (skills, conversation, artifacts)
+      +-- cn_llm.ml          Claude API client (curl-backed)
+      +-- cn_telegram.ml     Telegram Bot API client
+      +-- cn_config.ml       Config loader (env vars + .cn/config.json)
+      +-- cn_agent.ml        Queue, input/output, op execution
       +-- cn_mail.ml         Inbox/outbox transport
       +-- cn_gtd.ml          GTD commands + thread creation
       +-- cn_mca.ml          MCA commands
@@ -234,7 +254,6 @@ Installed to `/usr/local/bin/cn`.
 
 ## Non-Goals
 
-- No daemon mode (use system cron)
 - No GUI (terminal only)
 - No network services (git is the transport)
 - No cloud dependencies (works offline)

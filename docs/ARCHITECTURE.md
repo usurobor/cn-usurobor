@@ -1,7 +1,7 @@
 # cnos Architecture
 
 **Status:** Current
-**Date:** 2026-02-11
+**Date:** 2026-02-22
 **Author:** Sigma
 
 ---
@@ -14,7 +14,7 @@ Each agent has a **hub** (a git repo). Agents publish by pushing branches to the
 
 ## Core Concepts
 
-**Hub** — A git repository that serves as an agent's home. Contains threads, state, and configuration. Discovered by walking up from `cwd` looking for `.cn/config.yaml`.
+**Hub** — A git repository that serves as an agent's home. Contains threads, state, and configuration. Discovered by walking up from `cwd` looking for `.cn/config.json`.
 
 **Peer** — Another agent's hub. Listed in `state/peers.md` with name, remote URL, and local clone path. You maintain a local clone of each peer's hub to fetch their outbound branches.
 
@@ -27,8 +27,13 @@ Each agent has a **hub** (a git repo). Agents publish by pushing branches to the
 ```
 cn.ml                 CLI dispatch (~100 lines, routes to modules)
  |
+ |-- cn_runtime.ml    Agent runtime orchestrator (dequeue → LLM → execute)
+ |-- cn_context.ml    Context packer (skills, conversation, artifacts)
+ |-- cn_llm.ml        Claude API client (curl-backed, no --fail)
+ |-- cn_telegram.ml   Telegram Bot API client
+ |-- cn_config.ml     Config loader (env vars + .cn/config.json)
+ |-- cn_agent.ml      Queue, input/output, op execution (legacy: run_inbound deprecated)
  |-- cn_protocol.ml   FSMs: Thread, Actor, Sender, Receiver (pure)
- |-- cn_agent.ml      Queue, input/output, agent wake, op execution
  |-- cn_gtd.ml        GTD lifecycle: do/defer/delegate/done/delete
  |-- cn_mail.ml       Inbox/outbox: send, receive, materialize
  |-- cn_mca.ml        Managed Concern Aggregation
@@ -36,29 +41,33 @@ cn.ml                 CLI dispatch (~100 lines, routes to modules)
  |-- cn_system.ml     Init, setup, update, status, doctor, sync
  |-- cn_hub.ml        Hub discovery, path constants, helpers
  |-- cn_fmt.ml        Output formatting, timestamps, dry-run
- |-- cn_ffi.ml        Native system bindings (Fs, Path, Process)
+ |-- cn_ffi.ml        Native system bindings (Fs, Path, Process, Http)
  |-- cn_io.ml         Protocol I/O over git (sync, flush, archive)
  |-- cn_lib.ml        Types, parsing, help text (pure)
+ |-- cn_json.ml       JSON parser/emitter (pure, zero-dep)
  |-- git.ml           Raw git operations (pure git, no CN knowledge)
 ```
 
 ### Dependency Layers
 
 ```
-Layer 4  cn.ml (dispatch)
+Layer 5  cn.ml (dispatch)
          |
-Layer 3  cn_agent  cn_gtd  cn_mail  cn_mca  cn_commands  cn_system
-         |         |       |        |       |            |
+Layer 4  cn_runtime (orchestrator: pack → call → archive → execute → project)
+         |
+Layer 3  cn_context  cn_llm  cn_telegram  cn_config  cn_agent  cn_gtd  cn_mail  cn_mca  cn_commands  cn_system
+         |           |       |            |          |         |       |        |       |            |
 Layer 2  cn_protocol  cn_hub  cn_io  cn_fmt
          |            |       |      |
-Layer 1  cn_lib  cn_ffi  git.ml
+Layer 1  cn_lib  cn_json  cn_ffi  git.ml
 ```
 
 Rules:
 - Layer N may depend on Layer N-1 and below, never on same layer or above
 - `cn_protocol.ml` has zero dependencies (pure types and transitions)
-- `cn_lib.ml` is pure (no I/O) — fully testable with ppx_expect
+- `cn_lib.ml` and `cn_json.ml` are pure (no I/O) — fully testable with ppx_expect
 - `cn_ffi.ml` is the only module that touches Unix/stdlib directly
+- `cn_runtime.ml` is the only module that calls the LLM
 
 ## The Four FSMs
 
@@ -158,24 +167,42 @@ Peer pushes branch
 
 ## Data Flow
 
-The core loop that `cn` drives:
+The runtime pipeline, executed by `cn agent` (cron) or `cn agent --daemon` (Telegram):
 
 ```
-1. cn inbox check     Fetch peer branches, materialize to inbox
-2. cn process         Queue inbox items, feed to agent
-3. cn writes          state/input.md (one thread at a time)
-4. Agent → output     Produces state/output.md (decision + content)
-5. cn process         Parse output, execute ops, archive IO pair
-6. cn outbox flush    Push outbox threads to peer hubs
-7. cn commit + push   Save hub state to git
+1. cn sync            Fetch peer branches, send outbound
+2. cn agent           Runtime cycle (under atomic lock):
+   a. Queue inbox     Move inbox items to state/queue/
+   b. Dequeue         Pop oldest item from queue
+   c. Pack context    Build prompt from hub artifacts (identity, skills, conversation, message)
+   d. Write input.md  Frontmatter metadata + packed context body
+   e. Call LLM        Claude API (body-only prompt, Option B)
+   f. Write output.md LLM response (ops in frontmatter, body below)
+   g. Archive         Copy input.md + output.md to logs/ (before effects)
+   h. Execute ops     Parse output, resolve payloads, execute ops
+   i. Project         Route reply to Telegram (if from Telegram)
+   j. Conversation    Append to state/conversation.json
+   k. Cleanup         Delete state/input.md + state/output.md
+3. cn save            Commit + push hub state to git
 ```
+
+Recovery: if `cn agent` crashes at any point, the next invocation detects
+the state (output exists? input only? neither?) and resumes from the correct
+step — all under the same atomic lock.
+
+### Prompt Contract (Option B)
+
+- `state/input.md` contains frontmatter metadata (`id`, `from`, `chat_id`, `date`) + packed context body
+- The LLM is invoked with the body below frontmatter only (packed context)
+- Frontmatter is runtime metadata, not part of the prompt
+- `logs/input/` archives the full file for audit
 
 ### Agent I/O Protocol
 
-The agent sees exactly two files:
+The agent (LLM) sees packed context text and produces structured output:
 
-- `state/input.md` — one thread, with frontmatter metadata
-- `state/output.md` — agent writes its decision here
+- **Input:** Packed context (identity, skills, conversation history, inbound message)
+- **Output:** `state/output.md` with ops in YAML frontmatter and markdown body below
 
 Operations the agent can express in output.md:
 
@@ -196,7 +223,7 @@ surface   Create MCA (Managed Concern Aggregation)
 ```
 hub/
  +-- .cn/
- |    +-- config.yaml          Hub configuration
+ |    +-- config.json          Hub configuration (env vars override)
  |
  +-- threads/
  |    +-- in/                  Direct inbound (non-mail)
@@ -213,17 +240,22 @@ hub/
  |         +-- weekly/         Weekly reflections
  |
  +-- state/
- |    +-- input.md             Current agent input (one thread)
- |    +-- output.md            Agent response
+ |    +-- input.md             Current agent input (frontmatter + packed context)
+ |    +-- output.md            LLM response (ops in frontmatter, body below)
  |    +-- queue/               FIFO queue of pending items
+ |    +-- agent.lock           Atomic lock (O_CREAT|O_EXCL, prevents cron overlap)
+ |    +-- conversation.json    Recent conversation history (last 50 entries)
+ |    +-- telegram.offset      Telegram update_id offset (daemon mode)
  |    +-- peers.md             Peer registry
  |    +-- runtime.md           Runtime metadata
  |    +-- mca/                 Managed Concern files
  |
  +-- logs/
- |    +-- runs/                Archived input/output pairs
+ |    +-- input/               Archived input.md files (one per cycle)
+ |    +-- output/              Archived output.md files (one per cycle)
  |
- +-- spec/                     Agent specifications (SOUL.md, etc.)
+ +-- spec/                     Agent specifications (SOUL.md, USER.md)
+ +-- skills/                   Agent skills (matched by keyword overlap)
 ```
 
 ## Transport Protocol
@@ -267,7 +299,7 @@ Example: `pi/20260211-143022-review-request` is a thread from pi.
 | [EXECUTABLE-SKILLS.md](design/EXECUTABLE-SKILLS.md) | Vision: skills as programs |
 | [SECURITY-MODEL.md](design/SECURITY-MODEL.md) | Security architecture |
 | [CLI.md](design/CLI.md) | CLI command reference |
-| [DAEMON.md](design/DAEMON.md) | Future: cn as runtime service |
+| [AGENT-RUNTIME-v3.md](design/AGENT-RUNTIME-v3.md) | Native agent runtime design (v3.1.3) |
 | [LOGGING.md](design/LOGGING.md) | Logging architecture |
 
 For the full docs audit and archive decisions, see [AUDIT.md](design/AUDIT.md).

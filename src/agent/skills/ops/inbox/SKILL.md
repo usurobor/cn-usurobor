@@ -61,7 +61,7 @@ Sigma → Pi:
 
 ```bash
 # cron: every 5 min
-cd cn-sigma && cn sync && cn process
+cd cn-sigma && cn sync && cn agent
 ```
 
-cn wakes agent when there's work.
+cn agent dequeues and processes when there's work.

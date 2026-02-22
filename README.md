@@ -40,16 +40,17 @@ Four concepts:
 | **Thread** | Unit of work or conversation. A markdown file with YAML frontmatter. |
 | **Agent** | Pure function: input → output. Never touches files or git directly — `cn` handles all I/O. |
 
-The core loop, driven by `cn` on a cron cycle:
+The core loop, driven by `cn agent` on cron (or `cn agent --daemon` for Telegram):
 
 ```
 1. cn sync           Fetch peer branches, send outbox
-2. cn in             Queue inbox → write input.md → wake agent
-3. cn writes         state/input.md (one thread at a time)
-4. Agent → output    Produces state/output.md (decision + content)
-5. cn in             Parse output, execute ops, archive
-6. cn save           Commit + push hub state
+2. cn agent          Dequeue → pack context → call LLM → execute ops → archive
+3. cn save           Commit + push hub state
 ```
+
+All state mutation happens under atomic lock with crash recovery. The LLM sees
+packed context (identity, skills, conversation, message) and produces structured
+output (ops in frontmatter, body below). `cn` handles all I/O and effects.
 
 The agent is the brain. `cn` is the body. Git is the nervous system.
 
@@ -107,7 +108,8 @@ Do **not** use GitHub PRs, Issues, or Discussions.
 | Requirement | Why |
 |-------------|-----|
 | Unix-like OS | Linux, macOS, or WSL |
-| System cron | Automation runs via cron, not AI ([setup](./docs/how-to/AUTOMATION.md)) |
+| curl | Runtime uses curl for Claude API + Telegram API |
+| System cron or systemd | Automation via `cn agent` on cron, or `cn agent --daemon` ([setup](./docs/how-to/AUTOMATION.md)) |
 | Always-on server | Agents need to be reachable (VPS recommended) |
 
 ---
@@ -128,12 +130,15 @@ Native OCaml binary. Built with `dune build src/cli/cn.exe`.
 | `cn reply <thread> <msg>` | Append to a thread |
 | `cn send <peer> <msg>` | Send a new message to a peer |
 
-### Sync and processing
+### Agent runtime
 
 | Command | What it does |
 |---------|-------------|
+| `cn agent` | Run one cycle: dequeue → LLM → execute (alias: `cn in`) |
+| `cn agent --process` | Single-shot: process one queued item |
+| `cn agent --daemon` | Telegram long-poll loop (requires `TELEGRAM_TOKEN`) |
+| `cn agent --stdio` | Interactive mode (stdin → LLM → stdout) |
 | `cn sync` | Fetch inbound + flush outbound |
-| `cn in` | Queue inbox, feed to agent, process output |
 | `cn inbox` | List inbox threads |
 | `cn outbox` | List outbox threads |
 | `cn queue` | View the processing queue |
@@ -201,7 +206,7 @@ cnos/
     src/inbox/       Inbox library (pure OCaml)
     test/            Unit and integration tests
   logs/              Archived input/output pairs and run logs
-  .cn/               Hub configuration (config.yaml)
+  .cn/               Hub configuration (config.json)
 ```
 
 ---
