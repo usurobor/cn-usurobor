@@ -381,16 +381,56 @@ let run_cron ~(config : Cn_config.config) ~hub_path ~name =
 
 (* === Telegram daemon === *)
 
+(** Offset persistence: read state/telegram.offset (returns 0 if missing). *)
+let read_offset hub_path =
+  let path = Cn_ffi.Path.join hub_path "state/telegram.offset" in
+  if Cn_ffi.Fs.exists path then
+    match String.trim (Cn_ffi.Fs.read path) |> int_of_string_opt with
+    | Some n -> n
+    | None ->
+        Cn_hub.log_action hub_path "daemon.offset_corrupt" "resetting to 0";
+        0
+  else 0
+
+(** Write offset to state/telegram.offset. *)
+let write_offset hub_path n =
+  Cn_ffi.Fs.ensure_dir (Cn_ffi.Path.join hub_path "state");
+  Cn_ffi.Fs.write
+    (Cn_ffi.Path.join hub_path "state/telegram.offset")
+    (Printf.sprintf "%d\n" n)
+
+(** Check allowed_users list. [] = deny all (documented security default). *)
+let is_allowed_user (config : Cn_config.config) user_id =
+  match config.allowed_users with
+  | [] -> false
+  | ids -> List.mem user_id ids
+
+(** Check whether a trigger ID is already in-flight (in state/input.md or
+    state/output.md). Prevents duplicate enqueue when daemon re-polls
+    while processor is recovering. *)
+let is_in_flight hub_path trigger_id =
+  let check path =
+    if Cn_ffi.Fs.exists path then
+      let content = Cn_ffi.Fs.read path in
+      let meta = parse_frontmatter content in
+      meta |> List.exists (fun (k, v) -> k = "id" && v = trigger_id)
+    else false
+  in
+  check (Cn_agent.input_path hub_path)
+  || check (Cn_agent.output_path hub_path)
+
 (** Enqueue a Telegram message to state/queue/ with chat_id in frontmatter.
-    Idempotent: skips if a file with the same trigger ID already exists. *)
+    Idempotent: skips if already queued or already in-flight. *)
 let enqueue_telegram hub_path (msg : Cn_telegram.message) =
   let dir = Cn_ffi.Path.join hub_path "state/queue" in
   Cn_ffi.Fs.ensure_dir dir;
   let trigger_id = Printf.sprintf "tg-%d" msg.update_id in
-  let already = Cn_ffi.Fs.readdir dir
+  (* Skip if already queued *)
+  let already_queued = Cn_ffi.Fs.readdir dir
     |> List.exists (fun f ->
          ends_with ~suffix:(Printf.sprintf "-telegram-%s.md" trigger_id) f) in
-  if not already then begin
+  (* Skip if already in-flight (state/input.md or output.md has this id) *)
+  if not already_queued && not (is_in_flight hub_path trigger_id) then begin
     let ts = Cn_hub.sanitize_timestamp (Cn_fmt.now_iso ()) in
     let file_name = Printf.sprintf "%s-telegram-%s.md" ts trigger_id in
     let file_path = Cn_ffi.Path.join dir file_name in
@@ -403,7 +443,12 @@ let enqueue_telegram hub_path (msg : Cn_telegram.message) =
   end
 
 (** Telegram long-poll daemon. Polls for updates, enqueues accepted
-    messages, then processes one queued item per cycle. Loops forever. *)
+    messages, processes one per cycle, persists offset after success.
+    Loops forever. Per v3.1.3:
+    - allowed_users = [] → deny all
+    - Offset persisted to state/telegram.offset
+    - Offset advanced only after successful processing (ack boundary)
+    - Rejected users advance offset immediately (handled by dropping) *)
 let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
   match config.telegram_token with
   | None ->
@@ -414,25 +459,35 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
         "Telegram daemon started (poll=%ds timeout=%ds)"
         config.poll_interval config.poll_timeout));
       Cn_hub.log_action hub_path "daemon.start" "telegram";
-      let offset = ref 0 in
+      let offset = ref (read_offset hub_path) in
       while true do
-        match Cn_telegram.get_updates ~token ~offset:!offset
+        (match Cn_telegram.get_updates ~token ~offset:!offset
                 ~timeout:config.poll_timeout with
         | Error msg ->
-            print_endline (Cn_fmt.warn (Printf.sprintf "Poll error: %s" msg));
-            Unix.sleepf (float_of_int config.poll_interval)
+            print_endline (Cn_fmt.warn (Printf.sprintf "Poll error: %s" msg))
         | Ok messages ->
             messages |> List.iter (fun (msg : Cn_telegram.message) ->
-              (* Always advance offset — even for rejected users *)
-              offset := max !offset (msg.update_id + 1);
-              if config.allowed_users = []
-                 || List.mem msg.user_id config.allowed_users then
-                enqueue_telegram hub_path msg
-              else
+              if not (is_allowed_user config msg.user_id) then begin
+                (* Rejected: advance offset (handled by dropping) *)
                 Cn_hub.log_action hub_path "daemon.rejected"
-                  (Printf.sprintf "user_id:%d" msg.user_id));
-            (* Process one item per poll cycle *)
-            ignore (process_one ~config ~hub_path ~name)
+                  (Printf.sprintf "user_id:%d" msg.user_id);
+                offset := msg.update_id + 1;
+                write_offset hub_path !offset
+              end else begin
+                (* Enqueue, process, advance offset only on success *)
+                enqueue_telegram hub_path msg;
+                match process_one ~config ~hub_path ~name with
+                | Ok () ->
+                    offset := msg.update_id + 1;
+                    write_offset hub_path !offset
+                | Error err ->
+                    (* Do NOT advance offset — Telegram will retry *)
+                    print_endline (Cn_fmt.warn (Printf.sprintf
+                      "Processing failed for tg-%d: %s (will retry)"
+                      msg.update_id err))
+              end));
+        (* Always sleep poll_interval between cycles *)
+        Unix.sleepf (float_of_int config.poll_interval)
       done
 
 (* === Interactive stdio mode === *)
