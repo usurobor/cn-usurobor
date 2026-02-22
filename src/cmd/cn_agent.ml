@@ -461,7 +461,16 @@ let auto_update_enabled () =
       | Some "0" -> false
       | _ -> true
 
-let install_dir = "/usr/local/lib/cnos"
+let install_dir =
+  let candidates = [
+    Sys.getenv_opt "CNOS_DIR";
+    Some "/usr/local/lib/cnos";
+    (Sys.getenv_opt "HOME" |> Option.map (fun h -> h ^ "/.openclaw/workspace/cnos"));
+  ] in
+  candidates
+  |> List.filter_map Fun.id
+  |> List.find_opt (fun d -> Sys.file_exists d && Sys.file_exists (Filename.concat d ".git"))
+  |> Option.value ~default:"/usr/local/lib/cnos"
 let bin_path = "/usr/local/bin/cn"
 let repo = "usurobor/cnos"
 let update_cooldown_sec = 3600.0  (* 1 hour between update checks *)

@@ -50,6 +50,9 @@ let () =
       (match Cn_hub.find_hub_path (Cn_ffi.Process.cwd ()) with
        | Some hub_path -> Cn_system.run_update_with_cron hub_path
        | None -> Cn_system.run_update ())
+  | Some (Release v) ->
+      let hub_path_opt = Cn_hub.find_hub_path (Cn_ffi.Process.cwd ()) in
+      Cn_system.run_release hub_path_opt v
   | Some (Init name) -> Cn_system.run_init name
   | Some cmd ->
       match Cn_hub.find_hub_path (Cn_ffi.Process.cwd ()) with
@@ -112,4 +115,4 @@ let () =
           | Daily -> Cn_gtd.run_daily hub_path
           | Weekly -> Cn_gtd.run_weekly hub_path
           | Setup -> Cn_system.run_setup hub_path
-          | Help | Version | Init _ | Update -> ()
+          | Help | Version | Init _ | Update | Release _ -> ()

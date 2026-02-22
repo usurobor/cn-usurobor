@@ -113,6 +113,49 @@ Constrain what external interactions can occur.
   - ❌ Implement → "works"
   - ✅ "What if API returns HTML?"
 
+4.4. **Pass data via stdin, not args**
+  - ❌ `exec (sprintf "curl -d '%s'" body)` — injection risk
+  - ✅ `exec_args ~prog:"curl" ~args:["--config"; "-"] ~stdin_data:config`
+
+4.5. **Use `data-raw` not `data` for curl**
+  - ❌ `--data` — curl interprets `@filename` as file read
+  - ✅ `--data-raw` — literal bytes, no interpretation
+
+4.6. **Merge stderr into stdout for subprocesses**
+  - ❌ Read stdout then stderr — deadlock if buffer fills
+  - ✅ `create_process prog argv stdin_r stdout_w stdout_w`
+
+4.7. **Default timeouts on all external calls**
+  - ❌ `curl $url` — hangs forever on stall
+  - ✅ `curl --connect-timeout 10 --max-time 120`
+
+4.8. **Verify side effects — don't trust exit codes**
+  - ❌ `git push` returns 0 → assume branch landed
+  - ✅ `git push` then `git ls-remote` to confirm branch exists on remote
+  - Rule: if the side effect matters, verify it independently
+  - From RCA `2026-02-21`: `git push` returned exit code 0 but branches never landed on GitHub. FSM marked messages as "sent". Silent data loss for 9 messages.
+
+4.9. **Design for crash recovery**
+  - ❌ Assume the process runs to completion
+  - ✅ Design for resume: check what state exists on entry, pick up from there
+  - Pattern: if output exists → finalize; if input exists → resume LLM call; neither → start fresh
+  - Reference: `cn_runtime.ml` process_one recovery model
+
+4.10. **Graceful degradation for optional inputs**
+  - ❌ `let content = Fs.read path` — crashes if missing
+  - ✅ `let content = if Fs.exists path then Fs.read path else ""`
+  - Rule: missing optional files → skip, don't error
+
+4.11. **Retry policy: backoff on transient, fail-fast on permanent**
+  - ❌ Retry all errors the same way
+  - ✅ 5xx/timeout → retry 3x with exponential backoff; 4xx → fail immediately
+  - Reference: `cn_llm.ml`, `cn_telegram.ml`
+
+4.12. **Single-line output for injection-prone contexts**
+  - ❌ Multi-line JSON body in curl config → line break terminates directive
+  - ✅ `to_string` guarantees single-line; `curl_quote` escapes `\` and `"`
+  - Reference: `cn_json.ml` to_string, `cn_ffi.ml` Http.curl_quote
+
 ## Reference
 
 Case study: `references/auto-update-case.md`
