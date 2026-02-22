@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.0.0  | A+  | A+          | A+           | A+               | Native agent runtime. OpenClaw removed. Pure-pipe: LLM = `string → string`, cn = all effects. Zero runtime deps. |
 | v2.4.0  | A+  | A+          | A+           | A+               | Typed FSM protocol. All 4 state machines (sender, receiver, thread, actor) enforced at compile time. |
 | v2.3.x  | A+  | A+          | A+           | A                | Native OCaml binary, 10-module refactor. No more Node.js dependency. |
 | v2.2.0  | A+  | A+          | A+           | A+               | First hash consensus. Actor model complete: 5-min cron, input/output protocol, bidirectional messaging, verified sync. |
@@ -29,6 +30,120 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v3.0.0 (2026-02-22)
+
+**Native Agent Runtime**
+
+cnos agents now run natively — no external orchestrator required. The runtime implements a pure-pipe architecture: the LLM is a stateless `string → string` function, `cn` handles all I/O, effects, and coordination. OpenClaw is fully removed.
+
+### The Big Picture
+
+```
+Before (v2.x):  Telegram → OpenClaw → cn → agent ops
+After  (v3.0):  Telegram → cn agent → Claude API → cn → agent ops
+                           ^^^^^^^^^^^^^^^^^^^^^^^^
+                           All native OCaml, ~1,500 lines
+```
+
+The agent runtime replaces OpenClaw's:
+- Telegram bot infrastructure → `cn_telegram.ml`
+- LLM orchestration → `cn_llm.ml` (single call, no tool loop)
+- Context management → `cn_context.ml` (pack everything upfront)
+- Session handling → `cn_runtime.ml` (orchestrator)
+
+### Added
+
+**6 new modules (~1,500 lines total):**
+
+| Module | Lines | Purpose |
+|--------|-------|---------|
+| `cn_runtime.ml` | 557 | Orchestrator: pack → call LLM → write → archive → execute → project |
+| `cn_json.ml` | 310 | Zero-dependency JSON parser/emitter |
+| `cn_context.ml` | 177 | Context packer (SOUL, USER, skills, conversation, message) |
+| `cn_telegram.ml` | 170 | Telegram Bot API client (long-poll + send) |
+| `cn_llm.ml` | 154 | Claude Messages API client (single request/response) |
+| `cn_config.ml` | 88 | Environment + config.json loader |
+
+**CLI interface:**
+- `cn agent` — Cron entry point (dequeue, pack, call LLM, execute ops)
+- `cn agent --daemon` — Long-running Telegram polling loop
+- `cn agent --stdio` — Interactive testing mode
+- `cn agent --process` — Process one queued item directly
+
+**Documentation:**
+- `AGENT-RUNTIME-v3.md` — Full design doc with rationale, architecture, migration plan
+- Updated `ARCHITECTURE.md`, `CLI.md`, `AUTOMATION.md`
+
+### Architecture: Pure Pipe
+
+The core insight: LLMs don't need tools if you pack context upfront.
+
+```
+cn packs context → LLM plans → cn executes ops
+```
+
+**Context stuffing vs. tool loops:**
+
+| Approach | Token cost | API calls | Latency |
+|----------|------------|-----------|---------|
+| Tool loop (3 retrievals) | ~15K+ | 3-5 | 3-10s |
+| Context stuffing | ~6.5K | **1** | **1-3s** |
+
+For cnos's bounded, predictable context (~20-30 hub files), stuffing wins.
+
+**What gets packed into `state/input.md`:**
+- `spec/SOUL.md` — Agent identity (~500 tokens)
+- `spec/USER.md` — User context (~300 tokens)
+- Last 3 daily reflections (~1,500 tokens)
+- Matched skills, top 3 (~1,500 tokens)
+- Conversation history, last 10 (~2,000 tokens)
+- Inbound message (~200 tokens)
+
+### Changed
+
+- **Removed OpenClaw dependency** — No external orchestrator
+- **System deps only** — Requires `git` + `curl`, no opam runtime deps
+- **Config location** — `.cn/config.json` (reuses existing hub discovery)
+- **Secrets via env vars** — `TELEGRAM_TOKEN`, `ANTHROPIC_KEY`, `CN_MODEL`
+
+### Security Model (Preserved)
+
+The CN security invariant is enforced:
+
+> Agent interface: `state/input.md → state/output.md`  
+> LLM reality: sees text in, produces text out. cn does all effects.
+
+- LLM never touches files, commands, or network
+- Ops parsed from output.md frontmatter, validated before execution
+- Raw IO pairs archived before effects (crash-safe audit trail)
+- API keys via env vars, never logged
+
+### Breaking Changes
+
+- **OpenClaw no longer required** — Remove OC config after migration
+- **`cn agent` is the new entry point** — Replaces OC heartbeat/cron
+- **Telegram handled natively** — OC bot infrastructure bypassed
+
+### Migration
+
+1. Set env vars: `TELEGRAM_TOKEN`, `ANTHROPIC_KEY`
+2. Create `.cn/config.json` with `allowed_users`
+3. Start daemon: `cn agent --daemon` (or systemd unit)
+4. Add cron: `* * * * * cn agent` (processes queue)
+5. Disable OpenClaw after verification
+
+Rollback: `systemctl stop cn-agent && systemctl start openclaw`
+
+### Technical Highlights
+
+- **Zero opam runtime deps** — stdlib + Unix only
+- **curl-backed HTTP** — No OCaml HTTP stack complexity
+- **Body consumption rules** — Markdown body = full response, frontmatter = notification
+- **FSM integration** — Reuses existing `cn_protocol.ml` actor FSM
+- **617 lines of new tests** — `cn_cmd_test.ml` + `cn_json_test.ml`
 
 ---
 
