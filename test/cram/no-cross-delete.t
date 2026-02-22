@@ -87,14 +87,14 @@ Verify branch exists on pi-origin before sync:
 
 Run sync — should materialize the message:
 
-  $ $CN sync 2>&1 | grep -E "(Materialized|From pi)"
+  $ $CN sync 2>&1 | grep -E "(Materialized|From pi)" | sed 's/[0-9]\{8\}-[0-9]\{6\}/TIMESTAMP/g'
   ⚠ From pi: 1 inbound
-  ✓ Materialized: 20260221-121825-pi-hello-from-pi.md
+  ✓ Materialized: TIMESTAMP-pi-hello-from-pi.md
 
 Verify message was materialized in inbox:
 
-  $ ls threads/mail/inbox/ | grep "pi-hello-from-pi"
-  20260221-121825-pi-hello-from-pi.md
+  $ ls threads/mail/inbox/ | grep "pi-hello-from-pi" | sed 's/[0-9]\{8\}-[0-9]\{6\}/TIMESTAMP/'
+  TIMESTAMP-pi-hello-from-pi.md
 
 CRITICAL: Verify sender's branch was NOT deleted from pi-origin:
 
