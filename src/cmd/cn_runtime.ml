@@ -502,9 +502,12 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                           offset := max !offset (msg.update_id + 1);
                           write_offset hub_path !offset;
                           drain rest
-                        end
-                        (* else: message still pending — stop and let next
-                           poll cycle retry from current offset *)
+                        end else
+                          (* Message still pending — stop and let next
+                             poll cycle retry from current offset *)
+                          Cn_hub.log_action hub_path "daemon.pending"
+                            (Printf.sprintf "id:%s still queued/in-flight, pausing drain"
+                               trigger_id)
                     | Error err ->
                         (* Do NOT advance offset — Telegram will retry *)
                         print_endline (Cn_fmt.warn (Printf.sprintf
