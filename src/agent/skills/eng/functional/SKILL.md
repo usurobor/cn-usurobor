@@ -39,6 +39,11 @@ let parse s =
   parse_value st  (* returns Result, no state leaks *)
 ```
 
+**Case study: `cn_json.ml`** — full JSON parser using localized mutable `pos`.
+API is `parse : string -> (t, string) result` — pure. Internally uses
+`{ src; mutable pos }` for efficient single-pass parsing. Errors return
+position info: `Error (sprintf "expected X at pos %d" st.pos)`.
+
 ## 2. Composition
 
 ### 2.1 Pipelines Over Sequences

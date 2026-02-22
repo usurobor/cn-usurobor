@@ -98,6 +98,15 @@ let parse s : (value, string) result =
 type state = { src: string; mutable pos: int }
 let parse s = let st = { src = s; pos = 0 } in parse_value st
 
+(* Atomic file locking — exclusive, no race *)
+let fd = Unix.openfile path [O_WRONLY; O_CREAT; O_EXCL] 0o644 in
+Fun.protect ~finally:(fun () -> Unix.close fd) (fun () -> ...)
+
+(* Safe subprocess — stdin data, merged stderr, no shell injection *)
+let code, output =
+  exec_args ~prog:"curl" ~args:["--config"; "-"]
+    ~stdin_data:config ()
+
 (* avoid *)
 let x = ref 0
 for i = 0 to n do ... done
