@@ -118,6 +118,7 @@ Forward-looking designs. Not yet implemented.
 | Reference | What it covers |
 |-----------|---------------|
 | [GLOSSARY.md](./reference/GLOSSARY.md) | Terms and definitions |
+| [NAMING.md](./reference/NAMING.md) | Naming conventions (CN, cnos, cn) |
 
 ## Explanation
 

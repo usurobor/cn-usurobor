@@ -1,5 +1,10 @@
 ; cn library (pure functions, testable)
 (library
  (name cn_lib)
- (modules cn_lib cn_json)
+ (modules cn_lib cn_json cn_build_info)
  (libraries inbox_lib))
+
+(rule
+ (target cn_build_info.ml)
+ (deps (universe))
+ (action (bash "echo 'let cnos_commit = \"'$(git rev-parse --short HEAD 2>/dev/null || echo unknown)'\"' > %{target}")))
