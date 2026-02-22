@@ -80,7 +80,12 @@ let () =
                | Ok config ->
                    match mode with
                    | Agent.Cron -> Cn_runtime.run_cron ~config ~hub_path ~name
-                   | Agent.Process -> ignore (Cn_runtime.process_one ~config ~hub_path ~name)
+                   | Agent.Process ->
+                       (match Cn_runtime.process_one ~config ~hub_path ~name with
+                        | Ok () -> ()
+                        | Error msg ->
+                            print_endline (Cn_fmt.fail msg);
+                            Cn_ffi.Process.exit 1)
                    | Agent.Daemon -> Cn_runtime.run_daemon ~config ~hub_path ~name
                    | Agent.Stdio -> Cn_runtime.run_stdio ~config ~hub_path ~name)
           | Read t -> Cn_gtd.run_read hub_path t
