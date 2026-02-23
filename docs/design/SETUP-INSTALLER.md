@@ -200,13 +200,13 @@ and `created_at`.
   (cost-effective for an always-on daemon). User can pick any model,
   including Opus.
 - **Offline / error**: fall back to hardcoded default
-  `claude-sonnet-4-5-20250929` and print a note.
+  `claude-sonnet-4-6` (stable alias for current Sonnet line) and print a note.
 - **Re-run**: show current model; Enter keeps it.
 
 ```
   Available models:
     1. claude-opus-4-6             (Claude Opus 4.6)
-    2. claude-sonnet-4-5-20250929  (Claude Sonnet 4.5)  ← default
+    2. claude-sonnet-4-6           (Claude Sonnet 4.6)  ← default
     3. claude-haiku-4-5-20251001   (Claude Haiku 4.5)
     ...
   Model [2]:
@@ -298,7 +298,8 @@ If the token is valid, offer automatic user-ID detection:
      → Send /start to @my_cn_bot in Telegram, then press Enter.
    ```
 2. User presses Enter.
-3. Call `GET https://api.telegram.org/bot<TOKEN>/getUpdates`.
+3. Call `GET https://api.telegram.org/bot<TOKEN>/getUpdates?allowed_updates=["message"]&timeout=0`
+   (`timeout=0` for non-blocking probe; `allowed_updates` filters to messages only).
 4. Collect unique `from.id` + `from.first_name` from all messages.
 5. If users found, present them for confirmation:
    ```
@@ -361,9 +362,20 @@ After role selection, prompt for agent name:
 
 #### What each role scaffolds
 
-**Engineer** (`spec/SOUL.md` generated from `mindsets/ENGINEERING.md` + `PERSONALITY.md`):
+Templates are sourced from the `cnos` template repo (at these paths):
+
+- `src/agent/mindsets/ENGINEERING.md` — engineer principles
+- `src/agent/mindsets/PM.md` — PM principles
+- `src/agent/mindsets/PERSONALITY.md` — identity structure (name, vibe, mission)
+- `src/agent/SOUL.md` — baseline Conduct section (shared by all roles)
+
+At build time, `cn setup` reads these files from the template repo
+(or uses embedded copies if the template repo is not cloned locally).
+
+**Engineer** (`spec/SOUL.md` generated from the templates above):
 
 ```markdown
+<!-- generated-by: cn setup; role=engineer; name=Sigma; template=v1 -->
 # SOUL.md — Sigma
 
 ## Identity
@@ -386,9 +398,10 @@ Build and ship. Design doc → implementation → spec.
 - Remember you're a guest
 ```
 
-**PM** (`spec/SOUL.md` generated from `mindsets/PM.md` + `PERSONALITY.md`):
+**PM** (`spec/SOUL.md` generated from the templates above):
 
 ```markdown
+<!-- generated-by: cn setup; role=pm; name=Pi; template=v1 -->
 # SOUL.md — Pi
 
 ## Identity
@@ -411,10 +424,6 @@ Identify what needs to exist. Ensure it gets built coherently.
 - Remember you're a guest
 ```
 
-The Conduct section is always copied verbatim from `src/agent/SOUL.md`
-(the baseline contract). Role-specific principles come from the
-corresponding mindset file.
-
 #### Re-run behavior
 
 ```
@@ -430,7 +439,11 @@ Enter keeps current. `y` re-enters the role + name flow.
 
 - `spec/SOUL.md` — the generated identity file (in the hub, not `.cn/`)
 - `runtime.role` in `.cn/config.json` — `"engineer"` or `"pm"`
-  (used by context packer to prioritize role-specific skills)
+
+> **Note:** The current context packer (`cn_context.ml`) scores skills
+> by keyword overlap only — it does not read `runtime.role`. A future
+> patch should add role-aware weighting so that e.g. an engineer agent
+> ranks `skills/eng/*` higher than `skills/pm/*` by default.
 
 ### Step 5: Write files
 
@@ -448,8 +461,17 @@ TELEGRAM_TOKEN="123456:ABCDEF..."
 Write/update `spec/SOUL.md` (generated from role template in Step 4).
 
 - Create `spec/` directory if missing.
-- Only write if file doesn't exist or user chose to change persona.
-- **Never overwrite** a hand-edited SOUL.md without confirmation.
+- Generated files include a marker as the first line (HTML comment,
+  invisible in rendered markdown):
+  `<!-- generated-by: cn setup; role=engineer; name=Sigma; template=v1 -->`
+- **Overwrite rules:**
+  - Marker present → safe to rewrite when persona changes.
+  - Marker absent → treat as hand-edited; require confirmation:
+    ```
+      spec/SOUL.md appears to have been manually edited.
+      Overwrite with generated template? [y/N]
+    ```
+  - File missing → write without prompting.
 
 Write/update `.cn/config.json`:
 
@@ -457,7 +479,7 @@ Write/update `.cn/config.json`:
 {
   "runtime": {
     "role": "engineer",
-    "model": "claude-sonnet-4-5-20250929",
+    "model": "claude-sonnet-4-6",
     "allowed_users": [498316684],
     "poll_interval": 1,
     "poll_timeout": 30,
@@ -541,7 +563,7 @@ $ cn setup
 
   Available models:
     1. claude-opus-4-6             (Claude Opus 4.6)
-    2. claude-sonnet-4-5-20250929  (Claude Sonnet 4.5)  ← default
+    2. claude-sonnet-4-6           (Claude Sonnet 4.6)  ← default
     3. claude-haiku-4-5-20251001   (Claude Haiku 4.5)
   Model [2]:
 
@@ -602,7 +624,7 @@ $ cn setup
 
   Available models:
     1. claude-opus-4-6             (Claude Opus 4.6)
-    2. claude-sonnet-4-5-20250929  (Claude Sonnet 4.5)  ← current
+    2. claude-sonnet-4-6           (Claude Sonnet 4.6)  ← current
     3. claude-haiku-4-5-20251001   (Claude Haiku 4.5)
   Model [2]:
 
