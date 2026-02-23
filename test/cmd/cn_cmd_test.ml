@@ -28,6 +28,22 @@
     Each config test calls reset_config_env() to clear env vars
     (Cn_config treats "" as unset, so tests run in any order). *)
 
+(** Create a fresh temp directory. Works on OCaml >= 4.14 — avoids
+    Filename.temp_dir which requires 5.1+. *)
+let mk_temp_dir prefix =
+  let base = Filename.get_temp_dir_name () in
+  let rec attempt k =
+    if k = 0 then failwith "mk_temp_dir: exhausted attempts";
+    let dir =
+      Filename.concat base
+        (Printf.sprintf "%s-%d-%06d" prefix (Unix.getpid ()) (Random.int 1_000_000))
+    in
+    try Unix.mkdir dir 0o700; dir
+    with Unix.Unix_error (Unix.EEXIST, _, _) -> attempt (k - 1)
+  in
+  Random.self_init ();
+  attempt 50
+
 (* === Cn_mail: parse_rejected_branch === *)
 
 let%expect_test "parse_rejected_branch: valid rejection notice" =
@@ -388,7 +404,7 @@ let find_sub_idx (s : string) (sub : string) : int =
   if m = 0 then 0 else loop 0
 
 let with_pack_hub f =
-  let tmp = Filename.temp_dir "cn_pack_test" "" in
+  let tmp = mk_temp_dir "cn_pack_test" in
   (* Build hub structure *)
   let dirs = [
     ".cn"; "spec"; "src/agent/mindsets";
@@ -603,7 +619,7 @@ let%expect_test "telegram_payload: body=Some empty string still wins" =
    cleanup — no ordering constraints between tests. *)
 
 let with_temp_hub ?config_json f =
-  let tmp = Filename.temp_dir "cn_config_test" "" in
+  let tmp = mk_temp_dir "cn_config_test" in
   let cn_dir = Filename.concat tmp ".cn" in
   Cn_ffi.Fs.mkdir_p cn_dir;
   (match config_json with
@@ -736,7 +752,7 @@ let%expect_test "config: CN_MODEL env overrides config file model" =
    and state/queue/ files. *)
 
 let with_daemon_hub f =
-  let tmp = Filename.temp_dir "cn_daemon_test" "" in
+  let tmp = mk_temp_dir "cn_daemon_test" in
   let state_dir = Filename.concat tmp "state" in
   let queue_dir = Filename.concat state_dir "queue" in
   Cn_ffi.Fs.mkdir_p queue_dir;
