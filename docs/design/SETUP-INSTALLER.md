@@ -142,10 +142,43 @@ Edge cases:
 | Anthropic API key | Yes | `.cn/secrets.env` | masked on re-run: `sk-ant-…abcd` |
 | Telegram bot token | No | `.cn/secrets.env` | if unset, daemon runs without Telegram |
 | Allowed Telegram user IDs | No | `.cn/config.json` | comma-separated → JSON array of **ints**; empty = deny all |
-| Model | No | `.cn/config.json` | default: `claude-sonnet-4-5-20250929` |
+| Model | No | `.cn/config.json` | selected from live API list (see below) |
 | max_tokens | No | `.cn/config.json` | default: 8192; clamp >= 1 |
 | poll_interval | No | `.cn/config.json` | default: 1; clamp >= 1 |
 | poll_timeout | No | `.cn/config.json` | default: 30; clamp >= 0 |
+
+#### Model selection
+
+After the API key is entered (or loaded from existing secrets),
+`cn setup` calls `GET /v1/models` to fetch the live model list.
+The API returns models sorted most-recent-first with `id`, `display_name`,
+and `created_at`.
+
+Behavior:
+
+- **Online**: present a numbered list of available models.
+  Default selection: the first model whose `id` contains `sonnet`
+  (cost-effective for an always-on daemon). User can pick any model,
+  including Opus.
+- **Offline / error**: fall back to hardcoded default
+  `claude-sonnet-4-5-20250929` and print a note.
+- **Re-run**: show current model with `[current-model-id]` prompt;
+  Enter keeps it.
+
+Example output:
+
+```
+  Available models:
+    1. claude-opus-4-6           (Claude Opus 4.6)
+    2. claude-sonnet-4-5-20250929 (Claude Sonnet 4.5)  ← default
+    3. claude-haiku-4-5-20251001  (Claude Haiku 4.5)
+    ...
+  Model [2]:
+```
+
+This reuses the same API call that Step 4 uses for key validation —
+if the call succeeds, the key is valid and we have the model list.
+If it fails with 401/403, we know the key is bad before writing anything.
 
 ### Step 2: Write secrets
 
@@ -188,12 +221,13 @@ Merge strategy:
 
 Validation is best-effort and never blocks setup.
 
-**Anthropic:**
+**Anthropic** (already done if model list was fetched in Step 1):
 
 - `GET https://api.anthropic.com/v1/models`
 - Headers: `x-api-key: <KEY>`, `anthropic-version: 2023-06-01`
-- `200` → valid
+- `200` → valid (also populates model picker)
 - `401`/`403` → warn "invalid key"
+- If model list was already fetched successfully, skip re-validation.
 
 **Telegram:**
 
@@ -260,12 +294,18 @@ $ cn setup
   CN Setup
   ────────
   Anthropic API key: sk-ant-api03-xxxxx
+  ✓ API key valid — fetching models...
+
+  Available models:
+    1. claude-opus-4-6             (Claude Opus 4.6)
+    2. claude-sonnet-4-5-20250929  (Claude Sonnet 4.5)  ← default
+    3. claude-haiku-4-5-20251001   (Claude Haiku 4.5)
+  Model [2]:
+
   Telegram bot token (optional): 123456:ABCDEF
   Allowed Telegram user IDs: 498316684
-  Model [claude-sonnet-4-5-20250929]:
 
-  Validating...
-  ✓ Anthropic API key valid
+  Validating Telegram...
   ✓ Telegram bot @my_cn_bot
 
   Writing .cn/secrets.env (0600)... ✓
@@ -287,12 +327,16 @@ $ cn setup
   CN Setup
   ────────
   Anthropic API key [sk-ant-…xxxx]:
+  ✓ API key valid — fetching models...
+
+  Available models:
+    1. claude-opus-4-6             (Claude Opus 4.6)
+    2. claude-sonnet-4-5-20250929  (Claude Sonnet 4.5)  ← current
+    3. claude-haiku-4-5-20251001   (Claude Haiku 4.5)
+  Model [2]:
+
   Telegram bot token [123…DEF]:
   Allowed Telegram user IDs [498316684]:
-  Model [claude-sonnet-4-5-20250929]:
-
-  Validating...
-  ✓ Anthropic API key valid
   ✓ Telegram bot @my_cn_bot
 
   No changes detected. ✓
