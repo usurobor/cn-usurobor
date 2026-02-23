@@ -127,11 +127,12 @@ Edge cases:
 
 ## 6. `cn setup` UX / Flow
 
-`cn setup` is interactive and opinionated. It asks three things in order:
+`cn setup` is interactive and opinionated. It asks four things in order:
 
 1. **Daemon** — how will this agent run?
 2. **Anthropic** — the brain (API key + model)
 3. **Telegram** — the interface (bot token + allowed users)
+4. **Persona** — who is this agent? (role + identity)
 
 Pressing Enter accepts the default / keeps the existing value.
 
@@ -333,7 +334,105 @@ Write `"allowed_users": []` (deny all). Print:
   ⚠ No users allowed. Edit .cn/config.json to add user IDs later.
 ```
 
-### Step 4: Write files
+### Step 4: Persona
+
+Persona defines who this agent is — its role, name, and behavioral
+contract. This scaffolds `spec/SOUL.md` from role-specific templates.
+
+```
+  4. Persona
+
+  Role:
+    1. Engineer  ← default
+    2. PM
+  [1]:
+```
+
+**Default: Engineer.** Most hubs are code-first.
+
+After role selection, prompt for agent name:
+
+```
+  Agent name: Sigma
+```
+
+- Must be non-empty, alphanumeric + hyphens.
+- Used in `spec/SOUL.md` identity section and thread headers.
+
+#### What each role scaffolds
+
+**Engineer** (`spec/SOUL.md` generated from `mindsets/ENGINEERING.md` + `PERSONALITY.md`):
+
+```markdown
+# SOUL.md — Sigma
+
+## Identity
+- **Name:** Sigma
+- **Role:** Engineer
+- **Vibe:** sharp, concise
+
+## Mission
+Build and ship. Design doc → implementation → spec.
+
+## Principles
+- Unix: one tool, one job
+- Done > Perfect: ship v0, iterate
+- Never self-merge: push branch, wait for review
+
+## Conduct
+- Be genuinely helpful, not performatively helpful
+- Be resourceful before asking
+- Earn trust through competence
+- Remember you're a guest
+```
+
+**PM** (`spec/SOUL.md` generated from `mindsets/PM.md` + `PERSONALITY.md`):
+
+```markdown
+# SOUL.md — Pi
+
+## Identity
+- **Name:** Pi
+- **Role:** PM
+- **Vibe:** warm, structured
+
+## Mission
+Identify what needs to exist. Ensure it gets built coherently.
+
+## Principles
+- Problem, not solution: define outcomes, let engineers propose
+- State claims require proof: fetch before reporting
+- No self-merge: PM reviews, doesn't fix
+
+## Conduct
+- Be genuinely helpful, not performatively helpful
+- Be resourceful before asking
+- Earn trust through competence
+- Remember you're a guest
+```
+
+The Conduct section is always copied verbatim from `src/agent/SOUL.md`
+(the baseline contract). Role-specific principles come from the
+corresponding mindset file.
+
+#### Re-run behavior
+
+```
+  4. Persona
+
+  Role: Engineer (Sigma)
+  Change persona? [y/N]
+```
+
+Enter keeps current. `y` re-enters the role + name flow.
+
+#### Stored in
+
+- `spec/SOUL.md` — the generated identity file (in the hub, not `.cn/`)
+- `runtime.role` in `.cn/config.json` — `"engineer"` or `"pm"`
+  (used by context packer to prioritize role-specific skills)
+
+### Step 5: Write files
 
 Write `.cn/secrets.env`:
 
@@ -346,11 +445,18 @@ TELEGRAM_TOKEN="123456:ABCDEF..."
 - `chmod 0600`
 - ensure `.gitignore` contains `.cn/secrets.env`
 
+Write/update `spec/SOUL.md` (generated from role template in Step 4).
+
+- Create `spec/` directory if missing.
+- Only write if file doesn't exist or user chose to change persona.
+- **Never overwrite** a hand-edited SOUL.md without confirmation.
+
 Write/update `.cn/config.json`:
 
 ```json
 {
   "runtime": {
+    "role": "engineer",
     "model": "claude-sonnet-4-5-20250929",
     "allowed_users": [498316684],
     "poll_interval": 1,
@@ -366,7 +472,7 @@ Merge strategy:
 - update known keys under `runtime`
 - preserve everything else
 
-### Step 5: Install daemon
+### Step 6: Install daemon
 
 Only if user said yes in Step 1 and systemd is present.
 
@@ -458,13 +564,22 @@ $ cn setup
     1. Alice (ID: 498316684)  ✓
   Allow these users? [Y/n] y
 
+  4. Persona
+
+  Role:
+    1. Engineer  ← default
+    2. PM
+  [1]:
+  Agent name: Sigma
+
   Writing .cn/secrets.env (0600)... ✓
+  Writing spec/SOUL.md... ✓
   Writing .cn/config.json... ✓
   Updating .gitignore... ✓
   Writing cn.service... ✓
   Starting cn.service... ✓
 
-  Done. cn is running.
+  Done. Sigma (engineer) is running.
   View logs: journalctl -u cn -f
 ```
 
@@ -499,6 +614,11 @@ $ cn setup
   Allowed users: Alice (498316684)
   Change allowed users? [y/N]
 
+  4. Persona
+
+  Role: Engineer (Sigma)
+  Change persona? [y/N]
+
   No changes detected. ✓
 ```
 
@@ -506,8 +626,9 @@ $ cn setup
 
 After `install.sh` + `cn setup`:
 
-- `.cn/config.json` exists and is valid JSON.
+- `.cn/config.json` exists and is valid JSON with `runtime.role` set.
 - `.cn/secrets.env` exists, chmod 0600, and is gitignored.
+- `spec/SOUL.md` exists with role-appropriate identity and principles.
 - `cn.service` is active and running (if systemd present and user accepted default).
 - `cn agent --daemon` starts and reads secrets without manual exports.
 - Re-running `cn setup` with no changes prints "No changes detected"
@@ -518,11 +639,12 @@ After `install.sh` + `cn setup`:
 | Patch | Scope | Depends on |
 |-------|-------|-----------|
 | **A** | Dotenv loader + secret precedence in `Cn_config.load` | — |
-| **B** | `cn setup` scaffold: Step 0 preconditions + Step 4 file writes | A |
+| **B** | `cn setup` scaffold: Step 0 preconditions + Step 5 file writes | A |
 | **C** | Step 1 — Daemon: systemd detection, unit generation, idempotent install | B |
 | **D** | Step 2 — Anthropic: key prompt, `/v1/models` validation + model picker | B |
 | **E** | Step 3 — Telegram: guided flow (BotFather, `getMe`, `getUpdates` auto-detect) | B |
-| **F** | Tests (dotenv parsing, setup idempotency, config merge, each step) | A–E |
+| **F** | Step 4 — Persona: role picker, name prompt, `spec/SOUL.md` scaffolding | B |
+| **G** | Tests (dotenv parsing, setup idempotency, config merge, each step) | A–F |
 
 ## 10. Open questions
 
