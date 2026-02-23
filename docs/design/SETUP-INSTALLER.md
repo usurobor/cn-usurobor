@@ -140,8 +140,8 @@ Edge cases:
 | Prompt | Required | Stored in | Notes |
 |--------|----------|-----------|-------|
 | Anthropic API key | Yes | `.cn/secrets.env` | masked on re-run: `sk-ant-…abcd` |
-| Telegram bot token | No | `.cn/secrets.env` | if unset, daemon runs without Telegram |
-| Allowed Telegram user IDs | No | `.cn/config.json` | comma-separated → JSON array of **ints**; empty = deny all |
+| Telegram bot token | No | `.cn/secrets.env` | guided flow (see below) |
+| Allowed Telegram user IDs | No | `.cn/config.json` | auto-detected or manual (see below) |
 | Model | No | `.cn/config.json` | selected from live API list (see below) |
 | max_tokens | No | `.cn/config.json` | default: 8192; clamp >= 1 |
 | poll_interval | No | `.cn/config.json` | default: 1; clamp >= 1 |
@@ -179,6 +179,119 @@ Example output:
 This reuses the same API call that Step 4 uses for key validation —
 if the call succeeds, the key is valid and we have the model list.
 If it fails with 401/403, we know the key is bad before writing anything.
+
+#### Telegram setup (guided)
+
+Telegram integration is optional. The flow walks users through bot
+creation, token validation, and **automatic user-ID detection** — no
+more asking users to look up their numeric Telegram ID.
+
+**Phase 1 — Enable Telegram?**
+
+```
+  Enable Telegram integration? [Y/n]
+```
+
+- `n` → skip all Telegram prompts, write no token or user IDs.
+- `y` / Enter → continue.
+- **Re-run with existing token**: skip this prompt, go straight to
+  Phase 2 (show masked token, let user change or keep it).
+
+**Phase 2 — Token acquisition**
+
+```
+  Do you have a bot token? [Y/n]
+```
+
+If **no**, print step-by-step BotFather instructions inline:
+
+```
+  To create a Telegram bot:
+    1. Open https://t.me/BotFather
+    2. Send /newbot
+    3. Choose a name and username
+    4. Copy the token BotFather gives you
+
+  Telegram bot token:
+```
+
+If **yes** (or re-run):
+
+```
+  Telegram bot token [123…DEF]:
+```
+
+**Phase 3 — Token validation**
+
+Immediately call `GET https://api.telegram.org/bot<TOKEN>/getMe`.
+
+- `ok: true` → print bot info and continue:
+  ```
+    ✓ Bot: My CN Bot (@my_cn_bot)
+  ```
+- `ok: false` / `401` → warn and offer retry or skip:
+  ```
+    ✗ Token invalid.
+    Re-enter token, or press Enter to skip Telegram:
+  ```
+- Network error → warn "could not validate" and continue
+  (user IDs prompt still shown so they can configure offline).
+
+**Phase 4 — Allowed users (auto-detect)**
+
+If the token is valid, offer automatic user-ID detection:
+
+```
+  Who should be allowed to talk to this bot?
+
+    1. Auto-detect (send /start to @my_cn_bot, then press Enter)
+    2. Enter user IDs manually
+    3. Skip (deny all — configure later)
+  [1]:
+```
+
+**Option 1 — Auto-detect** (default):
+
+1. Print instruction:
+   ```
+     → Send /start to @my_cn_bot in Telegram, then press Enter.
+   ```
+2. User presses Enter.
+3. Call `GET https://api.telegram.org/bot<TOKEN>/getUpdates`.
+4. Collect unique `from.id` + `from.first_name` from all messages.
+5. If users found, present them for confirmation:
+   ```
+     Detected users:
+       1. Alice (ID: 498316684)  ✓
+       2. Bob   (ID: 123456789)  ✓
+     Allow these users? [Y/n]
+   ```
+   - `Y` → save all detected IDs.
+   - `n` → fall back to manual entry.
+6. If no messages found:
+   ```
+     No messages found. Make sure you sent /start to @my_cn_bot.
+     Retry? [Y/n]
+   ```
+   - `Y` → repeat from sub-step 2.
+   - `n` → fall back to manual entry.
+
+**Option 2 — Manual entry**:
+
+```
+  Allowed Telegram user IDs (comma-separated): 498316684, 123456789
+```
+
+Parsed as before: comma-separated → JSON array of ints.
+Invalid input (non-numeric) → warn and re-prompt.
+
+**Option 3 — Skip**:
+
+Write `"allowed_users": []` (deny all). Print:
+
+```
+  ⚠ No users allowed. Edit .cn/config.json to add user IDs later.
+```
 
 ### Step 2: Write secrets
 
@@ -220,22 +333,16 @@ Merge strategy:
 ### Step 4: Validate keys (warn-only)
 
 Validation is best-effort and never blocks setup.
+Both keys are now validated **inline during Step 1**:
 
-**Anthropic** (already done if model list was fetched in Step 1):
+- **Anthropic**: validated when fetching the model list
+  (`GET /v1/models`; 200 = valid, 401/403 = warn).
+- **Telegram**: validated immediately after token entry
+  (`GET /bot<TOKEN>/getMe`; ok = valid, else warn + offer retry/skip).
 
-- `GET https://api.anthropic.com/v1/models`
-- Headers: `x-api-key: <KEY>`, `anthropic-version: 2023-06-01`
-- `200` → valid (also populates model picker)
-- `401`/`403` → warn "invalid key"
-- If model list was already fetched successfully, skip re-validation.
-
-**Telegram:**
-
-- `GET https://api.telegram.org/bot<TOKEN>/getMe`
-- `ok: true` → valid (print bot username)
-- `ok: false` / `401` → warn "invalid token"
-
-If offline or network error → warn "could not validate" and continue.
+Step 4 only runs validation for keys that were **not yet checked**
+(e.g. loaded from existing `secrets.env` on re-run without changes).
+If both were already validated inline, this step is a no-op.
 
 ### Step 5: Optional systemd install
 
@@ -302,11 +409,22 @@ $ cn setup
     3. claude-haiku-4-5-20251001   (Claude Haiku 4.5)
   Model [2]:
 
-  Telegram bot token (optional): 123456:ABCDEF
-  Allowed Telegram user IDs: 498316684
+  Enable Telegram integration? [Y/n] y
+  Do you have a bot token? [Y/n] y
+  Telegram bot token: 123456:ABCDEF
+  ✓ Bot: My CN Bot (@my_cn_bot)
 
-  Validating Telegram...
-  ✓ Telegram bot @my_cn_bot
+  Who should be allowed to talk to this bot?
+    1. Auto-detect (send /start to @my_cn_bot, then press Enter)
+    2. Enter user IDs manually
+    3. Skip (deny all — configure later)
+  [1]:
+
+  → Send /start to @my_cn_bot in Telegram, then press Enter.
+
+  Detected users:
+    1. Alice (ID: 498316684)  ✓
+  Allow these users? [Y/n] y
 
   Writing .cn/secrets.env (0600)... ✓
   Writing .cn/config.json... ✓
@@ -336,8 +454,10 @@ $ cn setup
   Model [2]:
 
   Telegram bot token [123…DEF]:
-  Allowed Telegram user IDs [498316684]:
-  ✓ Telegram bot @my_cn_bot
+  ✓ Bot: My CN Bot (@my_cn_bot)
+
+  Allowed users: Alice (498316684)
+  Change allowed users? [y/N]
 
   No changes detected. ✓
 ```
