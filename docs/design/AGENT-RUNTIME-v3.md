@@ -1,14 +1,21 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.1.3
+**Version:** 3.1.4
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
-**Date:** 2026-02-19
+**Date:** 2026-02-23
 **Status:** Draft
 **Reviewers:** usurobor, external
 
 ---
 
 ## Patch Notes
+
+**v3.1.4** — Mindsets as session substrate + role-weighted skill scoring:
+- `Cn_context.pack` now loads mindsets from `src/agent/mindsets/` in deterministic order (COHERENCE, role-file, WRITING, OPERATIONS, PERSONALITY, MEMES) between USER and reflections
+- Closes the drift between AGENTS.md session contract ("every session ingest mindsets") and actual runtime behavior
+- `load_skills` accepts `runtime.role` from `.cn/config.json` and applies a +2 score bonus to role-matching skill paths; filter still requires base keyword overlap > 0 (bonus reorders, never introduces)
+- `load_role` normalizes to lowercase (tolerates "Engineer", "PM", etc.)
+- Token estimate updated from ~6.5K to ~8.5K; mindsets sit in the stable prefix for prompt caching
 
 **v3.1.3** — Prompt contract: Option B (body-only prompt):
 - LLM is invoked with the body below frontmatter only (packed context)

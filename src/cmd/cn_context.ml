@@ -50,7 +50,10 @@ let load_role ~hub_path : string option =
     | Ok json ->
         (match Cn_json.get "runtime" json with
          | None -> None
-         | Some runtime -> Cn_json.get_string "role" runtime)
+         | Some runtime ->
+             match Cn_json.get_string "role" runtime with
+             | Some r -> Some (String.lowercase_ascii r)
+             | None -> None)
 
 (** Load mindsets in deterministic order, selecting role-specific file.
     Returns concatenated content or "" if no mindsets found. *)

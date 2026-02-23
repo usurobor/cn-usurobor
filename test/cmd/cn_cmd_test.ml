@@ -10,6 +10,8 @@
     - Cn_telegram.parse_update (Telegram update JSON extraction)
     - Cn_context.tokenize (keyword extraction)
     - Cn_context.score_skill (keyword overlap scoring)
+    - Cn_context.contains_sub (substring containment)
+    - Cn_context.pack (mindsets + role-weighted skills integration)
     - Cn_runtime.extract_inbound_message (message slicing from packed context)
     - Cn_runtime.telegram_payload (Telegram reply fallback chain)
     - Cn_config.load (config loading: defaults, env override, clamping, errors)
@@ -346,6 +348,142 @@ let%expect_test "score_skill: case insensitive matching" =
   let skill = "Code Review process for pull requests" in
   Printf.printf "score=%d\n" (Cn_context.score_skill keywords skill);
   [%expect {| score=2 |}]
+
+
+(* === Cn_context: contains_sub === *)
+
+let%expect_test "contains_sub: present" =
+  Printf.printf "%b\n" (Cn_context.contains_sub "/skills/eng/alpha/SKILL.md" "/skills/eng/");
+  [%expect {| true |}]
+
+let%expect_test "contains_sub: absent" =
+  Printf.printf "%b\n" (Cn_context.contains_sub "/skills/eng/alpha/SKILL.md" "/skills/pm/");
+  [%expect {| false |}]
+
+let%expect_test "contains_sub: empty sub" =
+  Printf.printf "%b\n" (Cn_context.contains_sub "anything" "");
+  [%expect {| true |}]
+
+let%expect_test "contains_sub: sub longer than string" =
+  Printf.printf "%b\n" (Cn_context.contains_sub "ab" "abc");
+  [%expect {| false |}]
+
+
+(* === Cn_context: pack — mindsets + role-weighted skills ===
+
+   Integration test: creates a temp hub with config, spec, mindsets,
+   and two skills with identical keyword overlap. Verifies:
+   1. Mindsets section is present in packed output
+   2. COHERENCE precedes ENGINEERING (deterministic order)
+   3. Engineer-role skill ranks before PM skill (role weighting) *)
+
+let find_sub_idx (s : string) (sub : string) : int =
+  let n = String.length s in
+  let m = String.length sub in
+  let rec loop i =
+    if i + m > n then -1
+    else if String.sub s i m = sub then i
+    else loop (i + 1)
+  in
+  if m = 0 then 0 else loop 0
+
+let with_pack_hub f =
+  let tmp = Filename.temp_dir "cn_pack_test" "" in
+  (* Build hub structure *)
+  let dirs = [
+    ".cn"; "spec"; "src/agent/mindsets";
+    "src/agent/skills/eng/alpha"; "src/agent/skills/pm/beta";
+    "state";
+  ] in
+  List.iter (fun d -> Cn_ffi.Fs.mkdir_p (Filename.concat tmp d)) dirs;
+  Fun.protect ~finally:(fun () ->
+    (* Best-effort recursive cleanup *)
+    let rec rm path =
+      if Sys.is_directory path then begin
+        Sys.readdir path |> Array.iter (fun f -> rm (Filename.concat path f));
+        Unix.rmdir path
+      end else Sys.remove path
+    in
+    (try rm tmp with _ -> ()))
+    (fun () -> f tmp)
+
+let%expect_test "pack: mindsets inserted + engineer skill ranks first" =
+  with_pack_hub (fun hub ->
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/config.json")
+      {|{"runtime":{"role":"engineer"}}|};
+    Cn_ffi.Fs.write (Filename.concat hub "spec/SOUL.md") "# SOUL\n";
+    Cn_ffi.Fs.write (Filename.concat hub "spec/USER.md") "# USER\n";
+    Cn_ffi.Fs.write (Filename.concat hub "src/agent/mindsets/COHERENCE.md")
+      "# COHERENCE\n";
+    Cn_ffi.Fs.write (Filename.concat hub "src/agent/mindsets/ENGINEERING.md")
+      "# ENGINEERING\n";
+    (* Two skills with identical keyword overlap on "ship patch" *)
+    Cn_ffi.Fs.write (Filename.concat hub "src/agent/skills/eng/alpha/SKILL.md")
+      "# ENG SKILL\nship patch\n";
+    Cn_ffi.Fs.write (Filename.concat hub "src/agent/skills/pm/beta/SKILL.md")
+      "# PM SKILL\nship patch\n";
+
+    let packed =
+      Cn_context.pack ~hub_path:hub ~trigger_id:"t1"
+        ~message:"ship patch" ~from:"test"
+    in
+    let c = packed.content in
+    let has_mindsets = find_sub_idx c "## Mindsets" >= 0 in
+    let coh_i = find_sub_idx c "# COHERENCE" in
+    let eng_i = find_sub_idx c "# ENGINEERING" in
+    let mindset_order = coh_i >= 0 && eng_i >= 0 && coh_i < eng_i in
+    let eng_skill_i = find_sub_idx c "# ENG SKILL" in
+    let pm_skill_i = find_sub_idx c "# PM SKILL" in
+    let skill_order = eng_skill_i >= 0 && pm_skill_i >= 0
+                      && eng_skill_i < pm_skill_i in
+    Printf.printf "has_mindsets=%b\nmindset_order=%b\nskill_order=%b\n"
+      has_mindsets mindset_order skill_order);
+  [%expect {|
+    has_mindsets=true
+    mindset_order=true
+    skill_order=true
+  |}]
+
+let%expect_test "pack: role normalization — Engineer (capitalized) works" =
+  with_pack_hub (fun hub ->
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/config.json")
+      {|{"runtime":{"role":"Engineer"}}|};
+    Cn_ffi.Fs.write (Filename.concat hub "spec/SOUL.md") "# SOUL\n";
+    Cn_ffi.Fs.write (Filename.concat hub "src/agent/mindsets/ENGINEERING.md")
+      "# ENGINEERING\n";
+    Cn_ffi.Fs.write (Filename.concat hub "src/agent/skills/eng/alpha/SKILL.md")
+      "# ENG SKILL\nship patch\n";
+    Cn_ffi.Fs.write (Filename.concat hub "src/agent/skills/pm/beta/SKILL.md")
+      "# PM SKILL\nship patch\n";
+
+    let packed =
+      Cn_context.pack ~hub_path:hub ~trigger_id:"t2"
+        ~message:"ship patch" ~from:"test"
+    in
+    let c = packed.content in
+    let eng_i = find_sub_idx c "# ENG SKILL" in
+    let pm_i = find_sub_idx c "# PM SKILL" in
+    Printf.printf "eng_first=%b\n" (eng_i >= 0 && pm_i >= 0 && eng_i < pm_i));
+  [%expect {| eng_first=true |}]
+
+let%expect_test "pack: no config → no mindsets crash, skills still work" =
+  with_pack_hub (fun hub ->
+    (* No .cn/config.json at all *)
+    (try Sys.remove (Filename.concat hub ".cn/config.json") with _ -> ());
+    Cn_ffi.Fs.write (Filename.concat hub "spec/SOUL.md") "# SOUL\n";
+    Cn_ffi.Fs.write (Filename.concat hub "src/agent/mindsets/ENGINEERING.md")
+      "# ENGINEERING\n";
+    Cn_ffi.Fs.write (Filename.concat hub "src/agent/skills/eng/alpha/SKILL.md")
+      "# SKILL\nship patch\n";
+
+    let packed =
+      Cn_context.pack ~hub_path:hub ~trigger_id:"t3"
+        ~message:"ship patch" ~from:"test"
+    in
+    let has_eng = find_sub_idx packed.content "# ENGINEERING" >= 0 in
+    let has_skill = find_sub_idx packed.content "# SKILL" >= 0 in
+    Printf.printf "has_eng=%b has_skill=%b\n" has_eng has_skill);
+  [%expect {| has_eng=true has_skill=true |}]
 
 
 (* === Cn_context: load_conversation === *)
