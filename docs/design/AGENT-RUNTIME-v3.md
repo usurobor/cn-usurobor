@@ -176,6 +176,7 @@ message ──→  1. Pack state/input.md
              │ ## Context           │
              │ <SOUL.md>            │
              │ <USER.md>            │
+             │ <mindsets>           │
              │ <recent reflections> │
              │ <matched skills>     │
              │ <conversation>       │
@@ -245,7 +246,7 @@ The industry has three main patterns for giving LLMs access to context:
 
 **Assumptions (illustrative):**
 
-- Packed context ≈ 6.5K tokens (see [Context Packing estimate](#context-packing) below)
+- Packed context ≈ 8.5K tokens (see [Context Packing estimate](#context-packing) below)
 - Output body ≈ 0.5–1.0K tokens typical
 - Tool-loop token growth depends on number/size of tool results and whether the platform supports caching for stable prefixes
 - Latency ranges are estimates based on typical API response times, not benchmarks
@@ -300,7 +301,7 @@ Pre-load everything relevant
 
 | Turn | Input | Output | Total |
 |------|-------|--------|-------|
-| 1. Only turn | ~6.5K | ~500 | 7K |
+| 1. Only turn | ~8.5K | ~500 | 9K |
 
 **When it wins:** Bounded context (<50K tokens), consistent task domain, predictable context needs.
 
@@ -308,25 +309,25 @@ Pre-load everything relevant
 
 | Factor | cnos Reality |
 |--------|--------------|
-| Corpus size | ~20-30 hub files, <50K tokens total |
+| Corpus size | ~20-30 hub files + mindsets, <50K tokens total |
 | Task domain | Agent ops, reflections, peer comms (consistent) |
-| Context needs | Predictable (SOUL, USER, skills, recent threads) |
+| Context needs | Predictable (SOUL, USER, mindsets, skills, recent threads) |
 | Query patterns | Most queries benefit from full context |
 
 **Cost comparison:**
 
 | Scenario | Tool Loop | Context Stuffing |
 |----------|-----------|------------------|
-| Simple "hi" | ~2K (cheaper) | ~6.5K |
-| Needs 1 file | ~5K | ~6.5K (similar) |
-| Needs 2+ files | ~10K+ | ~6.5K (cheaper) |
-| Needs skills + memory | ~15K+ | ~6.5K (cheaper) |
+| Simple "hi" | ~2K (cheaper) | ~8.5K |
+| Needs 1 file | ~5K | ~8.5K |
+| Needs 2+ files | ~10K+ | ~8.5K (cheaper) |
+| Needs skills + memory | ~15K+ | ~8.5K (cheaper) |
 | **API calls** | 2-5 | **1** |
 | **Latency** | 2-10s (serial) | **1-3s** |
 
 **Platform capabilities that enable this design:**
 
-- **Model capability trend:** Larger context windows make single-shot context packing feasible for bounded domains. Claude supports a 200K-token context window (and 1M-token beta for eligible orgs) ([Context Windows](https://docs.anthropic.com/en/docs/build-with-claude/context-windows)), far exceeding cnos's ~6.5K packed context.
+- **Model capability trend:** Larger context windows make single-shot context packing feasible for bounded domains. Claude supports a 200K-token context window (and 1M-token beta for eligible orgs) ([Context Windows](https://docs.anthropic.com/en/docs/build-with-claude/context-windows)), far exceeding cnos's ~8.5K packed context.
 - **Cost/latency lever:** Prompt caching allows reuse of an identical prompt prefix to reduce processing time and cost. Anthropic documents cache-read pricing at a significant discount, with a default TTL of 5 minutes ([Prompt Caching](https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching)).
 - **cnos implication:** Because cnos context is bounded and predictable, we prefer eager context packing + single LLM call over multi-turn retrieval loops. For larger or unbounded corpora, just-in-time retrieval remains the better fit.
 
@@ -338,14 +339,14 @@ cnos context packing produces a predictable prefix that is mostly stable across 
 
 | Segment | Stability | Cache? |
 |---------|-----------|--------|
-| SOUL, USER, skills, op format spec | Stable across calls | **Yes** — cache as prefix |
+| SOUL, USER, mindsets, skills, op format spec | Stable across calls | **Yes** — cache as prefix |
 | Hub state (hub.md, peers, reflections) | Changes on writes only | **Yes** — cache; invalidated on hub mutation |
 | Inbound message + recent conversation | Changes every call | **No** — dynamic tail |
 
 **Implementation notes:**
 - Use Anthropic's `cache_control` breakpoint after the stable prefix to mark the cache boundary
 - Default TTL is 5 minutes; cnos's cron cadence (1–5 min) fits within this window
-- Cache-read pricing is discounted vs. fresh input processing — for a ~5K stable prefix, this yields meaningful savings on repeated invocations
+- Cache-read pricing is discounted vs. fresh input processing — for a ~7K stable prefix (identity + mindsets + skills), this yields meaningful savings on repeated invocations
 - Monitor cache hit rate via `cache_creation_input_tokens` / `cache_read_input_tokens` in API responses
 
 ---
@@ -492,12 +493,13 @@ cn packs the following into `state/input.md` before LLM invocation:
 |----------|----------|---------------|
 | Agent identity | `spec/SOUL.md` | ~500 |
 | User context | `spec/USER.md` | ~300 |
+| Mindsets (session substrate) | `src/agent/mindsets/{COHERENCE,ENG/PM,WRITING,OPS,PERSONALITY,MEMES}.md` | ~2000 |
 | Recent daily reflections (last 3) | `threads/reflections/daily/YYYYMMDD.md` | ~1500 |
 | Current weekly reflection | `threads/reflections/weekly/YYYY-WNN.md` | ~500 |
-| Matched skills (top 3) | `src/agent/skills/**/SKILL.md` | ~1500 |
+| Matched skills (top 3, role-weighted) | `src/agent/skills/**/SKILL.md` | ~1500 |
 | Conversation history (last 10) | `state/conversation.json` | ~2000 |
 | Inbound message | The Telegram message text | ~200 |
-| **Total** | | **~6500** |
+| **Total** | | **~8500** |
 
 Token budget varies by model and context mode. The runtime should treat headroom as telemetry, not a hardcoded assumption.
 
@@ -606,9 +608,10 @@ type response = {
 type packed_context = {
   soul : string;                    (* spec/SOUL.md *)
   user : string;                    (* spec/USER.md *)
+  mindsets : string;                (* src/agent/mindsets/, deterministic order, role-aware *)
   daily_threads : string list;      (* threads/reflections/daily/, last 3 *)
   weekly_thread : string option;    (* threads/reflections/weekly/, current *)
-  skills : string list;             (* src/agent/skills/**/SKILL.md, matched *)
+  skills : string list;             (* src/agent/skills/**/SKILL.md, role-weighted *)
   conversation : llm_message list;  (* state/conversation.json, last 10 *)
   inbound_message : string;         (* the Telegram message text *)
 }

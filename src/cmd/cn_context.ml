@@ -3,14 +3,15 @@
     Loads hub artifacts and assembles the full context string sent to
     the LLM. Missing files degrade gracefully (skip, don't error).
 
-    Loading order (per design doc):
+    Loading order (per design doc + AGENTS.md session contract):
     1. spec/SOUL.md
     2. spec/USER.md
-    3. Last 3 daily reflections from threads/reflections/daily/
-    4. Current weekly reflection from threads/reflections/weekly/
-    5. Top 3 keyword-matched skills from src/agent/skills/
-    6. Conversation history from state/conversation.json (last 10)
-    7. Inbound message *)
+    3. Mindsets from src/agent/mindsets/ (deterministic order, role-aware)
+    4. Last 3 daily reflections from threads/reflections/daily/
+    5. Current weekly reflection from threads/reflections/weekly/
+    6. Top 3 keyword-matched skills from src/agent/skills/ (role-weighted)
+    7. Conversation history from state/conversation.json (last 10)
+    8. Inbound message *)
 
 type packed = {
   trigger_id : string;
@@ -23,6 +24,55 @@ let read_opt path =
   if Cn_ffi.Fs.exists path then
     (try Cn_ffi.Fs.read path with _ -> "")
   else ""
+
+(** Substring containment check (no Str dependency). *)
+let contains_sub (s : string) (sub : string) : bool =
+  let n = String.length s in
+  let m = String.length sub in
+  if m = 0 then true
+  else if m > n then false
+  else
+    let rec loop i =
+      if i + m > n then false
+      else if String.sub s i m = sub then true
+      else loop (i + 1)
+    in
+    loop 0
+
+(** Read runtime.role from .cn/config.json. Returns None if missing or unset. *)
+let load_role ~hub_path : string option =
+  let cfg = Cn_ffi.Path.join hub_path ".cn/config.json" in
+  let raw = read_opt cfg in
+  if raw = "" then None
+  else
+    match Cn_json.parse raw with
+    | Error _ -> None
+    | Ok json ->
+        (match Cn_json.get "runtime" json with
+         | None -> None
+         | Some runtime -> Cn_json.get_string "role" runtime)
+
+(** Load mindsets in deterministic order, selecting role-specific file.
+    Returns concatenated content or "" if no mindsets found. *)
+let load_mindsets ~hub_path ~(role : string option) : string =
+  let dir = Cn_ffi.Path.join hub_path "src/agent/mindsets" in
+  let role_file =
+    match role with
+    | Some "pm" -> "PM.md"
+    | _ -> "ENGINEERING.md"
+  in
+  [ "COHERENCE.md"
+  ; role_file
+  ; "WRITING.md"
+  ; "OPERATIONS.md"
+  ; "PERSONALITY.md"
+  ; "MEMES.md"
+  ]
+  |> List.filter_map (fun f ->
+       let p = Cn_ffi.Path.join dir f in
+       let c = String.trim (read_opt p) in
+       if c = "" then None else Some c)
+  |> String.concat "\n\n---\n\n"
 
 (** List .md files in a directory, sorted descending (newest first).
     Returns [] if directory doesn't exist. *)
@@ -62,8 +112,10 @@ let score_skill keywords skill_content =
     if List.mem kw skill_tokens then acc + 1 else acc
   ) 0
 
-(** Load top N skills by keyword overlap with the message. *)
-let load_skills ~hub_path ~message ~n =
+(** Load top N skills by keyword overlap with the message.
+    When role is set, skills under the matching role path get a small
+    score bonus (reorders, does not introduce zero-overlap skills). *)
+let load_skills ~hub_path ~message ~(role : string option) ~n =
   let skills_dir = Cn_ffi.Path.join hub_path "src/agent/skills" in
   if not (Cn_ffi.Fs.exists skills_dir) then []
   else
@@ -90,16 +142,25 @@ let load_skills ~hub_path ~message ~n =
               else [])
           with _ -> []
       in
+      let bonus_for_path path =
+        match role with
+        | Some "pm" when contains_sub path "/skills/pm/" -> 2
+        | Some "engineer" when contains_sub path "/skills/eng/" -> 2
+        | _ -> 0
+      in
       let all_skills = walk skills_dir in
       all_skills
-      |> List.map (fun (path, content) -> (path, content, score_skill keywords content))
-      |> List.filter (fun (_, _, score) -> score > 0)
+      |> List.map (fun (path, content) ->
+           let base = score_skill keywords content in
+           let score = base + bonus_for_path path in
+           (path, content, base, score))
+      |> List.filter (fun (_, _, base, _) -> base > 0)
       (* Sort by score desc, then path asc for stable tie-breaking.
          Deterministic order matters for prompt caching effectiveness. *)
-      |> List.sort (fun (p1, _, s1) (p2, _, s2) ->
+      |> List.sort (fun (p1, _, _, s1) (p2, _, _, s2) ->
            match compare s2 s1 with 0 -> String.compare p1 p2 | c -> c)
       |> (fun lst -> if List.length lst > n then List.filteri (fun i _ -> i < n) lst else lst)
-      |> List.map (fun (_, content, _) -> content)
+      |> List.map (fun (_, content, _, _) -> content)
 
 (** Load last N entries from state/conversation.json. *)
 let load_conversation ~hub_path ~n =
@@ -138,10 +199,14 @@ let pack ~hub_path ~trigger_id ~message ~from =
       Buffer.add_string buf "\n\n"
     end
   in
+  let role = load_role ~hub_path in
   (* 1. Core identity *)
   section "Identity" (read_opt (Cn_ffi.Path.join hub_path "spec/SOUL.md"));
   (* 2. User context *)
   section "User" (read_opt (Cn_ffi.Path.join hub_path "spec/USER.md"));
+  (* 2.5. Mindsets — session substrate, deterministic order *)
+  let mindsets = load_mindsets ~hub_path ~role in
+  if mindsets <> "" then section "Mindsets" mindsets;
   (* 3. Last 3 daily reflections *)
   let daily_dir = Cn_ffi.Path.join hub_path "threads/reflections/daily" in
   let dailies = list_md_desc daily_dir in
@@ -160,8 +225,8 @@ let pack ~hub_path ~trigger_id ~message ~from =
        section "Current Weekly Reflection"
          (read_opt (Cn_ffi.Path.join weekly_dir latest))
    | [] -> ());
-  (* 5. Top 3 keyword-matched skills *)
-  let skills = load_skills ~hub_path ~message ~n:3 in
+  (* 5. Top 3 keyword-matched skills (role-weighted) *)
+  let skills = load_skills ~hub_path ~message ~role ~n:3 in
   if skills <> [] then
     section "Relevant Skills" (String.concat "\n---\n" skills);
   (* 6. Conversation history (last 10) *)
