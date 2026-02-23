@@ -127,7 +127,13 @@ Edge cases:
 
 ## 6. `cn setup` UX / Flow
 
-`cn setup` is interactive by default. Pressing Enter keeps the existing value.
+`cn setup` is interactive and opinionated. It asks three things in order:
+
+1. **Daemon** — how will this agent run?
+2. **Anthropic** — the brain (API key + model)
+3. **Telegram** — the interface (bot token + allowed users)
+
+Pressing Enter accepts the default / keeps the existing value.
 
 ### Step 0: Preconditions
 
@@ -135,26 +141,58 @@ Edge cases:
 - Ensure `.cn/` exists.
 - Create `.cn/config.json` if missing (`{}`).
 
-### Step 1: Prompts (interactive)
+### Step 1: Daemon
 
-| Prompt | Required | Stored in | Notes |
-|--------|----------|-----------|-------|
-| Anthropic API key | Yes | `.cn/secrets.env` | masked on re-run: `sk-ant-…abcd` |
-| Telegram bot token | No | `.cn/secrets.env` | guided flow (see below) |
-| Allowed Telegram user IDs | No | `.cn/config.json` | auto-detected or manual (see below) |
-| Model | No | `.cn/config.json` | selected from live API list (see below) |
-| max_tokens | No | `.cn/config.json` | default: 8192; clamp >= 1 |
-| poll_interval | No | `.cn/config.json` | default: 1; clamp >= 1 |
-| poll_timeout | No | `.cn/config.json` | default: 30; clamp >= 0 |
+The first question establishes deployment intent.
+
+```
+  CN Setup
+  ────────
+
+  1. Daemon
+
+  Install as systemd service? [Y/n]
+```
+
+- **Default: Yes.** This is an always-on agent — daemon is the expected mode.
+- If systemd is detected → record intent, install later (after files are written).
+- If systemd is not detected → print warning and continue:
+  ```
+    ⚠ systemd not found. You can run the agent manually:
+      cn agent --daemon
+  ```
+- **Re-run with existing service**: show current status, ask to reinstall:
+  ```
+    cn.service: active (running)
+    Reinstall service? [y/N]
+  ```
+
+Settings (shown only if daemon = yes):
+
+```
+  max_tokens [8192]:
+  poll_interval (seconds) [1]:
+  poll_timeout (seconds) [30]:
+```
+
+### Step 2: Anthropic
+
+API key entry, inline validation, and model selection.
+
+```
+  2. Anthropic
+
+  API key: sk-ant-api03-xxxxx
+  ✓ API key valid — fetching models...
+```
+
+After the key is entered (or loaded from existing secrets),
+call `GET /v1/models` to validate the key and fetch available models.
 
 #### Model selection
 
-After the API key is entered (or loaded from existing secrets),
-`cn setup` calls `GET /v1/models` to fetch the live model list.
 The API returns models sorted most-recent-first with `id`, `display_name`,
 and `created_at`.
-
-Behavior:
 
 - **Online**: present a numbered list of available models.
   Default selection: the first model whose `id` contains `sonnet`
@@ -162,25 +200,25 @@ Behavior:
   including Opus.
 - **Offline / error**: fall back to hardcoded default
   `claude-sonnet-4-5-20250929` and print a note.
-- **Re-run**: show current model with `[current-model-id]` prompt;
-  Enter keeps it.
-
-Example output:
+- **Re-run**: show current model; Enter keeps it.
 
 ```
   Available models:
-    1. claude-opus-4-6           (Claude Opus 4.6)
-    2. claude-sonnet-4-5-20250929 (Claude Sonnet 4.5)  ← default
-    3. claude-haiku-4-5-20251001  (Claude Haiku 4.5)
+    1. claude-opus-4-6             (Claude Opus 4.6)
+    2. claude-sonnet-4-5-20250929  (Claude Sonnet 4.5)  ← default
+    3. claude-haiku-4-5-20251001   (Claude Haiku 4.5)
     ...
   Model [2]:
 ```
 
-This reuses the same API call that Step 4 uses for key validation —
-if the call succeeds, the key is valid and we have the model list.
-If it fails with 401/403, we know the key is bad before writing anything.
+If the API call fails with `401`/`403`, warn and offer re-entry:
 
-#### Telegram setup (guided)
+```
+  ✗ API key invalid.
+  Re-enter key:
+```
+
+### Step 3: Telegram
 
 Telegram integration is optional. The flow walks users through bot
 creation, token validation, and **automatic user-ID detection** — no
@@ -189,6 +227,8 @@ more asking users to look up their numeric Telegram ID.
 **Phase 1 — Enable Telegram?**
 
 ```
+  3. Telegram
+
   Enable Telegram integration? [Y/n]
 ```
 
@@ -212,13 +252,13 @@ If **no**, print step-by-step BotFather instructions inline:
     3. Choose a name and username
     4. Copy the token BotFather gives you
 
-  Telegram bot token:
+  Bot token:
 ```
 
 If **yes** (or re-run):
 
 ```
-  Telegram bot token [123…DEF]:
+  Bot token [123…DEF]:
 ```
 
 **Phase 3 — Token validation**
@@ -282,7 +322,7 @@ If the token is valid, offer automatic user-ID detection:
   Allowed Telegram user IDs (comma-separated): 498316684, 123456789
 ```
 
-Parsed as before: comma-separated → JSON array of ints.
+Parsed as: comma-separated → JSON array of ints.
 Invalid input (non-numeric) → warn and re-prompt.
 
 **Option 3 — Skip**:
@@ -293,9 +333,9 @@ Write `"allowed_users": []` (deny all). Print:
   ⚠ No users allowed. Edit .cn/config.json to add user IDs later.
 ```
 
-### Step 2: Write secrets
+### Step 4: Write files
 
-Write `.cn/secrets.env` with normalized lines:
+Write `.cn/secrets.env`:
 
 ```dotenv
 # CN secrets — do not commit (chmod 600)
@@ -303,12 +343,8 @@ ANTHROPIC_KEY="sk-ant-..."
 TELEGRAM_TOKEN="123456:ABCDEF..."
 ```
 
-Then:
-
 - `chmod 0600`
 - ensure `.gitignore` contains `.cn/secrets.env`
-
-### Step 3: Write config
 
 Write/update `.cn/config.json`:
 
@@ -330,30 +366,14 @@ Merge strategy:
 - update known keys under `runtime`
 - preserve everything else
 
-### Step 4: Validate keys (warn-only)
+### Step 5: Install daemon
 
-Validation is best-effort and never blocks setup.
-Both keys are now validated **inline during Step 1**:
+Only if user said yes in Step 1 and systemd is present.
 
-- **Anthropic**: validated when fetching the model list
-  (`GET /v1/models`; 200 = valid, 401/403 = warn).
-- **Telegram**: validated immediately after token entry
-  (`GET /bot<TOKEN>/getMe`; ok = valid, else warn + offer retry/skip).
-
-Step 4 only runs validation for keys that were **not yet checked**
-(e.g. loaded from existing `secrets.env` on re-run without changes).
-If both were already validated inline, this step is a no-op.
-
-### Step 5: Optional systemd install
-
-Prompt: `Install and start as a systemd service? [Y/n]`
-
-If yes and systemd present:
-
-- Prefer a **user service** if not root
-  (writes into `~/.config/systemd/user/`)
-- If root (or user agrees to sudo), install as a **system service**
-  in `/etc/systemd/system/`
+Prefer a **user service** if not root
+(writes into `~/.config/systemd/user/`).
+If root (or user agrees to sudo), install as a **system service**
+in `/etc/systemd/system/`.
 
 System service example (generated by `cn setup`, placeholders replaced):
 
@@ -400,7 +420,17 @@ $ cd my-project
 $ cn setup
   CN Setup
   ────────
-  Anthropic API key: sk-ant-api03-xxxxx
+
+  1. Daemon
+
+  Install as systemd service? [Y/n]
+  max_tokens [8192]:
+  poll_interval (seconds) [1]:
+  poll_timeout (seconds) [30]:
+
+  2. Anthropic
+
+  API key: sk-ant-api03-xxxxx
   ✓ API key valid — fetching models...
 
   Available models:
@@ -409,9 +439,11 @@ $ cn setup
     3. claude-haiku-4-5-20251001   (Claude Haiku 4.5)
   Model [2]:
 
+  3. Telegram
+
   Enable Telegram integration? [Y/n] y
   Do you have a bot token? [Y/n] y
-  Telegram bot token: 123456:ABCDEF
+  Bot token: 123456:ABCDEF
   ✓ Bot: My CN Bot (@my_cn_bot)
 
   Who should be allowed to talk to this bot?
@@ -429,9 +461,7 @@ $ cn setup
   Writing .cn/secrets.env (0600)... ✓
   Writing .cn/config.json... ✓
   Updating .gitignore... ✓
-
-  Install as systemd service? [Y/n] y
-  Writing /etc/systemd/system/cn.service... ✓
+  Writing cn.service... ✓
   Starting cn.service... ✓
 
   Done. cn is running.
@@ -444,7 +474,15 @@ Re-run (idempotent):
 $ cn setup
   CN Setup
   ────────
-  Anthropic API key [sk-ant-…xxxx]:
+
+  1. Daemon
+
+  cn.service: active (running)
+  Reinstall service? [y/N]
+
+  2. Anthropic
+
+  API key [sk-ant-…xxxx]:
   ✓ API key valid — fetching models...
 
   Available models:
@@ -453,7 +491,9 @@ $ cn setup
     3. claude-haiku-4-5-20251001   (Claude Haiku 4.5)
   Model [2]:
 
-  Telegram bot token [123…DEF]:
+  3. Telegram
+
+  Bot token [123…DEF]:
   ✓ Bot: My CN Bot (@my_cn_bot)
 
   Allowed users: Alice (498316684)
@@ -468,6 +508,7 @@ After `install.sh` + `cn setup`:
 
 - `.cn/config.json` exists and is valid JSON.
 - `.cn/secrets.env` exists, chmod 0600, and is gitignored.
+- `cn.service` is active and running (if systemd present and user accepted default).
 - `cn agent --daemon` starts and reads secrets without manual exports.
 - Re-running `cn setup` with no changes prints "No changes detected"
   and does not rewrite files.
@@ -477,10 +518,11 @@ After `install.sh` + `cn setup`:
 | Patch | Scope | Depends on |
 |-------|-------|-----------|
 | **A** | Dotenv loader + secret precedence in `Cn_config.load` | — |
-| **B** | `cn setup` interactive flow + atomic file writes | A |
-| **C** | Key validation (Anthropic `/v1/models`, Telegram `getMe`) | B |
-| **D** | Optional systemd unit generation + idempotent install | B |
-| **E** | Tests (dotenv parsing, setup idempotency, config merge) | A+B |
+| **B** | `cn setup` scaffold: Step 0 preconditions + Step 4 file writes | A |
+| **C** | Step 1 — Daemon: systemd detection, unit generation, idempotent install | B |
+| **D** | Step 2 — Anthropic: key prompt, `/v1/models` validation + model picker | B |
+| **E** | Step 3 — Telegram: guided flow (BotFather, `getMe`, `getUpdates` auto-detect) | B |
+| **F** | Tests (dotenv parsing, setup idempotency, config merge, each step) | A–E |
 
 ## 10. Open questions
 
