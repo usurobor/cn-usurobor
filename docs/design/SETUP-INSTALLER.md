@@ -136,6 +136,25 @@ Edge cases:
 
 Pressing Enter accepts the default / keeps the existing value.
 
+### Terminal output conventions
+
+All output follows `src/agent/skills/eng/ux-cli/SKILL.md`.
+
+**Color mapping** (ANSI):
+
+| Element | Color | Example |
+|---------|-------|---------|
+| Success lines (`✓`) | Green | `✓ API key valid` |
+| Error lines (`✗`) | Red | `✗ Token invalid.` |
+| Warning lines (`⚠`) | Yellow | `⚠ systemd not found.` |
+| Section headings / step numbers | Cyan | `1. Daemon`, `CN Setup` |
+| Commands to run | Magenta | `cn agent --daemon`, `journalctl -u cn -f` |
+| Defaults / dim text | Gray | `← default`, `← current` |
+
+**`NO_COLOR` support:** When the `NO_COLOR` environment variable is set
+(any value, including empty), suppress all ANSI color codes. Symbols
+(✓ ✗ ⚠ → ⏸) remain — they carry semantics independently of color.
+
 ### Step 0: Preconditions
 
 - Must run inside a hub directory (or accept `--hub PATH` later).
@@ -275,8 +294,12 @@ Immediately call `GET https://api.telegram.org/bot<TOKEN>/getMe`.
     ✗ Token invalid.
     Re-enter token, or press Enter to skip Telegram:
   ```
-- Network error → warn "could not validate" and continue
-  (user IDs prompt still shown so they can configure offline).
+- Network error → warn with cause and continue:
+  ```
+    ⚠ Could not reach api.telegram.org — check network.
+      Token saved; will validate on next run.
+  ```
+  (User IDs prompt still shown so they can configure offline.)
 
 **Phase 4 — Allowed users (auto-detect)**
 
@@ -295,7 +318,7 @@ If the token is valid, offer automatic user-ID detection:
 
 1. Print instruction:
    ```
-     → Send /start to @my_cn_bot in Telegram, then press Enter.
+     ⏸ Send /start to @my_cn_bot in Telegram, then press Enter.
    ```
 2. User presses Enter.
 3. Call `GET https://api.telegram.org/bot<TOKEN>/getUpdates?allowed_updates=["message"]&timeout=0`
@@ -440,11 +463,6 @@ Enter keeps current. `y` re-enters the role + name flow.
 - `spec/SOUL.md` — the generated identity file (in the hub, not `.cn/`)
 - `runtime.role` in `.cn/config.json` — `"engineer"` or `"pm"`
 
-> **Note:** The current context packer (`cn_context.ml`) scores skills
-> by keyword overlap only — it does not read `runtime.role`. A future
-> patch should add role-aware weighting so that e.g. an engineer agent
-> ranks `skills/eng/*` higher than `skills/pm/*` by default.
-
 ### Step 5: Write files
 
 Write `.cn/secrets.env`:
@@ -531,10 +549,15 @@ Then:
 - `systemctl enable --now cn.service`
 - show `systemctl status cn.service`
 
-If user says no (or systemd missing), print:
+If user says no (or systemd missing), print next steps:
 
-- `Run cn agent --daemon in this hub`
-- `Or schedule cn agent with cron/systemd timer`
+```
+  To run manually:
+    → cn agent --daemon
+
+  Or schedule with cron/systemd timer:
+    → cn agent
+```
 
 ## 7. User journey
 
@@ -580,7 +603,7 @@ $ cn setup
     3. Skip (deny all — configure later)
   [1]:
 
-  → Send /start to @my_cn_bot in Telegram, then press Enter.
+  ⏸ Send /start to @my_cn_bot in Telegram, then press Enter.
 
   Detected users:
     1. Alice (ID: 498316684)  ✓
