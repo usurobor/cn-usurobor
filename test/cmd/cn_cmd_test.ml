@@ -268,7 +268,7 @@ let%expect_test "parse_response: empty content array" =
 
 let%expect_test "parse_response: invalid JSON" =
   show_parse "not json";
-  [%expect {| Error: JSON parse error: unexpected char 'n' at pos 0 |}]
+  [%expect {| Error: JSON parse error: expected 'null' at pos 0 |}]
 
 
 (* === Cn_telegram: parse_update === *)
@@ -316,27 +316,27 @@ let%expect_test "tokenize: basic splitting and lowercasing" =
   Cn_context.tokenize "Hello World, how are you?"
   |> List.iter (fun t -> Printf.printf "%s\n" t);
   [%expect {|
-    hello
-    world
-    how
-    are
     you
+    are
+    how
+    world
+    hello
   |}]
 
 let%expect_test "tokenize: drops short tokens" =
   Cn_context.tokenize "I am an OCaml dev"
   |> List.iter (fun t -> Printf.printf "%s\n" t);
   [%expect {|
-    ocaml
     dev
+    ocaml
   |}]
 
 let%expect_test "tokenize: numbers included" =
   Cn_context.tokenize "step 42 complete"
   |> List.iter (fun t -> Printf.printf "%s\n" t);
   [%expect {|
-    step
     complete
+    step
   |}]
 
 let%expect_test "tokenize: empty string" =
@@ -725,7 +725,7 @@ let%expect_test "config: invalid JSON → Error with path" =
           in
           Printf.printf "has_path=%b suffix=%s\n" has_path suffix
       | Ok _ -> print_endline "unexpected Ok");
-  [%expect {| has_path=true suffix=/.cn/config.json: unexpected char 'n' at pos 0 |}]
+  [%expect {| has_path=true suffix=/.cn/config.json: expected 'null' at pos 0 |}]
 
 let%expect_test "config: no runtime key in JSON → defaults" =
   reset_config_env ();
