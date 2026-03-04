@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.2.0  | A+  | A+          | A+           | A+               | Structured LLM schema: system blocks with cache control + real multi-turn messages. Mindsets in context packer. Role-weighted skill scoring. Setup installer design. |
 | v3.0.0  | A+  | A+          | A+           | A+               | Native agent runtime. OpenClaw removed. Pure-pipe: LLM = `string → string`, cn = all effects. Zero runtime deps. |
 | v2.4.0  | A+  | A+          | A+           | A+               | Typed FSM protocol. All 4 state machines (sender, receiver, thread, actor) enforced at compile time. |
 | v2.3.x  | A+  | A+          | A+           | A                | Native OCaml binary, 10-module refactor. No more Node.js dependency. |
@@ -30,6 +31,47 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v3.2.0 (2026-03-04)
+
+**Structured LLM Request Schema**
+
+The LLM now receives a structured prompt instead of a flat string. This unlocks prompt caching, proper system prompts, and real multi-turn conversation.
+
+### The Big Picture
+
+```
+Before (v3.0):  { messages: [{ role: "user", content: "<everything>" }] }
+After  (v3.2):  { system: [stable_block, dynamic_block], messages: [turn, turn, ...] }
+```
+
+### Added
+
+- **Structured system prompt** — Two system blocks: (1) stable identity/user/mindsets with `cache_control` for Anthropic prompt caching (~90% cache hits on repeat calls), (2) dynamic reflections/skills (refreshed each call)
+- **Real multi-turn messages** — Conversation history as actual `user`/`assistant` turns instead of markdown rendered inside a single user message
+- **`system_block` / `message_turn` types** in `cn_llm.ml` with manual `to_json` helpers (zero-dep, no ppx)
+- **`packed` type** in `cn_context.ml` — returns structured data + `audit_text` for backward-compatible `input.md` logging
+- **Design doc** — `docs/DESIGN-LLM-SCHEMA.md` covers problem, schema, OCaml serialization decision, and all tradeoffs
+- **Mindsets in context packer** (v3.1.x) — `src/agent/mindsets/` loaded in deterministic order between USER and reflections
+- **Role-weighted skill scoring** (v3.1.x) — `runtime.role` from `.cn/config.json` applies +2 bonus to matching skill paths
+- **Setup installer design doc** — `docs/design/SETUP-INSTALLER.md`: guided `cn setup` flow with Telegram auto-detection, persona picker, secrets management
+- **UX-CLI terminal conventions** — Color-to-semantics map, `NO_COLOR` support, actionable error messages
+- **New skills** — `agent/coherent`, `eng/coding`, `eng/functional`, `eng/testing`
+
+### Changed
+
+- `Cn_llm.call` signature: `~content:string` → `~system:system_block list ~messages:message_turn list`
+- `Cn_context.pack` returns `packed` record (system blocks + messages + audit_text) instead of flat `content` string
+- `Cn_runtime.ml` passes structured data to LLM; recovery path (State 2) re-packs from extracted inbound message
+- Tests updated to use `packed.audit_text` instead of `packed.content`
+
+### Fixed
+
+- `Filename.temp_dir` replaced with OCaml 4.14-compatible helper
+- `runtime.role` normalized to lowercase (tolerates "Engineer", "PM", etc.)
+- Expect test promotion: tokenize order + JSON error messages
 
 ---
 
