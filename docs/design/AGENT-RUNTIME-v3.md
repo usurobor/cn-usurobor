@@ -1,6 +1,6 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.2.0
+**Version:** 3.3.0
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
 **Date:** 2026-03-04
 **Status:** Draft
@@ -10,7 +10,7 @@
 
 ## Patch Notes
 
-**v3.2.0** — CN Shell (capability runtime) + syscall manifests + receipts:
+**v3.3.0** — CN Shell (capability runtime) + syscall manifests + receipts:
 - Define **CN Shell** as a capability runtime inside cn (kernel/syscalls), not an interactive terminal for the LLM:
   - Agent (brain) emits plans; cn (body) validates + executes under policy
   - No tool loop; no in-call filesystem access; execution happens post-call under the processor lock
