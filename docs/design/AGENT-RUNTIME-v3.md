@@ -269,7 +269,7 @@ The LLM has no interactive tool access during a call. No tool loop. No mid-call 
 
 2. **Tools break the security boundary.** SECURITY-MODEL.md says the agent interacts with exactly two files. A tool loop means the LLM is iteratively reading the filesystem, which is the opposite of "agent sees two files."
 
-3. **The op vocabulary already exists.** Legacy ops (`ack`, `done`, `fail`, `reply`, `send`, `delegate`, `defer`, `delete`, `surface`) plus v3.3.0 typed ops (`ops:` manifest) give the LLM a closed vocabulary for expressing intent.
+3. **The coordination op vocabulary already exists.** Legacy ops (`ack`, `done`, `fail`, `reply`, `send`, `delegate`, `defer`, `delete`, `surface`) handle all social/governance moves. v3.3.0 adds capability ops (`ops:` manifest) as a separate layer for governed syscalls — same pure pipe, two layers of intent.
 
 4. **Simpler = more auditable.** One request, one response, one IO pair. No multi-turn tool loops to trace.
 
@@ -390,12 +390,22 @@ cnos context packing produces a predictable prefix that is mostly stable across 
 
 ## Op Vocabulary
 
-The LLM expresses its decisions via ops in `state/output.md` frontmatter. The format is **key-per-op with pipe-delimited arguments** — matching `cn_lib.ml:parse_agent_op` and the existing `agent-ops/SKILL.md` spec. The `id` field is required and must match the input's trigger id.
+The LLM expresses intent via frontmatter in `state/output.md`. There are two layers:
+
+1. **Coordination ops** (legacy, stable): key-per-op with pipe-delimited arguments. Parsed by `cn_lib.ml:parse_agent_op` and executed by `cn_agent.ml:execute_op`. These ops coordinate threads, messaging, and lifecycle.
+
+2. **Capability ops** (CN Shell, v3.3.0): a typed syscall manifest in `ops:`. Parsed via `cn_json` as data (not code), validated under policy, executed deterministically, and recorded as receipts/artifacts.
+
+`id:` is required and MUST match the trigger id from `state/input.md`.
+
+### 1) Coordination Ops (legacy)
+
+Format: `key: <pipe-delimited args>`
 
 | Op | Frontmatter | Meaning |
 |----|-------------|---------|
-| `ack` | `ack: <id>` | Acknowledge receipt, no action |
-| `done` | `done: <id>` | Mark thread complete → Archived |
+| `ack` | `ack: <id>` | Acknowledge receipt; no action |
+| `done` | `done: <id>` | Mark thread complete → archived |
 | `fail` | `fail: <id>\|<reason>` | Report failure |
 | `reply` | `reply: <id>\|<message>` | Reply to thread (body = extended content) |
 | `send` | `send: <peer>\|<message>` or `send: <peer>\|<message>\|<body>` | Send to peer → `threads/mail/outbox/` |
@@ -404,9 +414,9 @@ The LLM expresses its decisions via ops in `state/output.md` frontmatter. The fo
 | `delete` | `delete: <id>` | Discard thread |
 | `surface` | `surface: <description>` (alias: `mca:`) | Create Managed Concern |
 
-Multiple ops are allowed in a single output. They execute in order listed.
+Multiple ops are allowed in a single output. They execute in the order listed in frontmatter.
 
-Example output.md:
+Example:
 
 ```markdown
 ---
@@ -415,16 +425,34 @@ reply: 20260219-141209-abc123|Got it, reviewing now
 surface: Add retry logic to wake mechanism
 ---
 
-Got it. Here's what I'll do next:
-
-1. Review the design doc changes
-2. Check alignment with the protocol spec
-3. Flag any gaps
-
-I'll have this done by end of day.
+(body…)
 ```
 
-No new *legacy* ops are needed. The LLM writes the same format that `cn out` and `cn_agent.ml` already understand. v3.3.0 adds an optional typed ops manifest (`ops:`) for CN Shell capabilities — see below.
+### 2) Capability Ops: `ops:` Manifest (CN Shell, optional)
+
+Frontmatter key: `ops: <json>`
+
+- `<json>` MUST be a single-line JSON array.
+- Each element MUST be a JSON object describing a typed op.
+- Ops are declarative (data), not executable scripts.
+
+Minimal schema:
+
+- `kind` (string, required): closed vocabulary (syscall name)
+- `phase` (string, optional): `"observe"` or `"effect"` — default is `"effect"` if omitted
+- `op_id` (string, required for effect ops): idempotency key; must be stable across retries
+- `params` (object, optional): kind-specific parameters
+
+Execution + audit:
+
+- CN Shell ops are validated under policy (allowlists, budgets, `apply_mode`, etc.).
+- CN Shell produces receipts + artifacts. Receipts are written to `state/receipts/` and archived to `logs/receipts/`.
+- If `ops:` is absent, the runtime behaves exactly as v3.1.x: only coordination ops execute.
+
+Compatibility note:
+
+- No new *legacy coordination ops* are required for CN Shell.
+- CN Shell is additive: coordination ops remain the primary outward-facing contract (`reply`/`send`/`done`), while capability ops provide governed syscalls when enabled.
 
 ### Body Consumption Rules
 
