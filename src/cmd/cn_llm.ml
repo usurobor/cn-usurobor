@@ -1,10 +1,24 @@
 (** cn_llm.ml — Claude Messages API client
 
-    Single-turn text completion: one user message in, one text response out.
-    No tools, no streaming, no multi-turn.
+    Structured request: system blocks (with optional cache_control) +
+    multi-turn messages. No tools, no streaming.
 
     Uses Cn_json for request body (single-line guarantee) and response parsing.
     Retries 3x with exponential backoff on 5xx/timeout; 4xx fails immediately. *)
+
+(** A block in the system prompt array. When [cache] is true, a
+    cache_control breakpoint is emitted so Anthropic caches the prefix
+    up to and including this block. *)
+type system_block = {
+  text : string;
+  cache : bool;
+}
+
+(** A single message turn in the conversation. *)
+type message_turn = {
+  role : string;
+  content : string;
+}
 
 type response = {
   content : string;
@@ -104,16 +118,30 @@ let parse_response body =
         cache_read_input_tokens = get_usage_int "cache_read_input_tokens";
       }
 
-let call ~api_key ~model ~max_tokens ~content =
+let system_block_to_json (b : system_block) =
+  let fields = [
+    "type", Cn_json.String "text";
+    "text", Cn_json.String b.text;
+  ] in
+  if b.cache then
+    Cn_json.Object (fields @ [
+      "cache_control", Cn_json.Object ["type", Cn_json.String "ephemeral"]
+    ])
+  else
+    Cn_json.Object fields
+
+let message_to_json (m : message_turn) =
+  Cn_json.Object [
+    "role", Cn_json.String m.role;
+    "content", Cn_json.String m.content;
+  ]
+
+let call ~api_key ~model ~max_tokens ~system ~messages =
   let body = Cn_json.to_string (Cn_json.Object [
     "model", Cn_json.String model;
     "max_tokens", Cn_json.Int max_tokens;
-    "messages", Cn_json.Array [
-      Cn_json.Object [
-        "role", Cn_json.String "user";
-        "content", Cn_json.String content;
-      ]
-    ];
+    "system", Cn_json.Array (List.map system_block_to_json system);
+    "messages", Cn_json.Array (List.map message_to_json messages);
   ]) in
   let max_retries = 3 in
   let rec attempt n =

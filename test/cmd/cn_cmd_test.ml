@@ -443,7 +443,7 @@ let%expect_test "pack: mindsets inserted + engineer skill ranks first" =
       Cn_context.pack ~hub_path:hub ~trigger_id:"t1"
         ~message:"ship patch" ~from:"test"
     in
-    let c = packed.content in
+    let c = packed.audit_text in
     let has_mindsets = find_sub_idx c "## Mindsets" >= 0 in
     let coh_i = find_sub_idx c "# COHERENCE" in
     let eng_i = find_sub_idx c "# ENGINEERING" in
@@ -476,7 +476,7 @@ let%expect_test "pack: role normalization — Engineer (capitalized) works" =
       Cn_context.pack ~hub_path:hub ~trigger_id:"t2"
         ~message:"ship patch" ~from:"test"
     in
-    let c = packed.content in
+    let c = packed.audit_text in
     let eng_i = find_sub_idx c "# ENG SKILL" in
     let pm_i = find_sub_idx c "# PM SKILL" in
     Printf.printf "eng_first=%b\n" (eng_i >= 0 && pm_i >= 0 && eng_i < pm_i));
@@ -496,8 +496,8 @@ let%expect_test "pack: no config → no mindsets crash, skills still work" =
       Cn_context.pack ~hub_path:hub ~trigger_id:"t3"
         ~message:"ship patch" ~from:"test"
     in
-    let has_eng = find_sub_idx packed.content "# ENGINEERING" >= 0 in
-    let has_skill = find_sub_idx packed.content "# SKILL" >= 0 in
+    let has_eng = find_sub_idx packed.audit_text "# ENGINEERING" >= 0 in
+    let has_skill = find_sub_idx packed.audit_text "# SKILL" >= 0 in
     Printf.printf "has_eng=%b has_skill=%b\n" has_eng has_skill);
   [%expect {| has_eng=true has_skill=true |}]
 

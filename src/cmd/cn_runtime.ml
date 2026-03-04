@@ -9,10 +9,11 @@
     Uses atomic file locking (O_CREAT|O_EXCL) to prevent cron overlap
     and daemon race conditions on state/input.md and state/output.md.
 
-    Prompt contract (Option B):
-    - LLM is invoked with the body below frontmatter (packed context only).
-    - state/input.md frontmatter is runtime metadata (id, from, chat_id, date).
-    - logs/input/ archives the full file for audit (metadata + prompt).
+    Prompt contract:
+    - LLM is invoked with structured system blocks + message turns.
+    - state/input.md contains a flattened audit view (frontmatter + markdown).
+    - On recovery (State 2), the inbound message is extracted from input.md
+      and re-packed to produce fresh structured data for the API call.
 
     Recovery model: process_one handles three entry states under lock:
     1. output.md exists → finalize existing cycle
@@ -143,10 +144,11 @@ let cleanup_state hub_path =
 
 (* === Input construction === *)
 
-(** Build state/input.md with frontmatter + packed context.
-    Frontmatter is runtime metadata; the body below is the LLM prompt. *)
-let build_input_md ~trigger_id ~from ~chat_id_opt ~packed_content =
-  let buf = Buffer.create (String.length packed_content + 128) in
+(** Build state/input.md with frontmatter + audit text.
+    Frontmatter is runtime metadata; the body is a flattened view of what
+    was sent to the LLM (for human audit and recovery). *)
+let build_input_md ~trigger_id ~from ~chat_id_opt ~audit_text =
+  let buf = Buffer.create (String.length audit_text + 128) in
   Buffer.add_string buf "---\n";
   Buffer.add_string buf (Printf.sprintf "id: %s\n" trigger_id);
   Buffer.add_string buf (Printf.sprintf "from: %s\n" from);
@@ -155,7 +157,7 @@ let build_input_md ~trigger_id ~from ~chat_id_opt ~packed_content =
    | None -> ());
   Buffer.add_string buf (Printf.sprintf "date: %s\n" (Cn_fmt.now_iso ()));
   Buffer.add_string buf "---\n\n";
-  Buffer.add_string buf packed_content;
+  Buffer.add_string buf audit_text;
   Buffer.contents buf
 
 (* === Finalize: archive → execute → project → conversation → cleanup === *)
@@ -269,10 +271,15 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
         Cn_hub.log_action hub_path "process.resume_llm"
           (Printf.sprintf "id:%s from:%s" trigger_id from);
 
-        (* Call LLM with the input.md body (= packed context, Option B) *)
+        (* Re-pack to get structured system/messages for the API call.
+           The audit text in input.md is for humans; the LLM needs the
+           structured format with system prompt + message turns. *)
+        let packed = Cn_context.pack ~hub_path ~trigger_id
+          ~message:inbound_message ~from in
+
         match Cn_llm.call ~api_key:config.anthropic_key
                 ~model:config.model ~max_tokens:config.max_tokens
-                ~content:packed_body with
+                ~system:packed.system ~messages:packed.messages with
         | Error msg ->
             Cn_hub.log_action hub_path "process.llm_error"
               (Printf.sprintf "id:%s error:%s" trigger_id msg);
@@ -313,20 +320,20 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
             Cn_hub.log_action hub_path "process.start"
               (Printf.sprintf "id:%s from:%s" trigger_id from);
 
-            (* Pack context *)
+            (* Pack context into structured system blocks + message turns *)
             let packed = Cn_context.pack ~hub_path ~trigger_id
               ~message:inbound_message ~from in
 
-            (* Write input.md = frontmatter + packed content *)
+            (* Write input.md = frontmatter + audit text (human-readable) *)
             let input_doc = build_input_md ~trigger_id ~from ~chat_id_opt
-              ~packed_content:packed.content in
+              ~audit_text:packed.audit_text in
             Cn_ffi.Fs.ensure_dir (Cn_ffi.Path.join hub_path "state");
             Cn_ffi.Fs.write inp input_doc;
 
-            (* Call LLM with packed body (Option B: body-only prompt) *)
+            (* Call LLM with structured system prompt + message turns *)
             match Cn_llm.call ~api_key:config.anthropic_key
                     ~model:config.model ~max_tokens:config.max_tokens
-                    ~content:packed.content with
+                    ~system:packed.system ~messages:packed.messages with
             | Error msg ->
                 Cn_hub.log_action hub_path "process.llm_error"
                   (Printf.sprintf "id:%s error:%s" trigger_id msg);

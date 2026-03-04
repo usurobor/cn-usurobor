@@ -1,22 +1,33 @@
 (** cn_context.ml — Context packer
 
-    Loads hub artifacts and assembles the full context string sent to
-    the LLM. Missing files degrade gracefully (skip, don't error).
+    Loads hub artifacts and assembles a structured prompt for the LLM.
+    Returns system blocks (with cache hints) and message turns, plus
+    a flattened audit_text for state/input.md logging.
+
+    Missing files degrade gracefully (skip, don't error).
+
+    Structured output:
+    - system[0]: Identity + User + Mindsets (stable, cache_control=true)
+    - system[1]: Reflections + Skills (dynamic, no cache)
+    - messages[]: Conversation history turns + inbound message
 
     Loading order (per design doc + AGENTS.md session contract):
-    1. spec/SOUL.md
-    2. spec/USER.md
-    3. Mindsets from src/agent/mindsets/ (deterministic order, role-aware)
-    4. Last 3 daily reflections from threads/reflections/daily/
-    5. Current weekly reflection from threads/reflections/weekly/
-    6. Top 3 keyword-matched skills from src/agent/skills/ (role-weighted)
-    7. Conversation history from state/conversation.json (last 10)
-    8. Inbound message *)
+    1. spec/SOUL.md          → system block 1
+    2. spec/USER.md          → system block 1
+    3. Mindsets              → system block 1
+    4. Daily reflections     → system block 2
+    5. Weekly reflection     → system block 2
+    6. Keyword-matched skills → system block 2
+    7. Conversation history  → messages (real turns)
+    8. Inbound message       → messages (last user turn) *)
 
 type packed = {
   trigger_id : string;
   from : string;
-  content : string;
+  system : Cn_llm.system_block list;
+  messages : Cn_llm.message_turn list;
+  raw_inbound : string;
+  audit_text : string;
 }
 
 (** Read a file, returning "" if missing or unreadable. *)
@@ -165,52 +176,35 @@ let load_skills ~hub_path ~message ~(role : string option) ~n =
       |> (fun lst -> if List.length lst > n then List.filteri (fun i _ -> i < n) lst else lst)
       |> List.map (fun (_, content, _, _) -> content)
 
-(** Load last N entries from state/conversation.json. *)
-let load_conversation ~hub_path ~n =
+(** Load last N entries from state/conversation.json as message turns.
+    Returns structured turns for the messages array. *)
+let load_conversation_turns ~hub_path ~n : Cn_llm.message_turn list =
   let path = Cn_ffi.Path.join hub_path "state/conversation.json" in
   let raw = read_opt path in
-  if raw = "" then ""
+  if raw = "" then []
   else
     match Cn_json.parse raw with
-    | Error _ -> ""
-    | Ok json ->
-        match json with
-        | Cn_json.Array items ->
-            let len = List.length items in
-            let recent = if len <= n then items
-              else List.filteri (fun i _ -> i >= len - n) items
-            in
-            (* Format each exchange as role: content *)
-            recent |> List.filter_map (fun entry ->
-              let role = match Cn_json.get_string "role" entry with
-                | Some r -> r | None -> "unknown"
-              in
-              let text = match Cn_json.get_string "content" entry with
-                | Some c -> c | None -> ""
-              in
-              if text = "" then None
-              else Some (Printf.sprintf "**%s**: %s" role text)
-            ) |> String.concat "\n\n"
-        | _ -> ""
+    | Error _ -> []
+    | Ok (Cn_json.Array items) ->
+        let len = List.length items in
+        let recent = if len <= n then items
+          else List.filteri (fun i _ -> i >= len - n) items
+        in
+        recent |> List.filter_map (fun entry ->
+          match Cn_json.get_string "role" entry, Cn_json.get_string "content" entry with
+          | Some role, Some content when content <> "" ->
+              Some { Cn_llm.role; content }
+          | _ -> None)
+    | _ -> []
 
 let pack ~hub_path ~trigger_id ~message ~from =
-  let buf = Buffer.create 4096 in
-  let section title content =
-    if content <> "" then begin
-      Buffer.add_string buf (Printf.sprintf "## %s\n\n" title);
-      Buffer.add_string buf content;
-      Buffer.add_string buf "\n\n"
-    end
-  in
   let role = load_role ~hub_path in
-  (* 1. Core identity *)
-  section "Identity" (read_opt (Cn_ffi.Path.join hub_path "spec/SOUL.md"));
-  (* 2. User context *)
-  section "User" (read_opt (Cn_ffi.Path.join hub_path "spec/USER.md"));
-  (* 2.5. Mindsets — session substrate, deterministic order *)
+
+  (* === Read all source data once === *)
+  let soul = read_opt (Cn_ffi.Path.join hub_path "spec/SOUL.md") in
+  let user = read_opt (Cn_ffi.Path.join hub_path "spec/USER.md") in
   let mindsets = load_mindsets ~hub_path ~role in
-  if mindsets <> "" then section "Mindsets" mindsets;
-  (* 3. Last 3 daily reflections *)
+
   let daily_dir = Cn_ffi.Path.join hub_path "threads/reflections/daily" in
   let dailies = list_md_desc daily_dir in
   let daily_texts = dailies
@@ -218,28 +212,75 @@ let pack ~hub_path ~trigger_id ~message ~from =
     |> List.map (fun f -> read_opt (Cn_ffi.Path.join daily_dir f))
     |> List.filter (fun s -> s <> "")
   in
-  if daily_texts <> [] then
-    section "Recent Reflections (Daily)" (String.concat "\n---\n" daily_texts);
-  (* 4. Current weekly reflection *)
+
   let weekly_dir = Cn_ffi.Path.join hub_path "threads/reflections/weekly" in
   let weeklies = list_md_desc weekly_dir in
-  (match weeklies with
-   | latest :: _ ->
-       section "Current Weekly Reflection"
-         (read_opt (Cn_ffi.Path.join weekly_dir latest))
-   | [] -> ());
-  (* 5. Top 3 keyword-matched skills (role-weighted) *)
+  let weekly_text = match weeklies with
+    | latest :: _ -> read_opt (Cn_ffi.Path.join weekly_dir latest)
+    | [] -> ""
+  in
+
   let skills = load_skills ~hub_path ~message ~role ~n:3 in
+  let conv_turns = load_conversation_turns ~hub_path ~n:10 in
+
+  (* === Build system blocks === *)
+  let add_section buf title content =
+    if content <> "" then begin
+      Buffer.add_string buf (Printf.sprintf "## %s\n\n" title);
+      Buffer.add_string buf content;
+      Buffer.add_string buf "\n\n"
+    end
+  in
+
+  (* Block 1: stable identity context (cacheable) *)
+  let stable_buf = Buffer.create 4096 in
+  add_section stable_buf "Identity" soul;
+  add_section stable_buf "User" user;
+  if mindsets <> "" then add_section stable_buf "Mindsets" mindsets;
+
+  (* Block 2: dynamic context (reflections + skills) *)
+  let dynamic_buf = Buffer.create 2048 in
+  if daily_texts <> [] then
+    add_section dynamic_buf "Recent Reflections (Daily)"
+      (String.concat "\n---\n" daily_texts);
+  if weekly_text <> "" then
+    add_section dynamic_buf "Current Weekly Reflection" weekly_text;
   if skills <> [] then
-    section "Relevant Skills" (String.concat "\n---\n" skills);
-  (* 6. Conversation history (last 10) *)
-  let conv = load_conversation ~hub_path ~n:10 in
-  if conv <> "" then
-    section "Recent Conversation" conv;
-  (* 7. Inbound message *)
-  Buffer.add_string buf "## Inbound Message\n\n";
-  Buffer.add_string buf (Printf.sprintf "**From**: %s\n" from);
-  Buffer.add_string buf (Printf.sprintf "**ID**: %s\n\n" trigger_id);
-  Buffer.add_string buf message;
-  Buffer.add_char buf '\n';
-  { trigger_id; from; content = Buffer.contents buf }
+    add_section dynamic_buf "Relevant Skills"
+      (String.concat "\n---\n" skills);
+
+  let system =
+    let stable = String.trim (Buffer.contents stable_buf) in
+    let dynamic = String.trim (Buffer.contents dynamic_buf) in
+    (if stable = "" then [] else [{ Cn_llm.text = stable; cache = true }])
+    @ (if dynamic = "" then [] else [{ Cn_llm.text = dynamic; cache = false }])
+  in
+
+  (* === Build messages: conversation history + inbound === *)
+  let messages = conv_turns @ [{ Cn_llm.role = "user"; content = message }] in
+
+  (* === Build audit text (backward-compatible markdown for input.md) === *)
+  let audit_buf = Buffer.create 4096 in
+  List.iter (fun (b : Cn_llm.system_block) ->
+    Buffer.add_string audit_buf b.text;
+    Buffer.add_string audit_buf "\n\n"
+  ) system;
+  let conv_text = conv_turns |> List.map (fun (m : Cn_llm.message_turn) ->
+    Printf.sprintf "**%s**: %s" m.role m.content
+  ) |> String.concat "\n\n" in
+  if conv_text <> "" then
+    add_section audit_buf "Recent Conversation" conv_text;
+  Buffer.add_string audit_buf "## Inbound Message\n\n";
+  Buffer.add_string audit_buf (Printf.sprintf "**From**: %s\n" from);
+  Buffer.add_string audit_buf (Printf.sprintf "**ID**: %s\n\n" trigger_id);
+  Buffer.add_string audit_buf message;
+  Buffer.add_char audit_buf '\n';
+
+  {
+    trigger_id;
+    from;
+    system;
+    messages;
+    raw_inbound = message;
+    audit_text = Buffer.contents audit_buf;
+  }
