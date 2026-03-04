@@ -25,10 +25,13 @@
 - Introduce receipts + artifacts as first-class runtime outputs:
   - Each executed op yields a receipt with status, timing, hashes (stdout/stderr), and artifact pointers
   - Receipts written to `state/receipts/` and archived to `logs/receipts/`
-- Optional bounded two-pass execution without tools:
-  - Pass A: requests observe ops → cn executes → receipts/artifacts become files
-  - Pass B: proposes effects using the new evidence
-  - Still pure-pipe; no tool loop; two-pass is opt-in, not default
+- Two-pass execution with auto-promote:
+  - `two_pass: auto` (default): if observe ops present, cn auto-promotes to two-pass
+  - Pass A: execute observe ops only; defer all effect ops with receipt
+  - Pass B: repack with artifacts/receipts, agent proposes effects with full evidence
+  - Strict rule: observe defers effects — agent cannot act before seeing
+  - Hard limit: `max_passes = 2`, no unbounded loops
+  - Configurable budgets for ops count and artifact bytes
 - Idempotency for effects:
   - Require `op_id` for effect ops
   - Runtime records applied `op_id`s in receipts and ensures crash recovery does not double-apply effects
@@ -718,22 +721,72 @@ Layout: `state/artifacts/<trigger_id>/<op_id>.*`
 
 Receipts reference artifacts by relative path + hash.
 
-### Optional Two-Pass Execution (bounded, no tools)
+### Two-Pass Execution (normative)
 
-Two-pass is opt-in (runtime config), bounded to max 2 LLM calls per trigger.
+#### Runtime mode: `two_pass`
 
-**Pass A (observe):**
-- Agent outputs observe ops in `ops:`
-- cn executes observe ops, writes receipts/artifacts
+| Mode | Behavior |
+|------|----------|
+| `auto` **(DEFAULT)** | If `ops:` contains any observe-phase op, cn auto-promotes to two-pass |
+| `off` | Observe ops are audit-only (executed + receipted, no second call) |
+| `on` | Same as `auto` — explicit opt-in for deployments that want to be declarative |
 
-**Pass B (effect proposal):**
-- cn repacks context INCLUDING newly created receipts/artifacts
-- Agent proposes effect ops (and final reply)
+#### Phase semantics
 
-Constraints:
-- No more than one extra pass
-- If Pass B fails, the system stops (no loop)
-- All calls still archive IO pairs, preserving audit invariants
+Every typed op has a phase: `observe` or `effect`.
+
+- Observe ops (read-only syscalls: `fs_read`, `git_diff`, etc.) imply the agent wants to *see* the result before deciding.
+- Effect ops (mutating syscalls: `fs_write`, `git_commit`, `exec`, etc.) imply the agent wants to *change* something.
+
+Phase is determined by `kind` (observe-class kinds are always observe; effect-class kinds are always effect). The optional `phase` field in the op schema is for documentation — it MUST NOT override the kind's class.
+
+#### The strict rule: observe defers effects
+
+If Pass A output contains **any** observe ops, then **all** effect ops in that same output are deferred:
+
+- Effect ops receive a receipt with `status: skipped`, `reason: observe_pass_requires_followup`
+- They are NOT executed in Pass A
+- The agent may re-propose them in Pass B with full evidence
+
+This prevents the agent from "acting before seeing" while still allowing it to express a draft plan. One rule, no ambiguity: **if you ask to observe, we observe first, then you decide.**
+
+#### Pass A (observe)
+
+1. cn parses `ops:` from `state/output.md`
+2. Execute observe ops only; skip effect ops with receipt
+3. Write artifacts to `state/artifacts/<trigger_id>/<op_id>.*`
+4. Write receipts to `state/receipts/<trigger_id>.json`
+5. Archive IO pair (Pass A) per LOGGING.md
+
+#### Pass B (decision / effect)
+
+1. cn repacks context including:
+   - Receipts summary (bounded)
+   - Artifact excerpts (bounded — configurable max bytes per artifact)
+2. Call the agent again (single LLM call)
+3. Parse Pass B output; execute coordination ops + effect ops
+4. Archive IO pair (Pass B) per LOGGING.md
+
+#### Loop prevention
+
+- **`max_passes = 2`** (Pass A + Pass B). Hard limit.
+- If Pass B output requests observe ops: they are denied with receipt `status: denied`, `reason: max_passes_exceeded`. No third call.
+- If Pass B fails (LLM error, timeout), the system stops. No retry loop.
+
+#### Cost control via pre-packing
+
+Most "read this file" requests SHOULD be satisfied without observe ops at all — `Cn_context.pack` includes a bounded workspace snapshot (skills, reflections, conversation). Observe ops are the exception for edge cases ("read file X specifically"), not the norm. This keeps two-pass rare and costs predictable.
+
+#### Budgets (configurable)
+
+| Budget | Default | Config key |
+|--------|---------|------------|
+| Max observe ops per pass | 10 | `runtime.max_observe_ops` |
+| Max artifact bytes (total) | 64 KB | `runtime.max_artifact_bytes` |
+| Max artifact bytes (per op) | 16 KB | `runtime.max_artifact_bytes_per_op` |
+| Max passes | 2 | Not configurable (hard limit) |
+
+Ops exceeding budgets receive receipt `status: denied`, `reason: budget_exceeded`.
 
 ### Host DSL Boundary (humans vs agent)
 
