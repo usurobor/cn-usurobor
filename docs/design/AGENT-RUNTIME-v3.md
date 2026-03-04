@@ -64,7 +64,7 @@
 
 **v3.1.0** — Align config + CLI with implementation plan:
 - Config: `.cn/agent.yaml` → `.cn/config.json` (reuses `cn_json.ml`, matches hub discovery)
-- Secrets: env-vars only (`TELEGRAM_TOKEN`, `ANTHROPIC_KEY`, `CN_MODEL`); never in config file
+- Secrets: env-vars + optional `.cn/secrets.env` (0600, gitignored); never in config.json
 - CLI: `--process` now means "dequeue one item + full pipeline" (not "process existing input.md")
 - CLI: `cn agent` (default, no flags) is the canonical cron entry point
 - CLI: `--config` default changed to `.cn/config.json`
@@ -207,6 +207,7 @@ message ──→  1. Pack state/input.md
              │ --- (frontmatter)    │
              │ id: trigger-id       │
              │ from: telegram       │
+             │ chat_id: <id>        │
              │ ---                  │
              │                      │
              │ ## Context           │
@@ -439,12 +440,18 @@ Frontmatter key: `ops: <json>`
 - Each element MUST be a JSON object describing a typed op.
 - Ops are declarative (data), not executable scripts.
 
-Minimal schema:
+#### Typed Op Schema (normative)
+
+Each element MUST be an object with:
 
 - `kind` (string, required): closed vocabulary (syscall name)
-- `phase` (string, optional): `"observe"` or `"effect"` — default is `"effect"` if omitted
-- `op_id` (string, required for effect ops): idempotency key; must be stable across retries
-- `params` (object, optional): kind-specific parameters
+- `op_id` (string, required for effect ops; optional for observe ops): idempotency / correlation key
+- `note` (string, optional): human-readable annotation
+- `phase` (string, optional): `"observe"` or `"effect"` — informational only; MUST NOT override the kind's class. If `phase` is present and conflicts with the kind's class, the op MUST be denied with receipt (`reason: phase_mismatch`)
+- All other fields are kind-specific parameters (e.g., `path`, `rev`, `argv`)
+- Unknown fields MUST be ignored (forward compatibility)
+
+> **Interpretation rule:** phase is derived from `kind`. `phase` never overrides the kind's class.
 
 Execution + audit:
 
@@ -516,7 +523,12 @@ let extract_body content =
 
 ### Telegram Routing (Projection Layer)
 
-Telegram is not an op — it's a projection. The processor knows the inbound message came from Telegram (because `state/input.md` frontmatter says `from: telegram:<chat_id>`), so when it executes a `reply:` op, it routes the **full payload** (per Body Consumption Rules above) to Telegram. This is a processor-level routing concern, not part of the op vocabulary.
+Telegram is not an op — it's a projection. The processor knows the inbound message came from Telegram because `state/input.md` frontmatter carries:
+
+- `from: telegram`
+- `chat_id: <id>`
+
+When the processor executes a `reply:` coordination op, it routes the **full payload** (per Body Consumption Rules above) to Telegram *if and only if* `from` and `chat_id` are present. This is a processor-level routing concern, not part of the op vocabulary.
 
 ```
 LLM produces: reply: trigger-id|Brief summary
@@ -633,17 +645,6 @@ ops: [{"kind":"fs_read","op_id":"01JA","path":"spec/SOUL.md"},{"kind":"git_diff"
 I'm going to inspect the relevant files and then propose a patch.
 ```
 
-#### Typed Op Schema (normative)
-
-Each element of the `ops` array MUST be an object:
-
-- **Required:** `kind` (string) — closed vocabulary, see below
-- **Required for effect ops:** `op_id` (string) — stable across retries for idempotency
-- **Optional:** `op_id` (string) — allowed for observe ops for correlation
-- **Optional:** `note` (string) — human-readable annotation
-
-Additional fields are allowed but MUST be ignored if unknown (forward compatibility).
-
 #### Observe Ops (read-only)
 
 Observe ops MUST NOT mutate working tree state:
@@ -750,13 +751,32 @@ If Pass A output contains **any** observe ops, then **all** effect ops in that s
 
 This prevents the agent from "acting before seeing" while still allowing it to express a draft plan. One rule, no ambiguity: **if you ask to observe, we observe first, then you decide.**
 
+#### Coordination ops during two-pass
+
+Two-pass is triggered by typed observe ops, but coordination ops still exist in the output. The runtime MUST apply these rules:
+
+**Pass A:**
+- Execute typed observe ops normally
+- Skip typed effect ops with receipt (`status: skipped`, `reason: observe_pass_requires_followup`)
+- Coordination ops are phase-aware:
+  - **Allowed in Pass A:** `reply` (progress updates), `surface` (managed concerns)
+  - **Deferred to Pass B:** `done`, `fail`, `delete`, `delegate`, `defer`, `send` (terminal/multi-party effects)
+  - Deferred coordination ops MUST be ignored and logged (agent SHOULD re-propose in Pass B)
+
+**Pass B:**
+- Execute coordination ops normally
+- Execute typed effect ops normally (subject to governance)
+
+This keeps "observe first, then decide" intact while preventing premature thread finalization or multi-party side effects before evidence is seen.
+
 #### Pass A (observe)
 
 1. cn parses `ops:` from `state/output.md`
 2. Execute observe ops only; skip effect ops with receipt
-3. Write artifacts to `state/artifacts/<trigger_id>/<op_id>.*`
-4. Write receipts to `state/receipts/<trigger_id>.json`
-5. Archive IO pair (Pass A) per LOGGING.md
+3. Apply coordination op rules (see above): execute allowed, defer disallowed
+4. Write artifacts to `state/artifacts/<trigger_id>/<op_id>.*`
+5. Write receipts to `state/receipts/<trigger_id>.json`
+6. Archive IO pair (Pass A) per LOGGING.md
 
 #### Pass B (decision / effect)
 
@@ -764,7 +784,7 @@ This prevents the agent from "acting before seeing" while still allowing it to e
    - Receipts summary (bounded)
    - Artifact excerpts (bounded — configurable max bytes per artifact)
 2. Call the agent again (single LLM call)
-3. Parse Pass B output; execute coordination ops + effect ops
+3. Parse Pass B output; execute all coordination ops + typed effect ops (subject to governance)
 4. Archive IO pair (Pass B) per LOGGING.md
 
 #### Loop prevention
@@ -1133,12 +1153,28 @@ Note: The existing `Cn_agent.archive_io_pair` already archives before executing 
 
 ## Configuration
 
-**Secrets: environment variables only (never in config files).**
+### Secrets
+
+Secrets MUST NOT be committed to git. cn loads secrets from:
+
+1. **Environment variables** (highest precedence)
+2. **`.cn/secrets.env`** (dotenv file; optional)
+
+`.cn/secrets.env` format:
+- `KEY=VALUE` lines
+- `#` comments and blank lines allowed
+- No interpolation, no multiline
+
+Required permissions:
+- `.cn/secrets.env` MUST be `0600`
+- `.cn/secrets.env` MUST be gitignored
+
+Recognized keys:
 
 ```
-TELEGRAM_TOKEN    Bot token (required for --daemon)
-ANTHROPIC_KEY     Claude API key (required for --process)
-CN_MODEL          Model override (default: claude-sonnet-4-latest)
+ANTHROPIC_KEY     Claude API key (required)
+TELEGRAM_TOKEN    Bot token (optional; absence disables Telegram)
+CN_MODEL          Model override (optional; default from config.json)
 ```
 
 **Non-secrets: `.cn/config.json`.**
@@ -1147,9 +1183,16 @@ CN_MODEL          Model override (default: claude-sonnet-4-latest)
 {
   "runtime": {
     "allowed_users": [498316684],
+    "model": "claude-sonnet-4-20250514",
     "poll_interval": 1,
     "poll_timeout": 30,
-    "max_tokens": 8192
+    "max_tokens": 8192,
+    "two_pass": "auto",
+    "apply_mode": "branch",
+    "max_observe_ops": 10,
+    "max_artifact_bytes": 65536,
+    "max_artifact_bytes_per_op": 16384,
+    "exec_allowlist": ["git", "rg", "sed"]
   }
 }
 ```
@@ -1320,9 +1363,10 @@ The agent interface is `state/input.md → state/output.md` (conceptual). The LL
 
 ### API Keys
 
-- Stored in environment variables, not config files
-- Config supports `${VAR}` expansion
+- Loaded from environment variables or `.cn/secrets.env` (0600, gitignored)
+- Environment variables take precedence over secrets.env
 - Never logged or included in error messages
+- Never committed to git
 
 ### Audit Trail
 
