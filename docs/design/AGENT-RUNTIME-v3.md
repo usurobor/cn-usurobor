@@ -255,23 +255,27 @@ The LLM receives a single system prompt + user message. It does NOT see files, t
 | Write output | Processor | Write LLM response as `state/output.md` |
 | Extract body | Processor | Extract markdown body below frontmatter (full payload) |
 | Archive | Processor | IO-pair to `logs/input/` + `logs/output/` — before effects (per LOGGING.md) |
-| Execute ops | Processor | Resolve payloads via Body Consumption Rules, execute via `cn_agent.ml:execute_op` |
+| Execute legacy ops | Processor | Resolve payloads via Body Consumption Rules, execute via `cn_agent.ml:execute_op` |
+| Execute typed ops | Processor | Parse `ops:` manifest, execute under governance policy (v3.3.0) |
+| Write receipts | Processor | Emit receipt per typed op to `state/receipts/`, archive to `logs/receipts/` (v3.3.0) |
 | Route Telegram reply | Processor | If inbound was from Telegram, send full payload to chat (projection) |
 | Advance FSM | Processor | `OutputReady → Idle` via actor transition |
 
 ### Why No Tools?
 
-In the current doc (v3.2), the LLM had read-only tools like `read_artifact` and `search_reflections`. But:
+The LLM has no interactive tool access during a call. No tool loop. No mid-call filesystem reads. This is deliberate:
 
 1. **cn can pre-load everything the LLM needs.** If cn packs SOUL, USER, reflections, skills, and conversation into the input, the LLM doesn't need to go read them itself.
 
 2. **Tools break the security boundary.** SECURITY-MODEL.md says the agent interacts with exactly two files. A tool loop means the LLM is iteratively reading the filesystem, which is the opposite of "agent sees two files."
 
-3. **The op vocabulary already exists.** `cn_agent.ml` already parses and executes: `ack`, `done`, `fail`, `reply`, `send`, `delegate`, `defer`, `delete`, `surface`. The LLM just needs to emit these in output.md frontmatter.
+3. **The op vocabulary already exists.** Legacy ops (`ack`, `done`, `fail`, `reply`, `send`, `delegate`, `defer`, `delete`, `surface`) plus v3.3.0 typed ops (`ops:` manifest) give the LLM a closed vocabulary for expressing intent.
 
 4. **Simpler = more auditable.** One request, one response, one IO pair. No multi-turn tool loops to trace.
 
-If the LLM needs information not in the packed context, that's a signal to improve context packing — not to add tools.
+**v3.3.0 update:** CN Shell adds typed ops (observe + effect) that cn executes *after* the call — preserving the pure-pipe boundary while enabling the agent to request evidence gathering and propose mutations. See [CN Shell: Capability Runtime](#cn-shell-capability-runtime-v330).
+
+If the LLM needs information not in the packed context, it can now request it via observe ops (two-pass) rather than requiring interactive tools.
 
 ### Industry Approaches Compared
 
@@ -420,7 +424,7 @@ Got it. Here's what I'll do next:
 I'll have this done by end of day.
 ```
 
-No new ops are needed. The LLM writes the same format that `cn out` and `cn_agent.ml` already understand.
+No new *legacy* ops are needed. The LLM writes the same format that `cn out` and `cn_agent.ml` already understand. v3.3.0 adds an optional typed ops manifest (`ops:`) for CN Shell capabilities — see below.
 
 ### Body Consumption Rules
 
@@ -550,6 +554,168 @@ let match_skills message skills =
 ```
 
 This is intentionally simple. Semantic skill matching is a v2 consideration.
+
+---
+
+## CN Shell: Capability Runtime (v3.3.0)
+
+### Definition
+
+**CN Shell** is a capability runtime inside cn (the body). It is not an interactive terminal for the LLM.
+
+- The agent (brain) emits *plans*.
+- cn (body) validates + executes those plans under policy, after the LLM call, under the processor lock.
+- There is no tool loop and no in-call filesystem access.
+
+This preserves the core invariant:
+
+> LLM reality: sees only text (body below frontmatter of `state/input.md`) and outputs only text (`state/output.md`). Any effects happen *after* the call, inside cn.
+
+### Why This Is Still "No Tools"
+
+CN Shell is not "tools for the LLM." Tools imply *interactive* iteration: LLM → tool → result → LLM → tool → …
+
+CN Shell is instead: LLM → proposal → cn executes → receipts/artifacts recorded (optionally followed by one bounded second call).
+
+No mid-call access. No unbounded loops. No imperative scripts from the model.
+
+### Typed Ops Manifest
+
+`state/output.md` frontmatter MAY include an `ops:` field — a single-line JSON array of typed ops, parsed via `cn_json`.
+
+Rationale:
+- We already have `cn_json.ml` (zero-dep JSON parser)
+- Single-line JSON is stable for parsing and avoids YAML dependencies
+- Typed ops allow a closed vocabulary (no agent-generated scripts)
+
+Legacy frontmatter ops remain valid. `ops:` is additive.
+
+#### Example
+
+```markdown
+---
+id: 20260304-021500-xyz
+reply: 20260304-021500-xyz|Got it — gathering evidence
+ops: [{"kind":"fs_read","op_id":"01JA","path":"spec/SOUL.md"},{"kind":"git_diff","op_id":"01JB","rev":"HEAD~1..HEAD"}]
+---
+
+I'm going to inspect the relevant files and then propose a patch.
+```
+
+#### Typed Op Schema (normative)
+
+Each element of the `ops` array MUST be an object:
+
+- **Required:** `kind` (string) — closed vocabulary, see below
+- **Required for effect ops:** `op_id` (string) — stable across retries for idempotency
+- **Optional:** `op_id` (string) — allowed for observe ops for correlation
+- **Optional:** `note` (string) — human-readable annotation
+
+Additional fields are allowed but MUST be ignored if unknown (forward compatibility).
+
+#### Observe Ops (read-only)
+
+Observe ops MUST NOT mutate working tree state:
+
+| Kind | Fields | Description |
+|------|--------|-------------|
+| `fs_read` | `path` | Read file contents |
+| `fs_list` | `path` | Directory listing |
+| `fs_glob` | `pattern` | Glob match |
+| `git_status` | — | Working tree status |
+| `git_diff` | `rev` | Diff for revision range |
+| `git_log` | `rev`, `max` | Commit log |
+| `git_grep` | `query`, `path?` | Search repo |
+
+Observe ops produce artifacts + receipts.
+
+#### Effect Ops (mutating)
+
+Effect ops MAY mutate, but MUST be gated by runtime policy:
+
+| Kind | Fields | Description |
+|------|--------|-------------|
+| `fs_write` | `path`, `content` | Write file |
+| `fs_patch` | `path`, `unified_diff` | Apply patch |
+| `git_branch` | `name` | Create branch |
+| `git_commit` | `message` | Commit staged changes |
+| `exec` | `argv`, `stdin?` | Run command (opt-in + allowlisted; never `sh -c`) |
+
+All effect ops MUST include `op_id`.
+
+### Governance Posture
+
+The runtime MUST enforce policy for effect ops.
+
+#### `apply_mode` (non-secret config)
+
+Controls where mutations land:
+
+| Mode | Behavior |
+|------|----------|
+| `off` | Reject all effect ops (observe-only system) |
+| `branch` **(DEFAULT)** | Effects applied on a dedicated branch (`cn/<trigger_id>`) |
+| `working_tree` | Effects apply directly in current working tree (explicit opt-in) |
+
+#### `exec` policy
+
+`exec` is always opt-in:
+- Only `argv` form is allowed (no shell string, no `sh -c`)
+- Allowlist binaries/paths in config
+- Apply timeouts and capture stdout/stderr into artifacts
+
+### Receipts and Artifacts
+
+#### Receipts (normative)
+
+For every executed typed op, cn MUST emit a receipt containing:
+
+- `op_id` (when present)
+- `kind`
+- `start`/`end` timestamps
+- `status`: `ok` | `error` | `skipped`
+- Exit code (for `exec`)
+- Hashes for stdout/stderr artifacts (if produced)
+- Artifact pointers (paths + hashes + size)
+
+Receipts MUST be written to `state/receipts/` and archived to `logs/receipts/`.
+
+Receipts MUST NOT contain secrets.
+
+#### Artifacts (normative)
+
+Any produced evidence (file snapshot, diff output, command output) MUST be written as a file so it can be audited, archived, and optionally included in a second-pass prompt.
+
+Layout: `state/artifacts/<trigger_id>/<op_id>.*`
+
+Receipts reference artifacts by relative path + hash.
+
+### Optional Two-Pass Execution (bounded, no tools)
+
+Two-pass is opt-in (runtime config), bounded to max 2 LLM calls per trigger.
+
+**Pass A (observe):**
+- Agent outputs observe ops in `ops:`
+- cn executes observe ops, writes receipts/artifacts
+
+**Pass B (effect proposal):**
+- cn repacks context INCLUDING newly created receipts/artifacts
+- Agent proposes effect ops (and final reply)
+
+Constraints:
+- No more than one extra pass
+- If Pass B fails, the system stops (no loop)
+- All calls still archive IO pairs, preserving audit invariants
+
+### Host DSL Boundary (humans vs agent)
+
+Humans MAY author workflows in host DSLs (e.g., F# computation expressions) that compile to the same syscall IR (typed ops manifest).
+
+The agent MUST NOT output executable code. It outputs:
+- Prose in the markdown body
+- Declarative ops in `ops:` (typed) and/or legacy frontmatter ops (coordination)
+
+This keeps automation power available to humans without granting the model an interpreter.
 
 ---
 
@@ -938,45 +1104,9 @@ WantedBy=multi-user.target
 
 ## Migration Path
 
-### Phase 1: Build & Test (Week 1)
+*v3.0 migration (OC → native runtime) is complete. Phase-by-phase build plan moved to [PLAN.md](../../PLAN.md).*
 
-| Task | Deliverable |
-|------|-------------|
-| Implement cn_telegram.ml | Polling + send working |
-| Implement cn_llm.ml | Claude API (single call, no tools) |
-| Implement cn_context.ml | Context packing from hub artifacts |
-| Implement cn_runtime.ml | Pack → call → write → archive → resolve/execute → projection |
-| Integration test | --stdio mode works end-to-end |
-
-### Phase 2: Parallel Operation (Week 2)
-
-| Task | Deliverable |
-|------|-------------|
-| Deploy cn agent daemon | Running alongside OC |
-| Route test messages | Verify response parity |
-| Monitor for issues | Latency, failures, context quality |
-| Fix bugs | Iterate based on real usage |
-
-### Phase 3: Cutover (Week 3)
-
-| Task | Deliverable |
-|------|-------------|
-| Switch Telegram webhook | cn agent receives all messages |
-| Disable OC heartbeat | cn daemon is sole orchestrator |
-| Update documentation | Reflect new architecture |
-| Remove OC config | Clean break |
-
-### Rollback Plan
-
-1. **Keep OC config commented** — Not deleted, can be restored
-2. **Environment switch** — `CN_AGENT_MODE=oc` falls back to OC relay
-3. **1-command rollback** — `systemctl stop cn-agent && systemctl start openclaw`
-
-Rollback tested before cutover.
-
----
-
-## Success Criteria
+### Success Criteria
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
@@ -995,14 +1125,14 @@ Rollback tested before cutover.
 |---------|-----|-------------|
 | Telegram transport | Long-polling | Webhook option |
 | LLM call | Single request→response | Streaming |
-| Agent model | Pure pipe (no tools) | Possibly read-only tools if context packing proves insufficient |
+| Agent model | Pure pipe + CN Shell typed ops (v3.3.0) | Streaming, expanded op vocabulary |
 | Context loading | Recent dailies + keyword skills | Full semantic search |
 | Media handling | Text only | Images, voice, files |
 | Multi-model | Claude only | Model selection |
 
 v1 targets functional parity with minimal scope. v2 features are explicitly deferred.
 
-**Critical v2 decision:** If context packing proves insufficient (LLM frequently lacks needed info), we may add read-only retrieval tools. But the default assumption is: pack better, not retrieve more.
+**Resolved in v3.3.0:** CN Shell observe ops provide read-only evidence gathering without tools. Two-pass execution (opt-in) lets the agent request files/diffs in Pass A, then propose effects in Pass B — preserving the pure-pipe boundary.
 
 ---
 
@@ -1013,8 +1143,9 @@ v1 targets functional parity with minimal scope. v2 features are explicitly defe
 | **Keep OpenClaw** | Zero effort, already working | No ownership, coupling, opacity, fragility | Rejected — core dependency without auditability |
 | **Fork OpenClaw** | Existing codebase, faster start | Python runtime, large surface area, still not native | Rejected — violates constraint 1 (pure OCaml) |
 | **Wrap OC via HTTP relay** | Minimal code, OC does the work | Still dependent, extra latency, two failure domains | Rejected — adds complexity without removing dependency |
-| **Native runtime with tool loop** | Familiar "agentic" pattern | Breaks CN security boundary, harder to audit, more code | Rejected (v3.2) — tools violate "agent sees two files" |
+| **Native runtime with tool loop** | Familiar "agentic" pattern | Breaks CN security boundary, harder to audit, more code | Rejected — tools violate "agent sees two files" |
 | **Native runtime, pure pipe** | Full ownership, single binary, CN-native, simplest possible | Must pre-load all context (no interactive retrieval) | **Accepted** — aligns with all constraints + security model |
+| **Native runtime, pure pipe + CN Shell (v3.3.0)** | Pure pipe preserved, typed ops for observe/effect, two-pass for evidence | More complexity than pure pipe alone | **Accepted** — extends pure pipe without breaking security boundary |
 
 ---
 
@@ -1141,4 +1272,4 @@ The agent interface is `state/input.md → state/output.md` (conceptual). The LL
 
 ---
 
-*Document version 3.1.1. For comments and iteration, contact reviewers or open a thread in the hub.*
+*Document version 3.3.0. For comments and iteration, contact reviewers or open a thread in the hub.*
