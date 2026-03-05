@@ -167,8 +167,9 @@ All output follows `src/agent/skills/eng/ux-cli/SKILL.md`.
 | Defaults / dim text | Gray | `← default`, `← current` |
 
 **`NO_COLOR` support:** When the `NO_COLOR` environment variable is set
-(any value, including empty), suppress all ANSI color codes. Symbols
-(✓ ✗ ⚠ → ⏸) remain — they carry semantics independently of color.
+and non-empty, suppress all ANSI color codes. This follows the
+[informal `NO_COLOR` standard](https://no-color.org/) (presence + non-empty).
+Symbols (✓ ✗ ⚠ → ⏸) remain — they carry semantics independently of color.
 
 ### Step 0: Preconditions
 

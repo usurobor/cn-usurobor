@@ -1,6 +1,6 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.3.4
+**Version:** 3.3.5
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
 **Date:** 2026-03-05
 **Status:** Draft
@@ -9,6 +9,14 @@
 ---
 
 ## Patch Notes
+
+**v3.3.5** — CLP pass: γ-axis hardening (evolution / migration):
+- **Capability discovery**: runtime-generated `## CN Shell Capabilities` block in packed context; declares supported kinds, budgets, apply_mode, exec allowlist at call time; agents degrade gracefully on older runtimes
+- **Receipts schema version**: `state/receipts/{trigger_id}.json` now has a normative container shape: `{ "schema": "cn.receipts.v1", "pass": "A"|"B", "receipts": [...] }`; hash algorithm specified as `sha256:`
+- **In-band ops version**: optional `ops_version` frontmatter field; runtime warns on unsupported versions, processes known kinds normally
+- **CN Shell section header**: dropped stale version number from header (was showing v3.3.2 in v3.3.4 content)
+- **Reply marker placeholders**: angle brackets → curly braces for renderer compatibility; marker writes explicitly placed under processor lock (crash-recovery envelope)
+- **NO_COLOR**: SETUP-INSTALLER aligned with informal standard (set + non-empty, not "any value including empty")
 
 **v3.3.4** — CLP pass: β-axis convergence (Setup ↔ Runtime ↔ Security):
 - **SETUP-INSTALLER aligned**: added §5.6 Path Sandbox alignment explaining why secrets live in `.cn/`; removed stale "Patch A" note; tightened permissions to refuse-to-load (ssh-style)
@@ -612,9 +620,36 @@ cn packs the following into `state/input.md` before LLM invocation:
 | Matched skills (top 3, role-weighted) | `src/agent/skills/**/SKILL.md` | ~1500 |
 | Conversation history (last 10) | `state/conversation.json` | ~2000 |
 | Inbound message | The Telegram message text | ~200 |
-| **Total** | | **~8500** |
+| CN Shell capabilities (v3.3.5+) | Runtime-generated | ~100 |
+| **Total** | | **~8600** |
 
 Token budget varies by model and context mode. The runtime should treat headroom as telemetry, not a hardcoded assumption.
+
+#### Capability Discovery Block (v3.3.5+)
+
+`Cn_context.pack` MUST include a short capability-discovery block in the packed context so the agent knows what the runtime supports before proposing ops. This is not a tool loop — it is declaring the syscall ABI at call time.
+
+The block is runtime-generated (not hand-authored) and placed after skills, before conversation history. Format:
+
+```
+## CN Shell Capabilities
+
+observe: fs_read, fs_glob, git_diff, git_log
+effect: fs_write, fs_patch, git_branch, git_commit, exec
+apply_mode: branch
+exec_enabled: true
+exec_allowlist: make, dune, ocamlfind
+budgets: max_observe_ops=10, max_artifact_bytes=65536, max_artifact_bytes_per_op=16384
+max_passes: 2
+```
+
+Rules:
+
+- Only list `kind` values the runtime actually supports (closed vocabulary from `cn_runtime.ml`).
+- If `exec` is disabled (`exec_enabled: false`), omit `exec` from the effect list and omit `exec_allowlist`.
+- If `apply_mode: off`, omit all effect kinds.
+- Budgets reflect the runtime's current config, not hardcoded defaults.
+- Older runtimes that predate this block simply omit it; agents degrade to proposing ops speculatively (denied via `unknown_op_kind` receipts as before).
 
 ### Skill Matching
 
@@ -633,7 +668,7 @@ This is intentionally simple. Semantic skill matching is a v2 consideration.
 
 ---
 
-## CN Shell: Capability Runtime (v3.3.2)
+## CN Shell: Capability Runtime
 
 ### Definition
 
@@ -686,6 +721,27 @@ The set of valid op `kind` values is a closed vocabulary maintained in `cn_runti
 - New effect ops: require governance review, minor version bump
 - Removing an op kind: major version bump, deprecation cycle in patch notes
 - The runtime MUST reject unknown `kind` values with receipt `status: denied`, `reason: unknown_op_kind`
+
+#### In-band ops version declaration (optional, v3.3.5+)
+
+The agent or host DSL MAY declare an `ops_version` in output frontmatter:
+
+```
+---
+id: 20260304-021500-xyz
+ops_version: 3.3
+ops: [...]
+---
+```
+
+Semantics:
+
+- If `ops_version` is absent, the runtime assumes the current version (no warning).
+- If `ops_version` is present and matches the runtime's supported range, proceed normally.
+- If `ops_version` is newer than the runtime supports, the runtime SHOULD emit a warning receipt (`status: denied`, `reason: ops_version_unsupported`) for any ops using unknown kinds, but MUST still process known kinds normally.
+- If `ops_version` is older, the runtime processes all ops normally (vocabulary is additive; older versions are always a subset).
+
+This gives agents and host DSLs a clean signal for version-dependent behavior without breaking the pure pipe.
 
 #### Example
 
@@ -775,6 +831,32 @@ For every executed typed op, cn MUST emit a receipt containing:
 
 These four statuses are exhaustive. Every receipt MUST use exactly one.
 
+#### Receipt container format (normative, v3.3.5+)
+
+`state/receipts/{trigger_id}.json` MUST be a JSON object with the following shape:
+
+```json
+{
+  "schema": "cn.receipts.v1",
+  "trigger_id": "20260304-021500-xyz",
+  "pass": "A",
+  "receipts": [
+    {
+      "op_id": "01JA",
+      "kind": "fs_read",
+      "status": "ok",
+      "start": "2026-03-04T02:15:01Z",
+      "end": "2026-03-04T02:15:01Z",
+      "artifacts": [{ "path": "state/artifacts/20260304-021500-xyz/01JA.txt", "hash": "sha256:abcd…", "size": 1234 }]
+    }
+  ]
+}
+```
+
+- `schema` is a version string. Bump when receipt fields change (additive fields = minor bump; removals/renames = major bump).
+- `pass` is `"A"` or `"B"`. For two-pass execution, Pass B appends to the same file (the `receipts` array grows).
+- Hash algorithm is SHA-256, prefixed as `sha256:`.
+
 Receipts MUST be written to `state/receipts/` and archived to `logs/receipts/`.
 
 **Secret safety:** Receipts MUST NOT contain secrets. This is enforced structurally: observe ops read from the hub (no secret paths); effect ops write to the hub (content is agent-authored prose/code, not credentials). The `exec` op captures stdout/stderr into artifacts — the allowlist MUST exclude commands that emit secrets. Config validation rejects `exec` allowlist entries known to emit credentials (e.g., `cat .cn/secrets.env`).
@@ -840,9 +922,10 @@ Rather than enumerate which legacy ops are allowed in each pass, we derive from 
 
 One acceptable mechanism:
 
-- When projecting a `reply` for `<trigger_id>`, cn MUST create a marker file:
-  `state/projected/<projection>/<trigger_id>.sent`
+- When projecting a `reply` for a given trigger, cn MUST create a marker file:
+  `state/projected/{projection}/{trigger_id}.sent`
   using an atomic create (`O_CREAT|O_EXCL` or equivalent).
+- Marker writes MUST happen under the same processor lock as IO-pair archival — they are part of the crash-recovery envelope, not a separate concern.
 - If the marker already exists, cn MUST skip sending the external message and emit a receipt
   `status: skipped`, `reason: already_projected`.
 
