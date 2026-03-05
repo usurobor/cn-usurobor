@@ -438,12 +438,12 @@ val mark_projected : hub_path:string -> projection:string -> trigger_id:string
 
 See **AGENT-RUNTIME-v3.md, Appendix C** for 6 worked examples covering:
 
-1. Observe-only (single pass)
-2. Two-pass (observe + effect, with cross-pass `op_id` reuse)
-3. Effect-only (single pass, `git_commit` as sequential argv calls)
-4. Mixed coordination + typed ops (body resolution interaction)
-5. Denied ops (sandbox violations, missing `op_id`, unknown kind)
-6. Exec with env scrubbing and allowlist enforcement
+1. Observe-only (two-pass under `auto` — read file to answer question, Pass B reply with evidence)
+2. Two-pass observe + effect (cross-pass `op_id` reuse, `apply_mode: branch`, non-protected file)
+3. Effect-only (single pass, `git_commit`, `apply_mode: branch`, `done` gating)
+4. Observe then communicate (two-pass with `send` deferred as Pass-A-unsafe, body resolution, raw argv pathspecs)
+5. Denied ops with coordination gating (sandbox violations, unknown kind, terminal op gating on effect failure)
+6. Exec with env scrubbing, allowlist, non-zero exit (`status: error`), and `done` gating on failure
 
 Each example shows exact LLM output, runtime behavior steps, and resulting receipt JSON.
 Implementations MUST match these behaviors.
