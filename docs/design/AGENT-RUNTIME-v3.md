@@ -1,6 +1,6 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.3.5
+**Version:** 3.3.6
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
 **Date:** 2026-03-05
 **Status:** Draft
@@ -9,6 +9,11 @@
 ---
 
 ## Patch Notes
+
+**v3.3.6** — CLP pass: α-axis polish (spec precision):
+- **Receipts `pass` field**: moved from container-level to per-receipt entry; two-pass files contain entries with `"pass": "A"` and `"pass": "B"` in one array (self-describing, no ambiguity)
+- **Capability discovery ordering**: kinds MUST be listed in fixed table order (observe first, then effect); budget keys in lexical order (maximizes prompt cache hits)
+- **`ops_version` type**: explicitly a string (`"3.3"`); runtime MUST parse as string regardless of frontmatter parser behavior; quoting recommended
 
 **v3.3.5** — CLP pass: γ-axis hardening (evolution / migration):
 - **Capability discovery**: runtime-generated `## CN Shell Capabilities` block in packed context; declares supported kinds, budgets, apply_mode, exec allowlist at call time; agents degrade gracefully on older runtimes
@@ -646,6 +651,7 @@ max_passes: 2
 Rules:
 
 - Only list `kind` values the runtime actually supports (closed vocabulary from `cn_runtime.ml`).
+- **Deterministic ordering:** kinds MUST be listed in the fixed table order defined in `cn_runtime.ml` (observe kinds first, then effect kinds, each in declaration order). Budget keys MUST be emitted in lexical order. This maximizes prompt cache hits and keeps the block low-noise across invocations.
 - If `exec` is disabled (`exec_enabled: false`), omit `exec` from the effect list and omit `exec_allowlist`.
 - If `apply_mode: off`, omit all effect kinds.
 - Budgets reflect the runtime's current config, not hardcoded defaults.
@@ -729,10 +735,12 @@ The agent or host DSL MAY declare an `ops_version` in output frontmatter:
 ```
 ---
 id: 20260304-021500-xyz
-ops_version: 3.3
+ops_version: "3.3"
 ops: [...]
 ---
 ```
+
+**Type:** `ops_version` is a string (e.g., `"3.3"`). Unquoted `3.3` in frontmatter is acceptable — the runtime MUST parse it as a string regardless of whether the frontmatter parser returns a float or string. Quoting is recommended to avoid parser-dependent behavior.
 
 Semantics:
 
@@ -839,9 +847,9 @@ These four statuses are exhaustive. Every receipt MUST use exactly one.
 {
   "schema": "cn.receipts.v1",
   "trigger_id": "20260304-021500-xyz",
-  "pass": "A",
   "receipts": [
     {
+      "pass": "A",
       "op_id": "01JA",
       "kind": "fs_read",
       "status": "ok",
@@ -854,7 +862,7 @@ These four statuses are exhaustive. Every receipt MUST use exactly one.
 ```
 
 - `schema` is a version string. Bump when receipt fields change (additive fields = minor bump; removals/renames = major bump).
-- `pass` is `"A"` or `"B"`. For two-pass execution, Pass B appends to the same file (the `receipts` array grows).
+- `pass` is per-receipt (`"A"` or `"B"`), not per-container. For two-pass execution, Pass B appends entries with `"pass": "B"` to the same `receipts` array. This removes ambiguity: the file always contains every receipt from every pass, each self-describing.
 - Hash algorithm is SHA-256, prefixed as `sha256:`.
 
 Receipts MUST be written to `state/receipts/` and archived to `logs/receipts/`.
