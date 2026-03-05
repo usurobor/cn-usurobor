@@ -181,7 +181,10 @@ Parsing contract:
   - Effect ops: `op_id` required — missing → receipt `denied`, `missing_op_id`
   - Observe ops: `op_id` optional — if absent, runtime assigns a deterministic id (e.g., `obs-01`, `obs-02` by manifest position) and records it in the receipt
   - `op_id` is the idempotence key for effects; observe ops don't need it but benefit from traceability when provided
-- Duplicate `op_id` within a manifest → receipt `denied`, `duplicate_op_id` (all ops sharing the id)
+- Duplicate `op_id` within a single manifest → receipt `denied`, `duplicate_op_id` (all ops sharing the id)
+- **Cross-pass duplicates:** Pass B may reuse an `op_id` from Pass A. This is allowed —
+  the idempotency key is `(trigger_id, pass, op_id)`, not `(trigger_id, op_id)` alone.
+  This lets Pass B re-propose an effect after reviewing Pass A evidence without conflict.
 
 **Tests:** parse valid manifests, reject unknown kinds, reject multi-line, missing op_id on effects, auto-assign observe op_ids, duplicate op_id detection
 
@@ -290,6 +293,17 @@ Execution per kind:
 **Important:** All git/exec ops use argv-only primitives (`exec_args` / `exec_args_env`).
 No shell pipelines or `&&` chaining — the runtime sequences calls explicitly and handles
 errors between each step.
+
+**Git observe path exclusion:** Git ops that accept paths or produce diffs apply the
+same denylist as the filesystem sandbox. Enforcement is via git's `--` pathspec exclusion:
+- `git_diff` → appends `-- . ':!.cn' ':!state' ':!logs'` to exclude denylisted prefixes
+- `git_log` → same pathspec exclusion appended
+- `git_grep` → if no `path` field specified, defaults to `-- . ':!.cn' ':!state' ':!logs'`;
+  if `path` specified, sandbox-checks it first (same 4-step validation as fs ops)
+- `git_status` → no exclusion needed (shows working tree status; no content leak)
+
+This uses git's native pathspec negation (`':!prefix'`), not post-hoc output filtering.
+The runtime constructs the argv with exclusions unconditionally — agents cannot opt out.
 
 Receipt writing:
 - Container: `{ "schema": "cn.receipts.v1", "trigger_id": "...", "receipts": [...] }`
