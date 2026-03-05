@@ -17,7 +17,7 @@
 
 **v3.3.5** — CLP pass: γ-axis hardening (evolution / migration):
 - **Capability discovery**: runtime-generated `## CN Shell Capabilities` block in packed context; declares supported kinds, budgets, apply_mode, exec allowlist at call time; agents degrade gracefully on older runtimes
-- **Receipts schema version**: `state/receipts/{trigger_id}.json` now has a normative container shape: `{ "schema": "cn.receipts.v1", "pass": "A"|"B", "receipts": [...] }`; hash algorithm specified as `sha256:`
+- **Receipts schema version**: `state/receipts/{trigger_id}.json` now has a normative container shape: `{ "schema": "cn.receipts.v1", "receipts": [{ "pass": "A"|"B", ... }] }`; hash algorithm specified as `sha256:`
 - **In-band ops version**: optional `ops_version` frontmatter field; runtime warns on unsupported versions, processes known kinds normally
 - **CN Shell section header**: dropped stale version number from header (was showing v3.3.2 in v3.3.4 content)
 - **Reply marker placeholders**: angle brackets → curly braces for renderer compatibility; marker writes explicitly placed under processor lock (crash-recovery envelope)
