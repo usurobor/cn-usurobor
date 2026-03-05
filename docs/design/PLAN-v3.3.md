@@ -127,22 +127,35 @@ Modify `cn_config.ml:load`:
 New file: `src/cmd/cn_shell.ml` (~400 lines total, built incrementally across Steps 2–5)
 
 ```ocaml
-(** Typed op kinds — closed vocabulary per spec *)
-type observe_kind = Fs_read | Fs_glob | Git_diff | Git_log
-type effect_kind = Fs_write | Fs_patch | Git_branch | Git_commit | Exec
+(** Typed op kinds — closed vocabulary per v3.3.6 spec (complete set) *)
+type observe_kind =
+  | Fs_read    (* {path} *)
+  | Fs_list    (* {path} *)
+  | Fs_glob    (* {pattern} *)
+  | Git_status (* no required fields *)
+  | Git_diff   (* {rev} — rev range e.g. "HEAD~1..HEAD" *)
+  | Git_log    (* {rev, max?} — max defaults to 20 *)
+  | Git_grep   (* {query, path?} *)
+
+type effect_kind =
+  | Fs_write    (* {path, content} *)
+  | Fs_patch    (* {path, unified_diff} *)
+  | Git_branch  (* {name} *)
+  | Git_commit  (* {message} *)
+  | Exec        (* {argv, stdin?} *)
 
 type op_kind = Observe of observe_kind | Effect of effect_kind
 
 type typed_op = {
   kind : op_kind;
-  op_id : string;
+  op_id : string option;  (* required for effects; optional for observes *)
   fields : (string * Cn_json.t) list;  (* kind-specific fields *)
 }
 
 type receipt_status = Ok_status | Denied | Error_status | Skipped
 type receipt = {
   pass : string;  (* "A" or "B" *)
-  op_id : string;
+  op_id : string option;  (* present when op declared one; runtime assigns for observes without *)
   kind : string;
   status : receipt_status;
   reason : string;
@@ -162,11 +175,15 @@ val parse_ops_manifest : string -> (typed_op list * receipt list)
 
 Parsing contract:
 - `ops:` value MUST be single-line JSON array (reject newlines → receipt `denied`, `ops_not_single_line`)
-- Each element is a JSON object with `kind` and `op_id` fields
+- Each element is a JSON object with `kind` field (required) and `op_id` field
 - Unknown `kind` → receipt `denied`, `unknown_op_kind`
-- Missing `op_id` on effect ops → receipt `denied`, `missing_op_id`
+- **`op_id` rules:**
+  - Effect ops: `op_id` required — missing → receipt `denied`, `missing_op_id`
+  - Observe ops: `op_id` optional — if absent, runtime assigns a deterministic id (e.g., `obs-01`, `obs-02` by manifest position) and records it in the receipt
+  - `op_id` is the idempotence key for effects; observe ops don't need it but benefit from traceability when provided
+- Duplicate `op_id` within a manifest → receipt `denied`, `duplicate_op_id` (all ops sharing the id)
 
-**Tests:** parse valid manifests, reject unknown kinds, reject multi-line, missing op_id
+**Tests:** parse valid manifests, reject unknown kinds, reject multi-line, missing op_id on effects, auto-assign observe op_ids, duplicate op_id detection
 
 **Depends on:** `cn_json.ml` (already exists)
 
@@ -193,11 +210,25 @@ Protected files (`spec/SOUL.md`, `spec/USER.md`, `state/peers.md`) denied for wr
 
 ```ocaml
 (** Scrub environment for exec: drop vars matching *_KEY, *_TOKEN, *_SECRET,
-    plus configured secret keys. *)
+    plus configured secret keys. Returns a clean env array. *)
 val scrub_env : extra_keys:string list -> (string * string) list
 ```
 
-**Tests:** normal paths, `..` escape, symlink bypass, denylist hits, protected files, env scrubbing
+**Prerequisite:** `Cn_ffi.Process.exec_args` currently uses `Unix.create_process`, which
+inherits the parent env wholesale. Add `Cn_ffi.Process.exec_args_env`:
+
+```ocaml
+(** Like exec_args but with explicit environment (Unix.create_process_env).
+    Used by CN Shell exec to enforce env scrubbing structurally. *)
+val exec_args_env : prog:string -> args:string list -> env:(string * string) list
+                    -> ?stdin_data:string -> unit -> int * string
+```
+
+Without this primitive, env scrubbing is "policy" (trust the caller) rather than
+"mechanism" (the kernel enforces it). CN Shell `exec` ops MUST use `exec_args_env`,
+not `exec_args`.
+
+**Tests:** normal paths, `..` escape, symlink bypass, denylist hits, protected files, env scrubbing, exec_args_env passes only scrubbed env
 
 **Depends on:** Step 2 (types)
 
@@ -236,21 +267,42 @@ type shell_config = {
 ```
 
 Execution per kind:
+
+**Observe ops:**
 - `fs_read` → read file (sandbox check first), write content to artifact, cap at `max_artifact_bytes_per_op`
+- `fs_list` → list directory entries (sandbox check), write listing to artifact
 - `fs_glob` → glob pattern match, write file list to artifact
-- `git_diff` → `git diff <rev>` via `exec_args`, write to artifact
-- `git_log` → `git log <args>` via `exec_args`, write to artifact
+- `git_status` → `exec_args ~prog:"git" ~args:["status"; "--porcelain"]`, write to artifact
+- `git_diff` → `exec_args ~prog:"git" ~args:["diff"; rev]`, write to artifact
+- `git_log` → `exec_args ~prog:"git" ~args:["log"; "--oneline"; "-n"; max; rev]`, write to artifact
+- `git_grep` → `exec_args ~prog:"git" ~args:["grep"; "-n"; query] @ (match path with Some p -> ["--"; p] | None -> [])`, write to artifact
+
+**Effect ops:**
 - `fs_write` → sandbox check, write content (respect `apply_mode`)
 - `fs_patch` → sandbox check, apply unified diff
-- `git_branch` → `git checkout -b <name>`
-- `git_commit` → `git add -A && git commit -m <msg>` (on cn/ branch if `apply_mode: branch`)
-- `exec` → check allowlist, scrub env, run via `exec_args`, cap output, hash artifact (SHA-256)
+- `git_branch` → `exec_args ~prog:"git" ~args:["checkout"; "-b"; name]`
+- `git_commit` → **two sequential argv calls** (no shell `&&`):
+  1. `exec_args ~prog:"git" ~args:["add"; "-A"]` — if exit ≠ 0 → receipt `error`, stop
+  2. `exec_args ~prog:"git" ~args:["commit"; "-m"; msg]` — if exit ≠ 0 → receipt `error`
+  (Uses `cn/<trigger_id>` branch if `apply_mode: branch`)
+- `exec` → check allowlist, scrub env, run via `exec_args_env` (NOT `exec_args`), cap output, hash artifact (SHA-256)
+
+**Important:** All git/exec ops use argv-only primitives (`exec_args` / `exec_args_env`).
+No shell pipelines or `&&` chaining — the runtime sequences calls explicitly and handles
+errors between each step.
 
 Receipt writing:
 - Container: `{ "schema": "cn.receipts.v1", "trigger_id": "...", "receipts": [...] }`
 - `pass` is per-receipt entry
 - Artifacts referenced by relative path + `sha256:` hash + size
 - Archive receipts to `logs/receipts/` after writing
+
+**SHA-256 implementation:** The codebase is stdlib-only (zero external deps). Two options:
+1. **(Preferred)** Implement SHA-256 in pure OCaml (~120 lines, well-known algorithm)
+2. **(Fallback)** Shell out to `sha256sum` via `exec_args` — adds a runtime dep but is simpler
+
+Decision: use option 1 (pure OCaml) to maintain the zero-deps invariant. Place in
+`cn_shell.ml` as a private helper (not exposed in `.mli`).
 
 **Tests:** each op kind (mock filesystem), receipt format, artifact hashing, budget enforcement
 
@@ -390,14 +442,15 @@ Critical path: 2 → 3 → 4 → 5.
 | File | Action | Est. Lines |
 |------|--------|-----------|
 | `src/cmd/cn_dotenv.ml` | **New** — dotenv parser + secret resolution | ~60 |
-| `src/cmd/cn_shell.ml` | **New** — typed ops, sandbox, execution, receipts | ~400 |
+| `src/cmd/cn_shell.ml` | **New** — typed ops, sandbox, execution, receipts, SHA-256 | ~520 |
+| `src/lib/cn_ffi.ml` | Edit — add `exec_args_env` (Unix.create_process_env) | ~30 |
 | `src/cmd/cn_config.ml` | Edit — add shell_config fields, use dotenv fallback | ~40 |
 | `src/cmd/cn_context.ml` | Edit — add capabilities block | ~30 |
 | `src/cmd/cn_runtime.ml` | Edit — two-pass finalize, projection markers | ~150 |
 | `src/cmd/dune` | Edit — add `cn_dotenv`, `cn_shell` | +2 |
 | `test/cmd/cn_shell_test.ml` | **New** — typed ops + sandbox + receipt tests | ~200 |
 | `test/cmd/cn_dotenv_test.ml` | **New** — dotenv parser tests | ~60 |
-| **Total new/changed** | | **~940 lines** |
+| **Total new/changed** | | **~1,090 lines** |
 
 ---
 
@@ -416,7 +469,8 @@ Critical path: 2 → 3 → 4 → 5.
 | Risk | Mitigation |
 |------|-----------|
 | Path sandbox bypass via symlink | 4-step validation order: denylist on resolved path, not raw input |
-| Secret leakage via exec | Suffix-based env scrubbing (`_KEY`, `_TOKEN`, `_SECRET`) + configurable list |
+| Git observe leaking secrets | `git_grep`/`git_diff`/`git_log` apply implicit path exclusion for denylisted prefixes (`.cn/`, `state/`, `logs/`) even if content is tracked |
+| Secret leakage via exec | Suffix-based env scrubbing (`_KEY`, `_TOKEN`, `_SECRET`) + configurable list; enforced structurally via `exec_args_env` |
 | Two-pass cost explosion | `max_passes = 2` hard cap; budgets on observe ops + artifact bytes |
 | Receipt format instability | `cn.receipts.v1` schema version; `pass` per-entry; SHA-256 with prefix |
 | Backwards compatibility | `ops:` is optional; absence means current behavior unchanged |
