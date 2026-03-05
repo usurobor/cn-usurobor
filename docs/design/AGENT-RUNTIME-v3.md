@@ -1,6 +1,6 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.3.2
+**Version:** 3.3.3
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
 **Date:** 2026-03-05
 **Status:** Draft
@@ -9,6 +9,12 @@
 ---
 
 ## Patch Notes
+
+**v3.3.3** — CLP pass: β-axis hardening (cross-doc coherence):
+- **`reply` idempotency**: replaced "current implementation" claim (code didn't match) with normative requirement; specified atomic marker file mechanism (`state/projected/<projection>/<trigger_id>.sent`) and fallback (defer to Pass B)
+- **SECURITY-MODEL.md reconciled**: added CN Shell Addendum; "no exec" refined to "no direct exec; governed exec under allowlist + budgets + receipts"; attack surface table and agent capability list updated
+- **Path Sandbox**: new shared-vocabulary subsection — path normalization rules, default denylist prefixes (`.cn/`, `.git/`, `state/`, `logs/`), exec environment scrubbing, artifact hashing
+- **Cost control wording**: "bounded workspace snapshot" corrected to "bounded cognitive context" (matches actual `Cn_context.pack` contents)
 
 **v3.3.2** — CLP pass: α-axis hardening (internal consistency):
 - **ops: encoding**: normative single-line requirement; runtime MUST reject newlines in `ops:` value
@@ -820,7 +826,20 @@ Rather than enumerate which legacy ops are allowed in each pass, we derive from 
 | `defer` | **No** | Reschedules — changes thread timing |
 | `delete` | **No** | Destructive — removes thread |
 
-**`reply` idempotency requirement:** `reply` in Pass A is projected to the user (e.g., Telegram message). If the projection layer does not deduplicate by `trigger_id` on crash recovery, `reply` becomes Pass-A-unsafe (crash → restart → duplicate user message). The runtime MUST either: (a) ensure projection deduplicates by `trigger_id`, or (b) defer `reply` to Pass B. Current implementation: Telegram projection deduplicates by `trigger_id` via `state/projected/<trigger_id>` marker files (see `cn_telegram.ml`), so `reply` is Pass-A-safe.
+**`reply` idempotency requirement (normative):** `reply` in Pass A is projected to the user (e.g., Telegram message). Therefore:
+
+- `reply` is Pass-A-safe **only if** the projection layer is idempotent under crash recovery.
+- The runtime MUST ensure projection deduplicates by `trigger_id` (or `trigger_id` + `projection`).
+
+One acceptable mechanism:
+
+- When projecting a `reply` for `<trigger_id>`, cn MUST create a marker file:
+  `state/projected/<projection>/<trigger_id>.sent`
+  using an atomic create (`O_CREAT|O_EXCL` or equivalent).
+- If the marker already exists, cn MUST skip sending the external message and emit a receipt
+  `status: skipped`, `reason: already_projected`.
+
+If projection idempotency cannot be guaranteed, the runtime MUST treat `reply` as Pass-A-unsafe and defer it to Pass B.
 
 Pass-A-unsafe ops in Pass A output are ignored and logged via receipts (`status: skipped`, `reason: pass_a_unsafe`). The agent SHOULD re-propose them in Pass B after reviewing evidence.
 
@@ -879,7 +898,7 @@ This ordering ensures the system never advances narrative state (FSM) when the w
 
 #### Cost control via pre-packing
 
-Most "read this file" requests SHOULD be satisfied without observe ops at all — `Cn_context.pack` includes a bounded workspace snapshot (skills, reflections, conversation). Observe ops are the exception for edge cases ("read file X specifically"), not the norm. This keeps two-pass rare and costs predictable.
+Most "read this file" requests SHOULD be satisfied without observe ops at all — `Cn_context.pack` includes a bounded cognitive context (identity, user spec, mindsets, reflections, skills, conversation history). Observe ops are the exception for cases requiring specific filesystem or git inspection ("read file X", "show diff Y"), not the norm. This keeps two-pass rare and costs predictable.
 
 #### Budgets (configurable)
 
@@ -891,6 +910,35 @@ Most "read this file" requests SHOULD be satisfied without observe ops at all �
 | Max passes | 2 | Hard limit — not configurable | — |
 
 Ops exceeding budgets receive receipt `status: denied`, `reason: budget_exceeded`.
+
+### Path Sandbox
+
+Typed ops that reference filesystem paths (`fs_read`, `fs_write`) or execute commands (`exec`) are subject to path and environment sandboxing. These rules are shared vocabulary across CN Shell, [SECURITY-MODEL.md](SECURITY-MODEL.md), and [SETUP-INSTALLER.md](SETUP-INSTALLER.md).
+
+#### Path normalization
+
+- All paths MUST be relative to the hub root. Absolute paths are denied.
+- `..` components are resolved and denied if they escape the hub.
+- Symlinks are resolved; if the resolved path escapes the hub, the op is denied.
+
+#### Default denylist prefixes
+
+Ops targeting these prefixes receive `status: denied`, `reason: path_denied`:
+
+| Prefix | Rationale |
+|--------|-----------|
+| `.cn/` | Configuration and secrets (includes `.cn/secrets.env`) |
+| `.git/` | Git internals |
+| `state/` | Runtime state — managed exclusively by cn |
+| `logs/` | Audit trail — append-only, not agent-writable |
+
+Protected files (`spec/SOUL.md`, `spec/USER.md`, `state/peers.md`) are additionally denied for write/delete regardless of prefix rules.
+
+#### `exec` environment scrubbing
+
+- The runtime MUST NOT pass secret-bearing environment variables (e.g., `ANTHROPIC_API_KEY`, `TELEGRAM_BOT_TOKEN`) to exec'd commands.
+- Exec output is capped at `runtime.max_artifact_bytes_per_op` (default 16 KB).
+- Exec artifacts are hashed (SHA-256) and the hash is recorded in the receipt.
 
 ### Host DSL Boundary (humans vs agent)
 
