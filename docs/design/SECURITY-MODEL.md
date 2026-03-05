@@ -1,7 +1,7 @@
 # CN Security Model
 
-**Status:** Current  
-**Date:** 2026-02-11  
+**Status:** Current
+**Date:** 2026-03-05
 **Author:** usurobor (aka Axiom)  
 **Contributors:** Sigma  
 
@@ -37,7 +37,7 @@ The agent interacts with exactly two files. `cn` reads the output, validates the
 
 | Vector | Status | How |
 |--------|--------|-----|
-| Arbitrary commands | Blocked | No `exec` access |
+| Arbitrary commands | Blocked | No direct exec; governed exec under allowlist + budgets + receipts (see CN Shell Addendum) |
 | System files | Blocked | Paths must be within hub |
 | Other repos | Blocked | Git ops scoped to hub + peers |
 | Identity theft | Blocked | Critical files protected |
@@ -82,9 +82,9 @@ See [LOGGING.md](LOGGING.md) for full logging architecture.
 
 ### Agent CANNOT:
 
-- Execute shell commands
+- Execute shell commands directly (governed exec via typed ops requires allowlist + budget + receipt)
 - Access files outside hub
-- Read/write arbitrary files (only input.md/output.md)
+- Read/write arbitrary files directly (only input.md/output.md for agent I/O; typed ops may access additional hub paths under governance)
 - Modify git history directly
 - Delete protected files
 - Forge log entries
@@ -112,6 +112,28 @@ The four typed FSMs in `cn_protocol.ml` provide compile-time safety:
 | Transport Receiver | Branches not cleaned after materialization |
 
 All transition functions return `Ok state | Error string`. Invalid transitions are errors, not silent bugs.
+
+## CN Shell Addendum (v3.3+)
+
+The CN Shell capability runtime ([AGENT-RUNTIME-v3.md](AGENT-RUNTIME-v3.md), §CN Shell) introduces governed post-call capabilities (`fs_read`, `fs_write`, `git_diff`, `exec`, etc.) that extend the agent's vocabulary beyond coordination ops. This does NOT change the core security architecture — it refines it:
+
+| Property | Pre-CN Shell | With CN Shell |
+|----------|-------------|---------------|
+| In-call FS/exec access | None | None — unchanged |
+| Direct exec authority | None | None — unchanged |
+| Post-call capabilities | Coordination ops only | Coordination ops + typed ops (governed) |
+| Exec authority | Blocked entirely | Governed: allowlisted commands, budget-capped, receipted |
+| FS access | `input.md` / `output.md` only | `input.md` / `output.md` for agent I/O; typed ops may read/write additional paths under governance |
+| Audit | IO pair archival | IO pair archival + per-op receipts + artifact hashing |
+
+**Key invariants preserved:**
+
+1. **No in-call tool loop** — the agent cannot invoke capabilities during generation. All capability execution is post-call, after output is archived.
+2. **All effects are governed** — every typed op is validated (schema, policy, budgets) before execution. Invalid ops are denied with receipts.
+3. **Full traceability** — typed ops produce receipts (`state/receipts/<trigger_id>.json`) and artifacts (`state/artifacts/<trigger_id>/`), extending the existing IO-pair audit trail.
+4. **Identity preserved** — protected files remain protected; typed ops cannot write to `spec/SOUL.md`, `spec/USER.md`, or `state/peers.md`.
+
+**Corrected phrasing:** "No exec access" becomes "no direct exec; only governed exec under allowlist + budgets + receipts." The agent still cannot execute arbitrary commands — it proposes ops, and `cn` decides whether to execute them.
 
 ## Why This Matters
 
