@@ -1,14 +1,26 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.3.0
+**Version:** 3.3.1
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
-**Date:** 2026-03-04
+**Date:** 2026-03-05
 **Status:** Draft
 **Reviewers:** usurobor, external
 
 ---
 
 ## Patch Notes
+
+**v3.3.1** — CLP pass: β-axis strengthening (relational connections):
+- Add **Design Principle: Observe Before Act** — names the CAP invariant the two-pass architecture enforces; traces to MCA priority (CAP §3.1) and the Coherence Walk
+- Replace coordination-op enumeration with **phase derivation** from single principle: "Pass-A-safe iff idempotent and does not change thread state or reach another party"; add `ack` (was missing)
+- Add **Interaction with Actor FSM** — typed ops do not drive FSM; coordination ops do; FSM sees only final pass
+- Add **Interaction with Skill Loading** — Pass B does not re-score skills; artifacts injected after skill block
+- Add **Ops Vocabulary Versioning** — closed vocab evolution rules (additive = minor, removal = major, unknown = error receipt)
+- Remove `two_pass: on` (was redundant synonym for `auto`)
+- Add **secret safety enforcement** — structural guarantee via op vocabulary + exec allowlist, not just policy
+- Add **Rationale** column to budgets table
+- Add **Host DSL validation** note — runtime applies identical checks regardless of op origin
+- Add **Migration: Legacy Ops → Typed Ops** — clarifies the two layers are complementary, not a migration path
 
 **v3.3.0** — CN Shell (capability runtime) + syscall manifests + receipts:
 - Define **CN Shell** as a capability runtime inside cn (kernel/syscalls), not an interactive terminal for the LLM:
@@ -600,7 +612,7 @@ This is intentionally simple. Semantic skill matching is a v2 consideration.
 
 ---
 
-## CN Shell: Capability Runtime (v3.3.0)
+## CN Shell: Capability Runtime (v3.3.1)
 
 ### Definition
 
@@ -622,6 +634,14 @@ CN Shell is instead: LLM → proposal → cn executes → receipts/artifacts rec
 
 No mid-call access. No unbounded loops. No imperative scripts from the model.
 
+### Design Principle: Observe Before Act
+
+CN Shell encodes a coherence invariant from CAP (§cap/SKILL.md):
+
+> An agent that acts before sensing widens the gap between model and reality.
+
+The two-pass architecture is not merely a safety mechanism — it is the runtime expression of **MCA priority** (CAP §3.1): sense the gap first, then act. The `observe → effect` phase split is the capability-runtime analogue of the Coherence Walk: score first (observe), then rebalance (effect).
+
 ### Typed Ops Manifest
 
 `state/output.md` frontmatter MAY include an `ops:` field — a single-line JSON array of typed ops, parsed via `cn_json`.
@@ -631,7 +651,16 @@ Rationale:
 - Single-line JSON is stable for parsing and avoids YAML dependencies
 - Typed ops allow a closed vocabulary (no agent-generated scripts)
 
-Legacy frontmatter ops remain valid. `ops:` is additive.
+Legacy frontmatter ops (§agent-ops/SKILL.md) remain valid. `ops:` is additive.
+
+#### Ops Vocabulary Versioning
+
+The set of valid op `kind` values is a closed vocabulary maintained in `cn_runtime.ml`. Changes follow:
+
+- New observe ops: additive, minor version bump (e.g., 3.3.x → 3.4.0)
+- New effect ops: require governance review, minor version bump
+- Removing an op kind: major version bump, deprecation cycle in patch notes
+- The runtime MUST reject unknown `kind` values with receipt `status: error`, `reason: unknown_op_kind`
 
 #### Example
 
@@ -705,14 +734,14 @@ For every executed typed op, cn MUST emit a receipt containing:
 - `op_id` (when present)
 - `kind`
 - `start`/`end` timestamps
-- `status`: `ok` | `error` | `skipped`
+- `status`: `ok` | `error` | `skipped` | `denied`
 - Exit code (for `exec`)
 - Hashes for stdout/stderr artifacts (if produced)
 - Artifact pointers (paths + hashes + size)
 
 Receipts MUST be written to `state/receipts/` and archived to `logs/receipts/`.
 
-Receipts MUST NOT contain secrets.
+**Secret safety:** Receipts MUST NOT contain secrets. This is enforced structurally: observe ops read from the hub (no secret paths); effect ops write to the hub (content is agent-authored prose/code, not credentials). The `exec` op captures stdout/stderr into artifacts — the allowlist MUST exclude commands that emit secrets. Config validation rejects `exec` allowlist entries known to emit credentials (e.g., `cat .cn/secrets.env`).
 
 #### Artifacts (normative)
 
@@ -730,7 +759,6 @@ Receipts reference artifacts by relative path + hash.
 |------|----------|
 | `auto` **(DEFAULT)** | If `ops:` contains any observe-phase op, cn auto-promotes to two-pass |
 | `off` | Observe ops are audit-only (executed + receipted, no second call) |
-| `on` | Same as `auto` — explicit opt-in for deployments that want to be declarative |
 
 #### Phase semantics
 
@@ -751,29 +779,51 @@ If Pass A output contains **any** observe ops, then **all** effect ops in that s
 
 This prevents the agent from "acting before seeing" while still allowing it to express a draft plan. One rule, no ambiguity: **if you ask to observe, we observe first, then you decide.**
 
-#### Coordination ops during two-pass
+#### Coordination ops: phase derivation
 
-Two-pass is triggered by typed observe ops, but coordination ops still exist in the output. The runtime MUST apply these rules:
+Rather than enumerate which legacy ops are allowed in each pass, we derive from a single principle:
 
-**Pass A:**
-- Execute typed observe ops normally
-- Skip typed effect ops with receipt (`status: skipped`, `reason: observe_pass_requires_followup`)
-- Coordination ops are phase-aware:
-  - **Allowed in Pass A:** `reply` (progress updates), `surface` (managed concerns)
-  - **Deferred to Pass B:** `done`, `fail`, `delete`, `delegate`, `defer`, `send` (terminal/multi-party effects)
-  - Deferred coordination ops MUST be ignored and logged (agent SHOULD re-propose in Pass B)
+> **An op is Pass-A-safe iff it is idempotent and does not change thread state or reach another party.**
 
-**Pass B:**
-- Execute coordination ops normally
-- Execute typed effect ops normally (subject to governance)
+| Legacy op | Pass-A-safe? | Reason |
+|-----------|-------------|--------|
+| `reply` | Yes | Idempotent progress notification to same thread |
+| `surface` / `mca` | Yes | Adds concern to backlog; does not resolve or route |
+| `ack` | Yes | Idempotent acknowledgement |
+| `done` | **No** | Terminal — advances FSM to `resolved` |
+| `fail` | **No** | Terminal — advances FSM to `failed` |
+| `send` | **No** | Multi-party — reaches another agent's inbox |
+| `delegate` | **No** | Multi-party — transfers ownership |
+| `defer` | **No** | Reschedules — changes thread timing |
+| `delete` | **No** | Destructive — removes thread |
 
-This keeps "observe first, then decide" intact while preventing premature thread finalization or multi-party side effects before evidence is seen.
+Pass-A-unsafe ops in Pass A output are ignored and logged. The agent SHOULD re-propose them in Pass B after reviewing evidence.
+
+#### Interaction with Actor FSM
+
+Typed ops do not directly advance the actor FSM. The FSM transition rules remain as defined in `cn_agent.ml`:
+
+- Coordination ops (`done`, `fail`, `defer`, `delete`) drive FSM transitions
+- Typed effect ops (`fs_write`, `git_commit`, etc.) are executed but do not change actor state
+- The FSM sees only the final pass's coordination ops (Pass B if two-pass, Pass A if single-pass)
+
+This keeps the FSM simple: it reacts to intent (coordination ops), not to side effects (typed ops).
+
+#### Interaction with Skill Loading
+
+Pass B repacking (`Cn_context.pack`) does NOT re-score skills. The skill set is fixed at Pass A pack time. Rationale:
+
+- Skills are selected based on the *inbound message*, not on intermediate artifacts
+- Re-scoring would add latency and non-determinism to Pass B
+- If observe artifacts reveal a need for a different skill, the agent can express that need in prose; the next full cycle will load appropriate skills
+
+Observe artifacts are injected into Pass B context as bounded excerpts (see Budgets), alongside receipts. They sit after the skill block and before conversation history.
 
 #### Pass A (observe)
 
 1. cn parses `ops:` from `state/output.md`
 2. Execute observe ops only; skip effect ops with receipt
-3. Apply coordination op rules (see above): execute allowed, defer disallowed
+3. Apply coordination op phase rules (see table above): execute safe, defer unsafe
 4. Write artifacts to `state/artifacts/<trigger_id>/<op_id>.*`
 5. Write receipts to `state/receipts/<trigger_id>.json`
 6. Archive IO pair (Pass A) per LOGGING.md
@@ -783,13 +833,15 @@ This keeps "observe first, then decide" intact while preventing premature thread
 1. cn repacks context including:
    - Receipts summary (bounded)
    - Artifact excerpts (bounded — configurable max bytes per artifact)
+   - Same skill set as Pass A (no re-scoring)
 2. Call the agent again (single LLM call)
 3. Parse Pass B output; execute all coordination ops + typed effect ops (subject to governance)
-4. Archive IO pair (Pass B) per LOGGING.md
+4. FSM transitions applied from Pass B coordination ops
+5. Archive IO pair (Pass B) per LOGGING.md
 
 #### Loop prevention
 
-- **`max_passes = 2`** (Pass A + Pass B). Hard limit.
+- **`max_passes = 2`** (Pass A + Pass B). Hard limit, not configurable.
 - If Pass B output requests observe ops: they are denied with receipt `status: denied`, `reason: max_passes_exceeded`. No third call.
 - If Pass B fails (LLM error, timeout), the system stops. No retry loop.
 
@@ -799,12 +851,12 @@ Most "read this file" requests SHOULD be satisfied without observe ops at all �
 
 #### Budgets (configurable)
 
-| Budget | Default | Config key |
-|--------|---------|------------|
-| Max observe ops per pass | 10 | `runtime.max_observe_ops` |
-| Max artifact bytes (total) | 64 KB | `runtime.max_artifact_bytes` |
-| Max artifact bytes (per op) | 16 KB | `runtime.max_artifact_bytes_per_op` |
-| Max passes | 2 | Not configurable (hard limit) |
+| Budget | Default | Rationale | Config key |
+|--------|---------|-----------|------------|
+| Max observe ops per pass | 10 | Covers typical investigate-then-act (read 3–5 files + 2–3 git queries, headroom for growth) | `runtime.max_observe_ops` |
+| Max artifact bytes (total) | 64 KB | Fits comfortably in context window (~16K tokens) alongside skills + conversation | `runtime.max_artifact_bytes` |
+| Max artifact bytes (per op) | 16 KB | Single file/diff should not dominate artifact budget | `runtime.max_artifact_bytes_per_op` |
+| Max passes | 2 | Hard limit — not configurable | — |
 
 Ops exceeding budgets receive receipt `status: denied`, `reason: budget_exceeded`.
 
@@ -817,6 +869,19 @@ The agent MUST NOT output executable code. It outputs:
 - Declarative ops in `ops:` (typed) and/or legacy frontmatter ops (coordination)
 
 This keeps automation power available to humans without granting the model an interpreter.
+
+**Validation:** Whether ops originate from the agent or a host DSL, `cn_runtime.ml` applies identical validation: schema check, governance policy, budget enforcement. The runtime does not distinguish origin — it trusts the manifest, not the author.
+
+### Migration: Legacy Ops → Typed Ops
+
+Legacy frontmatter ops (`reply`, `send`, `done`, etc.) are NOT deprecated. They serve a different purpose:
+
+| Layer | Purpose | Format |
+|-------|---------|--------|
+| **Coordination ops** (legacy) | Intent signaling, FSM advancement, multi-party routing | `key: value` in frontmatter |
+| **Typed ops** (v3.3) | Capability execution — reading, writing, running | `ops: [...]` JSON array |
+
+The two layers are complementary. A single output.md MAY contain both. There is no migration path because there is no replacement — typed ops extend the vocabulary, they don't supersede it.
 
 ---
 
