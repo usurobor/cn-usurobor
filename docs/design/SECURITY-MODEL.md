@@ -31,7 +31,7 @@ Security by architecture: the agent has no direct access to git or filesystem. A
 +-------------------------------------+
 ```
 
-The agent interacts with exactly two files. `cn` reads the output, validates the requested operations against FSM state transitions, and executes only valid ones. See [PROTOCOL.md](PROTOCOL.md) for the typed state machines that enforce protocol correctness.
+The agent's direct I/O is exactly two files (`state/input.md` for reading, `state/output.md` for writing). Post-call, `cn` may execute governed typed ops on the agent's behalf (see CN Shell Addendum below), but the agent itself never touches additional files. `cn` reads the output, validates the requested operations against FSM state transitions, and executes only valid ones. See [PROTOCOL.md](PROTOCOL.md) for the typed state machines that enforce protocol correctness.
 
 ## Attack Surface Reduction
 

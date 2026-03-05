@@ -1,6 +1,6 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.3.3
+**Version:** 3.3.4
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
 **Date:** 2026-03-05
 **Status:** Draft
@@ -9,6 +9,13 @@
 ---
 
 ## Patch Notes
+
+**v3.3.4** — CLP pass: β-axis convergence (Setup ↔ Runtime ↔ Security):
+- **SETUP-INSTALLER aligned**: added §5.6 Path Sandbox alignment explaining why secrets live in `.cn/`; removed stale "Patch A" note; tightened permissions to refuse-to-load (ssh-style)
+- **Path Sandbox hardened**: explicit 4-step validation order (reject absolute → collapse `..` → resolve symlinks → denylist on resolved path); fixes symlink bypass ambiguity
+- **Env var names fixed**: `ANTHROPIC_API_KEY`/`TELEGRAM_BOT_TOKEN` → `ANTHROPIC_KEY`/`TELEGRAM_TOKEN` (matches code and setup contract)
+- **Exec scrubbing rule**: suffix-based drop (`_KEY`, `_TOKEN`, `_SECRET`) plus configurable list, not just examples
+- **SECURITY-MODEL micro-edit**: "exactly two files" → "direct I/O is exactly two files" (accurate post-CN Shell)
 
 **v3.3.3** — CLP pass: β-axis hardening (cross-doc coherence):
 - **`reply` idempotency**: replaced "current implementation" claim (code didn't match) with normative requirement; specified atomic marker file mechanism (`state/projected/<projection>/<trigger_id>.sent`) and fallback (defer to Pass B)
@@ -915,15 +922,18 @@ Ops exceeding budgets receive receipt `status: denied`, `reason: budget_exceeded
 
 Typed ops that reference filesystem paths (`fs_read`, `fs_write`) or execute commands (`exec`) are subject to path and environment sandboxing. These rules are shared vocabulary across CN Shell, [SECURITY-MODEL.md](SECURITY-MODEL.md), and [SETUP-INSTALLER.md](SETUP-INSTALLER.md).
 
-#### Path normalization
+#### Path normalization and validation order
 
-- All paths MUST be relative to the hub root. Absolute paths are denied.
-- `..` components are resolved and denied if they escape the hub.
-- Symlinks are resolved; if the resolved path escapes the hub, the op is denied.
+The runtime MUST apply checks in this order:
+
+1. **Reject absolute paths** — all paths MUST be relative to the hub root.
+2. **Collapse `..` components** — deny if the collapsed path escapes the hub.
+3. **Resolve symlinks** — follow symlinks to their canonical target; deny if the resolved path escapes the hub.
+4. **Apply denylist to the resolved/canonical relative path** — this is critical: the denylist operates on the *resolved* path, not the raw input. A symlink pointing into `.cn/` is denied even if the symlink itself lives outside `.cn/`.
 
 #### Default denylist prefixes
 
-Ops targeting these prefixes receive `status: denied`, `reason: path_denied`:
+Ops targeting these prefixes (checked against the **resolved** path) receive `status: denied`, `reason: path_denied`:
 
 | Prefix | Rationale |
 |--------|-----------|
@@ -936,7 +946,10 @@ Protected files (`spec/SOUL.md`, `spec/USER.md`, `state/peers.md`) are additiona
 
 #### `exec` environment scrubbing
 
-- The runtime MUST NOT pass secret-bearing environment variables (e.g., `ANTHROPIC_API_KEY`, `TELEGRAM_BOT_TOKEN`) to exec'd commands.
+- The runtime MUST NOT pass secret-bearing environment variables to exec'd commands.
+  At minimum: `ANTHROPIC_KEY`, `TELEGRAM_TOKEN`.
+- Recommended rule: drop any variable whose name ends with `_KEY`, `_TOKEN`, or `_SECRET`,
+  plus any explicitly configured secret key list. This keeps the spec stable as new integrations are added.
 - Exec output is capped at `runtime.max_artifact_bytes_per_op` (default 16 KB).
 - Exec artifacts are hashed (SHA-256) and the hash is recorded in the receipt.
 

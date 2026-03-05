@@ -89,8 +89,11 @@ When resolving a secret:
 This preserves env semantics for CI/override,
 while enabling `cn setup` to "just work."
 
-**Current code** (`Cn_config.load`): reads `ANTHROPIC_KEY`, `TELEGRAM_TOKEN`,
-and `CN_MODEL` from env only. Patch A adds `.cn/secrets.env` as a fallback source.
+`Cn_config.load` MUST resolve secrets with this precedence:
+1. Environment variable (if set and non-empty)
+2. `.cn/secrets.env` fallback
+
+This is a runtime contract, not an implementation detail.
 
 ### 5.4 Dotenv parser (minimal spec)
 
@@ -113,17 +116,29 @@ Edge cases:
 
 - File missing → treat as empty
 - File exists but unreadable → warn and treat as empty
-- File permissions more permissive than `0600` → warn
+- File permissions more permissive than `0600` → **error** (do not load secrets from file); print: `chmod 600 .cn/secrets.env`
 
 ### 5.5 Security
 
 | Concern | Mitigation |
 |---------|-----------|
 | Secrets in git | `.cn/secrets.env` added to `.gitignore` by `cn setup` |
-| File permissions | Created with 0600; warn at startup if more permissive |
+| File permissions | Created with 0600; **refuse to load** if more permissive (ssh-style) |
 | Secrets in config.json | Never. Model/users/settings only. |
 | Secrets in install pipe | Never. `install.sh` handles binary only. |
 | Git tracking check | `cn doctor` warns if `secrets.env` is tracked |
+
+### 5.6 Path Sandbox alignment (CN Shell)
+
+CN Shell ([AGENT-RUNTIME-v3.md](AGENT-RUNTIME-v3.md) §Path Sandbox) deny-lists the `.cn/` prefix for typed filesystem ops. This is intentional: `.cn/` contains configuration and secrets (including `.cn/secrets.env`).
+
+Implications for `cn setup`:
+
+- **Secrets MUST live in `.cn/secrets.env`** — not in `spec/`, not inlined in JSON. This is the architectural reason, not just convention: the capability runtime structurally cannot read `.cn/` paths.
+- **Path checks MUST apply to the canonical resolved path** (after `..` collapse and symlink resolution), to prevent symlink bypasses into `.cn/`.
+- **`cn setup` MUST NOT create secrets or config outside `.cn/`** — doing so would place them in paths reachable by typed ops.
+
+This subsection is the back-link to the shared vocabulary defined in AGENT-RUNTIME-v3.md §Path Sandbox and referenced by [SECURITY-MODEL.md](SECURITY-MODEL.md) §CN Shell Addendum.
 
 ## 6. `cn setup` UX / Flow
 
