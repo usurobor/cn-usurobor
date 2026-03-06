@@ -93,7 +93,7 @@ cn weekly                    Create/show weekly reflection
 
 ```
 cn init [name]               Create new hub
-cn setup                     System setup (logrotate + cron) — run with sudo
+cn setup                     Interactive hub setup (config, secrets, optional systemd)
 cn status                    Show hub state
 cn doctor                    Health check
 cn update                    Update cn to latest version
