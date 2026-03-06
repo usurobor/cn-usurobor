@@ -592,6 +592,11 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                     drain rest
                   end else begin
                     let trigger_id = Printf.sprintf "tg-%d" msg.update_id in
+                    (* Visual feedback: react to inbound + show typing *)
+                    Cn_telegram.set_reaction ~token
+                      ~chat_id:msg.chat_id ~message_id:msg.message_id
+                      ~emoji:"\xF0\x9F\xA4\x94"; (* 🤔 *)
+                    Cn_telegram.send_typing ~token ~chat_id:msg.chat_id;
                     enqueue_telegram hub_path msg;
                     match process_one ~config ~hub_path ~name with
                     | Ok () ->
@@ -601,6 +606,9 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                            a different queued item. *)
                         if not (is_queued hub_path trigger_id)
                            && not (is_in_flight hub_path trigger_id) then begin
+                          (* Clear thinking reaction on successful completion *)
+                          Cn_telegram.clear_reaction ~token
+                            ~chat_id:msg.chat_id ~message_id:msg.message_id;
                           offset := max !offset (msg.update_id + 1);
                           write_offset hub_path !offset;
                           drain rest

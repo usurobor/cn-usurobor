@@ -149,6 +149,39 @@ let get_updates ~token ~offset ~timeout =
               in
               Error (Printf.sprintf "Telegram API error: %s" desc)
 
+let send_typing ~token ~chat_id =
+  let url = Printf.sprintf "%s/bot%s/sendChatAction" api_base token in
+  let body = Cn_json.to_string (Cn_json.Object [
+    "chat_id", Cn_json.Int chat_id;
+    "action", Cn_json.String "typing";
+  ]) in
+  (* Fire-and-forget: typing indicators are ephemeral, best-effort.
+     Short timeout, ignore errors — never block processing. *)
+  ignore (request ~url ~body_opt:(Some body) ~max_time:10)
+
+let set_reaction ~token ~chat_id ~message_id ~emoji =
+  let url = Printf.sprintf "%s/bot%s/setMessageReaction" api_base token in
+  let body = Cn_json.to_string (Cn_json.Object [
+    "chat_id", Cn_json.Int chat_id;
+    "message_id", Cn_json.Int message_id;
+    "reaction", Cn_json.Array [
+      Cn_json.Object [
+        "type", Cn_json.String "emoji";
+        "emoji", Cn_json.String emoji;
+      ]
+    ];
+  ]) in
+  ignore (request ~url ~body_opt:(Some body) ~max_time:10)
+
+let clear_reaction ~token ~chat_id ~message_id =
+  let url = Printf.sprintf "%s/bot%s/setMessageReaction" api_base token in
+  let body = Cn_json.to_string (Cn_json.Object [
+    "chat_id", Cn_json.Int chat_id;
+    "message_id", Cn_json.Int message_id;
+    "reaction", Cn_json.Array [];
+  ]) in
+  ignore (request ~url ~body_opt:(Some body) ~max_time:10)
+
 let send_message ~token ~chat_id ~text =
   let url = Printf.sprintf "%s/bot%s/sendMessage" api_base token in
   let body = Cn_json.to_string (Cn_json.Object [
