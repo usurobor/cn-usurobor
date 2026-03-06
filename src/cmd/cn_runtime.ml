@@ -160,6 +160,31 @@ let build_input_md ~trigger_id ~from ~chat_id_opt ~audit_text =
   Buffer.add_string buf audit_text;
   Buffer.contents buf
 
+(* === Finalize checkpoint === *)
+
+(** Ops-done marker path: state/finalized/{trigger_id}.ops_done
+    Created atomically after all ops execute successfully.
+    Checked on recovery replay to skip re-execution of side effects. *)
+let ops_done_path hub_path trigger_id =
+  Cn_ffi.Path.join hub_path
+    (Cn_ffi.Path.join "state/finalized" (trigger_id ^ ".ops_done"))
+
+let mark_ops_done hub_path trigger_id =
+  let path = ops_done_path hub_path trigger_id in
+  Cn_ffi.Fs.ensure_dir (Filename.dirname path);
+  (try
+     let fd = Unix.openfile path
+                [Unix.O_CREAT; Unix.O_EXCL; Unix.O_WRONLY] 0o644 in
+     Unix.close fd
+   with Unix.Unix_error (Unix.EEXIST, _, _) -> ())
+
+let ops_already_done hub_path trigger_id =
+  Sys.file_exists (ops_done_path hub_path trigger_id)
+
+let clear_ops_done hub_path trigger_id =
+  let path = ops_done_path hub_path trigger_id in
+  (try Sys.remove path with Sys_error _ -> ())
+
 (* === Finalize: archive → execute → project → conversation → cleanup === *)
 
 (** Run the post-LLM pipeline on an existing input.md + output.md pair.
@@ -175,10 +200,16 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
   let body = extract_body output_content in
   let ops = List.map (resolve_payload body) ops in
 
-  (* 3. Execute operations *)
-  List.iter (fun op ->
-    Cn_agent.execute_op hub_path name trigger_id op
-  ) ops;
+  (* 3. Execute operations (skipped on recovery if already done) *)
+  if ops_already_done hub_path trigger_id then
+    Cn_hub.log_action hub_path "process.ops_skip"
+      (Printf.sprintf "trigger:%s ops already executed" trigger_id)
+  else begin
+    List.iter (fun op ->
+      Cn_agent.execute_op hub_path name trigger_id op
+    ) ops;
+    mark_ops_done hub_path trigger_id
+  end;
 
   (* 4. Project to Telegram if from Telegram.
         Uses Cn_projection.project_reply for crash-recovery idempotency:
@@ -243,7 +274,8 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
   append_conversation hub_path
     ~user_msg:inbound_message ~assistant_msg:assistant_text;
 
-  (* 6. Cleanup state files *)
+  (* 6. Cleanup state files + ops_done checkpoint *)
+  clear_ops_done hub_path trigger_id;
   cleanup_state hub_path;
 
   print_endline (Cn_fmt.ok
