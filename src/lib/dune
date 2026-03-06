@@ -2,7 +2,7 @@
 (library
  (name cn_lib)
  (wrapped false)
- (modules cn_lib cn_json cn_build_info)
+ (modules cn_lib cn_json cn_sha256 cn_build_info)
  (libraries inbox_lib))
 
 (rule
