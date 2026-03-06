@@ -1,8 +1,8 @@
 (** cn_config.ml — Runtime configuration loader
 
-    Loads config from environment variables + .cn/config.json.
-    Secrets (API keys) come from env only; non-secrets from config
-    file under the "runtime" key, with env overrides.
+    Loads config from environment variables + .cn/config.json + .cn/secrets.env.
+    Secrets (API keys) resolved via Cn_dotenv: env var > secrets.env file.
+    Non-secrets from config file under the "runtime" key, with env overrides.
 
     Uses Cn_json for config file parsing — same parser as API responses. *)
 
@@ -15,6 +15,7 @@ type config = {
   max_tokens : int;
   allowed_users : int list;  (* [] = deny all Telegram users *)
   hub_path : string;
+  shell : Cn_shell.shell_config;
 }
 
 let default_model = "claude-sonnet-4-latest"
@@ -28,9 +29,9 @@ let non_empty_env key =
   | some -> some
 
 let load ~hub_path =
-  (* Secrets from env only — empty string treated as unset *)
-  let anthropic_key = non_empty_env "ANTHROPIC_KEY" in
-  let telegram_token = non_empty_env "TELEGRAM_TOKEN" in
+  (* Secrets: env var > .cn/secrets.env (via Cn_dotenv) *)
+  let anthropic_key = Cn_dotenv.resolve_secret ~hub_path ~env_key:"ANTHROPIC_KEY" in
+  let telegram_token = Cn_dotenv.resolve_secret ~hub_path ~env_key:"TELEGRAM_TOKEN" in
   let env_model = non_empty_env "CN_MODEL" in
   (* Load config file — surface parse errors, tolerate missing file *)
   let config_path = Cn_ffi.Path.join hub_path ".cn/config.json" in
@@ -73,6 +74,40 @@ let load ~hub_path =
         | Some r -> (match Cn_json.get_string "model" r with Some m -> m | None -> default_model)
         | None -> default_model
   in
+  (* CN Shell config from runtime section *)
+  let get_string_cfg key default =
+    match runtime with
+    | Some r -> (match Cn_json.get_string key r with Some s -> s | None -> default)
+    | None -> default
+  in
+  let get_bool_cfg key default =
+    match runtime with
+    | Some r ->
+      (match Cn_json.get key r with
+       | Some (Cn_json.Bool b) -> b
+       | _ -> default)
+    | None -> default
+  in
+  let get_string_list key =
+    match runtime with
+    | Some r ->
+      (match Cn_json.get_list key r with
+       | Some items ->
+         List.filter_map (fun item ->
+           match item with Cn_json.String s -> Some s | _ -> None
+         ) items
+       | None -> [])
+    | None -> []
+  in
+  let d = Cn_shell.default_shell_config in
+  let shell = {
+    Cn_shell.apply_mode = get_string_cfg "apply_mode" d.apply_mode;
+    exec_enabled = get_bool_cfg "exec_enabled" d.exec_enabled;
+    exec_allowlist = get_string_list "exec_allowlist";
+    max_observe_ops = get_int "max_observe_ops" d.max_observe_ops 1;
+    max_artifact_bytes = get_int "max_artifact_bytes" d.max_artifact_bytes 1024;
+    max_artifact_bytes_per_op = get_int "max_artifact_bytes_per_op" d.max_artifact_bytes_per_op 1024;
+  } in
   match anthropic_key with
   | None -> Error "ANTHROPIC_KEY not set (required for agent runtime)"
   | Some key ->
@@ -85,4 +120,5 @@ let load ~hub_path =
         max_tokens = get_int "max_tokens" default_max_tokens 1;
         allowed_users;
         hub_path;
+        shell;
       }

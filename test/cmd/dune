@@ -5,3 +5,19 @@
  (libraries cn_cmd cn_ffi cn_lib cn_protocol)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_dotenv tests (ppx_expect) — dotenv parser + filesystem
+(library
+ (name cn_dotenv_test)
+ (modules cn_dotenv_test)
+ (libraries cn_cmd cn_ffi unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
+; cn_shell tests (ppx_expect) — CN Shell types + ops parser
+(library
+ (name cn_shell_test)
+ (modules cn_shell_test)
+ (libraries cn_cmd cn_lib)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
