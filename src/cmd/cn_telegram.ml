@@ -163,8 +163,8 @@ let get_updates ~token ~offset ~timeout =
               Error (Printf.sprintf "Telegram API error: %s" desc)
 
 (** All three UX calls use request_once: no retries, 3s max.
-    Worst-case delay per call is 3s (connect-timeout + max-time),
-    so ~9s total for all three in a catastrophic network scenario. *)
+    Non-fatal (errors ignored) with bounded synchronous delay —
+    worst case ~3s per call, ~9s total if all three time out. *)
 
 let send_typing ~token ~chat_id =
   let url = Printf.sprintf "%s/bot%s/sendChatAction" api_base token in
