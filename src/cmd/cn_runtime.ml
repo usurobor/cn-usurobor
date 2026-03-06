@@ -274,9 +274,16 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
   append_conversation hub_path
     ~user_msg:inbound_message ~assistant_msg:assistant_text;
 
-  (* 6. Cleanup state files + ops_done checkpoint *)
-  clear_ops_done hub_path trigger_id;
+  (* 6. Cleanup state files FIRST, then clear ops_done marker.
+        Order matters for crash safety:
+        - cleanup_state removes input.md + output.md (State 1 trigger)
+        - clear_ops_done removes the checkpoint
+        If crash between cleanup and clear: no state files remain,
+        so State 1 recovery cannot fire — stale ops_done is harmless.
+        If clear happened first: crash before cleanup would leave
+        state files without ops_done, causing duplicate op execution. *)
   cleanup_state hub_path;
+  clear_ops_done hub_path trigger_id;
 
   print_endline (Cn_fmt.ok
     (Printf.sprintf "Processed: %s (%d ops)" trigger_id (List.length ops)));
