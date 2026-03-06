@@ -166,7 +166,7 @@ Native OCaml binary. Built with `dune build src/cli/cn.exe`.
 | `cn commit [msg]` | Stage and commit |
 | `cn push` | Push to origin |
 | `cn save [msg]` | Commit + push |
-| `cn setup` | System setup (logrotate + cron) — run with sudo |
+| `cn setup` | Interactive hub setup (config, secrets, optional systemd) |
 | `cn update` | Update cn to latest |
 
 ### Flags

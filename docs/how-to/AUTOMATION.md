@@ -54,7 +54,7 @@ Optionally create `.cn/config.json` for non-secret settings:
 ```json
 {
   "runtime": {
-    "model": "claude-sonnet-4-5-20250929",
+    "model": "claude-sonnet-4-6",
     "max_tokens": 4096,
     "poll_interval": 30,
     "allowed_users": [12345678]
