@@ -441,7 +441,7 @@ let%expect_test "pack: mindsets inserted + engineer skill ranks first" =
 
     let packed =
       Cn_context.pack ~hub_path:hub ~trigger_id:"t1"
-        ~message:"ship patch" ~from:"test"
+        ~message:"ship patch" ~from:"test" ()
     in
     let c = packed.audit_text in
     let has_mindsets = find_sub_idx c "## Mindsets" >= 0 in
@@ -474,7 +474,7 @@ let%expect_test "pack: role normalization — Engineer (capitalized) works" =
 
     let packed =
       Cn_context.pack ~hub_path:hub ~trigger_id:"t2"
-        ~message:"ship patch" ~from:"test"
+        ~message:"ship patch" ~from:"test" ()
     in
     let c = packed.audit_text in
     let eng_i = find_sub_idx c "# ENG SKILL" in
@@ -494,7 +494,7 @@ let%expect_test "pack: no config → no mindsets crash, skills still work" =
 
     let packed =
       Cn_context.pack ~hub_path:hub ~trigger_id:"t3"
-        ~message:"ship patch" ~from:"test"
+        ~message:"ship patch" ~from:"test" ()
     in
     let has_eng = find_sub_idx packed.audit_text "# ENGINEERING" >= 0 in
     let has_skill = find_sub_idx packed.audit_text "# SKILL" >= 0 in
