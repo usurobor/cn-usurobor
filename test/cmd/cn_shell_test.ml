@@ -12,7 +12,7 @@ let show_manifest raw =
       (Cn_shell.string_of_receipt_status r.Cn_shell.status)
       r.Cn_shell.reason
   ) receipts;
-  List.iter (fun op ->
+  List.iter (fun (op : Cn_shell.typed_op) ->
     Printf.printf "  %s %s\n"
       (Cn_shell.string_of_op_kind op.Cn_shell.kind)
       (match op.Cn_shell.op_id with Some id -> id | None -> "none")
@@ -93,7 +93,7 @@ let%expect_test "parse: single observe op" =
   let input = {|[{"kind":"fs_read","path":"src/main.ml"}]|} in
   let ops, receipts = Cn_shell.parse_ops_manifest input in
   Printf.printf "ops: %d, receipts: %d\n" (List.length ops) (List.length receipts);
-  List.iter (fun op ->
+  List.iter (fun (op : Cn_shell.typed_op) ->
     Printf.printf "  kind=%s op_id=%s\n"
       (Cn_shell.string_of_op_kind op.Cn_shell.kind)
       (match op.Cn_shell.op_id with Some id -> id | None -> "<none>")
@@ -107,7 +107,7 @@ let%expect_test "parse: single effect op with op_id" =
   let input = {|[{"kind":"fs_write","op_id":"write-1","path":"out.txt","content":"hi"}]|} in
   let ops, receipts = Cn_shell.parse_ops_manifest input in
   Printf.printf "ops: %d, receipts: %d\n" (List.length ops) (List.length receipts);
-  List.iter (fun op ->
+  List.iter (fun (op : Cn_shell.typed_op) ->
     Printf.printf "  kind=%s op_id=%s\n"
       (Cn_shell.string_of_op_kind op.Cn_shell.kind)
       (match op.Cn_shell.op_id with Some id -> id | None -> "<none>")
@@ -121,7 +121,7 @@ let%expect_test "parse: mixed observe and effect" =
   let input = {|[{"kind":"fs_read","path":"a.ml"},{"kind":"fs_write","op_id":"w1","path":"b.ml","content":""}]|} in
   let ops, receipts = Cn_shell.parse_ops_manifest input in
   Printf.printf "ops: %d, receipts: %d\n" (List.length ops) (List.length receipts);
-  List.iter (fun op ->
+  List.iter (fun (op : Cn_shell.typed_op) ->
     Printf.printf "  kind=%s op_id=%s\n"
       (Cn_shell.string_of_op_kind op.Cn_shell.kind)
       (match op.Cn_shell.op_id with Some id -> id | None -> "<none>")
@@ -135,7 +135,7 @@ let%expect_test "parse: mixed observe and effect" =
 let%expect_test "parse: observe op with explicit op_id" =
   let input = {|[{"kind":"git_status","op_id":"my-status"}]|} in
   let ops, _ = Cn_shell.parse_ops_manifest input in
-  List.iter (fun op ->
+  List.iter (fun (op : Cn_shell.typed_op) ->
     Printf.printf "op_id=%s\n"
       (match op.Cn_shell.op_id with Some id -> id | None -> "<none>")
   ) ops;
@@ -144,7 +144,7 @@ let%expect_test "parse: observe op with explicit op_id" =
 let%expect_test "parse: auto-assign observe ids sequentially" =
   let input = {|[{"kind":"fs_read","path":"a"},{"kind":"git_status"},{"kind":"fs_read","path":"b"}]|} in
   let ops, _ = Cn_shell.parse_ops_manifest input in
-  List.iter (fun op ->
+  List.iter (fun (op : Cn_shell.typed_op) ->
     Printf.printf "%s: %s\n"
       (Cn_shell.string_of_op_kind op.Cn_shell.kind)
       (match op.Cn_shell.op_id with Some id -> id | None -> "<none>")
@@ -158,7 +158,7 @@ let%expect_test "parse: auto-assign observe ids sequentially" =
 let%expect_test "parse: fields preserved (minus kind and op_id)" =
   let input = {|[{"kind":"git_diff","op_id":"d1","rev":"HEAD~3..HEAD"}]|} in
   let ops, _ = Cn_shell.parse_ops_manifest input in
-  List.iter (fun op ->
+  List.iter (fun (op : Cn_shell.typed_op) ->
     Printf.printf "fields: %d\n" (List.length op.Cn_shell.fields);
     List.iter (fun (k, v) ->
       Printf.printf "  %s=%s\n" k (Cn_json.to_string v)
@@ -273,7 +273,7 @@ let%expect_test "parse: mixed valid and denied in same manifest" =
   let ops, receipts = Cn_shell.parse_ops_manifest input in
   Printf.printf "ops: %d, receipts: %d\n" (List.length ops) (List.length receipts);
   print_endline "--- valid ops ---";
-  List.iter (fun op ->
+  List.iter (fun (op : Cn_shell.typed_op) ->
     Printf.printf "  %s (%s)\n"
       (Cn_shell.string_of_op_kind op.Cn_shell.kind)
       (match op.Cn_shell.op_id with Some id -> id | None -> "<none>")
@@ -453,7 +453,7 @@ let%expect_test "parse: absent phase accepted (no validation)" =
 let%expect_test "parse: phase field stripped from fields list" =
   let input = {|[{"kind":"git_diff","op_id":"d1","phase":"observe","rev":"HEAD~3"}]|} in
   let ops, _ = Cn_shell.parse_ops_manifest input in
-  List.iter (fun op ->
+  List.iter (fun (op : Cn_shell.typed_op) ->
     Printf.printf "fields: %d\n" (List.length op.Cn_shell.fields);
     List.iter (fun (k, _) -> Printf.printf "  %s\n" k) op.Cn_shell.fields
   ) ops;

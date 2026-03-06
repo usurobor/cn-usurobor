@@ -94,7 +94,7 @@ let require_field_string key op =
 
 (* === Observe op executors === *)
 
-let execute_fs_read ~hub_path ~trigger_id ~config op =
+let execute_fs_read ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
   match require_field_string "path" op with
   | Error msg ->
@@ -124,7 +124,7 @@ let execute_fs_read ~hub_path ~trigger_id ~config op =
           status = Cn_shell.Ok_status; reason = "";
           start_time = start; end_time = now_iso (); artifacts = [artifact] }
 
-let execute_fs_list ~hub_path ~trigger_id ~config op =
+let execute_fs_list ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
   match require_field_string "path" op with
   | Error msg ->
@@ -155,7 +155,7 @@ let execute_fs_list ~hub_path ~trigger_id ~config op =
           status = Cn_shell.Ok_status; reason = "";
           start_time = start; end_time = now_iso (); artifacts = [artifact] }
 
-let execute_git_op ~hub_path ~trigger_id ~config ~kind_str ~args op =
+let execute_git_op ~hub_path ~trigger_id ~config ~kind_str ~args (op : Cn_shell.typed_op) =
   let start = now_iso () in
   let code, output =
     Cn_ffi.Process.exec_args ~prog:"git"
@@ -175,11 +175,11 @@ let execute_git_op ~hub_path ~trigger_id ~config ~kind_str ~args op =
       status = Cn_shell.Ok_status; reason = "";
       start_time = start; end_time = now_iso (); artifacts = [artifact] }
 
-let execute_git_status ~hub_path ~trigger_id ~config op =
+let execute_git_status ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   execute_git_op ~hub_path ~trigger_id ~config ~kind_str:"git_status"
     ~args:["status"; "--porcelain"] op
 
-let execute_git_diff ~hub_path ~trigger_id ~config op =
+let execute_git_diff ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   let rev = match get_field_string "rev" op with
     | Some r -> [r]
     | None -> []
@@ -187,7 +187,7 @@ let execute_git_diff ~hub_path ~trigger_id ~config op =
   execute_git_op ~hub_path ~trigger_id ~config ~kind_str:"git_diff"
     ~args:(["diff"] @ rev @ git_pathspec_exclusions) op
 
-let execute_git_log ~hub_path ~trigger_id ~config op =
+let execute_git_log ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   let max_n = match get_field_int "max" op with
     | Some n -> ["-n"; string_of_int n]
     | None -> ["-n"; "20"]
@@ -199,7 +199,7 @@ let execute_git_log ~hub_path ~trigger_id ~config op =
   execute_git_op ~hub_path ~trigger_id ~config ~kind_str:"git_log"
     ~args:(["log"; "--oneline"] @ max_n @ rev @ git_pathspec_exclusions) op
 
-let execute_git_grep ~hub_path ~trigger_id ~config op =
+let execute_git_grep ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
   match require_field_string "query" op with
   | Error msg ->
@@ -226,7 +226,7 @@ let execute_git_grep ~hub_path ~trigger_id ~config op =
 
 (* === Effect op executors === *)
 
-let execute_fs_write ~hub_path ~config op =
+let execute_fs_write ~hub_path ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
   if config.Cn_shell.apply_mode = "off" then
     { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_write";
@@ -253,7 +253,7 @@ let execute_fs_write ~hub_path ~config op =
         status = Cn_shell.Ok_status; reason = "";
         start_time = start; end_time = now_iso (); artifacts = [] }
 
-let execute_fs_patch ~hub_path ~config op =
+let execute_fs_patch ~hub_path ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
   if config.Cn_shell.apply_mode = "off" then
     { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_patch";
@@ -290,7 +290,7 @@ let execute_fs_patch ~hub_path ~config op =
           reason = Printf.sprintf "patch_failed: %s" (String.trim output);
           start_time = start; end_time = now_iso (); artifacts = [] }
 
-let execute_git_branch ~hub_path ~config op =
+let execute_git_branch ~hub_path ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
   if config.Cn_shell.apply_mode = "off" then
     { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_branch";
@@ -317,7 +317,7 @@ let execute_git_branch ~hub_path ~config op =
         reason = Printf.sprintf "git_exit_%d: %s" code (String.trim output);
         start_time = start; end_time = now_iso (); artifacts = [] }
 
-let execute_git_commit ~hub_path ~config op =
+let execute_git_commit ~hub_path ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
   if config.Cn_shell.apply_mode = "off" then
     { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
@@ -355,7 +355,7 @@ let execute_git_commit ~hub_path ~config op =
           reason = Printf.sprintf "git_commit_exit_%d: %s" code2 (String.trim output2);
           start_time = start; end_time = now_iso (); artifacts = [] }
 
-let execute_exec ~hub_path ~trigger_id ~config op =
+let execute_exec ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
   if not config.Cn_shell.exec_enabled then
     { Cn_shell.pass = ""; op_id = op.op_id; kind = "exec";
@@ -420,7 +420,7 @@ let execute_exec ~hub_path ~trigger_id ~config op =
 
 (** Execute a single typed op. Returns a receipt (pass field left blank —
     the orchestrator fills it in based on which pass is running). *)
-let execute_op ~hub_path ~trigger_id ~config op =
+let execute_op ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   match op.Cn_shell.kind with
   (* Observe ops *)
   | Observe Fs_read -> execute_fs_read ~hub_path ~trigger_id ~config op

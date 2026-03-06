@@ -346,7 +346,7 @@ let%expect_test "write_artifact: writes file and returns record" =
     Printf.printf "exists: %b\n" (Sys.file_exists full));
   [%expect {|
     path: state/artifacts/test-001/obs-01.txt
-    hash: sha256:f2bb0a5f0990e26247484b32e07637eb88b481e76ee0ee37e48e10e469eeec9f
+    hash: sha256:2362660f9e876799563237b854032040dd853aee58f6d135884c5f3f63712183
     size: 21
     exists: true |}]
 
