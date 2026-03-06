@@ -35,11 +35,18 @@ curl -fsSL https://raw.githubusercontent.com/usurobor/cnos/main/install.sh | sh
 
 ### 2. Configure
 
-Set environment variables (secrets never go in config files):
+Set secrets via environment variables or `.cn/secrets.env` (auto-loaded by the runtime,
+never committed — `.gitignore` excludes `.cn/secrets.env`):
 
 ```bash
-export ANTHROPIC_KEY="sk-ant-..."       # Required
-export TELEGRAM_TOKEN="123456:ABC..."   # Optional (for Telegram projection)
+# Option A: environment variables
+export ANTHROPIC_KEY="sk-ant-..."
+export TELEGRAM_TOKEN="123456:ABC..."
+
+# Option B: .cn/secrets.env (KEY=VALUE, one per line)
+echo 'ANTHROPIC_KEY=sk-ant-...' >> .cn/secrets.env
+echo 'TELEGRAM_TOKEN=123456:ABC...' >> .cn/secrets.env
+chmod 600 .cn/secrets.env
 ```
 
 Optionally create `.cn/config.json` for non-secret settings:
@@ -47,7 +54,7 @@ Optionally create `.cn/config.json` for non-secret settings:
 ```json
 {
   "runtime": {
-    "model": "claude-sonnet-4-5-20250929",
+    "model": "claude-sonnet-4-6",
     "max_tokens": 4096,
     "poll_interval": 30,
     "allowed_users": [12345678]
@@ -144,6 +151,12 @@ WantedBy=multi-user.target
   If the LLM call fails, Telegram re-delivers the message on next poll.
 - **Idempotent enqueue:** Duplicate messages are detected by trigger ID
   (in queue, in-flight state files, or logs).
+- **Conversation dedup:** Recovery replays skip conversation append if
+  the trigger_id is already present (prevents double-entries).
+- **Projection dedup:** Telegram reply markers prevent double-sending
+  on crash recovery.
+- **Visual feedback:** Typing indicator + reaction on inbound message
+  (bounded best-effort, non-fatal).
 
 ---
 
@@ -165,17 +178,20 @@ WantedBy=multi-user.target
 ┌──────────────────────────────────────────────┐
 │              cn agent (process_one)           │
 │  Under atomic lock (state/agent.lock):        │
-│  1. Queue inbox items                         │
-│  2. Dequeue from state/queue/                 │
-│  3. Pack context (identity, skills, convo)    │
-│  4. Write state/input.md                      │
-│  5. Call Claude API (body-only prompt)         │
-│  6. Write state/output.md                     │
-│  7. Archive to logs/ (before effects)         │
-│  8. Execute ops (reply, send, defer, ...)     │
-│  9. Project to Telegram (if from Telegram)    │
-│  10. Update conversation history              │
-│  11. Cleanup state files                      │
+│  1. GC stale markers (idle only)              │
+│  2. Queue inbox items                         │
+│  3. Dequeue from state/queue/                 │
+│  4. Pack context (identity, skills, caps,     │
+│     conversation, message)                    │
+│  5. Write state/input.md                      │
+│  6. Call Claude API (body-only prompt)         │
+│  7. Write state/output.md                     │
+│  8. Archive to logs/ (before effects)         │
+│  9. CN Shell: two-pass execute (observe →     │
+│     effect) + write receipts                  │
+│  10. Project to Telegram (idempotent)         │
+│  11. Update conversation (dedup by trigger)   │
+│  12. Cleanup state files + clear marker       │
 └──────────────────────────────────────────────┘
 ```
 

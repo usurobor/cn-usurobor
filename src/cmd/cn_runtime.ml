@@ -97,7 +97,7 @@ let conversation_path hub_path =
 
 (** Append a user+assistant exchange to state/conversation.json.
     Creates the file if missing. Keeps last 50 entries to bound growth. *)
-let append_conversation hub_path ~user_msg ~assistant_msg =
+let append_conversation hub_path ~trigger_id ~user_msg ~assistant_msg =
   let path = conversation_path hub_path in
   let existing =
     if Cn_ffi.Fs.exists path then
@@ -106,16 +106,31 @@ let append_conversation hub_path ~user_msg ~assistant_msg =
       | _ -> []
     else []
   in
-  let new_entries = existing @ [
-    Cn_json.Object ["role", Cn_json.String "user"; "content", Cn_json.String user_msg];
-    Cn_json.Object ["role", Cn_json.String "assistant"; "content", Cn_json.String assistant_msg];
-  ] in
-  (* Keep last 50 entries *)
-  let len = List.length new_entries in
-  let trimmed = if len > 50 then
-    List.filteri (fun i _ -> i >= len - 50) new_entries
-  else new_entries in
-  Cn_ffi.Fs.write path (Cn_json.to_string (Cn_json.Array trimmed) ^ "\n")
+  (* Dedup: if any entry already carries this trigger_id, this is a
+     recovery replay — skip to avoid double-appending conversation. *)
+  let already_appended = existing |> List.exists (fun entry ->
+    Cn_json.get_string "trigger_id" entry = Some trigger_id
+  ) in
+  if already_appended then
+    Cn_hub.log_action hub_path "process.conversation_skip"
+      (Printf.sprintf "trigger:%s already in conversation" trigger_id)
+  else begin
+    let new_entries = existing @ [
+      Cn_json.Object [
+        "role", Cn_json.String "user";
+        "content", Cn_json.String user_msg;
+        "trigger_id", Cn_json.String trigger_id];
+      Cn_json.Object [
+        "role", Cn_json.String "assistant";
+        "content", Cn_json.String assistant_msg];
+    ] in
+    (* Keep last 50 entries *)
+    let len = List.length new_entries in
+    let trimmed = if len > 50 then
+      List.filteri (fun i _ -> i >= len - 50) new_entries
+    else new_entries in
+    Cn_ffi.Fs.write path (Cn_json.to_string (Cn_json.Array trimmed) ^ "\n")
+  end
 
 (* === Archive (raw — no ops, no deletes) === *)
 
@@ -160,6 +175,31 @@ let build_input_md ~trigger_id ~from ~chat_id_opt ~audit_text =
   Buffer.add_string buf audit_text;
   Buffer.contents buf
 
+(* === Finalize checkpoint === *)
+
+(** Ops-done marker path: state/finalized/{trigger_id}.ops_done
+    Created atomically after all ops execute successfully.
+    Checked on recovery replay to skip re-execution of side effects. *)
+let ops_done_path hub_path trigger_id =
+  Cn_ffi.Path.join hub_path
+    (Cn_ffi.Path.join "state/finalized" (trigger_id ^ ".ops_done"))
+
+let mark_ops_done hub_path trigger_id =
+  let path = ops_done_path hub_path trigger_id in
+  Cn_ffi.Fs.ensure_dir (Filename.dirname path);
+  (try
+     let fd = Unix.openfile path
+                [Unix.O_CREAT; Unix.O_EXCL; Unix.O_WRONLY] 0o644 in
+     Unix.close fd
+   with Unix.Unix_error (Unix.EEXIST, _, _) -> ())
+
+let ops_already_done hub_path trigger_id =
+  Sys.file_exists (ops_done_path hub_path trigger_id)
+
+let clear_ops_done hub_path trigger_id =
+  let path = ops_done_path hub_path trigger_id in
+  (try Sys.remove path with Sys_error _ -> ())
+
 (* === Finalize: archive → execute → project → conversation → cleanup === *)
 
 (** Run the post-LLM pipeline on an existing input.md + output.md pair.
@@ -175,47 +215,90 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
   let body = extract_body output_content in
   let ops = List.map (resolve_payload body) ops in
 
-  (* 3. Execute operations *)
-  List.iter (fun op ->
-    Cn_agent.execute_op hub_path name trigger_id op
-  ) ops;
+  (* 3. Execute operations (skipped on recovery if already done) *)
+  if ops_already_done hub_path trigger_id then
+    Cn_hub.log_action hub_path "process.ops_skip"
+      (Printf.sprintf "trigger:%s ops already executed" trigger_id)
+  else begin
+    List.iter (fun op ->
+      Cn_agent.execute_op hub_path name trigger_id op
+    ) ops;
+    mark_ops_done hub_path trigger_id
+  end;
 
-  (* 4. Project to Telegram if from Telegram *)
-  (if from = "telegram" then
-     match config.telegram_token with
-     | Some token ->
-         let inp = Cn_agent.input_path hub_path in
-         let input_meta =
-           if Cn_ffi.Fs.exists inp then parse_frontmatter (Cn_ffi.Fs.read inp)
-           else []
-         in
-         let chat_id_str = input_meta |> List.find_map (fun (k, v) ->
-           if k = "chat_id" then Some v else None) |> Option.value ~default:"" in
-         (match int_of_string_opt chat_id_str with
-          | Some chat_id ->
-              let payload = telegram_payload ops body in
-              (match Cn_telegram.send_message ~token ~chat_id ~text:payload with
-               | Ok () ->
-                   Cn_hub.log_action hub_path "process.telegram_reply"
-                     (Printf.sprintf "chat_id:%d" chat_id)
-               | Error msg ->
-                   Cn_hub.log_action hub_path "process.telegram_error"
-                     (Printf.sprintf "chat_id:%d error:%s" chat_id msg);
-                   print_endline (Cn_fmt.warn
-                     (Printf.sprintf "Telegram reply failed: %s" msg)))
-          | None ->
-              Cn_hub.log_action hub_path "process.telegram_skip"
-                "no chat_id in input frontmatter")
-     | None ->
-         Cn_hub.log_action hub_path "process.telegram_skip" "no token");
+  (* 4. Project to Telegram if from Telegram.
+        Uses Cn_projection.project_reply for crash-recovery idempotency:
+        marker state/projected/telegram/{trigger_id}.sent is created
+        atomically (O_CREAT|O_EXCL) before sending. On recovery replay,
+        the marker prevents duplicate messages.
+
+        On send failure: marker is REMOVED and finalize returns Error,
+        which blocks offset advancement. The daemon will not advance
+        state/telegram.offset, so Telegram re-delivers the update and
+        the runtime retries projection on the next cycle. *)
+  let projection_result =
+    if from <> "telegram" then Ok ()
+    else match config.telegram_token with
+    | None ->
+        Cn_hub.log_action hub_path "process.telegram_skip" "no token";
+        Ok ()
+    | Some token ->
+        let inp = Cn_agent.input_path hub_path in
+        let input_meta =
+          if Cn_ffi.Fs.exists inp then parse_frontmatter (Cn_ffi.Fs.read inp)
+          else []
+        in
+        let chat_id_str = input_meta |> List.find_map (fun (k, v) ->
+          if k = "chat_id" then Some v else None) |> Option.value ~default:"" in
+        match int_of_string_opt chat_id_str with
+        | None ->
+            Cn_hub.log_action hub_path "process.telegram_skip"
+              "no chat_id in input frontmatter";
+            Ok ()
+        | Some chat_id ->
+            match Cn_projection.project_reply ~hub_path
+                    ~projection:"telegram" ~trigger_id with
+            | `Already_projected ->
+                Cn_hub.log_action hub_path "process.telegram_skip"
+                  (Printf.sprintf "already_projected trigger:%s" trigger_id);
+                Ok ()
+            | `Send ->
+                let payload = telegram_payload ops body in
+                match Cn_telegram.send_message ~token ~chat_id ~text:payload with
+                | Ok () ->
+                    Cn_hub.log_action hub_path "process.telegram_reply"
+                      (Printf.sprintf "chat_id:%d" chat_id);
+                    Ok ()
+                | Error msg ->
+                    Cn_projection.unmark ~hub_path
+                      ~projection:"telegram" ~trigger_id;
+                    Cn_hub.log_action hub_path "process.telegram_error"
+                      (Printf.sprintf "chat_id:%d error:%s retryable:true"
+                         chat_id msg);
+                    print_endline (Cn_fmt.warn
+                      (Printf.sprintf "Telegram reply failed (retryable): %s"
+                         msg));
+                    Error (Printf.sprintf "Telegram projection failed: %s" msg)
+  in
+  match projection_result with
+  | Error msg -> Error msg
+  | Ok () ->
 
   (* 5. Append to conversation history *)
   let assistant_text = telegram_payload ops body in
-  append_conversation hub_path
+  append_conversation hub_path ~trigger_id
     ~user_msg:inbound_message ~assistant_msg:assistant_text;
 
-  (* 6. Cleanup state files *)
+  (* 6. Cleanup state files FIRST, then clear ops_done marker.
+        Order matters for crash safety:
+        - cleanup_state removes input.md + output.md (State 1 trigger)
+        - clear_ops_done removes the checkpoint
+        If crash between cleanup and clear: no state files remain,
+        so State 1 recovery cannot fire — stale ops_done is harmless.
+        If clear happened first: crash before cleanup would leave
+        state files without ops_done, causing duplicate op execution. *)
   cleanup_state hub_path;
+  clear_ops_done hub_path trigger_id;
 
   print_endline (Cn_fmt.ok
     (Printf.sprintf "Processed: %s (%d ops)" trigger_id (List.length ops)));
@@ -275,7 +358,7 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
            The audit text in input.md is for humans; the LLM needs the
            structured format with system prompt + message turns. *)
         let packed = Cn_context.pack ~hub_path ~trigger_id
-          ~message:inbound_message ~from in
+          ~message:inbound_message ~from ~shell_config:config.shell () in
 
         match Cn_llm.call ~api_key:config.anthropic_key
                 ~model:config.model ~max_tokens:config.max_tokens
@@ -296,6 +379,18 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
 
       (* === State 3: neither exists → queue inbox + dequeue + pipeline === *)
       end else begin
+        (* GC: sweep stale ops_done markers left by crashes after
+           cleanup_state but before clear_ops_done. Safe here because
+           no input.md/output.md exist — no recovery can fire. *)
+        let finalized_dir = Cn_ffi.Path.join hub_path "state/finalized" in
+        (if Cn_ffi.Fs.exists finalized_dir then
+           Cn_ffi.Fs.readdir finalized_dir
+           |> List.iter (fun f ->
+                let path = Cn_ffi.Path.join finalized_dir f in
+                (try Sys.remove path with Sys_error _ -> ());
+                Cn_hub.log_action hub_path "process.gc_ops_done"
+                  (Printf.sprintf "removed stale marker: %s" f)));
+
         (* Queue inbox items under lock to prevent overlap races *)
         let queued = Cn_agent.queue_inbox_items hub_path in
         if queued > 0 then
@@ -322,7 +417,7 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
 
             (* Pack context into structured system blocks + message turns *)
             let packed = Cn_context.pack ~hub_path ~trigger_id
-              ~message:inbound_message ~from in
+              ~message:inbound_message ~from ~shell_config:config.shell () in
 
             (* Write input.md = frontmatter + audit text (human-readable) *)
             let input_doc = build_input_md ~trigger_id ~from ~chat_id_opt
@@ -497,6 +592,11 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                     drain rest
                   end else begin
                     let trigger_id = Printf.sprintf "tg-%d" msg.update_id in
+                    (* Visual feedback: react to inbound + show typing *)
+                    Cn_telegram.set_reaction ~token
+                      ~chat_id:msg.chat_id ~message_id:msg.message_id
+                      ~emoji:"\xF0\x9F\xA4\x94"; (* 🤔 *)
+                    Cn_telegram.send_typing ~token ~chat_id:msg.chat_id;
                     enqueue_telegram hub_path msg;
                     match process_one ~config ~hub_path ~name with
                     | Ok () ->
@@ -506,6 +606,9 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                            a different queued item. *)
                         if not (is_queued hub_path trigger_id)
                            && not (is_in_flight hub_path trigger_id) then begin
+                          (* Clear thinking reaction on successful completion *)
+                          Cn_telegram.clear_reaction ~token
+                            ~chat_id:msg.chat_id ~message_id:msg.message_id;
                           offset := max !offset (msg.update_id + 1);
                           write_offset hub_path !offset;
                           drain rest

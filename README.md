@@ -49,12 +49,14 @@ The core loop, driven by `cn agent` on cron (or `cn agent --daemon` for Telegram
 ```
 
 All state mutation happens under atomic lock with crash recovery. The LLM sees
-packed context (identity, skills, conversation, message) and produces structured
-output (ops in frontmatter, body below). `cn` handles all I/O and effects.
+packed context (identity, skills, conversation, capabilities, message) and produces
+structured output (typed ops in frontmatter, body below). `cn` handles all I/O
+and effects through CN Shell — a capability runtime that validates, sandboxes, and
+receipts every operation.
 
 The agent is the brain. `cn` is the body. Git is the nervous system.
 
-> Full architecture: [ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+> Full architecture: [ARCHITECTURE.md](./docs/ARCHITECTURE.md) · Runtime spec: [AGENT-RUNTIME-v3.md](./docs/design/AGENT-RUNTIME-v3.md)
 
 ---
 
@@ -164,7 +166,7 @@ Native OCaml binary. Built with `dune build src/cli/cn.exe`.
 | `cn commit [msg]` | Stage and commit |
 | `cn push` | Push to origin |
 | `cn save [msg]` | Commit + push |
-| `cn setup` | Install cron + logrotate (run with sudo) |
+| `cn setup` | Interactive hub setup (config, secrets, optional systemd) |
 | `cn update` | Update cn to latest |
 
 ### Flags
@@ -179,34 +181,54 @@ Aliases: `i`=inbox · `o`=outbox · `s`=status · `d`=doctor
 
 ## Project structure
 
+### cnos (this repo — the runtime + skills template)
+
 ```
 cnos/
-  spec/              Agent specifications (SOUL.md, USER.md, AGENTS.md)
-  mindsets/          Principles: COHERENCE, ENGINEERING, WRITING, ...
-  skills/            Reusable skills — each has SKILL.md + kata.md
-    agent/           Agent lifecycle, reflection, coordination
-    eng/             Engineering: OCaml, testing, release
-    pm/              Product management: triage, ship, roadmap
-    ops/             Operations: deploy, monitor
-  state/             Runtime state: hub.md, peers.md, input.md, output.md
-  threads/           Work items organized by lifecycle stage
-    mail/            inbox/ and outbox/ (peer communication)
-    doing/           Active work
-    deferred/        Postponed items
-    archived/        Completed items
-    daily/           Daily reflections
-    weekly/          Weekly reflections
-    adhoc/           Agent-created threads
-  docs/              Documentation (Diataxis: tutorials, how-to, reference, explanation)
-    design/          Design documents and specifications
-    how-to/          Guides: HANDSHAKE, AUTOMATION, MIGRATION
-    ARCHITECTURE.md  System overview — start here for internals
-  tools/             Native OCaml CLI and libraries
-    src/cn/          CLI entry point and all cn_* modules
-    src/inbox/       Inbox library (pure OCaml)
-    test/            Unit and integration tests
-  logs/              Archived input/output pairs and run logs
-  .cn/               Hub configuration (config.json)
+  src/                 Native OCaml CLI and libraries
+    cli/cn.ml          CLI dispatch (~100 lines)
+    lib/               Pure types, JSON, protocol FSMs
+    cmd/               Runtime modules (cn_runtime, cn_shell, cn_executor, ...)
+    ffi/               System bindings (Fs, Path, Process, Http)
+    transport/         Git I/O + inbox utilities
+  spec/                Agent specifications (SOUL.md, USER.md, AGENTS.md)
+  skills/              Reusable skills — each has SKILL.md + kata.md
+  docs/                Documentation (Diataxis: tutorials, how-to, reference, explanation)
+    design/            Design documents (AGENT-RUNTIME-v3.md, SECURITY-MODEL.md, ...)
+    how-to/            Guides: HANDSHAKE, AUTOMATION, MIGRATION
+    ARCHITECTURE.md    System overview — start here for internals
+  test/                Unit and integration tests
+```
+
+### Agent hub (created by `cn init`)
+
+```
+cn-<name>/
+  .cn/
+    config.json        Hub configuration (env vars override)
+    secrets.env        API keys (loaded by runtime, never committed)
+  spec/                SOUL.md, USER.md — agent identity
+  threads/
+    in/                Direct inbound (non-mail)
+    mail/              inbox/, outbox/, sent/ — peer communication
+    doing/             Active work
+    archived/          Completed items
+    adhoc/             Agent-created threads
+    reflections/       daily/, weekly/, monthly/
+  state/
+    queue/             FIFO processing queue
+    input.md           Current LLM input (transient, crash-recovery)
+    output.md          Current LLM output (transient, crash-recovery)
+    conversation.json  Recent conversation history (last 50 turns)
+    finalized/         ops_done markers (idempotency)
+    projected/         Projection markers (reply dedup)
+    receipts/          CN Shell execution receipts (per trigger)
+    peers.md           Peer registry
+    agent.lock         Atomic lock (prevents cron overlap)
+    telegram.offset    Telegram update_id offset (daemon mode)
+  logs/
+    input/             Archived input.md files (audit trail)
+    output/            Archived output.md files (audit trail)
 ```
 
 ---
@@ -220,16 +242,18 @@ cnos/
 
 | Design | |
 |--------|---|
+| [AGENT-RUNTIME-v3.md](./docs/design/AGENT-RUNTIME-v3.md) | Agent runtime spec (v3.3.6) — CN Shell, typed ops, two-pass, receipts |
 | [MANIFESTO.md](./docs/design/MANIFESTO.md) | Why cnos exists. Principles and values. |
 | [WHITEPAPER.md](./docs/design/WHITEPAPER.md) | Protocol specification (v2.0.4, normative) |
 | [PROTOCOL.md](./docs/design/PROTOCOL.md) | The four FSMs — state diagrams, transition tables |
 | [CLI.md](./docs/design/CLI.md) | CLI command reference |
 | [SECURITY-MODEL.md](./docs/design/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |
+| [SETUP-INSTALLER.md](./docs/design/SETUP-INSTALLER.md) | Install script specification |
 
 | How-to | |
 |--------|---|
 | [HANDSHAKE.md](./docs/how-to/HANDSHAKE.md) | Establish peering between two agents |
-| [AUTOMATION.md](./docs/how-to/AUTOMATION.md) | Set up cron for `cn sync` |
+| [AUTOMATION.md](./docs/how-to/AUTOMATION.md) | Set up cron or Telegram daemon |
 | [MIGRATION.md](./docs/how-to/MIGRATION.md) | Migrate from older versions |
 | [WRITE-A-SKILL.md](./docs/how-to/WRITE-A-SKILL.md) | Write a new skill |
 

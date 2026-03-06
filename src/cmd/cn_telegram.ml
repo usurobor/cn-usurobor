@@ -91,6 +91,19 @@ let request ~url ~body_opt ~max_time =
   in
   attempt 0
 
+(** Single-shot request for cosmetic/UX calls (typing, reactions).
+    No retries, 3s timeout — keeps worst-case delay bounded. *)
+let request_once ~url ~body_opt =
+  let config = build_config ~url ~body_opt ~max_time:3 in
+  let code, output =
+    Cn_ffi.Process.exec_args ~prog:"curl" ~args:["--config"; "-"]
+      ~stdin_data:config ()
+  in
+  if code = 0 then
+    let _, status = split_status output in
+    status >= 200 && status < 300
+  else false
+
 (** Parse a single update object into a message.
     Returns None for updates without a message/from/chat structure
     (channel_post, edited_message, etc.). Non-text messages (photos,
@@ -148,6 +161,41 @@ let get_updates ~token ~offset ~timeout =
                 | Some d -> d | None -> resp_body
               in
               Error (Printf.sprintf "Telegram API error: %s" desc)
+
+(** All three UX calls use request_once: no retries, 3s max.
+    Non-fatal (errors ignored) with bounded synchronous delay —
+    worst case ~3s per call, ~9s total if all three time out. *)
+
+let send_typing ~token ~chat_id =
+  let url = Printf.sprintf "%s/bot%s/sendChatAction" api_base token in
+  let body = Cn_json.to_string (Cn_json.Object [
+    "chat_id", Cn_json.Int chat_id;
+    "action", Cn_json.String "typing";
+  ]) in
+  ignore (request_once ~url ~body_opt:(Some body))
+
+let set_reaction ~token ~chat_id ~message_id ~emoji =
+  let url = Printf.sprintf "%s/bot%s/setMessageReaction" api_base token in
+  let body = Cn_json.to_string (Cn_json.Object [
+    "chat_id", Cn_json.Int chat_id;
+    "message_id", Cn_json.Int message_id;
+    "reaction", Cn_json.Array [
+      Cn_json.Object [
+        "type", Cn_json.String "emoji";
+        "emoji", Cn_json.String emoji;
+      ]
+    ];
+  ]) in
+  ignore (request_once ~url ~body_opt:(Some body))
+
+let clear_reaction ~token ~chat_id ~message_id =
+  let url = Printf.sprintf "%s/bot%s/setMessageReaction" api_base token in
+  let body = Cn_json.to_string (Cn_json.Object [
+    "chat_id", Cn_json.Int chat_id;
+    "message_id", Cn_json.Int message_id;
+    "reaction", Cn_json.Array [];
+  ]) in
+  ignore (request_once ~url ~body_opt:(Some body))
 
 let send_message ~token ~chat_id ~text =
   let url = Printf.sprintf "%s/bot%s/sendMessage" api_base token in

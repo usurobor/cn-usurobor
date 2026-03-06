@@ -1,7 +1,7 @@
 # cnos Architecture
 
 **Status:** Current
-**Date:** 2026-02-22
+**Date:** 2026-03-06
 **Author:** Sigma
 
 ---
@@ -25,27 +25,34 @@ Each agent has a **hub** (a git repo). Agents publish by pushing branches to the
 ## Module Structure
 
 ```
-cn.ml                 CLI dispatch (~100 lines, routes to modules)
+cn.ml                    CLI dispatch (~100 lines, routes to modules)
  |
- |-- cn_runtime.ml    Agent runtime orchestrator (dequeue → LLM → execute)
- |-- cn_context.ml    Context packer (skills, conversation, artifacts)
- |-- cn_llm.ml        Claude API client (curl-backed, no --fail)
- |-- cn_telegram.ml   Telegram Bot API client
- |-- cn_config.ml     Config loader (env vars + .cn/config.json)
- |-- cn_agent.ml      Queue, input/output, op execution (legacy: run_inbound deprecated)
- |-- cn_protocol.ml   FSMs: Thread, Actor, Sender, Receiver (pure)
- |-- cn_gtd.ml        GTD lifecycle: do/defer/delegate/done/delete
- |-- cn_mail.ml       Inbox/outbox: send, receive, materialize
- |-- cn_mca.ml        Managed Concern Aggregation
- |-- cn_commands.ml   Peer management + git commands (commit/push)
- |-- cn_system.ml     Init, setup, update, status, doctor, sync
- |-- cn_hub.ml        Hub discovery, path constants, helpers
- |-- cn_fmt.ml        Output formatting, timestamps, dry-run
- |-- cn_ffi.ml        Native system bindings (Fs, Path, Process, Http)
- |-- cn_io.ml         Protocol I/O over git (sync, flush, archive)
- |-- cn_lib.ml        Types, parsing, help text (pure)
- |-- cn_json.ml       JSON parser/emitter (pure, zero-dep)
- |-- git.ml           Raw git operations (pure git, no CN knowledge)
+ |-- cn_runtime.ml       Agent runtime orchestrator (dequeue → LLM → finalize)
+ |-- cn_context.ml       Context packer (skills, conversation, capabilities, artifacts)
+ |-- cn_llm.ml           Claude API client (curl-backed, no --fail)
+ |-- cn_telegram.ml      Telegram Bot API client (send, typing, reactions)
+ |-- cn_config.ml        Config loader (env vars + .cn/config.json)
+ |-- cn_dotenv.ml        .env file loader (.cn/secrets.env)
+ |-- cn_agent.ml         Queue, input/output, op execution
+ |-- cn_shell.ml         CN Shell: capability runtime (typed ops, two-pass)
+ |-- cn_executor.ml      Op executor (dispatch per kind)
+ |-- cn_sandbox.ml       Path sandbox (reject escapes, denylist)
+ |-- cn_capabilities.ml  Capability discovery (budget, allowlists)
+ |-- cn_projection.ml    Reply projection (Telegram routing, dedup markers)
+ |-- cn_orchestrator.ml  Two-pass orchestration (observe → effect)
+ |-- cn_protocol.ml      FSMs: Thread, Actor, Sender, Receiver (pure)
+ |-- cn_gtd.ml           GTD lifecycle: do/defer/delegate/done/delete
+ |-- cn_mail.ml          Inbox/outbox: send, receive, materialize
+ |-- cn_mca.ml           Managed Concern Aggregation
+ |-- cn_commands.ml      Peer management + git commands (commit/push)
+ |-- cn_system.ml        Init, setup, update, status, doctor, sync
+ |-- cn_hub.ml           Hub discovery, path constants, logging
+ |-- cn_fmt.ml           Output formatting, timestamps, dry-run
+ |-- cn_ffi.ml           Native system bindings (Fs, Path, Process, Http)
+ |-- cn_io.ml            Protocol I/O over git (sync, flush, archive)
+ |-- cn_lib.ml           Types, parsing, help text (pure)
+ |-- cn_json.ml          JSON parser/emitter (pure, zero-dep)
+ |-- git.ml              Raw git operations (pure git, no CN knowledge)
 ```
 
 ### Dependency Layers
@@ -53,12 +60,14 @@ cn.ml                 CLI dispatch (~100 lines, routes to modules)
 ```
 Layer 5  cn.ml (dispatch)
          |
-Layer 4  cn_runtime (orchestrator: pack → call → archive → execute → project)
+Layer 4  cn_runtime (orchestrator: pack → call → finalize → project)
          |
-Layer 3  cn_context  cn_llm  cn_telegram  cn_config  cn_agent  cn_gtd  cn_mail  cn_mca  cn_commands  cn_system
-         |           |       |            |          |         |       |        |       |            |
+Layer 3  cn_context  cn_llm  cn_telegram  cn_config  cn_agent  cn_shell
+         cn_executor  cn_sandbox  cn_capabilities  cn_projection  cn_orchestrator
+         cn_gtd  cn_mail  cn_mca  cn_commands  cn_system  cn_dotenv
+         |
 Layer 2  cn_protocol  cn_hub  cn_io  cn_fmt
-         |            |       |      |
+         |
 Layer 1  cn_lib  cn_json  cn_ffi  git.ml
 ```
 
@@ -68,6 +77,7 @@ Rules:
 - `cn_lib.ml` and `cn_json.ml` are pure (no I/O) — fully testable with ppx_expect
 - `cn_ffi.ml` is the only module that touches Unix/stdlib directly
 - `cn_runtime.ml` is the only module that calls the LLM
+- `cn_shell.ml` / `cn_executor.ml` handle all post-call effects (typed ops)
 
 ## The Four FSMs
 
@@ -172,23 +182,27 @@ The runtime pipeline, executed by `cn agent` (cron) or `cn agent --daemon` (Tele
 ```
 1. cn sync            Fetch peer branches, send outbound
 2. cn agent           Runtime cycle (under atomic lock):
-   a. Queue inbox     Move inbox items to state/queue/
-   b. Dequeue         Pop oldest item from queue
-   c. Pack context    Build prompt from hub artifacts (identity, skills, conversation, message)
-   d. Write input.md  Frontmatter metadata + packed context body
-   e. Call LLM        Claude API (body-only prompt, Option B)
-   f. Write output.md LLM response (ops in frontmatter, body below)
-   g. Archive         Copy input.md + output.md to logs/ (before effects)
-   h. Execute ops     Parse output, resolve payloads, execute ops
-   i. Project         Route reply to Telegram (if from Telegram)
-   j. Conversation    Append to state/conversation.json
-   k. Cleanup         Delete state/input.md + state/output.md
+   a. GC              Sweep stale ops_done markers (idle only)
+   b. Queue inbox     Move inbox items to state/queue/
+   c. Dequeue         Pop oldest item from queue
+   d. Pack context    Build prompt (identity, skills, capabilities, conversation, message)
+   e. Write input.md  Frontmatter metadata + packed context body
+   f. Call LLM        Claude API (body-only prompt, Option B)
+   g. Write output.md LLM response (typed ops in frontmatter, body below)
+   h. Archive         Copy input.md + output.md to logs/ (before effects)
+   i. Execute ops     CN Shell two-pass: observe (Pass A) → effect (Pass B)
+   j. Receipts        Write per-trigger receipt JSON (state/receipts/)
+   k. Project         Route reply to Telegram (idempotent via marker)
+   l. Conversation    Append to state/conversation.json (dedup by trigger_id)
+   m. Cleanup         Delete state/input.md + state/output.md
+   n. Clear marker    Remove ops_done marker (state/finalized/)
 3. cn save            Commit + push hub state to git
 ```
 
 Recovery: if `cn agent` crashes at any point, the next invocation detects
 the state (output exists? input only? neither?) and resumes from the correct
-step — all under the same atomic lock.
+step — all under the same atomic lock. Conversation dedup and projection
+markers prevent double-appending and double-sending on replay.
 
 ### Prompt Contract (Option B)
 
@@ -224,6 +238,7 @@ surface   Create MCA (Managed Concern Aggregation)
 hub/
  +-- .cn/
  |    +-- config.json          Hub configuration (env vars override)
+ |    +-- secrets.env          API keys (loaded by runtime, never committed)
  |
  +-- threads/
  |    +-- in/                  Direct inbound (non-mail)
@@ -240,12 +255,15 @@ hub/
  |         +-- weekly/         Weekly reflections
  |
  +-- state/
- |    +-- input.md             Current agent input (frontmatter + packed context)
- |    +-- output.md            LLM response (ops in frontmatter, body below)
+ |    +-- input.md             Current agent input (transient, crash-recovery)
+ |    +-- output.md            LLM response (transient, crash-recovery)
  |    +-- queue/               FIFO queue of pending items
  |    +-- agent.lock           Atomic lock (O_CREAT|O_EXCL, prevents cron overlap)
  |    +-- conversation.json    Recent conversation history (last 50 entries)
  |    +-- telegram.offset      Telegram update_id offset (daemon mode)
+ |    +-- finalized/           ops_done markers (idempotency guards)
+ |    +-- projected/           Projection markers (reply dedup per trigger)
+ |    +-- receipts/            CN Shell execution receipts (per trigger JSON)
  |    +-- peers.md             Peer registry
  |    +-- runtime.md           Runtime metadata
  |    +-- mca/                 Managed Concern files
@@ -299,7 +317,7 @@ Example: `pi/20260211-143022-review-request` is a thread from pi.
 | [EXECUTABLE-SKILLS.md](design/EXECUTABLE-SKILLS.md) | Vision: skills as programs |
 | [SECURITY-MODEL.md](design/SECURITY-MODEL.md) | Security architecture |
 | [CLI.md](design/CLI.md) | CLI command reference |
-| [AGENT-RUNTIME-v3.md](design/AGENT-RUNTIME-v3.md) | Native agent runtime design (v3.1.3) |
+| [AGENT-RUNTIME-v3.md](design/AGENT-RUNTIME-v3.md) | Agent runtime spec (v3.3.6): CN Shell, typed ops, two-pass, receipts |
 | [LOGGING.md](design/LOGGING.md) | Logging architecture |
 
 For the full docs audit and archive decisions, see [AUDIT.md](design/AUDIT.md).

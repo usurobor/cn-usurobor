@@ -197,7 +197,7 @@ let load_conversation_turns ~hub_path ~n : Cn_llm.message_turn list =
           | _ -> None)
     | _ -> []
 
-let pack ~hub_path ~trigger_id ~message ~from =
+let pack ~hub_path ~trigger_id ~message ~from ?shell_config () =
   let role = load_role ~hub_path in
 
   (* === Read all source data once === *)
@@ -248,6 +248,12 @@ let pack ~hub_path ~trigger_id ~message ~from =
   if skills <> [] then
     add_section dynamic_buf "Relevant Skills"
       (String.concat "\n---\n" skills);
+
+  (* CN Shell capabilities block — after skills, before conversation.
+     Only present when shell_config is provided (v3.3.5+). *)
+  (match shell_config with
+   | Some sc -> Buffer.add_string dynamic_buf (Cn_capabilities.render sc)
+   | None -> ());
 
   let system =
     let stable = String.trim (Buffer.contents stable_buf) in

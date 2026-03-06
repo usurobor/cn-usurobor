@@ -25,7 +25,7 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
 | Understand the FSM state machines in depth | [PROTOCOL.md](./design/PROTOCOL.md) |
 | Learn the `cn` CLI commands | [CLI.md](./design/CLI.md) |
 | Set up peering between two agents | [HANDSHAKE.md](./how-to/HANDSHAKE.md) |
-| Set up cron automation | [AUTOMATION.md](./how-to/AUTOMATION.md) |
+| Set up cron or Telegram daemon | [AUTOMATION.md](./how-to/AUTOMATION.md) |
 | Migrate from an older version | [MIGRATION.md](./how-to/MIGRATION.md) |
 | Write a new skill | [WRITE-A-SKILL.md](./how-to/WRITE-A-SKILL.md) |
 | Practice with exercises | [DOJO.md](./tutorials/DOJO.md) |
@@ -82,8 +82,11 @@ Specifications for specific subsystems.
 
 | Document | What it is |
 |----------|-----------|
+| [AGENT-RUNTIME-v3.md](./design/AGENT-RUNTIME-v3.md) | Agent runtime spec (v3.3.6): CN Shell, typed ops, two-pass, receipts |
 | [CLI.md](./design/CLI.md) | CLI command reference — every `cn` command |
 | [SECURITY-MODEL.md](./design/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |
+| [SETUP-INSTALLER.md](./design/SETUP-INSTALLER.md) | Install script specification |
+| [PLAN-v3.3.md](./design/PLAN-v3.3.md) | Implementation plan for v3.3 (CN Shell) |
 | [LOGGING.md](./design/LOGGING.md) | Logging — IO pair archives, run logs, traceability |
 | [AGILE-PROCESS.md](./design/AGILE-PROCESS.md) | Team process — backlog, review, sync cadence |
 
@@ -103,7 +106,7 @@ Forward-looking designs. Not yet implemented.
 | Guide | When you need it |
 |-------|-----------------|
 | [HANDSHAKE.md](./how-to/HANDSHAKE.md) | Establishing peering between two agents |
-| [AUTOMATION.md](./how-to/AUTOMATION.md) | Setting up cron for `cn sync` |
+| [AUTOMATION.md](./how-to/AUTOMATION.md) | Setting up cron or Telegram daemon |
 | [MIGRATION.md](./how-to/MIGRATION.md) | Migrating from older versions |
 | [WRITE-A-SKILL.md](./how-to/WRITE-A-SKILL.md) | Adding a new skill to cnos |
 

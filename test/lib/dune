@@ -12,3 +12,11 @@
  (libraries cn_lib)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_sha256 tests (ppx_expect) — NIST test vectors
+(library
+ (name cn_sha256_test)
+ (modules cn_sha256_test)
+ (libraries cn_lib)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
