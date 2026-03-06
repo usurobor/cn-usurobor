@@ -37,20 +37,24 @@ dune runtest
 
 ### 1. Version Bump
 
-Update the version string in **two** files:
+Update the version string in **three** files:
 
 ```bash
-# src/lib/cn_lib.ml
+# src/lib/cn_lib.ml (source of truth)
 let version = "3.3.0"
 
-# test/cram/version.t (expected output line)
+# test/cram/version.t (expected output)
+cn 3.3.0
+
+# test/cram/cli/cli.t (two occurrences: --version and doctor output)
 cn 3.3.0
 ```
 
-Verify both match:
+Verify all match:
 ```bash
 grep 'let version' src/lib/cn_lib.ml
 grep 'cn ' test/cram/version.t
+grep 'cn.*3\.' test/cram/cli/cli.t
 ```
 
 ### 2. Update CHANGELOG
