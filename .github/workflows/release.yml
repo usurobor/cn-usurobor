@@ -38,7 +38,10 @@ jobs:
       - name: Run tests
         run: |
           eval $(opam env)
-          dune runtest
+          mkdir -p "$TMPDIR"
+          dune runtest -j 1
+        env:
+          TMPDIR: ${{ runner.temp }}/dune-tests
 
       - name: Package binary
         run: |
@@ -59,12 +62,31 @@ jobs:
       contents: write
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Create release
+      - name: Check for release notes
+        id: notes
+        run: |
+          if [ -f RELEASE.md ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create release (with notes)
+        if: steps.notes.outputs.exists == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*/cn-*
+          body_path: RELEASE.md
+
+      - name: Create release (auto-generated)
+        if: steps.notes.outputs.exists != 'true'
         uses: softprops/action-gh-release@v1
         with:
           files: artifacts/*/cn-*
