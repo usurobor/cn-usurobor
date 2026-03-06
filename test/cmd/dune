@@ -37,3 +37,11 @@
  (libraries cn_cmd cn_ffi cn_lib unix)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_orchestrator tests (ppx_expect) — two-pass orchestration
+(library
+ (name cn_orchestrator_test)
+ (modules cn_orchestrator_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
