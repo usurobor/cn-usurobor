@@ -29,3 +29,11 @@
  (libraries cn_cmd unix)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_executor tests (ppx_expect) — typed op executor
+(library
+ (name cn_executor_test)
+ (modules cn_executor_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
