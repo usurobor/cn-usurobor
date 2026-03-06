@@ -45,3 +45,11 @@
  (libraries cn_cmd cn_ffi cn_lib unix)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_projection tests (ppx_expect) — projection idempotency markers
+(library
+ (name cn_projection_test)
+ (modules cn_projection_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))

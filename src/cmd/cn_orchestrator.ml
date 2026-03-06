@@ -39,11 +39,18 @@ let contains_sub (s : string) (sub : string) : bool =
 (* === Coordination classification === *)
 
 (** Classify a coordination op for Pass A.
-    Pass-A-safe: ack, surface/mca, reply (caller ensures idempotent projection).
+    Pass-A-safe: ack, surface/mca.
+    Reply: conditionally safe — only if projection is idempotent
+    (has_idempotent_projection=true). Without idempotent projection,
+    reply is deferred to Pass B as pass_a_unsafe per v3.3.6.
     Pass-A-unsafe: done, fail, send, delegate, defer, delete. *)
-let classify_coordination_pass_a (op : Cn_lib.agent_op) =
+let classify_coordination_pass_a
+      ?(has_idempotent_projection = true) (op : Cn_lib.agent_op) =
   match op with
-  | Ack _ | Surface _ | Reply _ -> Execute
+  | Ack _ | Surface _ -> Execute
+  | Reply _ ->
+    if has_idempotent_projection then Execute
+    else Skip "pass_a_unsafe"
   | Done _ | Fail _ | Send _ | Delegate _ | Defer _ | Delete _ ->
     Skip "pass_a_unsafe"
 
