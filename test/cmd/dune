@@ -53,3 +53,11 @@
  (libraries cn_cmd cn_ffi cn_lib unix)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_capabilities tests (ppx_expect) — capability discovery block
+(library
+ (name cn_capabilities_test)
+ (modules cn_capabilities_test)
+ (libraries cn_cmd cn_lib)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))

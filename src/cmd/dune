@@ -5,5 +5,5 @@
  (modules cn_fmt cn_hub cn_mail cn_gtd cn_agent cn_mca
           cn_commands cn_system cn_config cn_llm cn_telegram cn_context
           cn_runtime cn_dotenv cn_shell cn_sandbox cn_executor
-          cn_orchestrator cn_projection)
+          cn_orchestrator cn_projection cn_capabilities)
  (libraries cn_ffi cn_lib cn_protocol inbox_lib git cn_io unix))
