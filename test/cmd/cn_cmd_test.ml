@@ -756,6 +756,28 @@ let%expect_test "config: runtime.two_pass is parsed" =
       | Error msg -> Printf.printf "error: %s\n" msg);
   [%expect {| two_pass=off |}]
 
+let%expect_test "config: invalid two_pass normalized to auto" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
+  with_temp_hub
+    ~config_json:{|{"runtime":{"two_pass":"banana"}}|}
+    (fun hub_path ->
+      match Cn_config.load ~hub_path with
+      | Ok cfg -> Printf.printf "two_pass=%s\n" cfg.shell.Cn_shell.two_pass
+      | Error msg -> Printf.printf "error: %s\n" msg);
+  [%expect {| two_pass=auto |}]
+
+let%expect_test "config: invalid apply_mode normalized to branch" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
+  with_temp_hub
+    ~config_json:{|{"runtime":{"apply_mode":"yolo"}}|}
+    (fun hub_path ->
+      match Cn_config.load ~hub_path with
+      | Ok cfg -> Printf.printf "apply_mode=%s\n" cfg.shell.Cn_shell.apply_mode
+      | Error msg -> Printf.printf "error: %s\n" msg);
+  [%expect {| apply_mode=branch |}]
+
 let%expect_test "config: shell defaults when no shell keys" =
   reset_config_env ();
   Unix.putenv "ANTHROPIC_KEY" "sk-test-key";

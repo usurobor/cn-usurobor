@@ -21,3 +21,11 @@
  (libraries cn_cmd cn_lib)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_sandbox tests (ppx_expect) — path sandbox + symlink attacks
+(library
+ (name cn_sandbox_test)
+ (modules cn_sandbox_test)
+ (libraries cn_cmd unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
