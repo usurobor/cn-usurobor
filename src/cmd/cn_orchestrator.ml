@@ -109,13 +109,13 @@ let run_pass_a ~hub_path ~trigger_id ~config typed_ops =
   let receipts =
     if not two_pass_needed then
       (* Single pass: execute all ops *)
-      List.map (fun op ->
+      List.map (fun (op : Cn_shell.typed_op) ->
         let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config op in
         { r with Cn_shell.pass = "A" }
       ) typed_ops
     else
       (* Two-pass: observe executes, effects deferred *)
-      List.map (fun op ->
+      List.map (fun (op : Cn_shell.typed_op) ->
         if Cn_shell.is_effect op.Cn_shell.kind then
           let now = Cn_executor.now_iso () in
           { (Cn_shell.make_receipt ~pass:"A" ~op_id:op.op_id
@@ -143,7 +143,7 @@ let run_pass_a ~hub_path ~trigger_id ~config typed_ops =
     - All receipts tagged with pass="B"
     - Receipts appended to existing file (Pass A already wrote) *)
 let run_pass_b ~hub_path ~trigger_id ~config typed_ops =
-  let receipts = List.map (fun op ->
+  let receipts = List.map (fun (op : Cn_shell.typed_op) ->
     if not (Cn_shell.is_effect op.Cn_shell.kind) then
       (* Observe in Pass B → denied *)
       let now = Cn_executor.now_iso () in

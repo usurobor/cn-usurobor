@@ -227,7 +227,7 @@ let check_duplicates results =
   List.map (fun result ->
     match result with
     | Error r -> Error r
-    | Ok op ->
+    | Ok (op : typed_op) ->
       match op.op_id with
       | None -> Ok op
       | Some id ->
@@ -265,8 +265,8 @@ let parse_ops_manifest raw_value =
 
 (** Classify ops into observe and effect groups. *)
 let classify ops =
-  let observe = List.filter (fun op -> not (is_effect op.kind)) ops in
-  let effect = List.filter (fun op -> is_effect op.kind) ops in
+  let observe = List.filter (fun (op : typed_op) -> not (is_effect op.kind)) ops in
+  let effect = List.filter (fun (op : typed_op) -> is_effect op.kind) ops in
   (observe, effect)
 
 (** Determine if two-pass mode is needed.
