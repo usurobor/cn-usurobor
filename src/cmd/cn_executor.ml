@@ -1,0 +1,488 @@
+(** cn_executor.ml — Typed op executor for CN Shell
+
+    Executes observe and effect ops, produces receipts and artifacts.
+    Uses cn_sandbox for path validation, cn_sha256 for artifact hashing.
+
+    Design:
+    - Three separate execution paths: fs, git, exec
+    - All produce receipts in a single place (execute_op)
+    - Artifacts written to state/artifacts/<trigger_id>/<op_id>.*
+    - Receipts written to state/receipts/<trigger_id>.json
+    - No two-pass logic here — that belongs in Step 5 (orchestrator) *)
+
+(* === Timestamps === *)
+
+let now_iso () =
+  let t = Unix.gettimeofday () in
+  let tm = Unix.gmtime t in
+  Printf.sprintf "%04d-%02d-%02dT%02d:%02d:%02dZ"
+    (tm.Unix.tm_year + 1900) (tm.Unix.tm_mon + 1) tm.Unix.tm_mday
+    tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec
+
+(* === Artifact writing === *)
+
+(** Write artifact content, returning artifact record.
+    Caps content at max_bytes. *)
+let write_artifact ~hub_path ~trigger_id ~op_id ~ext ~content ~max_bytes =
+  let dir = Cn_ffi.Path.join hub_path
+              (Printf.sprintf "state/artifacts/%s" trigger_id) in
+  Cn_ffi.Fs.ensure_dir dir;
+  let capped = if String.length content > max_bytes
+    then String.sub content 0 max_bytes
+    else content in
+  let filename = Printf.sprintf "%s.%s" op_id ext in
+  let path = Cn_ffi.Path.join dir filename in
+  Cn_ffi.Fs.write path capped;
+  let rel_path = Printf.sprintf "state/artifacts/%s/%s" trigger_id filename in
+  { Cn_shell.path = rel_path;
+    hash = Cn_sha256.hash_prefixed capped;
+    size = String.length capped }
+
+(* === Environment scrubbing === *)
+
+(** Drop vars matching *_KEY, *_TOKEN, *_SECRET, plus explicit list. *)
+let scrub_env ~extra_keys =
+  let is_secret key =
+    let ends_with ~suffix s =
+      let sl = String.length suffix and kl = String.length s in
+      kl >= sl && String.sub s (kl - sl) sl = suffix
+    in
+    ends_with ~suffix:"_KEY" key
+    || ends_with ~suffix:"_TOKEN" key
+    || ends_with ~suffix:"_SECRET" key
+    || List.mem key extra_keys
+  in
+  (* Read current environment, filter out secrets *)
+  let env = Unix.environment () |> Array.to_list in
+  List.filter_map (fun entry ->
+    match String.index_opt entry '=' with
+    | None -> Some entry  (* malformed, pass through *)
+    | Some i ->
+      let key = String.sub entry 0 i in
+      if is_secret key then None
+      else Some entry
+  ) env
+  |> List.map (fun entry ->
+    match String.index_opt entry '=' with
+    | None -> (entry, "")
+    | Some i ->
+      (String.sub entry 0 i,
+       String.sub entry (i + 1) (String.length entry - i - 1)))
+
+(* === Git path exclusion === *)
+
+(** Standard denylist pathspec exclusions for git ops. *)
+let git_pathspec_exclusions =
+  ["--"; "."; ":!.cn"; ":!state"; ":!logs"]
+
+(* === Op field extraction helpers === *)
+
+let get_field_string key op =
+  match List.assoc_opt key op.Cn_shell.fields with
+  | Some (Cn_json.String s) -> Some s
+  | _ -> None
+
+let get_field_int key op =
+  match List.assoc_opt key op.Cn_shell.fields with
+  | Some (Cn_json.Int i) -> Some i
+  | _ -> None
+
+let require_field_string key op =
+  match get_field_string key op with
+  | Some s -> Ok s
+  | None -> Error (Printf.sprintf "missing required field '%s'" key)
+
+(* === Observe op executors === *)
+
+let execute_fs_read ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
+  let start = now_iso () in
+  match require_field_string "path" op with
+  | Error msg ->
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_read";
+      status = Cn_shell.Error_status; reason = msg;
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  | Ok raw_path ->
+    match Cn_sandbox.validate_path ~hub_path ~access:Read_access raw_path with
+    | Error reason ->
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_read";
+        status = Cn_shell.Denied;
+        reason = Cn_sandbox.string_of_denial_reason reason;
+        start_time = start; end_time = now_iso (); artifacts = [] }
+    | Ok resolved ->
+      let full = Cn_ffi.Path.join hub_path resolved in
+      if not (Cn_ffi.Fs.exists full) then
+        { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_read";
+          status = Cn_shell.Error_status; reason = "file_not_found";
+          start_time = start; end_time = now_iso (); artifacts = [] }
+      else
+        let content = Cn_ffi.Fs.read full in
+        let op_id_str = match op.op_id with Some id -> id | None -> "unknown" in
+        let artifact = write_artifact ~hub_path ~trigger_id ~op_id:op_id_str
+                         ~ext:"txt" ~content
+                         ~max_bytes:config.Cn_shell.max_artifact_bytes_per_op in
+        { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_read";
+          status = Cn_shell.Ok_status; reason = "";
+          start_time = start; end_time = now_iso (); artifacts = [artifact] }
+
+let execute_fs_list ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
+  let start = now_iso () in
+  match require_field_string "path" op with
+  | Error msg ->
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_list";
+      status = Cn_shell.Error_status; reason = msg;
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  | Ok raw_path ->
+    match Cn_sandbox.validate_path ~hub_path ~access:Read_access raw_path with
+    | Error reason ->
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_list";
+        status = Cn_shell.Denied;
+        reason = Cn_sandbox.string_of_denial_reason reason;
+        start_time = start; end_time = now_iso (); artifacts = [] }
+    | Ok resolved ->
+      let full = Cn_ffi.Path.join hub_path resolved in
+      if not (Cn_ffi.Fs.exists full) then
+        { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_list";
+          status = Cn_shell.Error_status; reason = "directory_not_found";
+          start_time = start; end_time = now_iso (); artifacts = [] }
+      else
+        let entries = Cn_ffi.Fs.readdir full in
+        let content = String.concat "\n" (List.sort String.compare entries) in
+        let op_id_str = match op.op_id with Some id -> id | None -> "unknown" in
+        let artifact = write_artifact ~hub_path ~trigger_id ~op_id:op_id_str
+                         ~ext:"txt" ~content
+                         ~max_bytes:config.Cn_shell.max_artifact_bytes_per_op in
+        { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_list";
+          status = Cn_shell.Ok_status; reason = "";
+          start_time = start; end_time = now_iso (); artifacts = [artifact] }
+
+let execute_git_op ~hub_path ~trigger_id ~config ~kind_str ~args (op : Cn_shell.typed_op) =
+  let start = now_iso () in
+  let code, output =
+    Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:([ "-C"; hub_path ] @ args) ()
+  in
+  let op_id_str = match op.Cn_shell.op_id with Some id -> id | None -> "unknown" in
+  if code <> 0 then
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = kind_str;
+      status = Cn_shell.Error_status;
+      reason = Printf.sprintf "git_exit_%d" code;
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  else
+    let artifact = write_artifact ~hub_path ~trigger_id ~op_id:op_id_str
+                     ~ext:"txt" ~content:output
+                     ~max_bytes:config.Cn_shell.max_artifact_bytes_per_op in
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = kind_str;
+      status = Cn_shell.Ok_status; reason = "";
+      start_time = start; end_time = now_iso (); artifacts = [artifact] }
+
+let execute_git_status ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
+  execute_git_op ~hub_path ~trigger_id ~config ~kind_str:"git_status"
+    ~args:["status"; "--porcelain"] op
+
+let execute_git_diff ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
+  let rev = match get_field_string "rev" op with
+    | Some r -> [r]
+    | None -> []
+  in
+  execute_git_op ~hub_path ~trigger_id ~config ~kind_str:"git_diff"
+    ~args:(["diff"] @ rev @ git_pathspec_exclusions) op
+
+let execute_git_log ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
+  let max_n = match get_field_int "max" op with
+    | Some n -> ["-n"; string_of_int n]
+    | None -> ["-n"; "20"]
+  in
+  let rev = match get_field_string "rev" op with
+    | Some r -> [r]
+    | None -> []
+  in
+  execute_git_op ~hub_path ~trigger_id ~config ~kind_str:"git_log"
+    ~args:(["log"; "--oneline"] @ max_n @ rev @ git_pathspec_exclusions) op
+
+let execute_git_grep ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
+  let start = now_iso () in
+  match require_field_string "query" op with
+  | Error msg ->
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_grep";
+      status = Cn_shell.Error_status; reason = msg;
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  | Ok query ->
+    let path_args = match get_field_string "path" op with
+      | Some raw_path ->
+        (match Cn_sandbox.validate_path ~hub_path ~access:Read_access raw_path with
+         | Error reason ->
+           Error (Cn_sandbox.string_of_denial_reason reason)
+         | Ok resolved -> Ok ["--"; resolved])
+      | None -> Ok git_pathspec_exclusions
+    in
+    match path_args with
+    | Error reason ->
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_grep";
+        status = Cn_shell.Denied; reason;
+        start_time = start; end_time = now_iso (); artifacts = [] }
+    | Ok extra_args ->
+      execute_git_op ~hub_path ~trigger_id ~config ~kind_str:"git_grep"
+        ~args:(["grep"; "-n"; query] @ extra_args) op
+
+(* === Effect op executors === *)
+
+let execute_fs_write ~hub_path ~config (op : Cn_shell.typed_op) =
+  let start = now_iso () in
+  if config.Cn_shell.apply_mode = "off" then
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_write";
+      status = Cn_shell.Denied; reason = "policy_rejected";
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  else
+  match require_field_string "path" op, require_field_string "content" op with
+  | Error msg, _ | _, Error msg ->
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_write";
+      status = Cn_shell.Error_status; reason = msg;
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  | Ok raw_path, Ok content ->
+    match Cn_sandbox.validate_path ~hub_path ~access:Write_access raw_path with
+    | Error reason ->
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_write";
+        status = Cn_shell.Denied;
+        reason = Cn_sandbox.string_of_denial_reason reason;
+        start_time = start; end_time = now_iso (); artifacts = [] }
+    | Ok resolved ->
+      let full = Cn_ffi.Path.join hub_path resolved in
+      Cn_ffi.Fs.ensure_dir (Cn_ffi.Path.dirname full);
+      Cn_ffi.Fs.write full content;
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_write";
+        status = Cn_shell.Ok_status; reason = "";
+        start_time = start; end_time = now_iso (); artifacts = [] }
+
+let execute_fs_patch ~hub_path ~config (op : Cn_shell.typed_op) =
+  let start = now_iso () in
+  if config.Cn_shell.apply_mode = "off" then
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_patch";
+      status = Cn_shell.Denied; reason = "policy_rejected";
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  else
+  match require_field_string "path" op, require_field_string "unified_diff" op with
+  | Error msg, _ | _, Error msg ->
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_patch";
+      status = Cn_shell.Error_status; reason = msg;
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  | Ok raw_path, Ok diff ->
+    match Cn_sandbox.validate_path ~hub_path ~access:Write_access raw_path with
+    | Error reason ->
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_patch";
+        status = Cn_shell.Denied;
+        reason = Cn_sandbox.string_of_denial_reason reason;
+        start_time = start; end_time = now_iso (); artifacts = [] }
+    | Ok resolved ->
+      let full = Cn_ffi.Path.join hub_path resolved in
+      (* Apply patch via `patch` command — argv-only, no shell *)
+      let code, output =
+        Cn_ffi.Process.exec_args ~prog:"patch"
+          ~args:["--no-backup-if-mismatch"; "-p0"; full]
+          ~stdin_data:diff ()
+      in
+      if code = 0 then
+        { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_patch";
+          status = Cn_shell.Ok_status; reason = "";
+          start_time = start; end_time = now_iso (); artifacts = [] }
+      else
+        { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_patch";
+          status = Cn_shell.Error_status;
+          reason = Printf.sprintf "patch_failed: %s" (String.trim output);
+          start_time = start; end_time = now_iso (); artifacts = [] }
+
+let execute_git_branch ~hub_path ~config (op : Cn_shell.typed_op) =
+  let start = now_iso () in
+  if config.Cn_shell.apply_mode = "off" then
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_branch";
+      status = Cn_shell.Denied; reason = "policy_rejected";
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  else
+  match require_field_string "name" op with
+  | Error msg ->
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_branch";
+      status = Cn_shell.Error_status; reason = msg;
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  | Ok name ->
+    let code, output =
+      Cn_ffi.Process.exec_args ~prog:"git"
+        ~args:["-C"; hub_path; "checkout"; "-b"; name] ()
+    in
+    if code = 0 then
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_branch";
+        status = Cn_shell.Ok_status; reason = "";
+        start_time = start; end_time = now_iso (); artifacts = [] }
+    else
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_branch";
+        status = Cn_shell.Error_status;
+        reason = Printf.sprintf "git_exit_%d: %s" code (String.trim output);
+        start_time = start; end_time = now_iso (); artifacts = [] }
+
+let execute_git_commit ~hub_path ~config (op : Cn_shell.typed_op) =
+  let start = now_iso () in
+  if config.Cn_shell.apply_mode = "off" then
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
+      status = Cn_shell.Denied; reason = "policy_rejected";
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  else
+  match require_field_string "message" op with
+  | Error msg ->
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
+      status = Cn_shell.Error_status; reason = msg;
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  | Ok message ->
+    (* Two sequential argv calls — no shell && *)
+    let code1, output1 =
+      Cn_ffi.Process.exec_args ~prog:"git"
+        ~args:["-C"; hub_path; "add"; "-A"] ()
+    in
+    if code1 <> 0 then
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
+        status = Cn_shell.Error_status;
+        reason = Printf.sprintf "git_add_exit_%d: %s" code1 (String.trim output1);
+        start_time = start; end_time = now_iso (); artifacts = [] }
+    else
+      let code2, output2 =
+        Cn_ffi.Process.exec_args ~prog:"git"
+          ~args:["-C"; hub_path; "commit"; "-m"; message] ()
+      in
+      if code2 = 0 then
+        { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
+          status = Cn_shell.Ok_status; reason = "";
+          start_time = start; end_time = now_iso (); artifacts = [] }
+      else
+        { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
+          status = Cn_shell.Error_status;
+          reason = Printf.sprintf "git_commit_exit_%d: %s" code2 (String.trim output2);
+          start_time = start; end_time = now_iso (); artifacts = [] }
+
+let execute_exec ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
+  let start = now_iso () in
+  if not config.Cn_shell.exec_enabled then
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "exec";
+      status = Cn_shell.Denied; reason = "policy_rejected";
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  else
+  match List.assoc_opt "argv" op.Cn_shell.fields with
+  | Some (Cn_json.Array items) ->
+    let argv = List.filter_map (function
+      | Cn_json.String s -> Some s | _ -> None
+    ) items in
+    (match argv with
+     | [] ->
+       { Cn_shell.pass = ""; op_id = op.op_id; kind = "exec";
+         status = Cn_shell.Error_status; reason = "empty_argv";
+         start_time = start; end_time = now_iso (); artifacts = [] }
+     | prog :: args ->
+       (* Resolve and check allowlist *)
+       let resolved_prog =
+         if String.length prog > 0 && prog.[0] = '/' then prog
+         else
+           (* Search PATH for the binary *)
+           let path_dirs = match Sys.getenv_opt "PATH" with
+             | Some p -> String.split_on_char ':' p
+             | None -> ["/usr/bin"; "/bin"]
+           in
+           let found = List.find_opt (fun dir ->
+             Sys.file_exists (Filename.concat dir prog)
+           ) path_dirs in
+           match found with
+           | Some dir -> Filename.concat dir prog
+           | None -> prog  (* will fail on exec *)
+       in
+       if not (List.mem resolved_prog config.exec_allowlist) then
+         { Cn_shell.pass = ""; op_id = op.op_id; kind = "exec";
+           status = Cn_shell.Denied; reason = "policy_rejected";
+           start_time = start; end_time = now_iso (); artifacts = [] }
+       else
+         let env = scrub_env ~extra_keys:[] in
+         let code, output =
+           Cn_ffi.Process.exec_args_env ~prog:resolved_prog ~args ~env ()
+         in
+         let op_id_str = match op.op_id with Some id -> id | None -> "unknown" in
+         let artifact = write_artifact ~hub_path ~trigger_id ~op_id:op_id_str
+                          ~ext:"stdout" ~content:output
+                          ~max_bytes:config.max_artifact_bytes_per_op in
+         if code = 0 then
+           { Cn_shell.pass = ""; op_id = op.op_id; kind = "exec";
+             status = Cn_shell.Ok_status; reason = "";
+             start_time = start; end_time = now_iso (); artifacts = [artifact] }
+         else
+           { Cn_shell.pass = ""; op_id = op.op_id; kind = "exec";
+             status = Cn_shell.Error_status;
+             reason = Printf.sprintf "non_zero_exit";
+             start_time = start; end_time = now_iso (); artifacts = [artifact] })
+  | _ ->
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "exec";
+      status = Cn_shell.Error_status; reason = "missing required field 'argv'";
+      start_time = start; end_time = now_iso (); artifacts = [] }
+
+(* === Dispatch === *)
+
+(** Execute a single typed op. Returns a receipt (pass field left blank —
+    the orchestrator fills it in based on which pass is running). *)
+let execute_op ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
+  match op.Cn_shell.kind with
+  (* Observe ops *)
+  | Observe Fs_read -> execute_fs_read ~hub_path ~trigger_id ~config op
+  | Observe Fs_list -> execute_fs_list ~hub_path ~trigger_id ~config op
+  | Observe Fs_glob ->
+    (* fs_glob: use find or simple readdir-based matching *)
+    let start = now_iso () in
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_glob";
+      status = Cn_shell.Error_status; reason = "not_yet_implemented";
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  | Observe Git_status -> execute_git_status ~hub_path ~trigger_id ~config op
+  | Observe Git_diff -> execute_git_diff ~hub_path ~trigger_id ~config op
+  | Observe Git_log -> execute_git_log ~hub_path ~trigger_id ~config op
+  | Observe Git_grep -> execute_git_grep ~hub_path ~trigger_id ~config op
+  (* Effect ops *)
+  | Effect Fs_write -> execute_fs_write ~hub_path ~config op
+  | Effect Fs_patch -> execute_fs_patch ~hub_path ~config op
+  | Effect Git_branch -> execute_git_branch ~hub_path ~config op
+  | Effect Git_commit -> execute_git_commit ~hub_path ~config op
+  | Effect Exec -> execute_exec ~hub_path ~trigger_id ~config op
+
+(* === Receipt I/O === *)
+
+(** Write receipts to state/receipts/<trigger_id>.json.
+    Appends to existing file if present (for Pass B). *)
+let write_receipts ~hub_path ~trigger_id ~pass receipts =
+  let dir = Cn_ffi.Path.join hub_path "state/receipts" in
+  Cn_ffi.Fs.ensure_dir dir;
+  let path = Cn_ffi.Path.join dir (trigger_id ^ ".json") in
+  (* Set pass on all receipts *)
+  let stamped = List.map (fun r -> { r with Cn_shell.pass }) receipts in
+  (* Read existing receipts if any *)
+  let existing =
+    if Cn_ffi.Fs.exists path then
+      match Cn_ffi.Fs.read path |> Cn_json.parse with
+      | Ok obj ->
+        (match Cn_json.get_list "receipts" obj with
+         | Some items ->
+           (* Parse back — but simpler to just keep raw JSON list *)
+           items
+         | None -> [])
+      | Error _ -> []
+    else []
+  in
+  let new_receipt_jsons = List.map Cn_shell.receipt_to_json stamped in
+  let all = existing @ new_receipt_jsons in
+  let container = Cn_json.Object [
+    ("schema", Cn_json.String "cn.receipts.v1");
+    ("trigger_id", Cn_json.String trigger_id);
+    ("receipts", Cn_json.Array all);
+  ] in
+  Cn_ffi.Fs.write path (Cn_json.to_string container ^ "\n")
+
+(** Read existing receipts from file. Returns empty list if missing/unparseable. *)
+let read_receipts ~hub_path ~trigger_id =
+  let path = Cn_ffi.Path.join hub_path
+               (Printf.sprintf "state/receipts/%s.json" trigger_id) in
+  if not (Cn_ffi.Fs.exists path) then []
+  else
+    match Cn_ffi.Fs.read path |> Cn_json.parse with
+    | Ok obj ->
+      (match Cn_json.get_list "receipts" obj with
+       | Some items -> items  (* Returns raw JSON — caller can inspect *)
+       | None -> [])
+    | Error _ -> []

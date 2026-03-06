@@ -52,6 +52,49 @@ module Process = struct
       | Unix.WSTOPPED s -> 128 + s
     in
     (code, output)
+
+  (** Like exec_args but with explicit environment.
+      Uses Unix.create_process_env — the child inherits ONLY the
+      supplied env, not the parent's. Used by CN Shell exec to
+      enforce env scrubbing structurally. *)
+  let exec_args_env ~prog ~args ~env ?(stdin_data = "") () =
+    let argv = Array.of_list (prog :: args) in
+    let env_array = Array.of_list (List.map (fun (k, v) -> k ^ "=" ^ v) env) in
+    let stdin_r, stdin_w = Unix.pipe ~cloexec:true () in
+    let stdout_r, stdout_w = Unix.pipe ~cloexec:true () in
+    let pid = Unix.create_process_env prog argv env_array
+                stdin_r stdout_w stdout_w in
+    Unix.close stdin_r;
+    Unix.close stdout_w;
+    if stdin_data <> "" then begin
+      let b = Bytes.of_string stdin_data in
+      let len = Bytes.length b in
+      let rec write_all off =
+        if off < len then
+          let n = Unix.write stdin_w b off (len - off) in
+          write_all (off + n)
+      in
+      write_all 0
+    end;
+    Unix.close stdin_w;
+    let buf = Buffer.create 4096 in
+    let tmp = Bytes.create 4096 in
+    let rec loop () =
+      match Unix.read stdout_r tmp 0 4096 with
+      | 0 -> ()
+      | n -> Buffer.add_subbytes buf tmp 0 n; loop ()
+      | exception Unix.Unix_error (Unix.EINTR, _, _) -> loop ()
+    in
+    loop ();
+    Unix.close stdout_r;
+    let output = Buffer.contents buf in
+    let _, status = Unix.waitpid [] pid in
+    let code = match status with
+      | Unix.WEXITED c -> c
+      | Unix.WSIGNALED s -> 128 + s
+      | Unix.WSTOPPED s -> 128 + s
+    in
+    (code, output)
 end
 
 module Fs = struct

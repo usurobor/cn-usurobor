@@ -5,3 +5,59 @@
  (libraries cn_cmd cn_ffi cn_lib cn_protocol)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_dotenv tests (ppx_expect) — dotenv parser + filesystem
+(library
+ (name cn_dotenv_test)
+ (modules cn_dotenv_test)
+ (libraries cn_cmd cn_ffi unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
+; cn_shell tests (ppx_expect) — CN Shell types + ops parser
+(library
+ (name cn_shell_test)
+ (modules cn_shell_test)
+ (libraries cn_cmd cn_lib)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
+; cn_sandbox tests (ppx_expect) — path sandbox + symlink attacks
+(library
+ (name cn_sandbox_test)
+ (modules cn_sandbox_test)
+ (libraries cn_cmd unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
+; cn_executor tests (ppx_expect) — typed op executor
+(library
+ (name cn_executor_test)
+ (modules cn_executor_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
+; cn_orchestrator tests (ppx_expect) — two-pass orchestration
+(library
+ (name cn_orchestrator_test)
+ (modules cn_orchestrator_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
+; cn_projection tests (ppx_expect) — projection idempotency markers
+(library
+ (name cn_projection_test)
+ (modules cn_projection_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
+; cn_capabilities tests (ppx_expect) — capability discovery block
+(library
+ (name cn_capabilities_test)
+ (modules cn_capabilities_test)
+ (libraries cn_cmd cn_lib)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))

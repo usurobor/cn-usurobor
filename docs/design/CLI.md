@@ -1,7 +1,7 @@
 # CN CLI Reference
 
 **Status:** Current
-**Date:** 2026-02-22
+**Date:** 2026-03-06
 **Author:** usurobor (aka Axiom)
 **Contributors:** Sigma  
 
@@ -93,7 +93,7 @@ cn weekly                    Create/show weekly reflection
 
 ```
 cn init [name]               Create new hub
-cn setup                     System setup (logrotate + cron) — run with sudo
+cn setup                     Interactive hub setup (config, secrets, optional systemd)
 cn status                    Show hub state
 cn doctor                    Health check
 cn update                    Update cn to latest version
@@ -216,25 +216,32 @@ src/
  |    +-- cn_protocol.ml     Typed FSMs
  |    +-- cn_protocol.mli    Interface
  +-- ffi/
- |    +-- cn_ffi.ml          System bindings
+ |    +-- cn_ffi.ml          System bindings (Fs, Path, Process, Http)
  +-- transport/
  |    +-- cn_io.ml           Protocol I/O
  |    +-- git.ml             Raw git operations
  |    +-- inbox_lib.ml       Inbox utilities
  +-- cmd/
-      +-- cn_runtime.ml      Agent runtime orchestrator (dequeue → LLM → execute)
-      +-- cn_context.ml      Context packer (skills, conversation, artifacts)
-      +-- cn_llm.ml          Claude API client (curl-backed)
-      +-- cn_telegram.ml     Telegram Bot API client
+      +-- cn_runtime.ml      Agent runtime orchestrator (dequeue → LLM → finalize)
+      +-- cn_context.ml      Context packer (skills, conversation, capabilities, artifacts)
+      +-- cn_llm.ml          Claude API client (curl-backed, no --fail)
+      +-- cn_telegram.ml     Telegram Bot API client (send, typing, reactions)
       +-- cn_config.ml       Config loader (env vars + .cn/config.json)
+      +-- cn_dotenv.ml       .env file loader (.cn/secrets.env)
       +-- cn_agent.ml        Queue, input/output, op execution
+      +-- cn_shell.ml        CN Shell: capability runtime (typed ops, two-pass)
+      +-- cn_executor.ml     Op executor (dispatch per kind)
+      +-- cn_sandbox.ml      Path sandbox (reject escapes, denylist)
+      +-- cn_capabilities.ml Capability discovery (budget, allowlists)
+      +-- cn_projection.ml   Reply projection (Telegram routing, dedup)
+      +-- cn_orchestrator.ml Two-pass orchestration (observe → effect)
       +-- cn_mail.ml         Inbox/outbox transport
       +-- cn_gtd.ml          GTD commands + thread creation
       +-- cn_mca.ml          MCA commands
       +-- cn_commands.ml     Peer + git commands
       +-- cn_system.ml       Init, setup, update, status, doctor
-      +-- cn_hub.ml          Hub discovery, paths
-      +-- cn_fmt.ml          Output formatting
+      +-- cn_hub.ml          Hub discovery, paths, logging
+      +-- cn_fmt.ml          Output formatting, timestamps
 ```
 
 ### Build
@@ -255,5 +262,12 @@ Installed to `/usr/local/bin/cn`.
 ## Non-Goals
 
 - No GUI (terminal only)
-- No network services (git is the transport)
-- No cloud dependencies (works offline)
+- No network services (git is the transport, Telegram is optional projection)
+- No cloud dependencies (works offline except LLM API calls)
+- No in-call tool loop (agent produces ops post-call; CN Shell executes them)
+
+## Related
+
+- [AGENT-RUNTIME-v3.md](AGENT-RUNTIME-v3.md) — Full runtime spec (CN Shell, typed ops, two-pass, receipts)
+- [SECURITY-MODEL.md](SECURITY-MODEL.md) — Security architecture
+- [SETUP-INSTALLER.md](SETUP-INSTALLER.md) — Install script specification

@@ -1625,6 +1625,460 @@ The agent interface is `state/input.md → state/output.md` (conceptual). The LL
 
 ---
 
+## Appendix C: Normative Examples
+
+These examples define expected runtime behavior for the key execution paths.
+Each shows exact LLM output, runtime steps, and resulting receipt JSON.
+Implementations MUST produce equivalent receipts for equivalent inputs.
+
+All examples assume default config: `two_pass: auto`, `apply_mode: branch`,
+`exec_enabled: false` (unless stated otherwise).
+
+---
+
+### Example 1: Observe-only (two-pass, read file to answer question)
+
+Agent reads a file to answer a user question. Under `two_pass: auto`, any
+observe op triggers two-pass — even when no effects are proposed. Pass B
+lets the agent incorporate the file content into a reply.
+
+**Pass A — LLM output (output.md):**
+
+```markdown
+---
+id: 20260305-091200-abc
+ack: trigger-42
+ops: [{"kind":"fs_read","path":"src/lib/cn_json.ml"}]
+---
+
+Let me check the JSON parser first.
+```
+
+**Runtime behavior (Pass A):**
+1. Parse frontmatter → coordination op `Ack "trigger-42"` + typed op `Fs_read {path}`
+2. Classify ops: 1 observe, 0 effects → `two_pass: auto` promotes to two-pass
+3. Execute `Ack "trigger-42"` (Pass-A-safe: yes — idempotent acknowledgement)
+4. Sandbox check `src/lib/cn_json.ml` → passes (not in denylist, no `..` escape)
+5. Read file, write to `state/artifacts/20260305-091200-abc/obs-01.txt`
+6. Hash artifact → `sha256:a1b2c3...`
+7. Write Pass A receipts
+8. Archive IO pair (Pass A)
+9. Repack context: original message + receipt summary + artifact content
+10. Call LLM again (Pass B)
+
+**Pass B — LLM output (after seeing the file content):**
+
+```markdown
+---
+id: 20260305-091200-abc
+reply: trigger-42|The JSON parser uses a recursive-descent approach.
+---
+
+The `cn_json.ml` parser is a hand-rolled recursive-descent parser.
+It handles three cases: objects, arrays, and primitives. The key
+function is `parse_value` at line 42, which dispatches on the first
+character of the input.
+```
+
+**Runtime behavior (Pass B):**
+1. Parse manifest → 0 typed ops, 1 coordination op (`Reply`)
+2. No typed ops → execute coordination ops normally
+3. `resolve_payload`: body is present → `Reply` full payload becomes body text ("The `cn_json.ml` parser...")
+4. Project reply to Telegram via idempotent marker (`state/projected/telegram/20260305-091200-abc.sent`)
+5. Write Pass B receipts
+6. Archive IO pair (Pass B)
+
+**Receipt (`state/receipts/20260305-091200-abc.json`):**
+
+```json
+{
+  "schema": "cn.receipts.v1",
+  "trigger_id": "20260305-091200-abc",
+  "receipts": [
+    {
+      "pass": "A",
+      "op_id": "obs-01",
+      "kind": "fs_read",
+      "status": "ok",
+      "reason": "",
+      "start": "2026-03-05T09:12:01Z",
+      "end": "2026-03-05T09:12:01Z",
+      "artifacts": [
+        {
+          "path": "state/artifacts/20260305-091200-abc/obs-01.txt",
+          "hash": "sha256:a1b2c3d4e5f6...",
+          "size": 8432
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Key points:**
+- `op_id` was not in the manifest → runtime assigned `obs-01` (first observe, position 0)
+- `two_pass: auto` promotes even with zero effects — observe ops always get Pass B so the agent can incorporate evidence
+- Body text in Pass A ("Let me check...") is consumed by `resolve_payload` for the `ack` coordination op, not typed ops
+- Pass B reply uses idempotent projection marker for crash-recovery safety
+
+> **Note:** To suppress Pass B (audit-only observation), set `two_pass: off` in config. In that mode, observe ops execute and produce receipts/artifacts, but no second LLM call is made.
+
+---
+
+### Example 2: Two-pass (observe + effect)
+
+Agent wants to read a file, then patch it based on what it sees.
+
+**Pass A — LLM output:**
+
+```markdown
+---
+id: 20260305-091500-def
+ops: [{"kind":"fs_read","path":"docs/design/README.md"},{"kind":"fs_patch","op_id":"patch-readme","path":"docs/design/README.md","unified_diff":"@@ -10,3 +10,4 @@\n context\n-old line\n+new line\n+added line"}]
+---
+
+I'll read the design README, then patch it.
+```
+
+**Runtime behavior (Pass A):**
+1. Parse manifest → 1 observe (`fs_read`), 1 effect (`fs_patch`)
+2. Mixed observe+effect → two-pass mode triggered
+3. Execute observe ops only:
+   - `fs_read docs/design/README.md` → artifact `obs-01.txt`, status `ok`
+4. Skip effect ops with receipt:
+   - `fs_patch` → status `skipped`, reason `observe_pass_requires_followup`
+5. Write Pass A receipts
+6. Archive IO pair (Pass A)
+7. Repack context: original message + receipt summary + artifact content
+8. Call LLM again (Pass B)
+
+**Pass B — LLM output (after seeing the file content):**
+
+```markdown
+---
+id: 20260305-091500-def
+reply: trigger-99|Done, I've updated the design README.
+ops: [{"kind":"fs_patch","op_id":"patch-readme","path":"docs/design/README.md","unified_diff":"@@ -10,3 +10,4 @@\n context\n-old line\n+new line\n+added line"}]
+---
+```
+
+**Runtime behavior (Pass B):**
+1. Parse manifest → 0 observe, 1 effect (`fs_patch`)
+2. No observe ops in Pass B → execute effects directly (no Pass C — `max_passes = 2`)
+3. `apply_mode: branch` → ensure branch `cn/20260305-091500-def` exists (create or checkout)
+4. Sandbox check `docs/design/README.md` → passes (not in denylist, not a protected file)
+5. Apply unified diff → success
+6. Execute coordination ops: `Reply "trigger-99"` (gated on effect success — all effects `ok`)
+7. Write Pass B receipts (appended to existing receipt file)
+
+**Final receipt file (both passes):**
+
+```json
+{
+  "schema": "cn.receipts.v1",
+  "trigger_id": "20260305-091500-def",
+  "receipts": [
+    {
+      "pass": "A",
+      "op_id": "obs-01",
+      "kind": "fs_read",
+      "status": "ok",
+      "reason": "",
+      "start": "2026-03-05T09:15:01Z",
+      "end": "2026-03-05T09:15:01Z",
+      "artifacts": [{"path": "state/artifacts/20260305-091500-def/obs-01.txt", "hash": "sha256:...", "size": 2048}]
+    },
+    {
+      "pass": "A",
+      "op_id": "patch-readme",
+      "kind": "fs_patch",
+      "status": "skipped",
+      "reason": "observe_pass_requires_followup",
+      "start": "2026-03-05T09:15:01Z",
+      "end": "2026-03-05T09:15:01Z",
+      "artifacts": []
+    },
+    {
+      "pass": "B",
+      "op_id": "patch-readme",
+      "kind": "fs_patch",
+      "status": "ok",
+      "reason": "",
+      "start": "2026-03-05T09:15:03Z",
+      "end": "2026-03-05T09:15:03Z",
+      "artifacts": []
+    }
+  ]
+}
+```
+
+**Key points:**
+- Same `op_id` ("patch-readme") appears in both Pass A (skipped) and Pass B (ok) — cross-pass reuse is allowed
+- `obs-01` auto-assigned for the observe op
+- `apply_mode: branch` causes effects to land on `cn/20260305-091500-def`, not the working tree
+- `Reply` coordination op only executes after effect succeeds (gating)
+- If Pass B had proposed new observe ops → denied with `max_passes_exceeded`
+
+---
+
+### Example 3: Effect-only (single pass, no observe)
+
+Agent commits directly without reading first. Since there are no observe ops,
+`two_pass: auto` does NOT promote — effects execute in a single pass.
+
+**LLM output:**
+
+```markdown
+---
+id: 20260305-100000-ghi
+done: trigger-77
+ops: [{"kind":"git_commit","op_id":"commit-1","message":"fix: correct typo in README"}]
+---
+
+Committed the fix.
+```
+
+**Runtime behavior:**
+1. Parse manifest → 0 observe, 1 effect (`git_commit`)
+2. No observe ops → single pass, execute effects directly
+3. `apply_mode: branch` → ensure branch `cn/20260305-100000-ghi` exists (create or checkout)
+4. Execute `git_commit`:
+   - `exec_args ~prog:"git" ~args:["add"; "-A"]` → exit 0
+   - `exec_args ~prog:"git" ~args:["commit"; "-m"; "fix: correct typo in README"]` → exit 0
+5. Execute coordination: `Done "trigger-77"` (gated on effect success — `git_commit` status `ok`)
+6. Write receipt: status `ok`
+
+**Key points:**
+- `apply_mode: branch` (default) creates `cn/{trigger_id}` branch before committing — effects never land on the working tree unless config says `apply_mode: working_tree`
+- `Done` is a terminal coordination op — gated on all effects succeeding
+- If `git_commit` had failed (e.g., nothing staged), `Done` would be skipped with `reason: effects_failed`
+
+---
+
+### Example 4: Observe then communicate (two-pass with send)
+
+Shows how `resolve_payload` interacts with typed ops, and how Pass-A-unsafe
+coordination ops (`send`) are deferred to Pass B.
+
+**Pass A — LLM output:**
+
+```markdown
+---
+id: 20260305-103000-jkl
+reply: trigger-55|Quick status update
+send: bob|Hey Bob
+ops: [{"kind":"git_status"},{"kind":"git_diff","rev":"HEAD~3..HEAD"}]
+---
+
+Here's the detailed status with recent changes.
+I reviewed the last 3 commits and everything looks good.
+```
+
+**Runtime behavior (Pass A):**
+1. Parse coordination ops: `Reply("trigger-55", "Quick status update")`, `Send("bob", "Hey Bob")`
+2. Parse typed ops: `Git_status` (observe), `Git_diff` (observe)
+3. Observe ops present → `two_pass: auto` promotes to two-pass
+4. Execute observe ops:
+   - `git_status` → `exec_args ~prog:"git" ~args:["status"; "--porcelain"]` → artifact `obs-01.txt`
+   - `git_diff` → `exec_args ~prog:"git" ~args:["diff"; "HEAD~3..HEAD"; "--"; "."; ":!.cn"; ":!state"; ":!logs"]` → artifact `obs-02.txt`
+5. Apply coordination phase rules:
+   - `Reply "trigger-55"` → Pass-A-safe (with idempotent projection marker) → execute
+   - `resolve_payload` for reply: body present → full payload becomes body text ("Here's the detailed status...")
+   - `Send "bob"` → Pass-A-**unsafe** (routes work to another agent) → defer with receipt `skipped`, `pass_a_unsafe`
+6. Write Pass A receipts
+7. Archive IO pair (Pass A)
+8. Repack context + call LLM (Pass B)
+
+**Pass B — LLM output (after seeing git artifacts):**
+
+```markdown
+---
+id: 20260305-103000-jkl
+send: bob|Status report|All 3 recent commits look clean. No conflicts or regressions detected.
+---
+```
+
+**Runtime behavior (Pass B):**
+1. Parse coordination ops: `Send("bob", "Status report", "All 3 recent commits...")`
+2. No typed ops → execute coordination normally
+3. `resolve_payload` for send: explicit 3rd pipe segment present → full payload is "All 3 recent commits..." (explicit > body > notification)
+4. Execute `Send` → project to bob's inbox
+5. Write Pass B receipts
+
+**Key points:**
+- `send` is Pass-A-unsafe (routes work to another agent) — always deferred to Pass B in two-pass
+- `reply` is Pass-A-safe only because projection uses idempotent markers (`O_CREAT|O_EXCL`)
+- `send` body resolution follows the normative table: explicit 3rd pipe > markdown body > notification `msg`
+- Git diff argv uses raw pathspec form (`:!.cn`) not shell-quoted (`':!.cn'`) — argv execution has no shell
+
+---
+
+### Example 5: Denied ops with coordination gating
+
+Shows error handling for invalid manifests, including how denied effect ops
+gate terminal coordination.
+
+**LLM output:**
+
+```markdown
+---
+id: 20260305-110000-mno
+done: trigger-88
+ops: [{"kind":"fs_read","path":".cn/secrets.env"},{"kind":"fs_write","op_id":"write-main","path":"src/main.ml","content":"let () = ()"},{"kind":"fs_read","path":"../../../etc/passwd"},{"kind":"frobnicate","op_id":"x1"}]
+---
+
+Let me read some files and make changes.
+```
+
+**Runtime behavior:**
+1. Parse manifest → 4 typed ops + 1 coordination op (`Done "trigger-88"`)
+2. Validate each typed op:
+   - `fs_read .cn/secrets.env` → sandbox step 4 denies (`.cn/` in denylist) → receipt `denied`, `path_denied`
+   - `fs_write src/main.ml` → `op_id` present, validate path → passes sandbox → but `apply_mode: branch` policy check passes → **however** this is a mixed manifest with observe ops → effect deferred with `skipped`, `observe_pass_requires_followup`
+   - `fs_read ../../../etc/passwd` → sandbox step 2 denies (escapes hub after collapse) → receipt `denied`, `path_escape`
+   - `frobnicate` → unknown kind → receipt `denied`, `unknown_op_kind`
+3. Observe ops present (even though denied) → `two_pass: auto` promotes to two-pass
+4. The only non-denied effect (`fs_write`) was deferred → Pass B needed
+5. Archive IO pair, repack context, call LLM (Pass B)
+
+**Pass B — LLM output (agent sees denials in receipt summary):**
+
+```markdown
+---
+id: 20260305-110000-mno
+reply: trigger-88|Several operations were denied by the sandbox.
+---
+
+I tried to read `.cn/secrets.env` and `/etc/passwd` but both were denied
+by the path sandbox. The `frobnicate` op is not a recognized kind.
+I'll need a different approach.
+```
+
+**Runtime behavior (Pass B):**
+1. No typed ops proposed → execute coordination normally
+2. No effect ops to gate → `Reply` executes (note: agent wisely dropped `done` and used `reply` instead)
+3. `resolve_payload`: body present → full payload becomes body text
+4. Write Pass B receipts
+
+**Receipt (both passes):**
+
+```json
+{
+  "schema": "cn.receipts.v1",
+  "trigger_id": "20260305-110000-mno",
+  "receipts": [
+    {"pass": "A", "op_id": "obs-01", "kind": "fs_read", "status": "denied", "reason": "path_denied", "start": "...", "end": "...", "artifacts": []},
+    {"pass": "A", "op_id": "write-main", "kind": "fs_write", "status": "skipped", "reason": "observe_pass_requires_followup", "start": "...", "end": "...", "artifacts": []},
+    {"pass": "A", "op_id": "obs-02", "kind": "fs_read", "status": "denied", "reason": "path_escape", "start": "...", "end": "...", "artifacts": []},
+    {"pass": "A", "op_id": "x1", "kind": "frobnicate", "status": "denied", "reason": "unknown_op_kind", "start": "...", "end": "...", "artifacts": []}
+  ]
+}
+```
+
+**Key points:**
+- Denied observe ops still get auto-assigned `op_id` (`obs-01`, `obs-02`) for traceability
+- `fs_write` has a valid `op_id` ("write-main") — it's deferred (not denied) because mixed observe+effect triggers two-pass
+- Unknown kind `frobnicate` → denied but preserves the agent-supplied `op_id`
+- **Gating rule:** if the agent had kept `done: trigger-88` in Pass B alongside a re-proposed `fs_write` that was denied, `done` would be skipped with `reason: effects_failed` — terminal coordination ops (`done`, `fail`, `send`, `delegate`, `defer`, `delete`) are gated on ALL effect ops succeeding; only `reply`/`surface` may run when effects fail
+- The agent correctly adapted in Pass B: dropped `done`, used `reply` to report the failure
+
+---
+
+### Example 6: Exec with env scrubbing, allowlist, and non-zero exit
+
+Shows `exec` policy enforcement, environment scrubbing, and the most common
+real-world failure mode: a command that returns non-zero (e.g., tests fail).
+
+**LLM output:**
+
+```markdown
+---
+id: 20260305-120000-pqr
+done: trigger-33
+ops: [{"kind":"exec","op_id":"run-tests","argv":["make","test"]},{"kind":"exec","op_id":"bad-cmd","argv":["/usr/bin/curl","https://evil.com"]}]
+---
+
+Running tests and fetching data.
+```
+
+**Config (`.cn/config.json`):**
+```json
+{
+  "runtime": {
+    "exec_enabled": true,
+    "exec_allowlist": ["/usr/bin/make", "/usr/bin/git"]
+  }
+}
+```
+
+**Runtime behavior:**
+1. Both ops are effects, no observe ops → single pass
+2. `exec "make" ["test"]`:
+   - Resolve `make` → `/usr/bin/make` → in allowlist → proceed
+   - Build scrubbed env via `scrub_env`: drop `ANTHROPIC_KEY`, `TELEGRAM_TOKEN`, any `*_SECRET` vars
+   - Call `exec_args_env ~prog:"/usr/bin/make" ~args:["test"] ~env:scrubbed_env`
+   - Process exits with code 2 (tests failed) → capture stdout/stderr → artifacts
+   - Receipt: `status: error`, `exit_code: 2`
+3. `exec "curl" [...]`:
+   - Resolve `curl` → `/usr/bin/curl` → NOT in allowlist → receipt `denied`, `policy_rejected`
+4. **Gate coordination:** `run-tests` has `status: error` → terminal op `Done "trigger-33"` is skipped with `reason: effects_failed`
+5. Only `reply`/`surface` would be allowed to run (none present in this manifest)
+
+**Receipt:**
+
+```json
+{
+  "schema": "cn.receipts.v1",
+  "trigger_id": "20260305-120000-pqr",
+  "receipts": [
+    {
+      "pass": "A",
+      "op_id": "run-tests",
+      "kind": "exec",
+      "status": "error",
+      "reason": "non_zero_exit",
+      "exit_code": 2,
+      "start": "2026-03-05T12:00:01Z",
+      "end": "2026-03-05T12:00:08Z",
+      "artifacts": [
+        {"path": "state/artifacts/20260305-120000-pqr/run-tests.stdout", "hash": "sha256:...", "size": 4096},
+        {"path": "state/artifacts/20260305-120000-pqr/run-tests.stderr", "hash": "sha256:...", "size": 512}
+      ]
+    },
+    {
+      "pass": "A",
+      "op_id": "bad-cmd",
+      "kind": "exec",
+      "status": "denied",
+      "reason": "policy_rejected",
+      "start": "2026-03-05T12:00:08Z",
+      "end": "2026-03-05T12:00:08Z",
+      "artifacts": []
+    },
+    {
+      "pass": "A",
+      "op_id": null,
+      "kind": "done",
+      "status": "skipped",
+      "reason": "effects_failed",
+      "start": "2026-03-05T12:00:08Z",
+      "end": "2026-03-05T12:00:08Z",
+      "artifacts": []
+    }
+  ]
+}
+```
+
+**Key points:**
+- `exec` ops are effects — they execute in a single pass (no observe ops to trigger two-pass)
+- Non-zero exit → `status: error` (not `denied` — the op ran, it just failed)
+- stdout/stderr always captured as artifacts even on error (essential for debugging)
+- `Done "trigger-33"` gated: skipped because `run-tests` has `status: error` — the system never advances terminal FSM state when world actions fail
+- `policy_rejected` for the curl op is `denied` (not `error`) because the op never executed
+- If `run-tests` had succeeded (exit 0) and `bad-cmd` was the only failure, `Done` would still be skipped — ALL effects must succeed for terminal coordination
+
+---
+
 ## References
 
 ### cnos Internal
@@ -1646,4 +2100,4 @@ The agent interface is `state/input.md → state/output.md` (conceptual). The LL
 
 ---
 
-*Document version 3.3.0. For comments and iteration, contact reviewers or open a thread in the hub.*
+*Document version 3.3.6. For comments and iteration, contact reviewers or open a thread in the hub.*
