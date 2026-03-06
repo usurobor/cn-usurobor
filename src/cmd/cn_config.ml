@@ -101,7 +101,8 @@ let load ~hub_path =
   in
   let d = Cn_shell.default_shell_config in
   let shell = {
-    Cn_shell.apply_mode = get_string_cfg "apply_mode" d.apply_mode;
+    Cn_shell.two_pass = get_string_cfg "two_pass" d.two_pass;
+    apply_mode = get_string_cfg "apply_mode" d.apply_mode;
     exec_enabled = get_bool_cfg "exec_enabled" d.exec_enabled;
     exec_allowlist = get_string_list "exec_allowlist";
     max_observe_ops = get_int "max_observe_ops" d.max_observe_ops 1;

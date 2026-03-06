@@ -82,6 +82,11 @@ let%expect_test "parse: lines without equals skipped" =
     ALSO_GOOD=yep
   |}]
 
+let%expect_test "parse: whitespace around key trimmed" =
+  let pairs = Cn_dotenv.parse "  ANTHROPIC_KEY = sk-ant-test" in
+  List.iter (fun (k, v) -> Printf.printf "%s=%s\n" k v) pairs;
+  [%expect {| ANTHROPIC_KEY=sk-ant-test |}]
+
 (* === Filesystem tests === *)
 
 let mk_temp_dir prefix =

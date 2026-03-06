@@ -36,7 +36,7 @@ let parse content =
       match String.index_opt trimmed '=' with
       | None -> None
       | Some i ->
-        let key = String.sub trimmed 0 i in
+        let key = String.sub trimmed 0 i |> String.trim in
         let value = String.sub trimmed (i + 1) (String.length trimmed - i - 1) in
         if valid_key key then
           Some (key, strip_quotes (String.trim value))

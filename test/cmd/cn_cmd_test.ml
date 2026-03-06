@@ -745,6 +745,30 @@ let%expect_test "config: CN_MODEL env overrides config file model" =
   [%expect {| model=claude-opus-4 poll=1 timeout=30 max=8192 users=[] tg=unset |}]
 
 
+let%expect_test "config: runtime.two_pass is parsed" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
+  with_temp_hub
+    ~config_json:{|{"runtime":{"two_pass":"off"}}|}
+    (fun hub_path ->
+      match Cn_config.load ~hub_path with
+      | Ok cfg -> Printf.printf "two_pass=%s\n" cfg.shell.Cn_shell.two_pass
+      | Error msg -> Printf.printf "error: %s\n" msg);
+  [%expect {| two_pass=off |}]
+
+let%expect_test "config: shell defaults when no shell keys" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
+  with_temp_hub (fun hub_path ->
+    match Cn_config.load ~hub_path with
+    | Ok cfg ->
+      Printf.printf "two_pass=%s apply_mode=%s exec=%b\n"
+        cfg.shell.Cn_shell.two_pass
+        cfg.shell.Cn_shell.apply_mode
+        cfg.shell.Cn_shell.exec_enabled
+    | Error msg -> Printf.printf "error: %s\n" msg);
+  [%expect {| two_pass=auto apply_mode=branch exec=false |}]
+
 (* === Cn_runtime: daemon helpers (filesystem) ===
 
    Tests is_in_flight, is_queued, and enqueue_telegram using

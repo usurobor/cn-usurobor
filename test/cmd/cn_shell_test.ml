@@ -3,6 +3,21 @@
     Tests the pure parsing core of the CN Shell capability runtime.
     All tests are deterministic — no I/O. *)
 
+let show_manifest raw =
+  let ops, receipts = Cn_shell.parse_ops_manifest raw in
+  Printf.printf "ops=%d receipts=%d\n" (List.length ops) (List.length receipts);
+  List.iter (fun r ->
+    Printf.printf "  %s %s %s\n"
+      r.Cn_shell.kind
+      (Cn_shell.string_of_receipt_status r.Cn_shell.status)
+      r.Cn_shell.reason
+  ) receipts;
+  List.iter (fun op ->
+    Printf.printf "  %s %s\n"
+      (Cn_shell.string_of_op_kind op.Cn_shell.kind)
+      (match op.Cn_shell.op_id with Some id -> id | None -> "none")
+  ) ops
+
 (* === Kind parsing === *)
 
 let%expect_test "op_kind_of_string: observe kinds" =
@@ -360,8 +375,13 @@ let%expect_test "receipts_to_json: container format" =
 
 (* === Shell config defaults === *)
 
+let%expect_test "default_shell_config: two_pass defaults to auto" =
+  Printf.printf "two_pass=%s\n" Cn_shell.default_shell_config.two_pass;
+  [%expect {| two_pass=auto |}]
+
 let%expect_test "default_shell_config values" =
   let c = Cn_shell.default_shell_config in
+  Printf.printf "two_pass: %s\n" c.two_pass;
   Printf.printf "apply_mode: %s\n" c.apply_mode;
   Printf.printf "exec_enabled: %b\n" c.exec_enabled;
   Printf.printf "exec_allowlist: %d\n" (List.length c.exec_allowlist);
@@ -369,6 +389,7 @@ let%expect_test "default_shell_config values" =
   Printf.printf "max_artifact_bytes: %d\n" c.max_artifact_bytes;
   Printf.printf "max_artifact_bytes_per_op: %d\n" c.max_artifact_bytes_per_op;
   [%expect {|
+    two_pass: auto
     apply_mode: branch
     exec_enabled: false
     exec_allowlist: 0
@@ -383,3 +404,60 @@ let%expect_test "parse: empty array" =
   let ops, receipts = Cn_shell.parse_ops_manifest "[]" in
   Printf.printf "ops: %d, receipts: %d\n" (List.length ops) (List.length receipts);
   [%expect {| ops: 0, receipts: 0 |}]
+
+(* === Phase validation === *)
+
+let%expect_test "parse: matching phase accepted (observe)" =
+  show_manifest {|[{"kind":"fs_read","phase":"observe","path":"README.md"}]|};
+  [%expect {|
+    ops=1 receipts=0
+      fs_read obs-01
+  |}]
+
+let%expect_test "parse: matching phase accepted (effect)" =
+  show_manifest {|[{"kind":"fs_write","op_id":"w1","phase":"effect","path":"a","content":""}]|};
+  [%expect {|
+    ops=1 receipts=0
+      fs_write w1
+  |}]
+
+let%expect_test "parse: phase mismatch denied (observe kind with effect phase)" =
+  show_manifest {|[{"kind":"fs_read","phase":"effect","path":"README.md"}]|};
+  [%expect {|
+    ops=0 receipts=1
+      fs_read denied phase_mismatch
+  |}]
+
+let%expect_test "parse: phase mismatch denied (effect kind with observe phase)" =
+  show_manifest {|[{"kind":"fs_write","op_id":"w1","phase":"observe","path":"a","content":""}]|};
+  [%expect {|
+    ops=0 receipts=1
+      fs_write denied phase_mismatch
+  |}]
+
+let%expect_test "parse: invalid phase string denied" =
+  show_manifest {|[{"kind":"fs_read","phase":"weird","path":"README.md"}]|};
+  [%expect {|
+    ops=0 receipts=1
+      fs_read denied invalid_phase
+  |}]
+
+let%expect_test "parse: absent phase accepted (no validation)" =
+  show_manifest {|[{"kind":"fs_read","path":"a"},{"kind":"fs_write","op_id":"w1","path":"b","content":""}]|};
+  [%expect {|
+    ops=2 receipts=0
+      fs_read obs-01
+      fs_write w1
+  |}]
+
+let%expect_test "parse: phase field stripped from fields list" =
+  let input = {|[{"kind":"git_diff","op_id":"d1","phase":"observe","rev":"HEAD~3"}]|} in
+  let ops, _ = Cn_shell.parse_ops_manifest input in
+  List.iter (fun op ->
+    Printf.printf "fields: %d\n" (List.length op.Cn_shell.fields);
+    List.iter (fun (k, _) -> Printf.printf "  %s\n" k) op.Cn_shell.fields
+  ) ops;
+  [%expect {|
+    fields: 1
+      rev
+  |}]

@@ -33,6 +33,10 @@ type op_kind =
   | Observe of observe_kind
   | Effect of effect_kind
 
+type op_phase =
+  | Observe_phase
+  | Effect_phase
+
 type typed_op = {
   kind : op_kind;
   op_id : string option;
@@ -63,7 +67,8 @@ type receipt = {
 }
 
 type shell_config = {
-  apply_mode : string;        (* "off" | "branch" | "working_tree" *)
+  two_pass : string;            (* "off" | "auto" *)
+  apply_mode : string;          (* "off" | "branch" | "working_tree" *)
   exec_enabled : bool;
   exec_allowlist : string list;
   max_observe_ops : int;
@@ -72,6 +77,7 @@ type shell_config = {
 }
 
 let default_shell_config = {
+  two_pass = "auto";
   apply_mode = "branch";
   exec_enabled = false;
   exec_allowlist = [];
@@ -132,6 +138,15 @@ let is_effect = function
   | Effect _ -> true
   | Observe _ -> false
 
+let phase_of_string = function
+  | "observe" -> Some Observe_phase
+  | "effect" -> Some Effect_phase
+  | _ -> None
+
+let phase_matches kind = function
+  | Observe_phase -> not (is_effect kind)
+  | Effect_phase -> is_effect kind
+
 (* === Receipt helpers === *)
 
 let string_of_receipt_status = function
@@ -164,9 +179,12 @@ let parse_single_op ~obs_counter json =
              ~status:Denied ~reason:"missing_kind")
   | Some kind_str ->
     let op_id = Cn_json.get_string "op_id" json in
+    let phase_raw = Cn_json.get_string "phase" json in
     let fields = match json with
       | Cn_json.Object pairs ->
-        List.filter (fun (k, _) -> k <> "kind" && k <> "op_id") pairs
+        List.filter (fun (k, _) ->
+          k <> "kind" && k <> "op_id" && k <> "phase"
+        ) pairs
       | _ -> []
     in
     match op_kind_of_string kind_str with
@@ -174,18 +192,33 @@ let parse_single_op ~obs_counter json =
       Error (make_receipt ~pass:"A" ~op_id ~kind:kind_str
                ~status:Denied ~reason:"unknown_op_kind")
     | Some kind ->
-      match kind with
-      | Effect _ when op_id = None ->
-        Error (make_receipt ~pass:"A" ~op_id:None ~kind:kind_str
-                 ~status:Denied ~reason:"missing_op_id")
-      | Observe _ ->
-        let resolved_id = match op_id with
-          | Some id -> id
-          | None -> assign_observe_id obs_counter
-        in
-        Ok { kind; op_id = Some resolved_id; fields }
-      | Effect _ ->
-        Ok { kind; op_id; fields }
+      let phase_check = match phase_raw with
+        | None -> Ok ()
+        | Some phase_str ->
+          match phase_of_string phase_str with
+          | None ->
+            Error (make_receipt ~pass:"A" ~op_id ~kind:kind_str
+                     ~status:Denied ~reason:"invalid_phase")
+          | Some phase when phase_matches kind phase -> Ok ()
+          | Some _ ->
+            Error (make_receipt ~pass:"A" ~op_id ~kind:kind_str
+                     ~status:Denied ~reason:"phase_mismatch")
+      in
+      match phase_check with
+      | Error r -> Error r
+      | Ok () ->
+        match kind with
+        | Effect _ when op_id = None ->
+          Error (make_receipt ~pass:"A" ~op_id:None ~kind:kind_str
+                   ~status:Denied ~reason:"missing_op_id")
+        | Observe _ ->
+          let resolved_id = match op_id with
+            | Some id -> id
+            | None -> assign_observe_id obs_counter
+          in
+          Ok { kind; op_id = Some resolved_id; fields }
+        | Effect _ ->
+          Ok { kind; op_id; fields }
 
 (** Check for duplicate op_ids within a manifest.
     Returns list of ops/receipts with duplicates converted to denials. *)
