@@ -29,7 +29,13 @@ jobs:
       - name: Run tests (cram + unit)
         run: |
           eval $(opam env)
-          dune runtest
+          mkdir -p "$TMPDIR"
+          dune runtest -j 1
+        env:
+          # Isolate temp files per CI run — ppx_expect's internal
+          # dune_*_stderr capture files race under parallel execution
+          # on GHA runners. Combined with -j 1 to serialize tests.
+          TMPDIR: ${{ runner.temp }}/dune-tests
 
       - name: Smoke test
         run: |
