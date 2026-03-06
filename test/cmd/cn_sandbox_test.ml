@@ -276,3 +276,59 @@ let%expect_test "validate: normalized .. before symlink resolution" =
   with_test_hub (fun hub ->
     show_validate hub ~access:Read_access "src/../docs/README.md");
   [%expect {| ok: docs/README.md |}]
+
+(* === Symlinked parent directory bypass attacks === *)
+
+let%expect_test "validate: write through symlinked parent into .cn/ denied" =
+  with_test_hub (fun hub ->
+    (* docs/link is a symlink to .cn/ — writing docs/link/new.txt
+       must resolve to .cn/new.txt and be denied *)
+    Unix.symlink
+      (Filename.concat hub ".cn")
+      (Filename.concat hub "docs/link");
+    show_validate hub ~access:Write_access "docs/link/new.txt");
+  [%expect {| denied: path_denied |}]
+
+let%expect_test "validate: write through symlinked parent escaping hub denied" =
+  with_test_hub (fun hub ->
+    (* docs/escape is a symlink to /tmp — writing docs/escape/evil.txt
+       must resolve outside hub and be denied *)
+    Unix.symlink "/tmp" (Filename.concat hub "docs/escape");
+    show_validate hub ~access:Write_access "docs/escape/evil.txt");
+  [%expect {| denied: symlink_escape |}]
+
+let%expect_test "validate: read through symlinked parent into .git/ denied" =
+  with_test_hub (fun hub ->
+    (* Create .git/ dir for the test *)
+    let git_dir = Filename.concat hub ".git" in
+    (try Unix.mkdir git_dir 0o755 with Unix.Unix_error (Unix.EEXIST, _, _) -> ());
+    let touch path =
+      let oc = open_out path in close_out oc
+    in
+    touch (Filename.concat git_dir "config");
+    (* src/sneaky is a symlink to .git/ *)
+    Unix.symlink
+      (Filename.concat hub ".git")
+      (Filename.concat hub "src/sneaky");
+    show_validate hub ~access:Read_access "src/sneaky/config");
+  [%expect {| denied: path_denied |}]
+
+let%expect_test "validate: write new file through valid symlinked parent ok" =
+  with_test_hub (fun hub ->
+    (* docs/srclink is a symlink to src/ (allowed) —
+       writing docs/srclink/new.ml should resolve to src/new.ml *)
+    Unix.symlink
+      (Filename.concat hub "src")
+      (Filename.concat hub "docs/srclink");
+    show_validate hub ~access:Write_access "docs/srclink/new.ml");
+  [%expect {| ok: src/new.ml |}]
+
+let%expect_test "validate: deeply nested nonexistent path through symlink denied" =
+  with_test_hub (fun hub ->
+    (* docs/link → .cn/, write docs/link/a/b/c.txt should still resolve
+       the symlinked parent and deny *)
+    Unix.symlink
+      (Filename.concat hub ".cn")
+      (Filename.concat hub "docs/link2");
+    show_validate hub ~access:Write_access "docs/link2/a/b/c.txt");
+  [%expect {| denied: path_denied |}]

@@ -136,6 +136,25 @@ let make_relative ~hub_root path =
   else
     None
 
+(** Find the deepest existing ancestor of a path and the remaining suffix.
+    Returns (existing_ancestor, suffix_components).
+    E.g. for "/hub/docs/link/new.txt" where /hub/docs/link exists:
+    returns ("/hub/docs/link", ["new.txt"]) *)
+let find_existing_ancestor path =
+  let rec walk current suffix =
+    if Sys.file_exists current then
+      (current, suffix)
+    else
+      let parent = Filename.dirname current in
+      let base = Filename.basename current in
+      if parent = current then
+        (* Reached filesystem root without finding anything *)
+        (current, suffix)
+      else
+        walk parent (base :: suffix)
+  in
+  walk path []
+
 (** Full path validation with symlink resolution.
     This is the only function with I/O (Unix.realpath).
     Returns Ok resolved_relative_path or Error denial_reason.
@@ -145,35 +164,58 @@ let make_relative ~hub_root path =
     2. Collapse .. (deny if escapes)
     3. Resolve symlinks via realpath (deny if escapes hub)
     4. Apply denylist to resolved canonical relative path
-    5. For write access, check protected files *)
+    5. For write access, check protected files
+
+    For paths whose target does not yet exist (new files), we resolve
+    the deepest existing ancestor and append the remaining suffix.
+    This prevents symlinked parent directories from bypassing the
+    denylist — e.g. docs/link/new.txt where docs/link → .cn/. *)
 let validate_path ~hub_path ~access raw_path =
   (* Steps 1-2: normalize *)
   match normalize_path raw_path with
   | Error reason -> Error reason
   | Ok normalized ->
-    (* Step 3: resolve symlinks *)
-    let full_path = Filename.concat hub_path normalized in
-    let resolved =
-      try Some (Unix.realpath full_path)
-      with Unix.Unix_error _ -> None
-    in
     let hub_canonical =
       try Some (Unix.realpath hub_path)
       with Unix.Unix_error _ -> None
     in
-    match resolved, hub_canonical with
-    | None, _ ->
-      (* File doesn't exist yet — for writes this is fine, use normalized.
-         For reads, the executor will handle the missing-file error.
-         Still apply denylist to the normalized path. *)
-      check_access ~access normalized
-    | _, None ->
+    match hub_canonical with
+    | None ->
       (* Hub doesn't exist — shouldn't happen in practice *)
       Error Path_escape
-    | Some resolved_abs, Some hub_abs ->
-      (* Check resolved path is under hub *)
-      match make_relative ~hub_root:hub_abs resolved_abs with
-      | None -> Error Symlink_escape
-      | Some resolved_rel ->
-        (* Step 4+5: denylist and protected file check *)
-        check_access ~access resolved_rel
+    | Some hub_abs ->
+    (* Step 3: resolve symlinks *)
+    let full_path = Filename.concat hub_abs normalized in
+    let resolved =
+      try Some (Unix.realpath full_path)
+      with Unix.Unix_error _ -> None
+    in
+    match resolved with
+    | Some resolved_abs ->
+      (* Full path exists — check it's under hub *)
+      (match make_relative ~hub_root:hub_abs resolved_abs with
+       | None -> Error Symlink_escape
+       | Some resolved_rel ->
+         (* Step 4+5: denylist and protected file check *)
+         check_access ~access resolved_rel)
+    | None ->
+      (* Target doesn't exist yet. Resolve deepest existing ancestor
+         to catch symlinked parent directories. *)
+      let ancestor, suffix = find_existing_ancestor full_path in
+      let ancestor_resolved =
+        try Some (Unix.realpath ancestor)
+        with Unix.Unix_error _ -> None
+      in
+      (match ancestor_resolved with
+       | None ->
+         (* No ancestor exists at all — fall back to normalized path *)
+         check_access ~access normalized
+       | Some ancestor_abs ->
+         (* Reconstruct: resolved_ancestor + suffix components *)
+         let reconstructed =
+           List.fold_left Filename.concat ancestor_abs suffix
+         in
+         match make_relative ~hub_root:hub_abs reconstructed with
+         | None -> Error Symlink_escape
+         | Some resolved_rel ->
+           check_access ~access resolved_rel)
