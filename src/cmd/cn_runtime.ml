@@ -180,7 +180,11 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
     Cn_agent.execute_op hub_path name trigger_id op
   ) ops;
 
-  (* 4. Project to Telegram if from Telegram *)
+  (* 4. Project to Telegram if from Telegram.
+        Uses Cn_projection.project_reply for crash-recovery idempotency:
+        marker state/projected/telegram/{trigger_id}.sent is created
+        atomically (O_CREAT|O_EXCL) before sending. On recovery replay,
+        the marker prevents duplicate messages. *)
   (if from = "telegram" then
      match config.telegram_token with
      | Some token ->
@@ -193,16 +197,22 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
            if k = "chat_id" then Some v else None) |> Option.value ~default:"" in
          (match int_of_string_opt chat_id_str with
           | Some chat_id ->
-              let payload = telegram_payload ops body in
-              (match Cn_telegram.send_message ~token ~chat_id ~text:payload with
-               | Ok () ->
-                   Cn_hub.log_action hub_path "process.telegram_reply"
-                     (Printf.sprintf "chat_id:%d" chat_id)
-               | Error msg ->
-                   Cn_hub.log_action hub_path "process.telegram_error"
-                     (Printf.sprintf "chat_id:%d error:%s" chat_id msg);
-                   print_endline (Cn_fmt.warn
-                     (Printf.sprintf "Telegram reply failed: %s" msg)))
+              (match Cn_projection.project_reply ~hub_path
+                       ~projection:"telegram" ~trigger_id with
+               | `Already_projected ->
+                   Cn_hub.log_action hub_path "process.telegram_skip"
+                     (Printf.sprintf "already_projected trigger:%s" trigger_id)
+               | `Send ->
+                   let payload = telegram_payload ops body in
+                   (match Cn_telegram.send_message ~token ~chat_id ~text:payload with
+                    | Ok () ->
+                        Cn_hub.log_action hub_path "process.telegram_reply"
+                          (Printf.sprintf "chat_id:%d" chat_id)
+                    | Error msg ->
+                        Cn_hub.log_action hub_path "process.telegram_error"
+                          (Printf.sprintf "chat_id:%d error:%s" chat_id msg);
+                        print_endline (Cn_fmt.warn
+                          (Printf.sprintf "Telegram reply failed: %s" msg))))
           | None ->
               Cn_hub.log_action hub_path "process.telegram_skip"
                 "no chat_id in input frontmatter")
@@ -275,7 +285,7 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
            The audit text in input.md is for humans; the LLM needs the
            structured format with system prompt + message turns. *)
         let packed = Cn_context.pack ~hub_path ~trigger_id
-          ~message:inbound_message ~from in
+          ~message:inbound_message ~from ~shell_config:config.shell () in
 
         match Cn_llm.call ~api_key:config.anthropic_key
                 ~model:config.model ~max_tokens:config.max_tokens
