@@ -114,10 +114,12 @@ Examples:
 ### Layer C — Hub-local overrides
 
 Optional local files inside the hub that shadow bundled/installed assets.
+These live under `agent/` in the hub root — human-managed cognitive overrides,
+not source code.
 
 Examples:
-- `hub/src/agent/mindsets/ENGINEERING.md` (override core)
-- `hub/src/agent/skills/eng/my-team/SKILL.md` (extend installed)
+- `agent/mindsets/ENGINEERING.md` (override core)
+- `agent/skills/eng/my-team/SKILL.md` (extend installed)
 
 ### Resolution order
 
@@ -288,7 +290,7 @@ More npm-like for discovery, but still git-native. No registry server.
 2. For each package: `git clone --depth=1 --branch=v<version> <source>` (or `git fetch <source> <rev>` for exact commit)
 3. Verify `integrity` hash
 4. Copy runtime-relevant dirs (`mindsets/`, `skills/`) into `.cn/vendor/packages/<name>@<version>/`
-5. Materialize core assets from template into `.cn/vendor/core/`
+5. Materialize bundled core assets into `.cn/vendor/core/`
 
 No network access happens outside this explicit command.
 
@@ -315,7 +317,7 @@ Single source. No layering.
 ```
 load_mindsets ~hub_path ~role
   ↓
-  1. scan hub-local overrides:  {hub_path}/src/agent/mindsets/
+  1. scan hub-local overrides:  {hub_path}/agent/mindsets/
   2. scan installed packages:   {hub_path}/.cn/vendor/packages/*/mindsets/
   3. scan bundled core:         {hub_path}/.cn/vendor/core/mindsets/
   ↓
@@ -327,7 +329,7 @@ load_mindsets ~hub_path ~role
 ```
 load_skills ~hub_path ~message ~role ~n
   ↓
-  1. walk hub-local skills:     {hub_path}/src/agent/skills/**/SKILL.md
+  1. walk hub-local skills:     {hub_path}/agent/skills/**/SKILL.md
   2. walk installed packages:   {hub_path}/.cn/vendor/packages/*/skills/**/SKILL.md
   3. walk bundled core skills:  {hub_path}/.cn/vendor/core/skills/**/SKILL.md
   ↓
@@ -449,9 +451,13 @@ guessing.
 ### Phase 1: `cn setup` materializes core (backward compatible)
 
 When `cn setup` runs on a fresh hub:
-1. Copy core mindsets/skills from template repo → `.cn/vendor/core/`
+1. Materialize bundled core assets → `.cn/vendor/core/`
 2. Create minimal `.cn/deps.json` with profile defaults
 3. Resolve and install profile-default packages
+
+In developer checkouts, bundled core may be sourced from the local template
+repo during `cn setup` / `cn deps restore`. In production installs, core
+assets are bundled with the `cn` binary/package.
 
 ### Phase 2: `cn_context.ml` uses CAR
 
