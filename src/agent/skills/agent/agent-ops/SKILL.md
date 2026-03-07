@@ -1,6 +1,6 @@
 # Agent Ops
 
-Operations an agent can perform via output.md.
+Operations an agent can request via `state/output.md`.
 
 ---
 
@@ -8,12 +8,21 @@ Operations an agent can perform via output.md.
 
 When processing input.md, the agent writes output.md with:
 1. Required `id` field matching input's id
-2. Optional operation fields in frontmatter
-3. Response body
+2. Optional legacy coordination operation fields in frontmatter
+3. Optional typed capability ops in `ops:`
+4. Response body
 
-cn parses output.md and executes any operations found.
+`cn` parses output.md and executes any valid operations found.
 
-## Operations
+There are **two layers**:
+
+1. **Legacy coordination ops** — reply, send, done, defer, etc.
+2. **Typed capability ops** — CN Shell observe/effect requests in `ops:`
+
+Use coordination ops for thread / routing / lifecycle intent.
+Use typed ops when you need `cn` to inspect or mutate governed workspace state.
+
+## Legacy Coordination Ops
 
 All operations go in output.md frontmatter as `key: value`.
 
@@ -115,13 +124,96 @@ Reviewed Pi's proposal. Approved with minor suggestions.
 The wake mechanism could use retry logic - surfacing as MCA.
 ```
 
+## Typed Capability Ops (ops:)
+
+Typed capability requests go in a single-line JSON array in frontmatter:
+
+```markdown
+---
+id: review-pi-proposal
+ops: [{"kind":"fs_read","path":"mindsets/wisdom/WISDOM.md"}]
+---
+I need to inspect the wisdom mindset before deciding.
+```
+
+### Important
+
+- `ops:` MUST be frontmatter, not body text
+- `ops:` MUST be JSON, not XML, not YAML, not pseudo-code
+- Do not invent wrappers like `<observe>...</observe>`
+- Do not emit shell commands like `cat file` or `git diff`
+
+### Common observe ops
+
+- `fs_read`
+- `fs_list`
+- `fs_glob`
+- `git_status`
+- `git_diff`
+- `git_log`
+- `git_grep`
+
+### Common effect ops
+
+- `fs_write`
+- `fs_patch`
+- `git_branch`
+- `git_commit`
+- `exec` (only when explicitly enabled by runtime policy)
+
+### Example: ask to inspect a file
+
+```markdown
+---
+id: wisdom-check-001
+reply: wisdom-check-001|Gathering the relevant file first
+ops: [{"kind":"fs_read","path":"mindsets/wisdom/WISDOM.md"}]
+---
+I want to read the wisdom file before I answer.
+```
+
+### Example: ask to inspect, then later patch
+
+Pass A:
+
+```markdown
+---
+id: fix-readme-001
+ops: [{"kind":"fs_read","path":"README.md"}]
+---
+Let me inspect the README first.
+```
+
+Pass B (after cn feeds back evidence):
+
+```markdown
+---
+id: fix-readme-001
+reply: fix-readme-001|I prepared a patch
+ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}]
+---
+Here is the proposed README fix.
+```
+
+### When to use which layer
+
+- Need to reply / route / complete / defer → use legacy coordination ops
+- Need to read / diff / patch / branch / commit / exec → use `ops:`
+
+### Two-pass intuition
+
+If you request observe ops, `cn` may run a bounded second pass so you can see the evidence
+before proposing effects. Do not assume you can observe and mutate in one step.
+
 ## Rules
 
 1. `id` field is required and must match input's id
-2. Multiple operations allowed in single output
-3. Operations execute in order listed
-4. IO pair archived to logs/input/ + logs/output/ before executing ops (per LOGGING.md)
-5. cn logs operations to system log (stdout, captured by systemd/cron)
+2. Multiple operations are allowed in a single output
+3. Legacy coordination ops execute in frontmatter order
+4. Typed capability ops are validated under policy; unknown or invalid ops are denied
+5. IO pair is archived to logs/input/ + logs/output/ before executing effects (per LOGGING.md)
+6. `cn` logs operations to system log (stdout, captured by systemd/cron)
+7. Never emit XML-style pseudo-tool syntax
 
 ## RACI: A vs I
 
@@ -189,3 +281,5 @@ type agent_op =
   | Delete of string
   | Surface of string
 ```
+
+Typed capability ops are represented separately by the CN Shell typed-op schema.
