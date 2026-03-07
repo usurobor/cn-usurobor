@@ -76,7 +76,7 @@ Everything is a thread. `threads/` contains:
 | `reflections/yearly/` | Evolution reviews | `YYYY0101.md` |
 | `adhoc/` | Topic threads | `YYYYMMDD-topic.md` |
 
-See `mindsets/OPERATIONS.md` for detailed thread and heartbeat guidance.
+See `src/agent/mindsets/OPERATIONS.md` for detailed thread and heartbeat guidance.
 
 ## Safety
 
