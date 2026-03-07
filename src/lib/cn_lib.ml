@@ -84,6 +84,11 @@ module Agent = struct
   type mode = Cron | Process | Daemon | Stdio
 end
 
+module Deps = struct
+  type cmd = List | Restore | Doctor | Add of string | Remove of string
+           | Update of string option | Vendor
+end
+
 module Gtd = struct
   type cmd =
     | Delete of string
@@ -216,6 +221,7 @@ type command =
   | Daily            (* Create/open daily reflection *)
   | Weekly           (* Create/open weekly reflection *)
   | Setup            (* System setup: logrotate + cron *)
+  | Deps of Deps.cmd (* Dependency management *)
 
 (* Exhaustive - compiler warns on missing cases *)
 let string_of_command = function
@@ -271,6 +277,14 @@ let string_of_command = function
   | Daily -> "daily"
   | Weekly -> "weekly"
   | Setup -> "setup"
+  | Deps Deps.List -> "deps list"
+  | Deps Deps.Restore -> "deps restore"
+  | Deps Deps.Doctor -> "deps doctor"
+  | Deps (Deps.Add pkg) -> "deps add " ^ pkg
+  | Deps (Deps.Remove pkg) -> "deps remove " ^ pkg
+  | Deps (Deps.Update None) -> "deps update"
+  | Deps (Deps.Update (Some pkg)) -> "deps update " ^ pkg
+  | Deps Deps.Vendor -> "deps vendor"
 
 (* === Alias Expansion === *)
 
@@ -310,6 +324,17 @@ let parse_queue_cmd = function
 let parse_mca_cmd = function
   | [] | ["list"] -> Some Mca.List
   | "add" :: rest when rest <> [] -> Some (Mca.Add (String.concat " " rest))
+  | _ -> None
+
+let parse_deps_cmd = function
+  | [] | ["list"] -> Some Deps.List
+  | ["restore"] -> Some Deps.Restore
+  | ["doctor"] -> Some Deps.Doctor
+  | ["add"; pkg] -> Some (Deps.Add pkg)
+  | ["remove"; pkg] -> Some (Deps.Remove pkg)
+  | ["update"] -> Some (Deps.Update None)
+  | ["update"; pkg] -> Some (Deps.Update (Some pkg))
+  | ["vendor"] -> Some Deps.Vendor
   | _ -> None
 
 let parse_agent_mode = function
@@ -384,6 +409,7 @@ let rec parse_command = function
   | "outbox" :: rest -> parse_outbox_cmd rest |> Option.map (fun c -> Outbox c)
   | "peer" :: rest -> parse_peer_cmd rest |> Option.map (fun c -> Peer c)
   | "queue" :: rest -> parse_queue_cmd rest |> Option.map (fun c -> Queue c)
+  | "deps" :: rest -> parse_deps_cmd rest |> Option.map (fun c -> Deps c)
   | "mca" :: rest -> parse_mca_cmd rest |> Option.map (fun c -> Mca c)
   | ["sync"] -> Some Sync
   | ["next"] -> Some Next
@@ -619,6 +645,15 @@ Commands:
   daily               Create/show daily reflection
   weekly              Create/show weekly reflection
   
+  # Dependencies
+  deps [list]         List installed packages
+  deps restore        Install from lockfile (deterministic)
+  deps doctor         Verify installed assets match lockfile
+  deps add <pkg>      Add dependency to .cn/deps.json
+  deps remove <pkg>   Remove dependency
+  deps update [pkg]   Update lockfile (re-resolve within ranges)
+  deps vendor         Commit vendor tree for airgapped use
+
   # Hub management
   init [name]         Create new hub
   setup               System setup (logrotate + cron) — run with sudo
@@ -649,7 +684,7 @@ Runtime:
   Daemon mode (--daemon) replaces cron with Telegram long-poll.
 |}
 
-let version = "3.3.0"
+let version = "3.4.0"
 let cnos_commit = Cn_build_info.cnos_commit
 
 (* === Version Comparison (pure, semantic) === *)

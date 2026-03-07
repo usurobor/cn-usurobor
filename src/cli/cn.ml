@@ -115,4 +115,13 @@ let () =
           | Daily -> Cn_gtd.run_daily hub_path
           | Weekly -> Cn_gtd.run_weekly hub_path
           | Setup -> Cn_system.run_setup hub_path
+          | Deps Deps.List -> Cn_deps.run_list ~hub_path
+          | Deps Deps.Restore -> Cn_deps.run_restore ~hub_path
+          | Deps Deps.Doctor -> Cn_deps.run_doctor ~hub_path
+          | Deps (Deps.Add pkg) -> Cn_deps.run_add ~hub_path pkg
+          | Deps (Deps.Remove pkg) -> Cn_deps.run_remove ~hub_path pkg
+          | Deps (Deps.Update _pkg_opt) ->
+              print_endline (Cn_fmt.info
+                "deps update: re-resolve not yet implemented (v3.4.1)")
+          | Deps Deps.Vendor -> Cn_deps.run_vendor ~hub_path
           | Help | Version | Init _ | Update | Release _ -> ()

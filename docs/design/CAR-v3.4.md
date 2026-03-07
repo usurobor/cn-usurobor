@@ -396,7 +396,9 @@ Core assets are protected:
 ### Integrity verification
 
 On `cn deps restore`:
-- Verify `integrity` hash against fetched content
+- If `integrity` is present in the lockfile entry, verify sha256 hash
+  against fetched content. In v3.4.0, integrity is optional; v3.4.1
+  makes it required.
 - Reject packages where `engines.cnos` does not match running cnos version
 - Log warnings for unsigned packages (future: optional signing)
 
