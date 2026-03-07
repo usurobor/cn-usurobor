@@ -30,16 +30,35 @@ workspace/
 
 ## Every Session
 
-Before doing anything else:
+There are two modes:
 
-1. Read `cn-<yourname>/spec/SOUL.md` — this is who you are.
-2. Read `cn-<yourname>/spec/USER.md` — this is who you're helping.
-3. Read recent daily threads: `threads/daily/YYYYMMDD.md` (today + yesterday).
-4. From template (`cnos/`), ingest:
-   1. Mindsets under `mindsets/` — COHERENCE, ENGINEERING, WRITING, OPERATIONS, PERSONALITY, MEMES.
-   2. Skills under `skills/` — read `SKILL.md` when you need to use a skill.
+### 1) Runtime mode (normal)
 
-Don't ask permission. Just do it.
+When `cn` wakes you via `state/input.md`, your context is already packed for you.
+You do **not** need to manually reopen hub/template files unless the human explicitly
+asks you to inspect something beyond what was packed.
+
+Packed context normally includes:
+1. `spec/SOUL.md`
+2. `spec/USER.md`
+3. Mindsets
+4. Recent reflections
+5. Relevant skills
+6. Recent conversation
+7. Current inbound message
+8. (When enabled) CN Shell capability block
+
+In runtime mode:
+- read `state/input.md`
+- think
+- write `state/output.md`
+- let `cn` execute anything post-call
+
+### 2) Manual / debugging mode
+
+If a human is interacting with you outside the normal runtime path, you may need to
+read files manually to reconstruct context. In that case, prefer the same order:
+SOUL → USER → mindsets → reflections → skills → current task.
 
 ## Threads
 
@@ -61,18 +80,26 @@ See `mindsets/OPERATIONS.md` for detailed thread and heartbeat guidance.
 
 ## Safety
 
-**Core rule: No IO or exec unless explicitly instructed by human.**
+**Core rule: no direct IO / exec / git authority.**
 
-- No automated external actions (HTTP calls, sending messages, exec)
-- No destructive commands without asking
-- `trash` > `rm` (recoverable beats gone forever)
-- Don't exfiltrate private data. Ever.
+You do not directly execute shell commands, git commands, or network actions.
+If you need filesystem or git evidence, request it declaratively via CN Shell typed ops
+in `state/output.md`; `cn` validates and executes them post-call under policy.
+
+- No direct external actions (HTTP calls, sending messages, exec)
+- No destructive commands
+- Do not exfiltrate private data. Ever.
+- Do not invent ad-hoc tool syntaxes.
 
 **What you do:**
 
 1. Read `state/input.md` when it exists
 2. Process the task
-3. Write `state/output.md` with result (status code + details)
+3. Write `state/output.md` with:
+   - required `id`
+   - optional legacy coordination ops (`reply:`, `send:`, `done:`, etc.)
+   - optional typed capability ops in `ops:`
+   - markdown body
 4. On heartbeat: reflections only (daily threads)
 
 **What you don't do:**
@@ -80,14 +107,23 @@ See `mindsets/OPERATIONS.md` for detailed thread and heartbeat guidance.
 - Delete or move input.md (cn does that)
 - Poll, fetch, or check external systems
 - Run cron jobs or scheduled tasks (cn does that)
-- Execute shell commands unless human explicitly asks
-- Send messages unless human explicitly asks
+- Execute shell commands directly
+- Send messages directly
 
 If `input.md` doesn't exist: do nothing. Wait for cn to provide work.
 
-## Tools
+## Skills and Capabilities
 
-Skills provide your tools. When you need one, check its `SKILL.md`. Keep local notes (camera names, SSH details, voice preferences) in `TOOLS.md`.
+Skills are instructions and constraints, not executable tools.
+When you need one, read its `SKILL.md` and follow it.
+
+CN Shell capabilities are requested through `ops:` in frontmatter.
+They are not XML tags, not code blocks, and not inline pseudo-calls.
+
+If you need to read a file, ask with a typed op manifest.
+If you need to reply or route work, use legacy coordination ops.
+
+Keep local notes (camera names, SSH details, voice preferences) in `TOOLS.md`.
 
 ## Working Together
 
@@ -99,31 +135,25 @@ This workspace is a joint system: a human + an agent.
 
 ## Git-Native Coordination
 
-**Use git primitives, not platform social features.**
+**Use git-native coordination through `cn`, not direct shell access.**
 
-As a cnos, you coordinate through git itself:
+Branches, commits, and merges remain the coordination substrate.
+But in runtime mode, you do **not** run git directly.
+If git evidence or git mutations are needed:
+- request observe/effect ops in `ops:`
+- let `cn` execute them under policy
 
-- **Branches** propose changes
-- **Commits** are the proposals
-- **Merges** accept proposals
-- **Push/pull** synchronize state
+Your human (or repo owner) still reviews/merges using git, not platform social features.
 
-You do NOT use:
+## Output Discipline
 
-- GitHub Pull Requests (human code review UI)
-- GitHub Issues (human task tracking)
-- GitHub Discussions (human forum)
-- Any platform-specific social features
+Never emit pseudo-tool syntaxes such as:
+- XML tags like `<observe><fs_read>...`
+- markdown "tool call" blocks
+- ad-hoc imperative shell snippets
 
-**Why?** These are human social layers built on top of git. You have direct access to git. Use it directly.
-
-When you want to propose a change to another repo:
-1. Clone/pull the repo
-2. Create a branch
-3. Make commits
-4. Push the branch
-
-Your human (or the repo owner) can review and merge with `git merge`. No PR needed.
+Capability requests MUST go in frontmatter `ops:` as a single-line JSON array.
+See `src/agent/skills/agent/agent-ops/SKILL.md`.
 
 ## Make It Yours
 
