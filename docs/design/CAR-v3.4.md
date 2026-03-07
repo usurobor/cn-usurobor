@@ -287,10 +287,17 @@ More npm-like for discovery, but still git-native. No registry server.
 
 `cn deps restore` (or `cn deps install`):
 1. Read `.cn/deps.lock.json`
-2. For each package: `git clone --depth=1 --branch=v<version> <source>` (or `git fetch <source> <rev>` for exact commit)
-3. Verify `integrity` hash
-4. Copy runtime-relevant dirs (`mindsets/`, `skills/`) into `.cn/vendor/packages/<name>@<version>/`
-5. Materialize bundled core assets into `.cn/vendor/core/`
+2. Materialize bundled core assets into `.cn/vendor/core/`
+3. For each locked package not already installed:
+   a. `git init` temp dir, `git fetch <source> <rev> --depth=1`
+   b. `git checkout <rev>` — the lockfile rev is authoritative, not a tag/branch
+   c. If `integrity` is present, verify sha256 (optional in v3.4.0, required in v3.4.1)
+   d. Copy runtime-relevant dirs (`mindsets/`, `skills/`) into `.cn/vendor/packages/<name>@<version>/`
+   e. Clean up temp dir
+
+Tags and branches can move; the lockfile pins a commit hash. Restore
+must checkout that exact rev for deterministic resolution. Tags are used
+during `cn deps update` (resolve phase), not during `restore` (install phase).
 
 No network access happens outside this explicit command.
 
@@ -323,7 +330,13 @@ load_mindsets ~hub_path ~role
   ↓
   merge (hub-local wins > package > core)
   ↓
-  deterministic load order: COHERENCE → role-file → WRITING → OPERATIONS → PERSONALITY → MEMES
+  deterministic load order (all 10 core mindsets):
+  COHERENCE → role-file → ENGINEERING → PM → WRITING → OPERATIONS →
+  PERSONALITY → MEMES → THINKING → WISDOM → FUNCTIONAL
+
+  Role-file inserts the active role's mindset second (e.g. if role=engineer,
+  ENGINEERING is loaded at position 2; it is not duplicated later).
+  All 10 are loaded if present — no "file exists but agent never sees it".
 ```
 
 ```
