@@ -11,7 +11,7 @@ Read `spec/SOUL.md` to understand who you are. Then run the self-cohere or confi
 After cohering, you have two repos:
 
 - **Hub** (`cn-<yourname>/`) — your personal identity + state
-- **Template** (`cnos/`) — generic skills, mindsets, docs
+- **Template** (`cnos/`) — generic agent instructions and runtime docs
 
 ```
 workspace/
@@ -21,8 +21,8 @@ workspace/
 │   ├── README.md
 │   └── state/
 └── cnos/          ← template (generic, shared)
-    ├── skills/
-    ├── mindsets/
+    ├── src/agent/skills/
+    ├── src/agent/mindsets/
     └── docs/
 ```
 
@@ -68,12 +68,12 @@ Everything is a thread. `threads/` contains:
 
 | Directory | Purpose | Naming |
 |-----------|---------|--------|
-| `daily/` | Daily reflections | `YYYYMMDD.md` |
-| `weekly/` | Weekly rollups | `YYYYMMDD.md` (Monday) |
-| `monthly/` | Monthly reviews | `YYYYMM01.md` |
-| `quarterly/` | Strategic alignment | `YYYYMM01.md` (Q start) |
-| `half/` | Half-yearly reviews | `YYYYMM01.md` (H start) |
-| `yearly/` | Evolution reviews | `YYYY0101.md` |
+| `reflections/daily/` | Daily reflections | `YYYYMMDD.md` |
+| `reflections/weekly/` | Weekly rollups | `YYYYMMDD.md` (Monday) |
+| `reflections/monthly/` | Monthly reviews | `YYYYMM01.md` |
+| `reflections/quarterly/` | Strategic alignment | `YYYYMM01.md` (Q start) |
+| `reflections/half/` | Half-yearly reviews | `YYYYMM01.md` (H start) |
+| `reflections/yearly/` | Evolution reviews | `YYYY0101.md` |
 | `adhoc/` | Topic threads | `YYYYMMDD-topic.md` |
 
 See `mindsets/OPERATIONS.md` for detailed thread and heartbeat guidance.

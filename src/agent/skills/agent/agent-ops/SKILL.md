@@ -131,9 +131,9 @@ Typed capability requests go in a single-line JSON array in frontmatter:
 ```markdown
 ---
 id: review-pi-proposal
-ops: [{"kind":"fs_read","path":"mindsets/wisdom/WISDOM.md"}]
+ops: [{"kind":"fs_read","path":"src/agent/mindsets/COHERENCE.md"}]
 ---
-I need to inspect the wisdom mindset before deciding.
+I need to inspect the coherence mindset before deciding.
 ```
 
 ### Important
@@ -167,9 +167,9 @@ I need to inspect the wisdom mindset before deciding.
 ---
 id: wisdom-check-001
 reply: wisdom-check-001|Gathering the relevant file first
-ops: [{"kind":"fs_read","path":"mindsets/wisdom/WISDOM.md"}]
+ops: [{"kind":"fs_read","path":"src/agent/mindsets/COHERENCE.md"}]
 ---
-I want to read the wisdom file before I answer.
+I want to read the coherence mindset before I answer.
 ```
 
 ### Example: ask to inspect, then later patch
