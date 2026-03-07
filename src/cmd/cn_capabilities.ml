@@ -75,4 +75,13 @@ let render (config : Cn_shell.shell_config) =
   (* max_passes: hard limit, always 2 *)
   Buffer.add_string buf "max_passes: 2\n";
 
+  (* Canonical emission examples — always present so the model sees
+     the exact ops: syntax on every wake-up *)
+  Buffer.add_string buf "syntax: frontmatter key `ops:` with a single-line JSON array\n";
+  Buffer.add_string buf
+    "example_observe: ops: [{\"kind\":\"fs_read\",\"path\":\"README.md\"}]\n";
+  if effects_enabled then
+    Buffer.add_string buf
+      "example_effect: ops: [{\"kind\":\"fs_patch\",\"op_id\":\"patch-001\",\"path\":\"README.md\",\"unified_diff\":\"...\"}]\n";
+
   Buffer.contents buf
