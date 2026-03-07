@@ -89,8 +89,11 @@ Three asset layers, resolved bottom-up:
 
 ### Layer A — Bundled core assets
 
-Shipped with `cnos` itself. Always present (the template repo is the
-distribution vehicle for these).
+Shipped with the `cn` binary/package. Always present after `cn setup`.
+
+**Distribution source** may be the template repo (or a release artifact).
+**Runtime source** is `.cn/vendor/core/` — wake-up never reads the template
+repo directly.
 
 Contents:
 - core mindsets: COHERENCE, ENGINEERING, PM, WRITING, OPERATIONS, PERSONALITY, MEMES, THINKING, WISDOM, FUNCTIONAL
@@ -255,10 +258,11 @@ Installed assets must be local to the hub, vendor-style.
 ```
 
 Notes:
-- `core/` is materialized from bundled runtime assets (template repo) for visibility and debugging
+- `core/` is materialized from bundled assets at setup/restore time for visibility and debugging
 - Package dirs are immutable by version
 - Wake-up reads only from `.cn/vendor/` + optional hub-local overrides
-- `.cn/vendor/` SHOULD be in `.gitignore` (reproducible from lockfile), but MAY be committed for airgapped environments
+- `.cn/vendor/` is in `.gitignore` by default (reproducible from lockfile via `cn deps restore`)
+- For airgapped or tightly pinned environments: `cn deps vendor` prepares a committed vendor tree
 
 ### Optional future optimization
 
@@ -281,7 +285,7 @@ More npm-like for discovery, but still git-native. No registry server.
 
 `cn deps restore` (or `cn deps install`):
 1. Read `.cn/deps.lock.json`
-2. For each package: `git clone --depth=1 --branch=<tag> <source>` (or fetch specific rev)
+2. For each package: `git clone --depth=1 --branch=v<version> <source>` (or `git fetch <source> <rev>` for exact commit)
 3. Verify `integrity` hash
 4. Copy runtime-relevant dirs (`mindsets/`, `skills/`) into `.cn/vendor/packages/<name>@<version>/`
 5. Materialize core assets from template into `.cn/vendor/core/`
@@ -401,6 +405,7 @@ cn deps remove <package>       Remove dependency
 cn deps update [<package>]     Update lockfile (re-resolve within ranges)
 cn deps restore                Install from lockfile (deterministic)
 cn deps doctor                 Verify installed assets match lockfile
+cn deps vendor                 Commit vendor tree for airgapped use
 ```
 
 ### Optional aliases (ergonomics)
@@ -451,8 +456,15 @@ When `cn setup` runs on a fresh hub:
 ### Phase 2: `cn_context.ml` uses CAR
 
 Replace the single-source resolver with the three-layer CAR.
-Old hubs without `.cn/vendor/` fall back to current behavior (read from
-`src/agent/` if it exists, otherwise degrade gracefully with warning).
+
+Runtime MUST fail fast if `.cn/vendor/` is missing or core assets cannot be
+resolved. "Graceful degradation" is what caused the silent incoherence in the
+first place — the whole point of CAR is to eliminate it. Backward compatibility
+is handled at setup/restore time, not at wake-up time:
+
+- `cn setup` detects v3.3 hubs, materializes `.cn/vendor/`, writes `deps.json`
+- `cn deps restore` populates the vendor tree from the lockfile
+- After that, `cn agent` enforces the same fail-fast rule as any new hub
 
 ### Phase 3: Full package ecosystem
 
@@ -461,10 +473,10 @@ Index repo, `cn deps search`, third-party packages.
 ### Existing hubs
 
 A v3.3 hub with no package manifest/lockfile:
-- Core bundled assets are still available (if template repo path is known)
-- No third-party packs installed
-- Runtime warns that no `.cn/deps.json` / `.cn/deps.lock.json` exists
-- `cn setup` or `cn deps restore` initializes the package state
+- `cn agent` fails fast with a clear error pointing to `cn setup` / `cn deps restore`
+- `cn setup` detects the v3.3 layout, materializes core assets, writes default deps
+- `cn deps restore` installs from the generated lockfile
+- After migration, the hub follows the same rules as any new hub — no special paths
 
 ---
 
@@ -519,27 +531,45 @@ If `.cn/vendor/` is removed or corrupted:
 
 ---
 
-## 16. Open questions
+## 16. Design decisions (resolved)
 
-1. **Should `cn setup` install a default profile package automatically?**
-   Leaning yes — the "zero skills" bug should be impossible after setup.
+1. **`cn setup` installs a default profile package automatically.**
+   Yes. After `cn setup`, a new hub must be impossible to wake without baseline
+   cognition. `cn setup` writes `.cn/deps.json` with the chosen profile and runs
+   `cn deps restore` automatically. The zero-skills bug is not recoverable by
+   "remembering another command."
 
-2. **Should package discovery use a default git index repo or direct git URLs first?**
-   Direct URLs first (simpler). Index repo as v3.4.1 addition.
+2. **Install uses direct git URLs; discovery uses an index repo.**
+   These are separate paths:
+   - **Install:** `cn deps add git+https://...` works without an index.
+   - **Discovery:** `cn deps search <query>` requires a git-native index repo.
+   Direct URLs ship first; index repo is a v3.4.1 addition.
 
-3. **Should org packs be able to declare profile defaults?**
-   Probably yes — an org should be able to say "our engineers get these packs."
+3. **Org packs declare profile defaults at setup time only.**
+   Yes. An org pack may specify "our engineer profile includes X, Y, Z packages,"
+   but those defaults materialize into `.cn/deps.json` / `.cn/deps.lock.json`
+   during `cn setup` — not via a dynamic runtime inheritance chain. Wake-up
+   remains deterministic.
 
-4. **Do we allow package-defined skill dependencies in v3.4, or keep dependency resolution flat?**
-   Flat for v3.4. Transitive deps add complexity with limited early value.
+4. **Flat dependencies in v3.4. No transitive resolution.**
+   The resolver is already doing a lot: bundling core, materializing vendor
+   assets, overlaying hub overrides, preserving deterministic ordering. Adding
+   transitive resolution now would multiply complexity before the basics are
+   battle-tested.
 
-5. **Template repo path: how does the runtime know where `cnos/` lives?**
-   Currently not tracked. Options: `.cn/config.json` field (`template_path`),
-   sibling directory convention, or env var. Needed for core materialization.
+5. **Runtime never needs to know where `cnos/` lives.**
+   Wake-up reads only from `.cn/vendor/` + hub-local overrides. The template
+   repo is a *setup/restore-time* source, not a runtime dependency.
+   - `cn setup` / `cn deps restore` materializes core assets into `.cn/vendor/core/`
+   - After that, `cn agent` reads `.cn/vendor/` exclusively
+   - How does setup/restore find core assets? Bundled with the installed `cn`
+     binary/package. An explicit `template_path` in config is acceptable as a
+     developer-checkout fallback, but is not part of the runtime contract.
 
-6. **Should `.cn/vendor/` be gitignored or committed?**
-   Default: gitignored (reproducible from lockfile). Option: committed for
-   airgapped or pinned environments.
+6. **`.cn/vendor/` is gitignored by default; optionally committed for airgapped use.**
+   Default: gitignored (reproducible from lockfile + `cn deps restore`).
+   Optional: `cn deps vendor` prepares a committed vendor tree intentionally
+   for airgapped or tightly pinned environments.
 
 ---
 
