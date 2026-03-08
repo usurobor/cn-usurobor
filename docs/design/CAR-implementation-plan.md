@@ -276,14 +276,15 @@ phase), not during `restore` (install phase).
 
 ### `bundled_core_source` implementation
 
-For now (developer checkout):
-1. Check `CN_TEMPLATE_PATH` env var
-2. Check `Sys.argv.(0)` location and look for sibling `cnos/` or
-   `../cnos/src/agent/` relative to binary
-3. Walk up from cwd looking for `cn.json` with `kind: "template"`
+v3.4.0 distribution model (template-checkout-based):
+1. Check `CN_TEMPLATE_PATH` env var (explicit override)
+2. Walk up from cwd looking for `src/agent/mindsets/COHERENCE.md`
 
 This is the one place where template-repo awareness lives. Runtime never
 calls this — only `cn setup` and `cn deps restore`.
+
+v3.5+ may bundle core assets alongside the installed binary for
+production installs that don't have a template checkout nearby.
 
 **Tests:** `materialize_core` copies files correctly. `read_manifest` /
 `write_manifest` round-trip. `restore` with empty lockfile succeeds

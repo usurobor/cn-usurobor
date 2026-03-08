@@ -131,15 +131,26 @@ let write_lockfile ~hub_path (l : lockfile) =
 
 (* === Bundled core source === *)
 
-(** Find the bundled core asset source (template repo's src/agent/).
-    Checks CN_TEMPLATE_PATH env var first, then walks up from cwd. *)
+(** Find the core asset source directory (template repo's src/agent/).
+
+    v3.4.0 distribution model: core assets are sourced from the cnos
+    template repo at setup/restore time. The runtime never calls this —
+    only cn setup and cn deps restore do.
+
+    Discovery order:
+    1. CN_TEMPLATE_PATH env var (explicit override)
+    2. Walk up from cwd looking for a cnos checkout with src/agent/
+
+    Future (v3.5+): core assets may be bundled alongside the installed
+    cn binary for production installs that don't have a checkout. *)
 let bundled_core_source () =
   (* 1. CN_TEMPLATE_PATH env var *)
   match Cn_ffi.Process.getenv_opt "CN_TEMPLATE_PATH" with
   | Some p ->
       let agent_dir = Cn_ffi.Path.join p "src/agent" in
       if Cn_ffi.Fs.exists agent_dir then Ok agent_dir
-      else Error (Printf.sprintf "CN_TEMPLATE_PATH=%s but %s not found" p agent_dir)
+      else Error (Printf.sprintf
+        "CN_TEMPLATE_PATH=%s but %s not found" p agent_dir)
   | None ->
       (* 2. Walk up from cwd looking for src/agent/mindsets/COHERENCE.md *)
       let rec walk dir =
@@ -149,7 +160,9 @@ let bundled_core_source () =
         else
           let parent = Filename.dirname dir in
           if parent = dir then
-            Error "Cannot find cnos template repo. Set CN_TEMPLATE_PATH or run from within the cnos checkout."
+            Error ("Cannot locate core assets. Either:\n" ^
+                   "  1. Run from within the cnos checkout, or\n" ^
+                   "  2. Set CN_TEMPLATE_PATH to the cnos repo root")
           else walk parent
       in
       walk (Cn_ffi.Process.cwd ())
@@ -201,10 +214,27 @@ let materialize_core ~hub_path =
       copy_tree src_skills dst_skills;
       Ok ()
 
+(* === Safe git helpers (argv-only, no shell strings) === *)
+
+(** Run git with structured args in a given directory.
+    Returns Ok stdout on exit 0, Error msg otherwise. *)
+let git_in ~cwd args =
+  let full_args = ["-C"; cwd] @ args in
+  let (code, output) = Cn_ffi.Process.exec_args ~prog:"git" ~args:full_args () in
+  if code = 0 then Ok output
+  else Error (Printf.sprintf "git %s failed (exit %d): %s"
+    (String.concat " " args) code output)
+
+(** Remove a directory tree using structured args (no shell injection). *)
+let rm_tree path =
+  if Cn_ffi.Fs.exists path then
+    ignore (Cn_ffi.Process.exec_args ~prog:"rm" ~args:["-rf"; path] ())
+
 (* === Restore === *)
 
 (** Install packages from lockfile into .cn/vendor/packages/.
-    Fetches by exact lockfile rev. Also materializes core. *)
+    Fetches by exact lockfile rev using argv-only git calls.
+    Also materializes core. *)
 let restore ~hub_path =
   (* Always materialize core first *)
   match materialize_core ~hub_path with
@@ -221,30 +251,35 @@ let restore ~hub_path =
               (Printf.sprintf "%s@%s" dep.name dep.version) in
             if Cn_ffi.Fs.exists pkg_dir then None (* already installed *)
             else begin
-              (* Fetch by exact rev *)
+              (* Fetch by exact rev using structured argv calls *)
               let tmp_dir = Cn_ffi.Path.join hub_path
                 (Printf.sprintf ".cn/tmp/%s-%s" dep.name dep.version) in
               Cn_ffi.Fs.ensure_dir tmp_dir;
-              let fetch_cmd = Printf.sprintf
-                "cd %s && git init -q && git fetch -q --depth=1 %s %s && git checkout -q %s"
-                tmp_dir dep.source dep.rev dep.rev in
-              match Cn_ffi.Child_process.exec fetch_cmd with
-              | None ->
-                  (* Clean up *)
-                  ignore (Cn_ffi.Child_process.exec
-                    (Printf.sprintf "rm -rf %s" tmp_dir));
-                  Some (Printf.sprintf "Failed to fetch %s@%s from %s (rev %s)"
-                    dep.name dep.version dep.source dep.rev)
-              | Some _ ->
+              let result =
+                match git_in ~cwd:tmp_dir ["init"; "-q"] with
+                | Error msg -> Error msg
+                | Ok _ ->
+                match git_in ~cwd:tmp_dir
+                  ["fetch"; "-q"; "--depth=1"; dep.source; dep.rev] with
+                | Error msg -> Error msg
+                | Ok _ ->
+                match git_in ~cwd:tmp_dir ["checkout"; "-q"; dep.rev] with
+                | Error msg -> Error msg
+                | Ok _ -> Ok ()
+              in
+              match result with
+              | Error msg ->
+                  rm_tree tmp_dir;
+                  Some (Printf.sprintf "Failed to fetch %s@%s from %s (rev %s): %s"
+                    dep.name dep.version dep.source dep.rev msg)
+              | Ok () ->
                   (* Copy runtime dirs *)
                   Cn_ffi.Fs.ensure_dir pkg_dir;
                   copy_tree (Cn_ffi.Path.join tmp_dir "mindsets")
                     (Cn_ffi.Path.join pkg_dir "mindsets");
                   copy_tree (Cn_ffi.Path.join tmp_dir "skills")
                     (Cn_ffi.Path.join pkg_dir "skills");
-                  (* Clean up tmp *)
-                  ignore (Cn_ffi.Child_process.exec
-                    (Printf.sprintf "rm -rf %s" tmp_dir));
+                  rm_tree tmp_dir;
                   None
             end
           ) in
