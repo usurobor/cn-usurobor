@@ -220,7 +220,7 @@ type command =
   | Adhoc of string  (* Create adhoc thread *)
   | Daily            (* Create/open daily reflection *)
   | Weekly           (* Create/open weekly reflection *)
-  | Setup            (* System setup: logrotate + cron *)
+  | Setup            (* Hub setup: materialize assets + deps *)
   | Deps of Deps.cmd (* Dependency management *)
 
 (* Exhaustive - compiler warns on missing cases *)
@@ -656,7 +656,7 @@ Commands:
 
   # Hub management
   init [name]         Create new hub
-  setup               System setup (logrotate + cron) — run with sudo
+  setup               Set up hub: materialize assets, write deps, restore
   status              Show hub state
   commit [msg]        Stage + commit
   push                Push to origin

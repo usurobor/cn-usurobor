@@ -168,44 +168,26 @@ let run_sync hub_path name =
 
 (* === Setup === *)
 
-let run_setup hub_path =
-  let uid = match Cn_ffi.Child_process.exec "id -u" with
-    | Some s -> String.trim s
-    | None -> "unknown"
-  in
-  if uid <> "0" then begin
-    print_endline (Cn_fmt.fail "Setup requires root. Run: sudo cn setup");
-    Cn_ffi.Process.exit 1
-  end;
+(** Read role from .cn/config.json runtime.role, default "engineer". *)
+let read_role hub_path =
+  let cfg = Cn_ffi.Path.join hub_path ".cn/config.json" in
+  if not (Cn_ffi.Fs.exists cfg) then "engineer"
+  else
+    match Cn_ffi.Fs.read cfg |> Cn_json.parse with
+    | Ok json ->
+        (match Cn_json.get "runtime" json with
+         | Some rt -> Cn_json.get_string "role" rt
+           |> Option.map String.lowercase_ascii
+           |> Option.value ~default:"engineer"
+         | None -> "engineer")
+    | Error _ -> "engineer"
 
-  print_endline (Cn_fmt.info "Setting up cn system components...");
-
-  let logrotate_config = {|/var/log/cn-*.log {
-    daily
-    rotate 7
-    compress
-    missingok
-    notifempty
-}
-|} in
-  let logrotate_path = "/etc/logrotate.d/cn" in
-  Cn_ffi.Fs.write logrotate_path logrotate_config;
-  print_endline (Cn_fmt.ok (Printf.sprintf "Created %s" logrotate_path));
-
-  let cron_line = Printf.sprintf "*/5 * * * * cn-cron %s" (Filename.quote hub_path) in
-  let cmd = Printf.sprintf "echo %s | crontab -" (Filename.quote cron_line) in
-  (match Cn_ffi.Child_process.exec cmd with
-   | Some _ -> print_endline (Cn_fmt.ok "Crontab configured")
-   | None -> print_endline (Cn_fmt.warn "Crontab update failed - configure manually"));
-
-  print_endline "";
-  print_endline (Cn_fmt.ok "System components configured.");
-  print_endline (Printf.sprintf "  • Logrotate: %s" logrotate_path);
-  print_endline (Printf.sprintf "  • Cron: %s" cron_line);
-  print_endline "";
-
-  (* v3.4: Materialize cognitive substrate *)
+(** Materialize cognitive assets into a hub: core assets, deps manifest,
+    lockfile, and restore. Called by both run_setup and run_init. *)
+let setup_assets hub_path =
   print_endline (Cn_fmt.info "Materializing cognitive assets...");
+
+  (* Materialize core *)
   (match Cn_deps.materialize_core ~hub_path with
    | Ok () -> print_endline (Cn_fmt.ok "Core assets materialized")
    | Error msg ->
@@ -213,19 +195,7 @@ let run_setup hub_path =
 
   (* Write default manifest if missing *)
   if not (Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.json")) then begin
-    let role =
-      let cfg = Cn_ffi.Path.join hub_path ".cn/config.json" in
-      if Cn_ffi.Fs.exists cfg then
-        match Cn_ffi.Fs.read cfg |> Cn_json.parse with
-        | Ok json ->
-            (match Cn_json.get "runtime" json with
-             | Some rt -> Cn_json.get_string "role" rt
-               |> Option.map String.lowercase_ascii
-               |> Option.value ~default:"engineer"
-             | None -> "engineer")
-        | Error _ -> "engineer"
-      else "engineer"
-    in
+    let role = read_role hub_path in
     Cn_deps.write_manifest ~hub_path (Cn_deps.default_manifest_for_profile role);
     print_endline (Cn_fmt.ok (Printf.sprintf "Created .cn/deps.json (profile: %s)" role))
   end;
@@ -245,11 +215,37 @@ let run_setup hub_path =
          summary.core_mindsets summary.core_skills
          (List.length summary.packages)))
    | Error msg ->
-       print_endline (Cn_fmt.warn (Printf.sprintf "Restore: %s" msg)));
+       print_endline (Cn_fmt.warn (Printf.sprintf "Restore: %s" msg)))
+
+(** cn setup — interactive hub setup.
+    Makes any hub wake-ready: materializes core assets, writes default
+    deps manifest with profile package, runs restore.
+    Does NOT require root. System-level setup (logrotate, cron) is
+    handled separately via cn setup --system. *)
+let run_setup hub_path =
+  print_endline (Cn_fmt.info (Printf.sprintf "Setting up hub: %s" hub_path));
+
+  (* Ensure .cn/ directory exists *)
+  Cn_ffi.Fs.ensure_dir (Cn_ffi.Path.join hub_path ".cn");
+
+  (* Materialize cognitive substrate *)
+  setup_assets hub_path;
+
+  (* Add .cn/vendor/ to .gitignore if not present *)
+  let gitignore_path = Cn_ffi.Path.join hub_path ".gitignore" in
+  let existing_gi = if Cn_ffi.Fs.exists gitignore_path
+    then Cn_ffi.Fs.read gitignore_path else "" in
+  if not (Cn_lib.starts_with ~prefix:".cn/vendor" (String.trim existing_gi))
+     && not (Cn_assets.contains_sub existing_gi ".cn/vendor") then begin
+    let content = existing_gi ^
+      (if existing_gi <> "" && not (Cn_lib.ends_with ~suffix:"\n" existing_gi)
+       then "\n" else "") ^ ".cn/vendor/\n" in
+    Cn_ffi.Fs.write gitignore_path content;
+    print_endline (Cn_fmt.ok "Added .cn/vendor/ to .gitignore")
+  end;
 
   print_endline "";
-  print_endline (Cn_fmt.ok "Setup complete!");
-  print_endline "Logs will be written to: /var/log/cn-YYYYMMDD.log"
+  print_endline (Cn_fmt.ok "Hub setup complete!")
 
 (* === Update === *)
 
@@ -517,21 +513,11 @@ Agents and repos this hub communicates with.
   update_runtime hub_dir;
 
   (* v3.4: Materialize cognitive assets so hub is wake-ready *)
-  (match Cn_deps.materialize_core ~hub_path:hub_dir with
-   | Ok () -> print_endline (Cn_fmt.ok "Core assets materialized")
-   | Error msg -> print_endline (Cn_fmt.warn (Printf.sprintf "Core materialization: %s" msg)));
-  Cn_deps.write_manifest ~hub_path:hub_dir (Cn_deps.default_manifest_for_profile "engineer");
-  Cn_deps.write_lockfile ~hub_path:hub_dir Cn_deps.empty_lockfile;
-  (match Cn_deps.restore ~hub_path:hub_dir with
-   | Ok () -> () | Error _ -> ());
+  setup_assets hub_dir;
 
   (* Add .cn/vendor/ to .gitignore *)
   let gitignore_path = Cn_ffi.Path.join hub_dir ".gitignore" in
-  let gitignore_content =
-    (if Cn_ffi.Fs.exists gitignore_path then Cn_ffi.Fs.read gitignore_path ^ "\n" else "")
-    ^ ".cn/vendor/\n"
-  in
-  Cn_ffi.Fs.write gitignore_path gitignore_content;
+  Cn_ffi.Fs.write gitignore_path ".cn/vendor/\n";
 
   let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_dir "git add -A" in
   let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_dir (Printf.sprintf "git commit -m %s" (Filename.quote (Printf.sprintf "Initialize %s hub" hub_name))) in

@@ -89,11 +89,16 @@ Three asset layers, resolved bottom-up:
 
 ### Layer A — Bundled core assets
 
-Shipped with the `cn` binary/package. Always present after `cn setup`.
+Always present after `cn setup`. The runtime reads only from
+`.cn/vendor/core/` — wake-up never reads the template repo directly.
 
-**Distribution source** may be the template repo (or a release artifact).
-**Runtime source** is `.cn/vendor/core/` — wake-up never reads the template
-repo directly.
+**Distribution source (v3.4.0):** the cnos template repo's `src/agent/`
+directory, located via `CN_TEMPLATE_PATH` env var or by walking up from
+cwd. `cn setup` and `cn deps restore` copy core assets into the hub's
+`.cn/vendor/core/`.
+
+**Future (v3.5+):** core assets may be bundled alongside the installed
+`cn` binary for production installs that don't have a template checkout.
 
 Contents:
 - core mindsets: COHERENCE, ENGINEERING, PM, WRITING, OPERATIONS, PERSONALITY, MEMES, THINKING, WISDOM, FUNCTIONAL
@@ -583,9 +588,10 @@ If `.cn/vendor/` is removed or corrupted:
    repo is a *setup/restore-time* source, not a runtime dependency.
    - `cn setup` / `cn deps restore` materializes core assets into `.cn/vendor/core/`
    - After that, `cn agent` reads `.cn/vendor/` exclusively
-   - How does setup/restore find core assets? Bundled with the installed `cn`
-     binary/package. An explicit `template_path` in config is acceptable as a
-     developer-checkout fallback, but is not part of the runtime contract.
+   - How does setup/restore find core assets in v3.4.0? Via `CN_TEMPLATE_PATH`
+     env var or by walking up from cwd to find the cnos checkout. This is the
+     v3.4.0 distribution model. v3.5+ may bundle assets with the binary for
+     production installs that don't have a checkout nearby.
 
 6. **`.cn/vendor/` is gitignored by default; optionally committed for airgapped use.**
    Default: gitignored (reproducible from lockfile + `cn deps restore`).
