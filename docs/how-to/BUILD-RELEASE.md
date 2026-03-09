@@ -106,9 +106,51 @@ gh release view v3.3.0 -R usurobor/cnos
 
 Or: https://github.com/usurobor/cnos/releases
 
-### 7. Deploy to Agents
+### 7. Deploy
 
-After release is published, update running agents.
+#### New agent (fresh deploy)
+
+**Prerequisites:** A server (VPS recommended, 4 GB RAM), SSH access, a GitHub repo for the hub.
+
+```bash
+# 1. Install cn
+curl -fsSL https://raw.githubusercontent.com/usurobor/cnos/main/install.sh | sh
+cn --version
+
+# 2. Create the hub
+cn init <agentname>
+cd cn-<agentname>
+
+# 3. Configure secrets
+cat > .cn/secrets.env <<EOF
+ANTHROPIC_KEY=sk-ant-...
+TELEGRAM_TOKEN=...          # optional, for daemon mode
+EOF
+
+# 4. Configure the agent
+$EDITOR .cn/config.json     # set name, model, allowed_users
+$EDITOR spec/SOUL.md        # agent identity
+$EDITOR spec/USER.md        # human context
+
+# 5. Materialize cognitive assets
+cn setup
+cn doctor                   # verify everything green
+
+# 6. Push hub to origin
+git remote add origin git@github.com:<owner>/cn-<agentname>.git
+git push -u origin main
+
+# 7. Start the agent
+# Daemon mode (Telegram long-poll):
+nohup cn agent --daemon > /var/log/cn-agent.log 2>&1 &
+
+# Or cron mode (5-min cycle):
+echo "*/5 * * * * cd $(pwd) && cn-cron $(pwd)" | crontab -
+```
+
+#### Update existing agent
+
+After a release is published, update running agents.
 
 #### Download the binary
 
