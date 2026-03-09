@@ -108,51 +108,105 @@ Or: https://github.com/usurobor/cnos/releases
 
 ### 7. Deploy
 
-#### New agent (fresh deploy)
+Two cases: standing up a new agent, or updating an existing one.
 
-**Prerequisites:** A server (VPS recommended, 4 GB RAM), SSH access, a GitHub repo for the hub.
+---
+
+#### Case A: New Agent
+
+Standing up a fresh agent on a new server.
+
+**Prerequisites:** Unix server (VPS recommended, 4 GB RAM), SSH access, API key.
+
+**Step 1 — Install the binary:**
 
 ```bash
-# 1. Install cn
 curl -fsSL https://raw.githubusercontent.com/usurobor/cnos/main/install.sh | sh
 cn --version
-
-# 2. Create the hub
-cn init <agentname>
-cd cn-<agentname>
-
-# 3. Configure secrets
-cat > .cn/secrets.env <<EOF
-ANTHROPIC_KEY=sk-ant-...
-TELEGRAM_TOKEN=...          # optional, for daemon mode
-EOF
-
-# 4. Configure the agent
-$EDITOR .cn/config.json     # set name, model, allowed_users
-$EDITOR spec/SOUL.md        # agent identity
-$EDITOR spec/USER.md        # human context
-
-# 5. Materialize cognitive assets
-cn setup
-cn doctor                   # verify everything green
-
-# 6. Push hub to origin
-git remote add origin git@github.com:<owner>/cn-<agentname>.git
-git push -u origin main
-
-# 7. Start the agent
-# Daemon mode (Telegram long-poll):
-nohup cn agent --daemon > /var/log/cn-agent.log 2>&1 &
-
-# Or cron mode (5-min cycle):
-echo "*/5 * * * * cd $(pwd) && cn-cron $(pwd)" | crontab -
 ```
 
-#### Update existing agent
+**Step 2 — Create the hub:**
 
-After a release is published, update running agents.
+```bash
+cn init <agentname>
+cd cn-<agentname>
+```
 
-#### Download the binary
+This creates the full hub directory structure (`spec/`, `threads/`, `state/`, `.cn/`) and materializes cognitive assets (`.cn/vendor/core/`).
+
+**Step 3 — Configure secrets:**
+
+```bash
+cat > .cn/secrets.env <<EOF
+ANTHROPIC_KEY=sk-ant-...
+TELEGRAM_TOKEN=...          # required for daemon mode
+EOF
+```
+
+**Step 4 — Configure identity:**
+
+```bash
+$EDITOR .cn/config.json     # name, model, allowed_users
+$EDITOR spec/SOUL.md        # agent identity and behavioral contract
+$EDITOR spec/USER.md        # human context and working contract
+```
+
+Minimal `config.json`:
+```json
+{
+  "name": "<agentname>",
+  "runtime": {
+    "allowed_users": [<telegram_user_id>],
+    "model": "claude-sonnet-4-20250514"
+  }
+}
+```
+
+**Step 5 — Verify:**
+
+```bash
+cn doctor                   # all checks green
+```
+
+**Step 6 — Push hub to git:**
+
+```bash
+git remote add origin git@github.com:<owner>/cn-<agentname>.git
+git push -u origin main
+```
+
+**Step 7 — Start the agent:**
+
+Pick one run mode:
+
+```bash
+# Daemon mode (Telegram long-poll, stays running):
+nohup cn agent --daemon > /var/log/cn-agent.log 2>&1 &
+
+# Cron mode (5-min cycle, fire-and-forget):
+echo "*/5 * * * * cd $(pwd) && cn-cron $(pwd)" | crontab -
+
+# Systemd (if you create a unit file):
+sudo systemctl enable --now cn-agent
+```
+
+**Step 8 — Verify it's alive:**
+
+```bash
+# Daemon: check process
+ps aux | grep "cn agent" | grep -v grep
+
+# Send a test message via Telegram, check logs
+tail -f /var/log/cn-agent.log
+```
+
+---
+
+#### Case B: Update Existing Agent
+
+Upgrading a running agent to a new release.
+
+**Step 1 — Download the new binary:**
 
 The running daemon holds a file lock on the binary. Download to a temp path first, then replace atomically:
 
@@ -166,29 +220,26 @@ cn --version  # verify
 
 > **Note:** `cn update` has a known bug where the git-based source update path can overwrite a successful binary download. Use direct download instead.
 
-#### Restart the agent
+**Step 2 — Restart the agent:**
 
-How you restart depends on the agent's run mode:
+Depends on run mode:
 
-**Daemon mode** (`cn agent --daemon`):
 ```bash
+# Daemon mode:
 pkill -f "cn agent --daemon"
 cd /path/to/hub
 nohup cn agent --daemon > /var/log/cn-agent.log 2>&1 &
 ps aux | grep "cn agent" | grep -v grep
-```
 
-**Cron mode**: No restart needed — next cron invocation picks up the new binary.
+# Cron mode: no restart needed — next invocation uses new binary.
 
-**Systemd**:
-```bash
+# Systemd:
 sudo systemctl restart cn-agent
-sudo systemctl status cn-agent
 ```
 
-#### Run setup for new features (if needed)
+**Step 3 — Run setup if the release requires it:**
 
-Some releases add new hub structure (e.g., v3.4.0 added `.cn/vendor/`). Materialize with:
+Some releases add new hub structure (e.g., v3.4.0 added `.cn/vendor/`). Check release notes, then:
 
 ```bash
 cd /path/to/hub
@@ -196,15 +247,15 @@ cn setup
 cn doctor  # verify
 ```
 
-#### Quick deploy (one-liner, daemon mode, over SSH)
+**One-liner (daemon mode, over SSH):**
 
 ```bash
 ssh user@host 'curl -fsSL -o /tmp/cn-new "https://github.com/usurobor/cnos/releases/download/vX.Y.Z/cn-linux-x64" && chmod +x /tmp/cn-new && mv /tmp/cn-new /usr/local/bin/cn && pkill -f "cn agent --daemon"; sleep 1; cd /path/to/hub && nohup cn agent --daemon > /var/log/cn-agent.log 2>&1 & sleep 2 && cn --version'
 ```
 
-#### Rollback
+**Rollback:**
 
-Same process, previous version:
+Same steps, previous version number:
 
 ```bash
 curl -fsSL -o /tmp/cn-old \
