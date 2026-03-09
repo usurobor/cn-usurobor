@@ -108,14 +108,68 @@ Or: https://github.com/usurobor/cnos/releases
 
 ### 7. Deploy to Agents
 
-After release is published, update running agents:
+After release is published, update running agents.
+
+#### Download the binary
+
+The running daemon holds a file lock on the binary. Download to a temp path first, then replace atomically:
 
 ```bash
-# Via install script (downloads latest release binary)
-curl -fsSL https://raw.githubusercontent.com/usurobor/cnos/main/install.sh | sh
+curl -fsSL -o /tmp/cn-new \
+  "https://github.com/usurobor/cnos/releases/download/vX.Y.Z/cn-$(uname -s | tr A-Z a-z)-$(uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/')"
+chmod +x /tmp/cn-new
+mv /tmp/cn-new /usr/local/bin/cn
+cn --version  # verify
+```
 
-# Restart daemon if running
-systemctl restart cn.service
+> **Note:** `cn update` has a known bug where the git-based source update path can overwrite a successful binary download. Use direct download instead.
+
+#### Restart the agent
+
+How you restart depends on the agent's run mode:
+
+**Daemon mode** (`cn agent --daemon`):
+```bash
+pkill -f "cn agent --daemon"
+cd /path/to/hub
+nohup cn agent --daemon > /var/log/cn-agent.log 2>&1 &
+ps aux | grep "cn agent" | grep -v grep
+```
+
+**Cron mode**: No restart needed — next cron invocation picks up the new binary.
+
+**Systemd**:
+```bash
+sudo systemctl restart cn-agent
+sudo systemctl status cn-agent
+```
+
+#### Run setup for new features (if needed)
+
+Some releases add new hub structure (e.g., v3.4.0 added `.cn/vendor/`). Materialize with:
+
+```bash
+cd /path/to/hub
+cn setup
+cn doctor  # verify
+```
+
+#### Quick deploy (one-liner, daemon mode, over SSH)
+
+```bash
+ssh user@host 'curl -fsSL -o /tmp/cn-new "https://github.com/usurobor/cnos/releases/download/vX.Y.Z/cn-linux-x64" && chmod +x /tmp/cn-new && mv /tmp/cn-new /usr/local/bin/cn && pkill -f "cn agent --daemon"; sleep 1; cd /path/to/hub && nohup cn agent --daemon > /var/log/cn-agent.log 2>&1 & sleep 2 && cn --version'
+```
+
+#### Rollback
+
+Same process, previous version:
+
+```bash
+curl -fsSL -o /tmp/cn-old \
+  "https://github.com/usurobor/cnos/releases/download/vPREVIOUS/cn-linux-x64"
+chmod +x /tmp/cn-old
+mv /tmp/cn-old /usr/local/bin/cn
+# restart daemon as above
 ```
 
 ## User Installation
@@ -211,6 +265,18 @@ Check install.sh platform detection:
 uname -s  # OS: Linux or Darwin
 uname -m  # Arch: x86_64, aarch64, or arm64
 ```
+
+### `curl: (23) Failure writing output` during deploy
+
+Binary is locked by the running daemon. Download to `/tmp` first, then `mv`.
+
+### Daemon not running after deploy
+
+Forgot to restart. `pkill` + `nohup cn agent --daemon`.
+
+### New features missing after upgrade
+
+Hub structure outdated. Run `cn setup` or `cn doctor`.
 
 ### Tests fail in release CI
 
