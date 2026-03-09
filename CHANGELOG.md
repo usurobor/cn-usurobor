@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.4.0  | A+  | A+          | A+           | A+               | CAR: three-layer cognitive asset resolver + package system. Fresh hubs wake with full substrate. Git-native deps, lockfile, hub-local overrides. |
 | v3.3.1  | A+  | A+          | A+           | A+               | Agent instruction alignment: canonical ops examples in capabilities block, stale path fixes, output discipline. Prevents hallucinated tool syntaxes. |
 | v3.3.0  | A+  | A+          | A+           | A+               | CN Shell: typed ops, two-pass execution, path sandbox, crash recovery. Pure-pipe preserved — ops are post-call, governed, receipted. Zero new runtime deps. |
 | v3.2.0  | A+  | A+          | A+           | A+               | Structured LLM schema: system blocks with cache control + real multi-turn messages. Mindsets in context packer. Role-weighted skill scoring. Setup installer design. |
@@ -33,6 +34,35 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v3.4.0 (2026-03-09)
+
+**Cognitive Asset Resolver & Package System**
+
+Fresh hubs now wake with the full cognitive substrate — mindsets, skills, and agent-ops guidance — without needing a separate template repo checkout.
+
+### Added
+
+- **`cn_assets.ml`** — Three-layer asset resolver (core → packages → hub-local overrides). Deterministic loading order, keyword-matched skill scoring delegates here
+- **`cn_deps.ml`** — Dependency manifest (`.cn/deps.json`), lockfile (`.cn/deps.lock.json`), materialize/restore pipeline. Git-native package distribution
+- **`cn deps` CLI commands** — `list`, `restore`, `doctor`, `add`, `remove`, `update`, `vendor`
+- **Cognitive Assets block** in capabilities — agent sees asset summary (core count, packages, overrides) on every wake-up
+- **`cn doctor`** checks for `.cn/vendor/core/`, deps manifest, and lockfile
+- **`cn setup`** and `cn init` now materialize cognitive assets automatically — hub is wake-ready out of the box
+- **CAR design doc** (`docs/design/CAR-v3.4.md`) — problem statement, three-layer model, package format, resolution spec
+- **Implementation plan** (`docs/design/CAR-implementation-plan.md`) — 8 ordered steps
+
+### Changed
+
+- **`cn_context.ml`** — delegates mindset/skill loading to `Cn_assets`; fails fast if core assets missing
+- **`cn_capabilities.ml`** — `render` accepts optional `~assets` summary
+- **`cn setup`** no longer requires root — focuses on hub asset materialization (system-level setup moves to `--system`)
+
+### Removed
+
+- Inline `load_mindsets` and skill-walking code from `cn_context.ml` (moved to `cn_assets.ml`)
 
 ---
 

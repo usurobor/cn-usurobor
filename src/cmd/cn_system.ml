@@ -119,6 +119,21 @@ let run_doctor hub_path =
     (match Cn_ffi.Child_process.exec_in ~cwd:hub_path "git remote get-url origin" with
      | Some _ -> { name = "origin remote"; passed = true; value = "configured" }
      | None -> { name = "origin remote"; passed = false; value = "not configured" });
+
+    (* v3.4: Cognitive asset checks *)
+    (match Cn_assets.validate_core ~hub_path with
+     | Ok () -> { name = ".cn/vendor/core"; passed = true; value = "present" }
+     | Error _ -> { name = ".cn/vendor/core"; passed = false;
+         value = "missing (run 'cn setup' or 'cn deps restore')" });
+
+    { name = ".cn/deps.json"; passed = Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.json");
+      value = if Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.json")
+              then "present" else "missing (run 'cn setup')" };
+
+    { name = ".cn/deps.lock.json";
+      passed = Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.lock.json");
+      value = if Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.lock.json")
+              then "present" else "missing (run 'cn setup')" };
   ] in
 
   let width = 22 in
@@ -153,44 +168,84 @@ let run_sync hub_path name =
 
 (* === Setup === *)
 
-let run_setup hub_path =
-  let uid = match Cn_ffi.Child_process.exec "id -u" with
-    | Some s -> String.trim s
-    | None -> "unknown"
-  in
-  if uid <> "0" then begin
-    print_endline (Cn_fmt.fail "Setup requires root. Run: sudo cn setup");
-    Cn_ffi.Process.exit 1
+(** Read role from .cn/config.json runtime.role, default "engineer". *)
+let read_role hub_path =
+  let cfg = Cn_ffi.Path.join hub_path ".cn/config.json" in
+  if not (Cn_ffi.Fs.exists cfg) then "engineer"
+  else
+    match Cn_ffi.Fs.read cfg |> Cn_json.parse with
+    | Ok json ->
+        (match Cn_json.get "runtime" json with
+         | Some rt -> Cn_json.get_string "role" rt
+           |> Option.map String.lowercase_ascii
+           |> Option.value ~default:"engineer"
+         | None -> "engineer")
+    | Error _ -> "engineer"
+
+(** Materialize cognitive assets into a hub: core assets, deps manifest,
+    lockfile, and restore. Called by both run_setup and run_init. *)
+let setup_assets hub_path =
+  print_endline (Cn_fmt.info "Materializing cognitive assets...");
+
+  (* Materialize core *)
+  (match Cn_deps.materialize_core ~hub_path with
+   | Ok () -> print_endline (Cn_fmt.ok "Core assets materialized")
+   | Error msg ->
+       print_endline (Cn_fmt.warn (Printf.sprintf "Core materialization: %s" msg)));
+
+  (* Write default manifest if missing *)
+  if not (Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.json")) then begin
+    let role = read_role hub_path in
+    Cn_deps.write_manifest ~hub_path (Cn_deps.default_manifest_for_profile role);
+    print_endline (Cn_fmt.ok (Printf.sprintf "Created .cn/deps.json (profile: %s)" role))
   end;
 
-  print_endline (Cn_fmt.info "Setting up cn system components...");
+  (* Write default lockfile if missing *)
+  if not (Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.lock.json")) then begin
+    Cn_deps.write_lockfile ~hub_path Cn_deps.empty_lockfile;
+    print_endline (Cn_fmt.ok "Created .cn/deps.lock.json")
+  end;
 
-  let logrotate_config = {|/var/log/cn-*.log {
-    daily
-    rotate 7
-    compress
-    missingok
-    notifempty
-}
-|} in
-  let logrotate_path = "/etc/logrotate.d/cn" in
-  Cn_ffi.Fs.write logrotate_path logrotate_config;
-  print_endline (Cn_fmt.ok (Printf.sprintf "Created %s" logrotate_path));
+  (* Restore from lockfile *)
+  (match Cn_deps.restore ~hub_path with
+   | Ok () ->
+       let summary = Cn_assets.summarize ~hub_path in
+       print_endline (Cn_fmt.ok (Printf.sprintf
+         "Assets ready: %d mindsets, %d core skills, %d packages"
+         summary.core_mindsets summary.core_skills
+         (List.length summary.packages)))
+   | Error msg ->
+       print_endline (Cn_fmt.warn (Printf.sprintf "Restore: %s" msg)))
 
-  let cron_line = Printf.sprintf "*/5 * * * * cn-cron %s" (Filename.quote hub_path) in
-  let cmd = Printf.sprintf "echo %s | crontab -" (Filename.quote cron_line) in
-  (match Cn_ffi.Child_process.exec cmd with
-   | Some _ -> print_endline (Cn_fmt.ok "Crontab configured")
-   | None -> print_endline (Cn_fmt.warn "Crontab update failed - configure manually"));
+(** cn setup — interactive hub setup.
+    Makes any hub wake-ready: materializes core assets, writes default
+    deps manifest with profile package, runs restore.
+    Does NOT require root. System-level setup (logrotate, cron) is
+    handled separately via cn setup --system. *)
+let run_setup hub_path =
+  print_endline (Cn_fmt.info (Printf.sprintf "Setting up hub: %s" hub_path));
+
+  (* Ensure .cn/ directory exists *)
+  Cn_ffi.Fs.ensure_dir (Cn_ffi.Path.join hub_path ".cn");
+
+  (* Materialize cognitive substrate *)
+  setup_assets hub_path;
+
+  (* Add .cn/vendor/ to .gitignore if not present *)
+  let gitignore_path = Cn_ffi.Path.join hub_path ".gitignore" in
+  let existing_gi = if Cn_ffi.Fs.exists gitignore_path
+    then Cn_ffi.Fs.read gitignore_path else "" in
+  if not (Cn_lib.starts_with ~prefix:".cn/vendor" (String.trim existing_gi))
+     && not (Cn_assets.contains_sub existing_gi ".cn/vendor") then begin
+    let content = existing_gi ^
+      (if existing_gi <> "" && not (Cn_lib.ends_with ~suffix:"\n" existing_gi)
+       then "\n" else "") ^ ".cn/vendor/\n" in
+    Cn_ffi.Fs.write gitignore_path content;
+    print_endline (Cn_fmt.ok "Added .cn/vendor/ to .gitignore")
+  end;
 
   print_endline "";
-  print_endline (Cn_fmt.ok "Setup complete!");
-  print_endline "";
-  print_endline "Configured:";
-  print_endline (Printf.sprintf "  • Logrotate: %s" logrotate_path);
-  print_endline (Printf.sprintf "  • Cron: %s" cron_line);
-  print_endline "";
-  print_endline "Logs will be written to: /var/log/cn-YYYYMMDD.log"
+  print_endline (Cn_fmt.ok "Hub setup complete!")
 
 (* === Update === *)
 
@@ -456,6 +511,13 @@ Agents and repos this hub communicates with.
   let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_dir "git init -b main" in
 
   update_runtime hub_dir;
+
+  (* v3.4: Materialize cognitive assets so hub is wake-ready *)
+  setup_assets hub_dir;
+
+  (* Add .cn/vendor/ to .gitignore *)
+  let gitignore_path = Cn_ffi.Path.join hub_dir ".gitignore" in
+  Cn_ffi.Fs.write gitignore_path ".cn/vendor/\n";
 
   let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_dir "git add -A" in
   let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_dir (Printf.sprintf "git commit -m %s" (Filename.quote (Printf.sprintf "Initialize %s hub" hub_name))) in

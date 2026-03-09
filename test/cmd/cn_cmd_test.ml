@@ -10,7 +10,7 @@
     - Cn_telegram.parse_update (Telegram update JSON extraction)
     - Cn_context.tokenize (keyword extraction)
     - Cn_context.score_skill (keyword overlap scoring)
-    - Cn_context.contains_sub (substring containment)
+    - Cn_assets.contains_sub (substring containment)
     - Cn_context.pack (mindsets + role-weighted skills integration)
     - Cn_runtime.extract_inbound_message (message slicing from packed context)
     - Cn_runtime.telegram_payload (Telegram reply fallback chain)
@@ -369,19 +369,19 @@ let%expect_test "score_skill: case insensitive matching" =
 (* === Cn_context: contains_sub === *)
 
 let%expect_test "contains_sub: present" =
-  Printf.printf "%b\n" (Cn_context.contains_sub "/skills/eng/alpha/SKILL.md" "/skills/eng/");
+  Printf.printf "%b\n" (Cn_assets.contains_sub "/skills/eng/alpha/SKILL.md" "/skills/eng/");
   [%expect {| true |}]
 
 let%expect_test "contains_sub: absent" =
-  Printf.printf "%b\n" (Cn_context.contains_sub "/skills/eng/alpha/SKILL.md" "/skills/pm/");
+  Printf.printf "%b\n" (Cn_assets.contains_sub "/skills/eng/alpha/SKILL.md" "/skills/pm/");
   [%expect {| false |}]
 
 let%expect_test "contains_sub: empty sub" =
-  Printf.printf "%b\n" (Cn_context.contains_sub "anything" "");
+  Printf.printf "%b\n" (Cn_assets.contains_sub "anything" "");
   [%expect {| true |}]
 
 let%expect_test "contains_sub: sub longer than string" =
-  Printf.printf "%b\n" (Cn_context.contains_sub "ab" "abc");
+  Printf.printf "%b\n" (Cn_assets.contains_sub "ab" "abc");
   [%expect {| false |}]
 
 
@@ -405,13 +405,19 @@ let find_sub_idx (s : string) (sub : string) : int =
 
 let with_pack_hub f =
   let tmp = mk_temp_dir "cn_pack_test" in
-  (* Build hub structure *)
+  (* Build hub structure — CAR v3.4 uses .cn/vendor/core/ for assets *)
   let dirs = [
-    ".cn"; "spec"; "src/agent/mindsets";
-    "src/agent/skills/eng/alpha"; "src/agent/skills/pm/beta";
-    "state";
+    ".cn"; ".cn/vendor/core/mindsets";
+    ".cn/vendor/core/skills/agent/agent-ops";
+    ".cn/vendor/core/skills/eng/alpha"; ".cn/vendor/core/skills/pm/beta";
+    "spec"; "state";
   ] in
   List.iter (fun d -> Cn_ffi.Fs.mkdir_p (Filename.concat tmp d)) dirs;
+  (* Seed required core assets for CAR validation *)
+  Cn_ffi.Fs.write (Filename.concat tmp ".cn/vendor/core/mindsets/COHERENCE.md")
+    "# COHERENCE\n";
+  Cn_ffi.Fs.write (Filename.concat tmp ".cn/vendor/core/skills/agent/agent-ops/SKILL.md")
+    "# Agent Ops\n";
   Fun.protect ~finally:(fun () ->
     (* Best-effort recursive cleanup *)
     let rec rm path =
@@ -429,14 +435,14 @@ let%expect_test "pack: mindsets inserted + engineer skill ranks first" =
       {|{"runtime":{"role":"engineer"}}|};
     Cn_ffi.Fs.write (Filename.concat hub "spec/SOUL.md") "# SOUL\n";
     Cn_ffi.Fs.write (Filename.concat hub "spec/USER.md") "# USER\n";
-    Cn_ffi.Fs.write (Filename.concat hub "src/agent/mindsets/COHERENCE.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/mindsets/COHERENCE.md")
       "# COHERENCE\n";
-    Cn_ffi.Fs.write (Filename.concat hub "src/agent/mindsets/ENGINEERING.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/mindsets/ENGINEERING.md")
       "# ENGINEERING\n";
     (* Two skills with identical keyword overlap on "ship patch" *)
-    Cn_ffi.Fs.write (Filename.concat hub "src/agent/skills/eng/alpha/SKILL.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/skills/eng/alpha/SKILL.md")
       "# ENG SKILL\nship patch\n";
-    Cn_ffi.Fs.write (Filename.concat hub "src/agent/skills/pm/beta/SKILL.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/skills/pm/beta/SKILL.md")
       "# PM SKILL\nship patch\n";
 
     let packed =
@@ -465,11 +471,11 @@ let%expect_test "pack: role normalization — Engineer (capitalized) works" =
     Cn_ffi.Fs.write (Filename.concat hub ".cn/config.json")
       {|{"runtime":{"role":"Engineer"}}|};
     Cn_ffi.Fs.write (Filename.concat hub "spec/SOUL.md") "# SOUL\n";
-    Cn_ffi.Fs.write (Filename.concat hub "src/agent/mindsets/ENGINEERING.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/mindsets/ENGINEERING.md")
       "# ENGINEERING\n";
-    Cn_ffi.Fs.write (Filename.concat hub "src/agent/skills/eng/alpha/SKILL.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/skills/eng/alpha/SKILL.md")
       "# ENG SKILL\nship patch\n";
-    Cn_ffi.Fs.write (Filename.concat hub "src/agent/skills/pm/beta/SKILL.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/skills/pm/beta/SKILL.md")
       "# PM SKILL\nship patch\n";
 
     let packed =
@@ -487,9 +493,9 @@ let%expect_test "pack: no config → no mindsets crash, skills still work" =
     (* No .cn/config.json at all *)
     (try Sys.remove (Filename.concat hub ".cn/config.json") with _ -> ());
     Cn_ffi.Fs.write (Filename.concat hub "spec/SOUL.md") "# SOUL\n";
-    Cn_ffi.Fs.write (Filename.concat hub "src/agent/mindsets/ENGINEERING.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/mindsets/ENGINEERING.md")
       "# ENGINEERING\n";
-    Cn_ffi.Fs.write (Filename.concat hub "src/agent/skills/eng/alpha/SKILL.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/skills/eng/alpha/SKILL.md")
       "# SKILL\nship patch\n";
 
     let packed =

@@ -4,22 +4,24 @@
     Returns system blocks (with cache hints) and message turns, plus
     a flattened audit_text for state/input.md logging.
 
-    Missing files degrade gracefully (skip, don't error).
+    v3.4: delegates asset loading to Cn_assets (three-layer CAR).
+    Fails fast if core cognitive assets are missing.
 
     Structured output:
     - system[0]: Identity + User + Mindsets (stable, cache_control=true)
-    - system[1]: Reflections + Skills (dynamic, no cache)
+    - system[1]: Reflections + Skills + Capabilities (dynamic, no cache)
     - messages[]: Conversation history turns + inbound message
 
-    Loading order (per design doc + AGENTS.md session contract):
+    Loading order (per CAR-v3.4 design):
     1. spec/SOUL.md          → system block 1
     2. spec/USER.md          → system block 1
-    3. Mindsets              → system block 1
+    3. Mindsets (via CAR)    → system block 1
     4. Daily reflections     → system block 2
     5. Weekly reflection     → system block 2
-    6. Keyword-matched skills → system block 2
-    7. Conversation history  → messages (real turns)
-    8. Inbound message       → messages (last user turn) *)
+    6. Keyword-matched skills (via CAR) → system block 2
+    7. Capabilities + asset summary     → system block 2
+    8. Conversation history  → messages (real turns)
+    9. Inbound message       → messages (last user turn) *)
 
 type packed = {
   trigger_id : string;
@@ -36,20 +38,6 @@ let read_opt path =
     (try Cn_ffi.Fs.read path with _ -> "")
   else ""
 
-(** Substring containment check (no Str dependency). *)
-let contains_sub (s : string) (sub : string) : bool =
-  let n = String.length s in
-  let m = String.length sub in
-  if m = 0 then true
-  else if m > n then false
-  else
-    let rec loop i =
-      if i + m > n then false
-      else if String.sub s i m = sub then true
-      else loop (i + 1)
-    in
-    loop 0
-
 (** Read runtime.role from .cn/config.json. Returns None if missing or unset. *)
 let load_role ~hub_path : string option =
   let cfg = Cn_ffi.Path.join hub_path ".cn/config.json" in
@@ -65,28 +53,6 @@ let load_role ~hub_path : string option =
              match Cn_json.get_string "role" runtime with
              | Some r -> Some (String.lowercase_ascii r)
              | None -> None)
-
-(** Load mindsets in deterministic order, selecting role-specific file.
-    Returns concatenated content or "" if no mindsets found. *)
-let load_mindsets ~hub_path ~(role : string option) : string =
-  let dir = Cn_ffi.Path.join hub_path "src/agent/mindsets" in
-  let role_file =
-    match role with
-    | Some "pm" -> "PM.md"
-    | _ -> "ENGINEERING.md"
-  in
-  [ "COHERENCE.md"
-  ; role_file
-  ; "WRITING.md"
-  ; "OPERATIONS.md"
-  ; "PERSONALITY.md"
-  ; "MEMES.md"
-  ]
-  |> List.filter_map (fun f ->
-       let p = Cn_ffi.Path.join dir f in
-       let c = String.trim (read_opt p) in
-       if c = "" then None else Some c)
-  |> String.concat "\n\n---\n\n"
 
 (** List .md files in a directory, sorted descending (newest first).
     Returns [] if directory doesn't exist. *)
@@ -126,55 +92,31 @@ let score_skill keywords skill_content =
     if List.mem kw skill_tokens then acc + 1 else acc
   ) 0
 
+(** Role-path bonus: skills under the role's directory get a small
+    score bump (reorders, does not introduce zero-overlap skills). *)
+let bonus_for_path path role =
+  match role with
+  | Some "pm" when Cn_assets.contains_sub path "/skills/pm/" -> 2
+  | Some "engineer" when Cn_assets.contains_sub path "/skills/eng/" -> 2
+  | _ -> 0
+
 (** Load top N skills by keyword overlap with the message.
-    When role is set, skills under the matching role path get a small
-    score bonus (reorders, does not introduce zero-overlap skills). *)
+    Delegates to Cn_assets.collect_skills for three-layer resolution. *)
 let load_skills ~hub_path ~message ~(role : string option) ~n =
-  let skills_dir = Cn_ffi.Path.join hub_path "src/agent/skills" in
-  if not (Cn_ffi.Fs.exists skills_dir) then []
+  let all_skills = Cn_assets.collect_skills ~hub_path in
+  let keywords = tokenize message in
+  if keywords = [] then []
   else
-    let keywords = tokenize message in
-    if keywords = [] then []
-    else
-      (* Walk skill directories, find SKILL.md files.
-         Sort entries for deterministic traversal across filesystems. *)
-      let rec walk dir =
-        if not (Cn_ffi.Fs.exists dir) then []
-        else
-          try
-            Cn_ffi.Fs.readdir dir
-            |> List.sort String.compare
-            |> List.concat_map (fun entry ->
-              let path = Cn_ffi.Path.join dir entry in
-              let skill_path = Cn_ffi.Path.join path "SKILL.md" in
-              if Cn_ffi.Fs.exists skill_path then
-                let content = read_opt skill_path in
-                if content = "" then []
-                else [skill_path, content]
-              else if Sys.is_directory path then
-                walk path
-              else [])
-          with _ -> []
-      in
-      let bonus_for_path path =
-        match role with
-        | Some "pm" when contains_sub path "/skills/pm/" -> 2
-        | Some "engineer" when contains_sub path "/skills/eng/" -> 2
-        | _ -> 0
-      in
-      let all_skills = walk skills_dir in
-      all_skills
-      |> List.map (fun (path, content) ->
-           let base = score_skill keywords content in
-           let score = base + bonus_for_path path in
-           (path, content, base, score))
-      |> List.filter (fun (_, _, base, _) -> base > 0)
-      (* Sort by score desc, then path asc for stable tie-breaking.
-         Deterministic order matters for prompt caching effectiveness. *)
-      |> List.sort (fun (p1, _, _, s1) (p2, _, _, s2) ->
-           match compare s2 s1 with 0 -> String.compare p1 p2 | c -> c)
-      |> (fun lst -> if List.length lst > n then List.filteri (fun i _ -> i < n) lst else lst)
-      |> List.map (fun (_, content, _, _) -> content)
+    all_skills
+    |> List.map (fun (rel_path, content, _source) ->
+         let base = score_skill keywords content in
+         let score = base + bonus_for_path rel_path role in
+         (rel_path, content, base, score))
+    |> List.filter (fun (_, _, base, _) -> base > 0)
+    |> List.sort (fun (p1, _, _, s1) (p2, _, _, s2) ->
+         match compare s2 s1 with 0 -> String.compare p1 p2 | c -> c)
+    |> (fun lst -> if List.length lst > n then List.filteri (fun i _ -> i < n) lst else lst)
+    |> List.map (fun (_, content, _, _) -> content)
 
 (** Load last N entries from state/conversation.json as message turns.
     Returns structured turns for the messages array. *)
@@ -198,12 +140,20 @@ let load_conversation_turns ~hub_path ~n : Cn_llm.message_turn list =
     | _ -> []
 
 let pack ~hub_path ~trigger_id ~message ~from ?shell_config () =
+  (* Fail fast if core cognitive assets are missing *)
+  (match Cn_assets.validate_core ~hub_path with
+   | Ok () -> ()
+   | Error msg ->
+       failwith (Printf.sprintf
+         "Core cognitive assets missing: %s\n\
+          Run 'cn setup' or 'cn deps restore' to materialize assets." msg));
+
   let role = load_role ~hub_path in
 
   (* === Read all source data once === *)
   let soul = read_opt (Cn_ffi.Path.join hub_path "spec/SOUL.md") in
   let user = read_opt (Cn_ffi.Path.join hub_path "spec/USER.md") in
-  let mindsets = load_mindsets ~hub_path ~role in
+  let mindsets = Cn_assets.load_mindsets ~hub_path ~role in
 
   let daily_dir = Cn_ffi.Path.join hub_path "threads/reflections/daily" in
   let dailies = list_md_desc daily_dir in
@@ -250,9 +200,12 @@ let pack ~hub_path ~trigger_id ~message ~from ?shell_config () =
       (String.concat "\n---\n" skills);
 
   (* CN Shell capabilities block — after skills, before conversation.
-     Only present when shell_config is provided (v3.3.5+). *)
+     Only present when shell_config is provided (v3.3.5+).
+     v3.4: includes asset summary for cognitive substrate awareness. *)
   (match shell_config with
-   | Some sc -> Buffer.add_string dynamic_buf (Cn_capabilities.render sc)
+   | Some sc ->
+       let assets = Cn_assets.summarize ~hub_path in
+       Buffer.add_string dynamic_buf (Cn_capabilities.render ~assets sc)
    | None -> ());
 
   let system =

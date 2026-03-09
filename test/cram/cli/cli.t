@@ -19,7 +19,7 @@ Help:
 Version:
 
   $ $CN --version
-  cn 3.3.1
+  cn 3.4.0
 
 Init - create a new hub:
 
@@ -30,7 +30,7 @@ Init - create a new hub:
   $ $CN init my-hub 2>&1 | head -3
   Initializing hub: my-hub
   ✓ Updated state/runtime.md
-  ✓ Created hub: cn-my-hub
+  Materializing cognitive assets...
 
 Status - check hub status:
 
@@ -62,7 +62,7 @@ Outbox (with message):
 Doctor - health check:
 
   $ $CN doctor 2>&1 | head -2
-  cn v3.3.1
+  cn v3.4.0
   Checking health...
 
 Aliases:

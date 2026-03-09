@@ -29,8 +29,9 @@ let effect_kinds_base =
 (* === Render === *)
 
 (** Render the capabilities block as a markdown string.
-    Pure function: config in, string out. *)
-let render (config : Cn_shell.shell_config) =
+    Pure function: config in, string out.
+    v3.4: optional asset summary appended for cognitive substrate awareness. *)
+let render ?(assets : Cn_assets.asset_summary option) (config : Cn_shell.shell_config) =
   let buf = Buffer.create 512 in
   Buffer.add_string buf "## CN Shell Capabilities\n\n";
 
@@ -83,5 +84,26 @@ let render (config : Cn_shell.shell_config) =
   if effects_enabled then
     Buffer.add_string buf
       "example_effect: ops: [{\"kind\":\"fs_patch\",\"op_id\":\"patch-001\",\"path\":\"README.md\",\"unified_diff\":\"...\"}]\n";
+
+  (* v3.4: Cognitive asset summary *)
+  (match assets with
+   | None -> ()
+   | Some a ->
+       Buffer.add_string buf "\n### Cognitive Assets\n";
+       (match a.profile with
+        | Some p -> Buffer.add_string buf (Printf.sprintf "- profile: %s\n" p)
+        | None -> ());
+       Buffer.add_string buf (Printf.sprintf
+         "- core: cnos v%s (%d mindsets, %d core skills)\n"
+         Cn_lib.version a.core_mindsets a.core_skills);
+       if a.packages <> [] then begin
+         Buffer.add_string buf "- packages:\n";
+         a.packages |> List.iter (fun (name, skill_count) ->
+           Buffer.add_string buf (Printf.sprintf
+             "  - %s (%d skills)\n" name skill_count))
+       end;
+       Buffer.add_string buf (Printf.sprintf
+         "- hub-local overrides: %d mindsets, %d skills\n"
+         a.hub_overrides_mindsets a.hub_overrides_skills));
 
   Buffer.contents buf
