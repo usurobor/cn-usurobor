@@ -120,10 +120,10 @@ let run_doctor hub_path =
      | Some _ -> { name = "origin remote"; passed = true; value = "configured" }
      | None -> { name = "origin remote"; passed = false; value = "not configured" });
 
-    (* v3.4: Cognitive asset checks *)
-    (match Cn_assets.validate_core ~hub_path with
-     | Ok () -> { name = ".cn/vendor/core"; passed = true; value = "present" }
-     | Error _ -> { name = ".cn/vendor/core"; passed = false;
+    (* v3.5: Package-based cognitive asset checks *)
+    (match Cn_assets.validate_packages ~hub_path with
+     | Ok () -> { name = "cnos.core doctrine"; passed = true; value = "present" }
+     | Error _ -> { name = "cnos.core doctrine"; passed = false;
          value = "missing (run 'cn setup' or 'cn deps restore')" });
 
     { name = ".cn/deps.json"; passed = Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.json");
@@ -182,27 +182,36 @@ let read_role hub_path =
          | None -> "engineer")
     | Error _ -> "engineer"
 
-(** Materialize cognitive assets into a hub: core assets, deps manifest,
-    lockfile, and restore. Called by both run_setup and run_init. *)
+(** Install cognitive packages into a hub: write deps manifest + lockfile,
+    then restore packages. Called by both run_setup and run_init.
+    No vendor/core — everything is a package. *)
 let setup_assets hub_path =
-  print_endline (Cn_fmt.info "Materializing cognitive assets...");
-
-  (* Materialize core *)
-  (match Cn_deps.materialize_core ~hub_path with
-   | Ok () -> print_endline (Cn_fmt.ok "Core assets materialized")
-   | Error msg ->
-       print_endline (Cn_fmt.warn (Printf.sprintf "Core materialization: %s" msg)));
+  print_endline (Cn_fmt.info "Installing cognitive packages...");
 
   (* Write default manifest if missing *)
-  if not (Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.json")) then begin
-    let role = read_role hub_path in
-    Cn_deps.write_manifest ~hub_path (Cn_deps.default_manifest_for_profile role);
-    print_endline (Cn_fmt.ok (Printf.sprintf "Created .cn/deps.json (profile: %s)" role))
-  end;
+  let manifest =
+    if Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.json") then
+      (match Cn_deps.read_manifest ~hub_path with
+       | Some m -> m
+       | None ->
+           let role = read_role hub_path in
+           let m = Cn_deps.default_manifest_for_profile role in
+           Cn_deps.write_manifest ~hub_path m;
+           print_endline (Cn_fmt.ok (Printf.sprintf "Created .cn/deps.json (profile: %s)" role));
+           m)
+    else begin
+      let role = read_role hub_path in
+      let m = Cn_deps.default_manifest_for_profile role in
+      Cn_deps.write_manifest ~hub_path m;
+      print_endline (Cn_fmt.ok (Printf.sprintf "Created .cn/deps.json (profile: %s)" role));
+      m
+    end
+  in
 
-  (* Write default lockfile if missing *)
+  (* Write lockfile from manifest (pins current rev + subdir) *)
   if not (Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.lock.json")) then begin
-    Cn_deps.write_lockfile ~hub_path Cn_deps.empty_lockfile;
+    let lock = Cn_deps.lockfile_for_manifest manifest in
+    Cn_deps.write_lockfile ~hub_path lock;
     print_endline (Cn_fmt.ok "Created .cn/deps.lock.json")
   end;
 
@@ -210,10 +219,10 @@ let setup_assets hub_path =
   (match Cn_deps.restore ~hub_path with
    | Ok () ->
        let summary = Cn_assets.summarize ~hub_path in
+       let pkg_count = List.length summary.packages in
        print_endline (Cn_fmt.ok (Printf.sprintf
-         "Assets ready: %d mindsets, %d core skills, %d packages"
-         summary.core_mindsets summary.core_skills
-         (List.length summary.packages)))
+         "Assets ready: %d packages, %d doctrine, %d mindsets"
+         pkg_count summary.doctrine_count summary.mindset_count))
    | Error msg ->
        print_endline (Cn_fmt.warn (Printf.sprintf "Restore: %s" msg)))
 

@@ -1,0 +1,7 @@
+{
+  "schema": "cn.package.v1",
+  "name": "cnos.core",
+  "version": "1.0.0",
+  "kind": "package",
+  "engines": { "cnos": ">=3.4.0 <4.0.0" }
+}

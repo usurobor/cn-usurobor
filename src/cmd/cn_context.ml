@@ -4,24 +4,25 @@
     Returns system blocks (with cache hints) and message turns, plus
     a flattened audit_text for state/input.md logging.
 
-    v3.4: delegates asset loading to Cn_assets (three-layer CAR).
-    Fails fast if core cognitive assets are missing.
+    v3.5: unified package model with three cognitive strata.
+    Fails fast if core doctrine is missing.
 
     Structured output:
-    - system[0]: Identity + User + Mindsets (stable, cache_control=true)
+    - system[0]: Identity + Doctrine + Mindsets (stable, cache_control=true)
     - system[1]: Reflections + Skills + Capabilities (dynamic, no cache)
     - messages[]: Conversation history turns + inbound message
 
-    Loading order (per CAR-v3.4 design):
-    1. spec/SOUL.md          → system block 1
-    2. spec/USER.md          → system block 1
-    3. Mindsets (via CAR)    → system block 1
-    4. Daily reflections     → system block 2
-    5. Weekly reflection     → system block 2
-    6. Keyword-matched skills (via CAR) → system block 2
-    7. Capabilities + asset summary     → system block 2
-    8. Conversation history  → messages (real turns)
-    9. Inbound message       → messages (last user turn) *)
+    Loading order (per unified package model):
+    1. spec/SOUL.md           → system block 1 (identity)
+    2. spec/USER.md           → system block 1 (identity)
+    3. Core Doctrine (via CAR) → system block 1 (always-on, not scored)
+    4. Mindsets (via CAR)      → system block 1 (always-on, not scored)
+    5. Daily reflections        → system block 2
+    6. Weekly reflection        → system block 2
+    7. Keyword-matched skills (via CAR) → system block 2 (scored, bounded)
+    8. Capabilities + asset summary     → system block 2
+    9. Conversation history    → messages (real turns)
+   10. Inbound message         → messages (last user turn) *)
 
 type packed = {
   trigger_id : string;
@@ -96,12 +97,12 @@ let score_skill keywords skill_content =
     score bump (reorders, does not introduce zero-overlap skills). *)
 let bonus_for_path path role =
   match role with
-  | Some "pm" when Cn_assets.contains_sub path "/skills/pm/" -> 2
-  | Some "engineer" when Cn_assets.contains_sub path "/skills/eng/" -> 2
+  | Some "pm" when Cn_assets.contains_sub path "pm/" -> 2
+  | Some "engineer" when Cn_assets.contains_sub path "eng/" -> 2
   | _ -> 0
 
 (** Load top N skills by keyword overlap with the message.
-    Delegates to Cn_assets.collect_skills for three-layer resolution. *)
+    Delegates to Cn_assets.collect_skills for two-layer resolution. *)
 let load_skills ~hub_path ~message ~(role : string option) ~n =
   let all_skills = Cn_assets.collect_skills ~hub_path in
   let keywords = tokenize message in
@@ -140,19 +141,20 @@ let load_conversation_turns ~hub_path ~n : Cn_llm.message_turn list =
     | _ -> []
 
 let pack ~hub_path ~trigger_id ~message ~from ?shell_config () =
-  (* Fail fast if core cognitive assets are missing *)
-  (match Cn_assets.validate_core ~hub_path with
+  (* Fail fast if core doctrine is missing *)
+  (match Cn_assets.validate_packages ~hub_path with
    | Ok () -> ()
    | Error msg ->
        failwith (Printf.sprintf
          "Core cognitive assets missing: %s\n\
-          Run 'cn setup' or 'cn deps restore' to materialize assets." msg));
+          Run 'cn setup' or 'cn deps restore' to install packages." msg));
 
   let role = load_role ~hub_path in
 
   (* === Read all source data once === *)
   let soul = read_opt (Cn_ffi.Path.join hub_path "spec/SOUL.md") in
   let user = read_opt (Cn_ffi.Path.join hub_path "spec/USER.md") in
+  let doctrine = Cn_assets.load_core_doctrine ~hub_path in
   let mindsets = Cn_assets.load_mindsets ~hub_path ~role in
 
   let daily_dir = Cn_ffi.Path.join hub_path "threads/reflections/daily" in
@@ -182,10 +184,11 @@ let pack ~hub_path ~trigger_id ~message ~from ?shell_config () =
     end
   in
 
-  (* Block 1: stable identity context (cacheable) *)
+  (* Block 1: stable identity + doctrine + mindsets (cacheable) *)
   let stable_buf = Buffer.create 4096 in
   add_section stable_buf "Identity" soul;
   add_section stable_buf "User" user;
+  if doctrine <> "" then add_section stable_buf "Core Doctrine" doctrine;
   if mindsets <> "" then add_section stable_buf "Mindsets" mindsets;
 
   (* Block 2: dynamic context (reflections + skills) *)
@@ -200,8 +203,7 @@ let pack ~hub_path ~trigger_id ~message ~from ?shell_config () =
       (String.concat "\n---\n" skills);
 
   (* CN Shell capabilities block — after skills, before conversation.
-     Only present when shell_config is provided (v3.3.5+).
-     v3.4: includes asset summary for cognitive substrate awareness. *)
+     Includes asset summary for cognitive substrate awareness. *)
   (match shell_config with
    | Some sc ->
        let assets = Cn_assets.summarize ~hub_path in

@@ -85,7 +85,7 @@ let render ?(assets : Cn_assets.asset_summary option) (config : Cn_shell.shell_c
     Buffer.add_string buf
       "example_effect: ops: [{\"kind\":\"fs_patch\",\"op_id\":\"patch-001\",\"path\":\"README.md\",\"unified_diff\":\"...\"}]\n";
 
-  (* v3.4: Cognitive asset summary *)
+  (* v3.5: Cognitive asset summary — unified package model *)
   (match assets with
    | None -> ()
    | Some a ->
@@ -94,16 +94,18 @@ let render ?(assets : Cn_assets.asset_summary option) (config : Cn_shell.shell_c
         | Some p -> Buffer.add_string buf (Printf.sprintf "- profile: %s\n" p)
         | None -> ());
        Buffer.add_string buf (Printf.sprintf
-         "- core: cnos v%s (%d mindsets, %d core skills)\n"
-         Cn_lib.version a.core_mindsets a.core_skills);
+         "- doctrine: %d files (always-on)\n" a.doctrine_count);
+       Buffer.add_string buf (Printf.sprintf
+         "- mindsets: %d (always-on)\n" a.mindset_count);
        if a.packages <> [] then begin
          Buffer.add_string buf "- packages:\n";
          a.packages |> List.iter (fun (name, skill_count) ->
            Buffer.add_string buf (Printf.sprintf
              "  - %s (%d skills)\n" name skill_count))
        end;
-       Buffer.add_string buf (Printf.sprintf
-         "- hub-local overrides: %d mindsets, %d skills\n"
-         a.hub_overrides_mindsets a.hub_overrides_skills));
+       if a.hub_overrides_mindsets > 0 || a.hub_overrides_skills > 0 then
+         Buffer.add_string buf (Printf.sprintf
+           "- hub-local overrides: %d mindsets, %d skills\n"
+           a.hub_overrides_mindsets a.hub_overrides_skills));
 
   Buffer.contents buf
