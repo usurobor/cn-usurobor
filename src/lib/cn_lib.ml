@@ -656,7 +656,7 @@ Commands:
 
   # Hub management
   init [name]         Create new hub
-  setup               Set up hub: materialize assets, write deps, restore
+  setup               Set up hub: install packages, write deps, restore
   status              Show hub state
   commit [msg]        Stage + commit
   push                Push to origin
@@ -684,7 +684,7 @@ Runtime:
   Daemon mode (--daemon) replaces cron with Telegram long-poll.
 |}
 
-let version = "3.4.0"
+let version = "3.5.0"
 let cnos_commit = Cn_build_info.cnos_commit
 
 (* === Version Comparison (pure, semantic) === *)

@@ -4,29 +4,32 @@ This folder is home. Treat it that way.
 
 ## First Run
 
-Read `spec/SOUL.md` to understand who you are. Then run the self-cohere or configure-agent skill to complete your setup.
+Read `spec/SOUL.md` to understand who you are. Your human ran `cn setup`,
+which installed cognitive packages (doctrine, mindsets, skills) locally
+under `.cn/vendor/packages/`.
 
-## Repos
+## Your Hub
 
-After cohering, you have two repos:
-
-- **Hub** (`cn-<yourname>/`) — your personal identity + state
-- **Template** (`cnos/`) — generic agent instructions and runtime docs
+Your hub is one repo — your identity, state, and installed cognition:
 
 ```
-workspace/
-├── cn-<yourname>/     ← YOUR hub (personal)
-│   ├── spec/SOUL.md
-│   ├── spec/USER.md
-│   ├── README.md
-│   └── state/
-└── cnos/          ← template (generic, shared)
-    ├── src/agent/skills/
-    ├── src/agent/mindsets/
-    └── docs/
+cn-<yourname>/
+├── spec/SOUL.md            Identity
+├── spec/USER.md            About your human
+├── .cn/
+│   ├── deps.json           What packages are declared
+│   ├── deps.lock.json      Pinned versions
+│   └── vendor/packages/    Installed cognitive packages
+│       ├── cnos.core@.../  Doctrine, mindsets, core skills
+│       └── cnos.eng@.../   Engineering skills (or cnos.pm)
+├── state/                  Runtime state
+└── threads/                Work and reflections
 ```
 
-**Update template with `cd cnos && git pull`. Your hub stays untouched.**
+Your cognition is local. No template checkout needed. No network at wake-up.
+
+To update packages: `cn deps restore` reinstalls from the lockfile.
+Your human manages `deps.json` and `deps.lock.json`.
 
 ## Every Session
 
@@ -39,14 +42,15 @@ You do **not** need to manually reopen hub/template files unless the human expli
 asks you to inspect something beyond what was packed.
 
 Packed context normally includes:
-1. `spec/SOUL.md`
-2. `spec/USER.md`
-3. Mindsets
-4. Recent reflections
-5. Relevant skills
-6. Recent conversation
-7. Current inbound message
-8. (When enabled) CN Shell capability block
+1. `spec/SOUL.md` — identity
+2. `spec/USER.md` — your human
+3. Core Doctrine — always-on principles (from installed cnos.core)
+4. Mindsets — always-on behavioral frames (from installed packages)
+5. Recent reflections
+6. Relevant skills (keyword-matched from installed packages)
+7. CN Shell capability block
+8. Recent conversation
+9. Current inbound message
 
 In runtime mode:
 - read `state/input.md`
@@ -76,7 +80,7 @@ Everything is a thread. `threads/` contains:
 | `reflections/yearly/` | Evolution reviews | `YYYY0101.md` |
 | `adhoc/` | Topic threads | `YYYYMMDD-topic.md` |
 
-See `src/agent/mindsets/OPERATIONS.md` for detailed thread and heartbeat guidance.
+See the OPERATIONS mindset (loaded at wake-up) for detailed thread and heartbeat guidance.
 
 ## Safety
 
@@ -153,7 +157,7 @@ Never emit pseudo-tool syntaxes such as:
 - ad-hoc imperative shell snippets
 
 Capability requests MUST go in frontmatter `ops:` as a single-line JSON array.
-See `src/agent/skills/agent/agent-ops/SKILL.md`.
+See the agent-ops skill in your installed cnos.core package.
 
 ## Make It Yours
 

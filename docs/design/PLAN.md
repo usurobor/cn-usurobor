@@ -2,7 +2,7 @@
 
 **Status:** Draft
 **Date:** 2026-03-05
-**Spec:** AGENT-RUNTIME-v3.md v3.3.6
+**Spec:** AGENT-RUNTIME.md v3.3.6
 **Base:** All Steps 0–14 from PLAN.md are **complete** — native runtime is shipped and running.
 
 ---
@@ -436,7 +436,7 @@ val mark_projected : hub_path:string -> projection:string -> trigger_id:string
 
 ## Normative Examples
 
-See **AGENT-RUNTIME-v3.md, Appendix C** for 6 worked examples covering:
+See **AGENT-RUNTIME.md, Appendix C** for 6 worked examples covering:
 
 1. Observe-only (two-pass under `auto` — read file to answer question, Pass B reply with evidence)
 2. Two-pass observe + effect (cross-pass `op_id` reuse, `apply_mode: branch`, non-protected file)

@@ -268,6 +268,6 @@ Installed to `/usr/local/bin/cn`.
 
 ## Related
 
-- [AGENT-RUNTIME-v3.md](AGENT-RUNTIME-v3.md) — Full runtime spec (CN Shell, typed ops, two-pass, receipts)
+- [AGENT-RUNTIME.md](AGENT-RUNTIME.md) — Full runtime spec (CN Shell, typed ops, two-pass, receipts)
 - [SECURITY-MODEL.md](SECURITY-MODEL.md) — Security architecture
 - [SETUP-INSTALLER.md](SETUP-INSTALLER.md) — Install script specification
