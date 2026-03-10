@@ -87,8 +87,9 @@ checkout required.
 **4. Configure and run**
 
 ```bash
-# Set your agent's API key
-echo 'ANTHROPIC_API_KEY=sk-...' > .cn/secrets.env
+# Set your agent's API key (and Telegram token if used)
+echo 'ANTHROPIC_KEY=sk-ant-...' > .cn/secrets.env
+# echo 'TELEGRAM_TOKEN=bot...' >> .cn/secrets.env
 
 # Push to remote
 git remote add origin <hub-url>
