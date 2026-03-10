@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.5.0  | A+  | A+          | A+           | A+               | Unified package model + CAA + FOUNDATIONS. Everything cognitive is a package. Doctrinal capstone. Architecture spec. |
 | v3.4.0  | A+  | A+          | A+           | A+               | CAR: three-layer cognitive asset resolver + package system. Fresh hubs wake with full substrate. Git-native deps, lockfile, hub-local overrides. |
 | v3.3.1  | A+  | A+          | A+           | A+               | Agent instruction alignment: canonical ops examples in capabilities block, stale path fixes, output discipline. Prevents hallucinated tool syntaxes. |
 | v3.3.0  | A+  | A+          | A+           | A+               | CN Shell: typed ops, two-pass execution, path sandbox, crash recovery. Pure-pipe preserved — ops are post-call, governed, receipted. Zero new runtime deps. |
@@ -34,6 +35,39 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v3.5.0 (2026-03-10)
+
+**Unified Package Model + Coherent Agent Architecture + FOUNDATIONS**
+
+Everything cognitive is now a package. Three packages ship: `cnos.core` (doctrine + mindsets + agent skills), `cnos.eng` (engineering skills), `cnos.pm` (PM skills). Role profiles select which packages an agent loads.
+
+### Added
+
+- **Unified package model** — `packages/` directory with `cn.package.json` manifests; two-layer resolution (installed packages → hub-local overrides); replaces the three-layer core/packages/hub-local split from v3.4.0
+- **`cnos.core` package** — doctrine (FOUNDATIONS, CAP, CBP, CA-Conduct, COHERENCE, AGENT-OPS) + all mindsets + agent/ops/documenting/testing/release/skill skills
+- **`cnos.eng` package** — engineering skills (coding, design, functional, OCaml, RCA, review, ship, testing, tool-writing, UX-CLI)
+- **`cnos.pm` package** — PM skills (follow-up, issue, ship)
+- **Role profiles** — `profiles/engineer.json`, `profiles/pm.json` — select packages per role
+- **CAA v1.0.0** (`docs/design/CAA.md`) — Coherent Agent Architecture spec: structural definition of a coherent agent, 7 invariants, failure mode table, wake-up strata
+- **FOUNDATIONS.md** (`docs/explanation/`, `packages/cnos.core/doctrine/`) — doctrinal capstone: first principle through runtime, four doctrinal layers, cognitive loop, hierarchy of guidance
+- **Doc graph cleanup** — version numbers removed from design doc filenames (AGENT-RUNTIME-v3.md → AGENT-RUNTIME.md, CAR-v3.4.md → CAR.md, PLAN-v3.3.md → PLAN.md)
+
+### Changed
+
+- **`cn_assets.ml`** — rewritten for unified two-layer resolution (was three-layer)
+- **`cn_deps.ml`** — updated for package-based materialization
+- **`cn_context.ml`** — delegates to `Cn_assets` for doctrine/mindset/skill loading
+- **`cn_system.ml`** — updated for package-aware `cn setup` and `cn init`
+- **`AGENTS.md`** — removed template-repo assumption; updated for package model
+- **`README.md`** — corrected env var names, removed template-repo references
+
+### Removed
+
+- **`docs/design/CAR-v3.4.md`** — superseded by `docs/design/CAR.md` (unified model)
+- Template-repo assumption throughout docs
 
 ---
 
