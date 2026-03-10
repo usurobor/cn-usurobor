@@ -215,7 +215,7 @@ let setup_assets hub_path =
     print_endline (Cn_fmt.ok "Created .cn/deps.lock.json")
   end;
 
-  (* Restore from lockfile *)
+  (* Restore from lockfile — MUST succeed for hub to be wake-ready *)
   (match Cn_deps.restore ~hub_path with
    | Ok () ->
        let summary = Cn_assets.summarize ~hub_path in
@@ -224,7 +224,9 @@ let setup_assets hub_path =
          "Assets ready: %d packages, %d doctrine, %d mindsets"
          pkg_count summary.doctrine_count summary.mindset_count))
    | Error msg ->
-       print_endline (Cn_fmt.warn (Printf.sprintf "Restore: %s" msg)))
+       print_endline (Cn_fmt.fail (Printf.sprintf "Restore failed: %s" msg));
+       print_endline (Cn_fmt.fail "Hub is NOT wake-ready. Fix the issue and re-run 'cn setup'.");
+       Cn_ffi.Process.exit 1)
 
 (** cn setup — interactive hub setup.
     Makes any hub wake-ready: materializes core assets, writes default
