@@ -1,34 +1,32 @@
-# v3.4.0 — Cognitive Asset Resolver
+# v3.5.0 — Unified Package Model + CAA + FOUNDATIONS
 
-Fresh hubs now wake with the full cognitive substrate. No more silent incoherence — mindsets, skills, and agent-ops guidance are materialized at setup time and resolved at wake-up through a three-layer system.
+Everything cognitive is now a package. Doctrine, mindsets, and skills ship as versioned packages with role profiles. The doctrinal capstone — from first principle to runtime — is complete.
 
 ## What's new
 
-**2 new modules**, zero new runtime dependencies:
+**3 cognitive packages:**
 
-| Module | Purpose |
-|--------|---------|
-| `cn_assets` | Three-layer asset resolver: core → packages → hub-local overrides |
-| `cn_deps` | Dependency manifest, lockfile, materialize/restore pipeline |
+| Package | Contents |
+|---------|----------|
+| `cnos.core` | Doctrine (FOUNDATIONS, CAP, CBP, CA-Conduct, COHERENCE, AGENT-OPS) + mindsets (10) + agent/ops/meta skills |
+| `cnos.eng` | Engineering skills (coding, design, functional, OCaml, RCA, review, ship, testing, tool-writing, UX-CLI) |
+| `cnos.pm` | PM skills (follow-up, issue, ship) |
 
-**Three-layer resolution:**
-- **Layer A: Core** — bundled cognitive substrate (`.cn/vendor/core/`): mindsets, skills, agent-ops
-- **Layer B: Packages** — installed dependencies (`.cn/vendor/packages/`): role-specific skill packs
-- **Layer C: Hub-local** — personal overrides (`agent/mindsets/`, `agent/skills/`): highest priority
+**Role profiles:** `profiles/engineer.json`, `profiles/pm.json` — select which packages an agent loads.
 
-**`cn deps` commands:** `list`, `restore`, `doctor`, `add <pkg>`, `remove <pkg>`, `update`, `vendor`
+**Two-layer resolution:** Installed packages → hub-local overrides. Simpler than v3.4.0's three-layer model. Same guarantees: local-only wake-up, deterministic context, fail-fast on missing substrate.
 
-**Wake-ready hubs:** `cn init` and `cn setup` materialize assets automatically. `cn_context.pack` fails fast if core assets are missing rather than silently packing an empty prompt.
+**CAA v1.0.0** — Coherent Agent Architecture: structural definition of what a coherent agent is, 7 invariants, failure mode table, wake-up strata.
 
-**Cognitive Assets block:** The capabilities section now includes an asset summary so the agent knows its cognitive substrate composition on every wake-up.
+**FOUNDATIONS.md** — Doctrinal capstone: first principle (FEP → CAP) through four doctrinal layers to runtime grammar. The "why" behind every design decision in cnos.
 
 ## Upgrade
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/usurobor/cnos/main/install.sh | sh
-cn setup   # materializes assets in existing hubs
+cn setup   # materializes packages in existing hubs
 ```
 
 ## Full changelog
 
-See [CHANGELOG.md](https://github.com/usurobor/cnos/blob/main/CHANGELOG.md#v340-2026-03-09) for details.
+See [CHANGELOG.md](https://github.com/usurobor/cnos/blob/main/CHANGELOG.md#v350-2026-03-10) for details.
