@@ -364,12 +364,18 @@ let default_manifest_for_profile profile =
   { schema = "cn.deps.v1"; profile; packages }
 
 (** Create a lockfile with first-party package entries.
-    Uses the current HEAD rev if in a cnos checkout, else empty rev. *)
+    Queries the upstream source repo for its HEAD rev via ls-remote. *)
 let lockfile_for_manifest (m : manifest) =
   let rev =
     let (code, output) = Cn_ffi.Process.exec_args ~prog:"git"
-      ~args:["rev-parse"; "HEAD"] () in
-    if code = 0 then String.trim output else ""
+      ~args:["ls-remote"; default_first_party_source; "HEAD"] () in
+    if code = 0 then
+      (* Output is "<sha>\tHEAD\n"; extract just the hash *)
+      let trimmed = String.trim output in
+      (match String.index_opt trimmed '\t' with
+       | Some i -> String.sub trimmed 0 i
+       | None -> trimmed)
+    else ""
   in
   let packages = m.packages |> List.map (fun (dep : manifest_dep) ->
     let source, subdir =
