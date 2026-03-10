@@ -186,7 +186,7 @@ let find_local_package_source pkg_name =
   in
   walk (Cn_ffi.Process.cwd ())
 
-(** Check if a package name is first-party (cnos.*). *)
+(** Check if a package name is first-party (cnos.xxx). *)
 let is_first_party name =
   String.length name >= 5 && String.sub name 0 5 = "cnos."
 
