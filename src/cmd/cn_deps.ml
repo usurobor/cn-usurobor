@@ -92,11 +92,10 @@ let parse_locked_dep json =
   match Cn_json.get_string "name" json,
         Cn_json.get_string "version" json,
         Cn_json.get_string "source" json,
-        Cn_json.get_string "rev" json with
-  | Some name, Some version, Some source, Some rev ->
-      Some { name; version; source; rev;
-             subdir = Cn_json.get_string "subdir" json
-               |> Option.value ~default:"";
+        Cn_json.get_string "rev" json,
+        Cn_json.get_string "subdir" json with
+  | Some name, Some version, Some source, Some rev, Some subdir ->
+      Some { name; version; source; rev; subdir;
              integrity = Cn_json.get_string "integrity" json }
   | _ -> None
 

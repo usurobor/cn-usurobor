@@ -137,10 +137,24 @@ let required_doctrine = [
   "COHERENCE.md";
   "CAP.md";
   "CA-CONDUCT.md";
+  "CBP.md";
   "AGENT-OPS.md";
 ]
 
-(** Checks that cnos.core is installed with required doctrine files.
+(** Required mindset files in cnos.core package. *)
+let required_mindsets = [
+  "ENGINEERING.md";
+  "PM.md";
+  "WRITING.md";
+  "OPERATIONS.md";
+  "PERSONALITY.md";
+  "MEMES.md";
+  "THINKING.md";
+  "WISDOM.md";
+  "FUNCTIONAL.md";
+]
+
+(** Checks that cnos.core is installed with required doctrine AND mindsets.
     Returns Error with message if missing. *)
 let validate_packages ~hub_path =
   match find_installed_package hub_path "cnos.core" with
@@ -148,13 +162,23 @@ let validate_packages ~hub_path =
       Error "Package cnos.core not installed. Run 'cn setup' or 'cn deps restore'."
   | Some core_path ->
       let doctrine_dir = Cn_ffi.Path.join core_path "doctrine" in
-      let missing = required_doctrine |> List.filter (fun f ->
+      let missing_doctrine = required_doctrine |> List.filter (fun f ->
         not (Cn_ffi.Fs.exists (Cn_ffi.Path.join doctrine_dir f))) in
-      match missing with
-      | [] -> Ok ()
-      | ms ->
-          Error (Printf.sprintf "Missing required doctrine in cnos.core: %s"
-            (String.concat ", " ms))
+      let mindsets_dir = Cn_ffi.Path.join core_path "mindsets" in
+      let missing_mindsets = required_mindsets |> List.filter (fun f ->
+        not (Cn_ffi.Fs.exists (Cn_ffi.Path.join mindsets_dir f))) in
+      match missing_doctrine, missing_mindsets with
+      | [], [] -> Ok ()
+      | d, m ->
+          let parts = [] in
+          let parts = if d <> [] then
+            (Printf.sprintf "doctrine: %s" (String.concat ", " d)) :: parts
+          else parts in
+          let parts = if m <> [] then
+            (Printf.sprintf "mindsets: %s" (String.concat ", " m)) :: parts
+          else parts in
+          Error (Printf.sprintf "Missing required assets in cnos.core: %s"
+            (String.concat "; " (List.rev parts)))
 
 (* === Doctrine loading === *)
 
