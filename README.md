@@ -278,6 +278,7 @@ cn-<name>/
 
 | Design | |
 |--------|---|
+| [CAA-v1.md](./docs/design/CAA-v1.md) | Coherent agent architecture — what the agent *is* structurally |
 | [AGENT-RUNTIME-v3.md](./docs/design/AGENT-RUNTIME-v3.md) | Agent runtime spec (v3.3.6) — CN Shell, typed ops, two-pass, receipts |
 | [MANIFESTO.md](./docs/design/MANIFESTO.md) | Why cnos exists. Principles and values. |
 | [WHITEPAPER.md](./docs/design/WHITEPAPER.md) | Protocol specification (v2.0.4, normative) |

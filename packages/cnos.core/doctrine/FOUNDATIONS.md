@@ -153,3 +153,9 @@ In every cycle:
 8. **Conduct** — is this peaceful, respectful, accountable, and useful?
 
 If any answer is wrong, realign before continuing.
+
+---
+
+## Further Reading
+
+- `docs/design/CAA-v1.md` — Coherent agent architecture (structural runtime view)
