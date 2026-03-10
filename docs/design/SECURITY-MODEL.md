@@ -115,7 +115,7 @@ All transition functions return `Ok state | Error string`. Invalid transitions a
 
 ## CN Shell Addendum (v3.3+)
 
-The CN Shell capability runtime ([AGENT-RUNTIME-v3.md](AGENT-RUNTIME-v3.md), §CN Shell) introduces governed post-call capabilities (`fs_read`, `fs_write`, `git_diff`, `exec`, etc.) that extend the agent's vocabulary beyond coordination ops. This does NOT change the core security architecture — it refines it:
+The CN Shell capability runtime ([AGENT-RUNTIME.md](AGENT-RUNTIME.md), §CN Shell) introduces governed post-call capabilities (`fs_read`, `fs_write`, `git_diff`, `exec`, etc.) that extend the agent's vocabulary beyond coordination ops. This does NOT change the core security architecture — it refines it:
 
 | Property | Pre-CN Shell | With CN Shell |
 |----------|-------------|---------------|

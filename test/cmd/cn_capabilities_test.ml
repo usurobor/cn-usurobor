@@ -1,7 +1,7 @@
 (** cn_capabilities_test: ppx_expect tests for capability discovery block
 
     Tests the runtime-generated ## CN Shell Capabilities block per
-    AGENT-RUNTIME-v3.3.6: deterministic ordering, config-dependent
+    AGENT-RUNTIME v3.3.6: deterministic ordering, config-dependent
     content, budget reflection, and conditional field omission. *)
 
 (* ============================================================ *)

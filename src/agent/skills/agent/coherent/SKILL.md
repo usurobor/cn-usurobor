@@ -83,7 +83,7 @@ Produce outputs where internal consistency and external alignment are verifiable
 3.5. **Make alignment verifiable**
   - Reader should be able to check coherence
   - ❌ "This matches the spec" (which spec? where?)
-  - ✅ "Implements AGENT-RUNTIME-v3.md §4.2 — see fn signature line 42"
+  - ✅ "Implements AGENT-RUNTIME.md §4.2 — see fn signature line 42"
 
 3.6. **Orphans are bugs**
   - Every part connects to the whole

@@ -1,7 +1,7 @@
 (** cn_projection_test: ppx_expect tests for projection idempotency
 
     Tests atomic marker creation, deduplication, and crash-recovery
-    semantics per AGENT-RUNTIME-v3.3.6 §reply idempotency requirement.
+    semantics per AGENT-RUNTIME v3.3.6 §reply idempotency requirement.
 
     Marker path: state/projected/{projection}/{trigger_id}.sent
     Mechanism: O_CREAT|O_EXCL (atomic, no TOCTOU) *)

@@ -2082,7 +2082,7 @@ Running tests and fetching data.
 ## References
 
 ### cnos Internal
-- [Coherent Agent Architecture](./CAA-v1.md) — What the agent *is* structurally
+- [Coherent Agent Architecture](./CAA.md) — What the agent *is* structurally
 - [Hub Layout](../../spec/system/HUB.md) — Canonical directory structure
 - [Agent Ops Skill](../../src/agent/skills/agent/agent-ops/SKILL.md) — Authoritative output.md format (key-per-op, pipe-delimited)
 - [Security Model](./SECURITY-MODEL.md) — Agent sandbox, protected files, audit trail

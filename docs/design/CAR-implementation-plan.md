@@ -107,4 +107,4 @@ Changed:
 | `src/cmd/cn_system.ml` | Modified |
 | `src/cmd/cn_capabilities.ml` | Modified |
 | `src/lib/cn_lib.ml` | Version bump + help text |
-| `docs/design/CAR-v3.4.md` | Updated to v3.5 |
+| `docs/design/CAR.md` | Updated to v3.5 |

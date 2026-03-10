@@ -1,6 +1,6 @@
 (** cn_orchestrator_test: ppx_expect tests for two-pass orchestrator
 
-    Tests the orchestration logic from AGENT-RUNTIME-v3.3.6:
+    Tests the orchestration logic from AGENT-RUNTIME v3.3.6:
     - Two-pass triggering (auto vs off)
     - Pass A: observe executes, effects deferred
     - Pass B: effects execute, observe denied

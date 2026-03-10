@@ -5,7 +5,7 @@ What a coherent agent is, structurally.
 **Status:** v1.0.0
 **Date:** 2026-03-10
 **Relationship:** FOUNDATIONS.md = doctrine/why. This doc = architecture/what.
-AGENT-RUNTIME-v3 = execution/how. CAR-v3.5 = package distribution/how cognition arrives.
+AGENT-RUNTIME = execution/how. CAR = package distribution/how cognition arrives.
 
 ---
 
@@ -190,9 +190,9 @@ the failure cannot occur.
 | Document | Scope | Question it answers |
 |----------|-------|-------------------|
 | FOUNDATIONS.md | Doctrine | Why — first principles and doctrinal layers |
-| **CAA-v1.md** | **Architecture** | **What — structural definition of a coherent agent** |
-| AGENT-RUNTIME-v3 | Runtime spec | How — process lifecycle, queue, execution |
-| CAR-v3.5.md | Distribution | How — package model, install, restore |
+| **CAA.md** | **Architecture** | **What — structural definition of a coherent agent** |
+| AGENT-RUNTIME | Runtime spec | How — process lifecycle, queue, execution |
+| CAR.md | Distribution | How — package model, install, restore |
 
 FOUNDATIONS defines the principles. CAA defines the structure that
 implements them. The runtime and distribution docs define the mechanics.
