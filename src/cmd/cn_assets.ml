@@ -134,6 +134,7 @@ let walk_skills root_dir =
 
 (** Required doctrine files in cnos.core package. *)
 let required_doctrine = [
+  "FOUNDATIONS.md";
   "COHERENCE.md";
   "CAP.md";
   "CA-CONDUCT.md";
@@ -184,6 +185,7 @@ let validate_packages ~hub_path =
 
 (** Deterministic doctrine order. *)
 let doctrine_order = [
+  "FOUNDATIONS.md";
   "COHERENCE.md";
   "CAP.md";
   "CA-CONDUCT.md";
