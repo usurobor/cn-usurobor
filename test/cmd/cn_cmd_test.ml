@@ -405,19 +405,26 @@ let find_sub_idx (s : string) (sub : string) : int =
 
 let with_pack_hub f =
   let tmp = mk_temp_dir "cn_pack_test" in
-  (* Build hub structure — CAR v3.4 uses .cn/vendor/core/ for assets *)
+  (* Build hub structure — v3.5 uses .cn/vendor/packages/<name>@<version>/ *)
+  let core = ".cn/vendor/packages/cnos.core@1.0.0" in
   let dirs = [
-    ".cn"; ".cn/vendor/core/mindsets";
-    ".cn/vendor/core/skills/agent/agent-ops";
-    ".cn/vendor/core/skills/eng/alpha"; ".cn/vendor/core/skills/pm/beta";
+    ".cn"; ".cn/vendor/packages";
+    core ^ "/doctrine"; core ^ "/mindsets";
+    core ^ "/skills/agent/agent-ops";
+    core ^ "/skills/eng/alpha"; core ^ "/skills/pm/beta";
     "spec"; "state";
   ] in
   List.iter (fun d -> Cn_ffi.Fs.mkdir_p (Filename.concat tmp d)) dirs;
-  (* Seed required core assets for CAR validation *)
-  Cn_ffi.Fs.write (Filename.concat tmp ".cn/vendor/core/mindsets/COHERENCE.md")
-    "# COHERENCE\n";
-  Cn_ffi.Fs.write (Filename.concat tmp ".cn/vendor/core/skills/agent/agent-ops/SKILL.md")
-    "# Agent Ops\n";
+  (* Seed required core assets for package validation *)
+  List.iter (fun f ->
+    Cn_ffi.Fs.write (Filename.concat tmp (core ^ "/doctrine/" ^ f))
+      (Printf.sprintf "# %s\n" (Filename.remove_extension f)))
+    ["FOUNDATIONS.md"; "COHERENCE.md"; "CAP.md"; "CA-CONDUCT.md"; "CBP.md"; "AGENT-OPS.md"];
+  List.iter (fun f ->
+    Cn_ffi.Fs.write (Filename.concat tmp (core ^ "/mindsets/" ^ f))
+      (Printf.sprintf "# %s\n" (Filename.remove_extension f)))
+    ["ENGINEERING.md"; "PM.md"; "WRITING.md"; "OPERATIONS.md";
+     "PERSONALITY.md"; "MEMES.md"; "THINKING.md"; "WISDOM.md"; "FUNCTIONAL.md"];
   Fun.protect ~finally:(fun () ->
     (* Best-effort recursive cleanup *)
     let rec rm path =
@@ -435,14 +442,14 @@ let%expect_test "pack: mindsets inserted + engineer skill ranks first" =
       {|{"runtime":{"role":"engineer"}}|};
     Cn_ffi.Fs.write (Filename.concat hub "spec/SOUL.md") "# SOUL\n";
     Cn_ffi.Fs.write (Filename.concat hub "spec/USER.md") "# USER\n";
-    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/mindsets/COHERENCE.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/packages/cnos.core@1.0.0/mindsets/COHERENCE.md")
       "# COHERENCE\n";
-    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/mindsets/ENGINEERING.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/packages/cnos.core@1.0.0/mindsets/ENGINEERING.md")
       "# ENGINEERING\n";
     (* Two skills with identical keyword overlap on "ship patch" *)
-    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/skills/eng/alpha/SKILL.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/packages/cnos.core@1.0.0/skills/eng/alpha/SKILL.md")
       "# ENG SKILL\nship patch\n";
-    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/skills/pm/beta/SKILL.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/packages/cnos.core@1.0.0/skills/pm/beta/SKILL.md")
       "# PM SKILL\nship patch\n";
 
     let packed =
@@ -471,11 +478,11 @@ let%expect_test "pack: role normalization — Engineer (capitalized) works" =
     Cn_ffi.Fs.write (Filename.concat hub ".cn/config.json")
       {|{"runtime":{"role":"Engineer"}}|};
     Cn_ffi.Fs.write (Filename.concat hub "spec/SOUL.md") "# SOUL\n";
-    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/mindsets/ENGINEERING.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/packages/cnos.core@1.0.0/mindsets/ENGINEERING.md")
       "# ENGINEERING\n";
-    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/skills/eng/alpha/SKILL.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/packages/cnos.core@1.0.0/skills/eng/alpha/SKILL.md")
       "# ENG SKILL\nship patch\n";
-    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/skills/pm/beta/SKILL.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/packages/cnos.core@1.0.0/skills/pm/beta/SKILL.md")
       "# PM SKILL\nship patch\n";
 
     let packed =
@@ -493,9 +500,9 @@ let%expect_test "pack: no config → no mindsets crash, skills still work" =
     (* No .cn/config.json at all *)
     (try Sys.remove (Filename.concat hub ".cn/config.json") with _ -> ());
     Cn_ffi.Fs.write (Filename.concat hub "spec/SOUL.md") "# SOUL\n";
-    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/mindsets/ENGINEERING.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/packages/cnos.core@1.0.0/mindsets/ENGINEERING.md")
       "# ENGINEERING\n";
-    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/core/skills/eng/alpha/SKILL.md")
+    Cn_ffi.Fs.write (Filename.concat hub ".cn/vendor/packages/cnos.core@1.0.0/skills/eng/alpha/SKILL.md")
       "# SKILL\nship patch\n";
 
     let packed =
