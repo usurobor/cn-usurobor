@@ -30,7 +30,7 @@ Init - create a new hub:
   $ $CN init my-hub 2>&1 | head -3
   Initializing hub: my-hub
   ✓ Updated state/runtime.md
-  Materializing cognitive assets...
+  Installing cognitive packages...
 
 Status - check hub status:
 
