@@ -1,7 +1,7 @@
 (** cn_capabilities.ml — CN Shell capability discovery block
 
     Runtime-generated ## CN Shell Capabilities block for the packed
-    context, per AGENT-RUNTIME-v3.3.6.
+    context, per AGENT-RUNTIME v3.3.6.
 
     Placed after skills, before conversation history. Declares the
     syscall ABI at call time so the agent knows what the runtime

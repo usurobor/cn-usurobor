@@ -1,7 +1,7 @@
 (** cn_projection.ml — Projection idempotency markers
 
     Implements crash-recovery deduplication for outbound projections
-    (Telegram, Slack, etc.) per AGENT-RUNTIME-v3.3.6.
+    (Telegram, Slack, etc.) per AGENT-RUNTIME v3.3.6.
 
     Marker path: state/projected/{projection}/{trigger_id}.sent
     Mechanism: O_CREAT|O_EXCL (atomic, no TOCTOU race)

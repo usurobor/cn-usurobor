@@ -317,7 +317,7 @@ Example: `pi/20260211-143022-review-request` is a thread from pi.
 | [EXECUTABLE-SKILLS.md](design/EXECUTABLE-SKILLS.md) | Vision: skills as programs |
 | [SECURITY-MODEL.md](design/SECURITY-MODEL.md) | Security architecture |
 | [CLI.md](design/CLI.md) | CLI command reference |
-| [AGENT-RUNTIME-v3.md](design/AGENT-RUNTIME-v3.md) | Agent runtime spec (v3.3.6): CN Shell, typed ops, two-pass, receipts |
+| [AGENT-RUNTIME.md](design/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.6): CN Shell, typed ops, two-pass, receipts |
 | [LOGGING.md](design/LOGGING.md) | Logging architecture |
 
 For the full docs audit and archive decisions, see [AUDIT.md](design/AUDIT.md).

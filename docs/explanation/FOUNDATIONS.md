@@ -175,7 +175,7 @@ The vision is worth building. The work is implementation.
 
 ## Further Reading
 
-- `docs/design/CAA-v1.md` — Coherent agent architecture (structural runtime view)
+- `docs/design/CAA.md` — Coherent agent architecture (structural runtime view)
 - `tsc/spec/tsc-core.md` — TSC measurement specification
 - `tsc-practice/ctb/spec/` — CTB language reference
 - `docs/design/WHITEPAPER.md` — Protocol v1 specification

@@ -21,7 +21,7 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
 |--------------|------|
 | Understand what cnos is and how it works | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | Understand *why* cnos exists | [MANIFESTO.md](./design/MANIFESTO.md) |
-| Understand the agent architecture | [CAA-v1.md](./design/CAA-v1.md) |
+| Understand the agent architecture | [CAA.md](./design/CAA.md) |
 | Read the formal protocol spec | [WHITEPAPER.md](./design/WHITEPAPER.md) |
 | Understand the FSM state machines in depth | [PROTOCOL.md](./design/PROTOCOL.md) |
 | Learn the `cn` CLI commands | [CLI.md](./design/CLI.md) |
@@ -83,12 +83,12 @@ Specifications for specific subsystems.
 
 | Document | What it is |
 |----------|-----------|
-| [CAA-v1.md](./design/CAA-v1.md) | Coherent agent architecture — what the agent *is* structurally |
-| [AGENT-RUNTIME-v3.md](./design/AGENT-RUNTIME-v3.md) | Agent runtime spec (v3.3.6): CN Shell, typed ops, two-pass, receipts |
+| [CAA.md](./design/CAA.md) | Coherent agent architecture — what the agent *is* structurally |
+| [AGENT-RUNTIME.md](./design/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.6): CN Shell, typed ops, two-pass, receipts |
 | [CLI.md](./design/CLI.md) | CLI command reference — every `cn` command |
 | [SECURITY-MODEL.md](./design/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |
 | [SETUP-INSTALLER.md](./design/SETUP-INSTALLER.md) | Install script specification |
-| [PLAN-v3.3.md](./design/PLAN-v3.3.md) | Implementation plan for v3.3 (CN Shell) |
+| [PLAN.md](./design/PLAN.md) | Implementation plan for v3.3 (CN Shell) |
 | [LOGGING.md](./design/LOGGING.md) | Logging — IO pair archives, run logs, traceability |
 | [AGILE-PROCESS.md](./design/AGILE-PROCESS.md) | Team process — backlog, review, sync cadence |
 

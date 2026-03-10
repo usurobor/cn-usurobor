@@ -56,7 +56,7 @@ receipts every operation.
 
 The agent is the brain. `cn` is the body. Git is the nervous system.
 
-> Full architecture: [ARCHITECTURE.md](./docs/ARCHITECTURE.md) · Runtime spec: [AGENT-RUNTIME-v3.md](./docs/design/AGENT-RUNTIME-v3.md)
+> Full architecture: [ARCHITECTURE.md](./docs/ARCHITECTURE.md) · Runtime spec: [AGENT-RUNTIME.md](./docs/design/AGENT-RUNTIME.md)
 
 ---
 
@@ -278,8 +278,8 @@ cn-<name>/
 
 | Design | |
 |--------|---|
-| [CAA-v1.md](./docs/design/CAA-v1.md) | Coherent agent architecture — what the agent *is* structurally |
-| [AGENT-RUNTIME-v3.md](./docs/design/AGENT-RUNTIME-v3.md) | Agent runtime spec (v3.3.6) — CN Shell, typed ops, two-pass, receipts |
+| [CAA.md](./docs/design/CAA.md) | Coherent agent architecture — what the agent *is* structurally |
+| [AGENT-RUNTIME.md](./docs/design/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.6) — CN Shell, typed ops, two-pass, receipts |
 | [MANIFESTO.md](./docs/design/MANIFESTO.md) | Why cnos exists. Principles and values. |
 | [WHITEPAPER.md](./docs/design/WHITEPAPER.md) | Protocol specification (v2.0.4, normative) |
 | [PROTOCOL.md](./docs/design/PROTOCOL.md) | The four FSMs — state diagrams, transition tables |
