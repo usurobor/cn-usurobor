@@ -1,6 +1,6 @@
 (** cn_orchestrator.ml — Two-pass execution orchestrator for CN Shell
 
-    Implements the two-pass execution model from AGENT-RUNTIME-v3.3.6:
+    Implements the two-pass execution model from AGENT-RUNTIME v3.3.6:
     - Pass A: observe ops execute, effect ops deferred
     - Pass B: effect ops execute, observe ops denied (max_passes_exceeded)
 

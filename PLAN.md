@@ -1,4 +1,4 @@
-# Implementation Plan: Agent Runtime (AGENT-RUNTIME-v3.md)
+# Implementation Plan: Agent Runtime (AGENT-RUNTIME.md)
 
 ## Goal
 

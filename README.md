@@ -56,7 +56,7 @@ receipts every operation.
 
 The agent is the brain. `cn` is the body. Git is the nervous system.
 
-> Full architecture: [ARCHITECTURE.md](./docs/ARCHITECTURE.md) · Runtime spec: [AGENT-RUNTIME-v3.md](./docs/design/AGENT-RUNTIME-v3.md)
+> Full architecture: [ARCHITECTURE.md](./docs/ARCHITECTURE.md) · Runtime spec: [AGENT-RUNTIME.md](./docs/design/AGENT-RUNTIME.md)
 
 ---
 
@@ -76,26 +76,52 @@ curl -fsSL https://raw.githubusercontent.com/usurobor/cnos/main/install.sh | sh
 
 ```bash
 cn init <agentname>
+cd cn-<agentname>
+cn setup
 ```
 
-**4. Tell your agent to cohere**
+`cn setup` installs cognitive packages locally into `.cn/vendor/packages/`
+(doctrine, mindsets, skills). The hub is wake-ready after setup — no template
+checkout required.
+
+**4. Configure and run**
+
+```bash
+# Set your agent's API key (and Telegram token if used)
+echo 'ANTHROPIC_KEY=sk-ant-...' > .cn/secrets.env
+# echo 'TELEGRAM_TOKEN=bot...' >> .cn/secrets.env
+
+# Push to remote
+git remote add origin <hub-url>
+git push -u origin main
+
+# Start the agent
+cn agent
+```
+
+### Agent: first wake
+
+Your human created your hub with `cn init` + `cn setup`. Your cognitive
+substrate (doctrine, mindsets, skills) is installed locally under
+`.cn/vendor/packages/`. Read `spec/SOUL.md` — your identity.
+
+Your hub is one repo:
+
+- **Hub** (`cn-<yourname>/`) — identity, state, threads, installed packages
+
+### Developer mode (optional)
+
+For contributing to cnos itself, clone the cnos repo alongside your hub:
 
 ```
-Cohere as https://github.com/<owner>/cn-<agentname>
+workspace/
+├── cn-<yourname>/     ← your hub (personal)
+└── cnos/              ← cnos source (for development only)
 ```
 
-### Agent: cohere
-
-Your human sent you `Cohere as <hub-url>`. Do this:
-
-1. Clone the hub repo
-2. Read `spec/SOUL.md` — your identity
-3. Run `skills/self-cohere/SKILL.md` from the template (`cnos/`)
-
-After cohere, you have two repos:
-
-- **Hub** (`cn-<yourname>/`) — identity, state, threads
-- **Template** (`cnos/`) — shared skills, mindsets, docs
+In developer mode, `cn setup` and `cn deps restore` can source packages
+from the local cnos checkout. This is a dev workflow — agents in production
+use installed packages only.
 
 ### Git primitives, not platform features
 
@@ -166,7 +192,8 @@ Native OCaml binary. Built with `dune build src/cli/cn.exe`.
 | `cn commit [msg]` | Stage and commit |
 | `cn push` | Push to origin |
 | `cn save [msg]` | Commit + push |
-| `cn setup` | Interactive hub setup (config, secrets, optional systemd) |
+| `cn setup` | Install cognitive packages, write deps manifest, restore |
+| `cn deps list\|restore\|doctor` | Manage installed packages |
 | `cn update` | Update cn to latest |
 
 ### Flags
@@ -181,7 +208,7 @@ Aliases: `i`=inbox · `o`=outbox · `s`=status · `d`=doctor
 
 ## Project structure
 
-### cnos (this repo — the runtime + skills template)
+### cnos (this repo — the runtime + cognitive packages)
 
 ```
 cnos/
@@ -191,22 +218,31 @@ cnos/
     cmd/               Runtime modules (cn_runtime, cn_shell, cn_executor, ...)
     ffi/               System bindings (Fs, Path, Process, Http)
     transport/         Git I/O + inbox utilities
-  spec/                Agent specifications (SOUL.md, USER.md, AGENTS.md)
-  skills/              Reusable skills — each has SKILL.md + kata.md
+  packages/            Cognitive packages (installed into hubs by cn setup)
+    cnos.core/         Doctrine, mindsets, core skills
+    cnos.eng/          Engineering skills
+    cnos.pm/           PM skills
+  profiles/            Setup-time presets (engineer, pm)
   docs/                Documentation (Diataxis: tutorials, how-to, reference, explanation)
-    design/            Design documents (AGENT-RUNTIME-v3.md, SECURITY-MODEL.md, ...)
+    design/            Design documents (CAA, CAR, AGENT-RUNTIME, ...)
     how-to/            Guides: HANDSHAKE, AUTOMATION, MIGRATION
     ARCHITECTURE.md    System overview — start here for internals
   test/                Unit and integration tests
 ```
 
-### Agent hub (created by `cn init`)
+### Agent hub (created by `cn init` + `cn setup`)
 
 ```
 cn-<name>/
   .cn/
     config.json        Hub configuration (env vars override)
     secrets.env        API keys (loaded by runtime, never committed)
+    deps.json          Dependency manifest (profile + packages)
+    deps.lock.json     Pinned lockfile (source, rev, subdir)
+    vendor/
+      packages/        Installed cognitive packages
+        cnos.core@1.0.0/  Doctrine, mindsets, core skills
+        cnos.eng@1.0.0/   Engineering skills (or cnos.pm for PM profile)
   spec/                SOUL.md, USER.md — agent identity
   threads/
     in/                Direct inbound (non-mail)
@@ -242,7 +278,8 @@ cn-<name>/
 
 | Design | |
 |--------|---|
-| [AGENT-RUNTIME-v3.md](./docs/design/AGENT-RUNTIME-v3.md) | Agent runtime spec (v3.3.6) — CN Shell, typed ops, two-pass, receipts |
+| [CAA.md](./docs/design/CAA.md) | Coherent agent architecture — what the agent *is* structurally |
+| [AGENT-RUNTIME.md](./docs/design/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.6) — CN Shell, typed ops, two-pass, receipts |
 | [MANIFESTO.md](./docs/design/MANIFESTO.md) | Why cnos exists. Principles and values. |
 | [WHITEPAPER.md](./docs/design/WHITEPAPER.md) | Protocol specification (v2.0.4, normative) |
 | [PROTOCOL.md](./docs/design/PROTOCOL.md) | The four FSMs — state diagrams, transition tables |

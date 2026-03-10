@@ -118,8 +118,8 @@ The agent can now read files, inspect git state, write patches, and run allowlis
 
 ### Docs
 
-- **AGENT-RUNTIME-v3.md** — Appendix C with 6 normative worked examples (v3.3.6)
-- **PLAN-v3.3.md** — 7-step implementation plan (all steps complete)
+- **AGENT-RUNTIME.md** — Appendix C with 6 normative worked examples (v3.3.6)
+- **PLAN.md** — 7-step implementation plan (all steps complete)
 - **README, ARCHITECTURE, CLI, AUTOMATION** — Updated for new modules and hub structure
 - **BUILD-RELEASE.md** — Accurate 7-step release process with RELEASE.md support
 
@@ -212,7 +212,7 @@ The agent runtime replaces OpenClaw's:
 - `cn agent --process` — Process one queued item directly
 
 **Documentation:**
-- `AGENT-RUNTIME-v3.md` — Full design doc with rationale, architecture, migration plan
+- `AGENT-RUNTIME.md` — Full design doc with rationale, architecture, migration plan
 - Updated `ARCHITECTURE.md`, `CLI.md`, `AUTOMATION.md`
 
 ### Architecture: Pure Pipe

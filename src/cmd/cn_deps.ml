@@ -1,12 +1,27 @@
-(** cn_deps.ml — Dependency manifest, lockfile, and asset materialization
+(** cn_deps.ml — Dependency manifest, lockfile, and package restore
 
     Handles .cn/deps.json (manifest) and .cn/deps.lock.json (lockfile)
-    parsing, writing, and the materialize/restore pipeline.
+    parsing, writing, and the restore pipeline.
+
+    Unified package model (v3.5):
+    - Everything cognitive is a package (cnos.core, cnos.eng, cnos.pm)
+    - Profiles are setup-time presets, not packages
+    - Restore fetches by (source, rev, subdir) and copies into
+      .cn/vendor/packages/<name>@<version>/
+    - No CN_TEMPLATE_PATH, no vendor/core, no runtime network
 
     Key design: runtime never calls this module. Only cn setup,
     cn deps restore, and cn deps commands use it. *)
 
 (* open Cn_lib — unused; types referenced fully qualified *)
+
+(* === Constants === *)
+
+(** Default git source for first-party packages. *)
+let default_first_party_source = "https://github.com/usurobor/cnos.git"
+
+(** Subdirectory prefix for packages within the cnos repo. *)
+let packages_subdir = "packages"
 
 (* === Types === *)
 
@@ -16,12 +31,14 @@ type manifest_dep = {
   version : string;
 }
 
-(** Lockfile entry: what the resolver pinned. *)
+(** Lockfile entry: what the resolver pinned.
+    subdir is required — multiple packages may live in one git repo. *)
 type locked_dep = {
   name : string;
   version : string;
   source : string;
   rev : string;
+  subdir : string;
   integrity : string option;
 }
 
@@ -58,6 +75,7 @@ let locked_dep_to_json (d : locked_dep) =
     "version", Cn_json.String d.version;
     "source", Cn_json.String d.source;
     "rev", Cn_json.String d.rev;
+    "subdir", Cn_json.String d.subdir;
   ] in
   let fields = match d.integrity with
     | Some h -> fields @ ["integrity", Cn_json.String h]
@@ -74,9 +92,10 @@ let parse_locked_dep json =
   match Cn_json.get_string "name" json,
         Cn_json.get_string "version" json,
         Cn_json.get_string "source" json,
-        Cn_json.get_string "rev" json with
-  | Some name, Some version, Some source, Some rev ->
-      Some { name; version; source; rev;
+        Cn_json.get_string "rev" json,
+        Cn_json.get_string "subdir" json with
+  | Some name, Some version, Some source, Some rev, Some subdir ->
+      Some { name; version; source; rev; subdir;
              integrity = Cn_json.get_string "integrity" json }
   | _ -> None
 
@@ -129,44 +148,6 @@ let write_lockfile ~hub_path (l : lockfile) =
   ] in
   Cn_ffi.Fs.write (lockfile_path hub_path) (Cn_json.to_string json ^ "\n")
 
-(* === Bundled core source === *)
-
-(** Find the core asset source directory (template repo's src/agent/).
-
-    v3.4.0 distribution model: core assets are sourced from the cnos
-    template repo at setup/restore time. The runtime never calls this —
-    only cn setup and cn deps restore do.
-
-    Discovery order:
-    1. CN_TEMPLATE_PATH env var (explicit override)
-    2. Walk up from cwd looking for a cnos checkout with src/agent/
-
-    Future (v3.5+): core assets may be bundled alongside the installed
-    cn binary for production installs that don't have a checkout. *)
-let bundled_core_source () =
-  (* 1. CN_TEMPLATE_PATH env var *)
-  match Cn_ffi.Process.getenv_opt "CN_TEMPLATE_PATH" with
-  | Some p ->
-      let agent_dir = Cn_ffi.Path.join p "src/agent" in
-      if Cn_ffi.Fs.exists agent_dir then Ok agent_dir
-      else Error (Printf.sprintf
-        "CN_TEMPLATE_PATH=%s but %s not found" p agent_dir)
-  | None ->
-      (* 2. Walk up from cwd looking for src/agent/mindsets/COHERENCE.md *)
-      let rec walk dir =
-        let candidate = Cn_ffi.Path.join dir "src/agent/mindsets/COHERENCE.md" in
-        if Cn_ffi.Fs.exists candidate then
-          Ok (Cn_ffi.Path.join dir "src/agent")
-        else
-          let parent = Filename.dirname dir in
-          if parent = dir then
-            Error ("Cannot locate core assets. Either:\n" ^
-                   "  1. Run from within the cnos checkout, or\n" ^
-                   "  2. Set CN_TEMPLATE_PATH to the cnos repo root")
-          else walk parent
-      in
-      walk (Cn_ffi.Process.cwd ())
-
 (* === Recursive copy helper === *)
 
 (** Copy all files from src_dir to dst_dir, preserving directory structure.
@@ -186,33 +167,28 @@ let rec copy_tree src_dir dst_dir =
     with _ -> ()
   end
 
-(* === Materialize core === *)
+(* === First-party package source resolution === *)
 
-(** Materialize bundled core assets into .cn/vendor/core/.
-    Source: cnos template repo's src/agent/ directory. *)
-let materialize_core ~hub_path =
-  match bundled_core_source () with
-  | Error msg -> Error msg
-  | Ok agent_dir ->
-      let core = Cn_assets.vendor_core_path hub_path in
-      (* Copy mindsets *)
-      let src_mindsets = Cn_ffi.Path.join agent_dir "mindsets" in
-      let dst_mindsets = Cn_ffi.Path.join core "mindsets" in
-      Cn_ffi.Fs.ensure_dir dst_mindsets;
-      (if Cn_ffi.Fs.exists src_mindsets then
-        try
-          Cn_ffi.Fs.readdir src_mindsets
-          |> List.filter (fun f -> Filename.check_suffix f ".md")
-          |> List.iter (fun f ->
-            Cn_ffi.Fs.write
-              (Cn_ffi.Path.join dst_mindsets f)
-              (Cn_ffi.Fs.read (Cn_ffi.Path.join src_mindsets f)))
-        with _ -> ());
-      (* Copy skills tree *)
-      let src_skills = Cn_ffi.Path.join agent_dir "skills" in
-      let dst_skills = Cn_ffi.Path.join core "skills" in
-      copy_tree src_skills dst_skills;
-      Ok ()
+(** Resolve the source directory for a first-party package.
+    First-party packages live in the cnos repo under packages/<name>/.
+    At setup time, we look for a local cnos checkout (walk up from cwd).
+    Returns Ok (local_path) if found locally, Error msg otherwise. *)
+let find_local_package_source pkg_name =
+  let rec walk dir =
+    let candidate = Cn_ffi.Path.join dir
+      (Printf.sprintf "packages/%s/cn.package.json" pkg_name) in
+    if Cn_ffi.Fs.exists candidate then
+      Ok (Cn_ffi.Path.join dir (Printf.sprintf "packages/%s" pkg_name))
+    else
+      let parent = Filename.dirname dir in
+      if parent = dir then Error "not found locally"
+      else walk parent
+  in
+  walk (Cn_ffi.Process.cwd ())
+
+(** Check if a package name is first-party (cnos.*). *)
+let is_first_party name =
+  String.length name >= 5 && String.sub name 0 5 = "cnos."
 
 (* === Safe git helpers (argv-only, no shell strings) === *)
 
@@ -232,60 +208,85 @@ let rm_tree path =
 
 (* === Restore === *)
 
+(** Install a single package from its lock entry.
+    Uses (source, rev, subdir) to fetch only the package subtree.
+    Returns None on success, Some error_msg on failure. *)
+let restore_one ~hub_path (dep : locked_dep) =
+  let pkg_root = Cn_assets.vendor_packages_path hub_path in
+  let pkg_dir = Cn_ffi.Path.join pkg_root
+    (Printf.sprintf "%s@%s" dep.name dep.version) in
+  if Cn_ffi.Fs.exists pkg_dir then None (* already installed *)
+  else
+    (* Try local first-party source first *)
+    let local_result =
+      if is_first_party dep.name then
+        match find_local_package_source dep.name with
+        | Ok local_path ->
+            Cn_ffi.Fs.ensure_dir pkg_dir;
+            copy_tree local_path pkg_dir;
+            Some (Ok ())
+        | Error _ -> None
+      else None
+    in
+    match local_result with
+    | Some (Ok ()) -> None
+    | _ ->
+      (* Fetch by exact rev using structured argv calls *)
+      let tmp_dir = Cn_ffi.Path.join hub_path
+        (Printf.sprintf ".cn/tmp/%s-%s" dep.name dep.version) in
+      Cn_ffi.Fs.ensure_dir tmp_dir;
+      let result =
+        match git_in ~cwd:tmp_dir ["init"; "-q"] with
+        | Error msg -> Error msg
+        | Ok _ ->
+        match git_in ~cwd:tmp_dir
+          ["fetch"; "-q"; "--depth=1"; dep.source; dep.rev] with
+        | Error msg -> Error msg
+        | Ok _ ->
+        match git_in ~cwd:tmp_dir ["checkout"; "-q"; dep.rev] with
+        | Error msg -> Error msg
+        | Ok _ -> Ok ()
+      in
+      match result with
+      | Error msg ->
+          rm_tree tmp_dir;
+          Some (Printf.sprintf "Failed to fetch %s@%s from %s (rev %s): %s"
+            dep.name dep.version dep.source dep.rev msg)
+      | Ok () ->
+          Cn_ffi.Fs.ensure_dir pkg_dir;
+          (* Copy from subdir if specified, else copy entire checkout *)
+          let src_root = if dep.subdir <> "" then
+            Cn_ffi.Path.join tmp_dir dep.subdir
+          else tmp_dir in
+          (* Copy all asset directories: doctrine, mindsets, skills, plus metadata *)
+          List.iter (fun sub ->
+            let src = Cn_ffi.Path.join src_root sub in
+            if Cn_ffi.Fs.exists src then
+              copy_tree src (Cn_ffi.Path.join pkg_dir sub)
+          ) ["doctrine"; "mindsets"; "skills"];
+          (* Copy cn.package.json if present *)
+          let pkg_json = Cn_ffi.Path.join src_root "cn.package.json" in
+          if Cn_ffi.Fs.exists pkg_json then
+            Cn_ffi.Fs.write (Cn_ffi.Path.join pkg_dir "cn.package.json")
+              (Cn_ffi.Fs.read pkg_json);
+          rm_tree tmp_dir;
+          None
+
 (** Install packages from lockfile into .cn/vendor/packages/.
-    Fetches by exact lockfile rev using argv-only git calls.
-    Also materializes core. *)
+    Fetches by exact lockfile rev + subdir using argv-only git calls.
+    No vendor/core — everything is a package. *)
 let restore ~hub_path =
-  (* Always materialize core first *)
-  match materialize_core ~hub_path with
-  | Error msg -> Error (Printf.sprintf "Core materialization failed: %s" msg)
-  | Ok () ->
-      match read_lockfile ~hub_path with
-      | None ->
-          (* No lockfile = nothing to install beyond core *)
-          Ok ()
-      | Some lock ->
-          let pkg_root = Cn_assets.vendor_packages_path hub_path in
-          let errors = lock.packages |> List.filter_map (fun (dep : locked_dep) ->
-            let pkg_dir = Cn_ffi.Path.join pkg_root
-              (Printf.sprintf "%s@%s" dep.name dep.version) in
-            if Cn_ffi.Fs.exists pkg_dir then None (* already installed *)
-            else begin
-              (* Fetch by exact rev using structured argv calls *)
-              let tmp_dir = Cn_ffi.Path.join hub_path
-                (Printf.sprintf ".cn/tmp/%s-%s" dep.name dep.version) in
-              Cn_ffi.Fs.ensure_dir tmp_dir;
-              let result =
-                match git_in ~cwd:tmp_dir ["init"; "-q"] with
-                | Error msg -> Error msg
-                | Ok _ ->
-                match git_in ~cwd:tmp_dir
-                  ["fetch"; "-q"; "--depth=1"; dep.source; dep.rev] with
-                | Error msg -> Error msg
-                | Ok _ ->
-                match git_in ~cwd:tmp_dir ["checkout"; "-q"; dep.rev] with
-                | Error msg -> Error msg
-                | Ok _ -> Ok ()
-              in
-              match result with
-              | Error msg ->
-                  rm_tree tmp_dir;
-                  Some (Printf.sprintf "Failed to fetch %s@%s from %s (rev %s): %s"
-                    dep.name dep.version dep.source dep.rev msg)
-              | Ok () ->
-                  (* Copy runtime dirs *)
-                  Cn_ffi.Fs.ensure_dir pkg_dir;
-                  copy_tree (Cn_ffi.Path.join tmp_dir "mindsets")
-                    (Cn_ffi.Path.join pkg_dir "mindsets");
-                  copy_tree (Cn_ffi.Path.join tmp_dir "skills")
-                    (Cn_ffi.Path.join pkg_dir "skills");
-                  rm_tree tmp_dir;
-                  None
-            end
-          ) in
-          match errors with
-          | [] -> Ok ()
-          | errs -> Error (String.concat "\n" errs)
+  match read_lockfile ~hub_path with
+  | None ->
+      (* No lockfile = nothing to install *)
+      Ok ()
+  | Some lock ->
+      let errors = lock.packages |> List.filter_map (fun dep ->
+        restore_one ~hub_path dep
+      ) in
+      match errors with
+      | [] -> Ok ()
+      | errs -> Error (String.concat "\n" errs)
 
 (* === List installed === *)
 
@@ -308,14 +309,14 @@ let list_installed ~hub_path =
 
 (* === Doctor === *)
 
-(** Verify installed assets match lockfile. Returns Ok () or Error with
+(** Verify installed packages match lockfile. Returns Ok () or Error with
     list of issues found. *)
 let doctor ~hub_path =
   let issues = ref [] in
   let add msg = issues := msg :: !issues in
 
-  (* Check core *)
-  (match Cn_assets.validate_core ~hub_path with
+  (* Check installed packages have required assets *)
+  (match Cn_assets.validate_packages ~hub_path with
    | Ok () -> ()
    | Error msg -> add msg);
 
@@ -345,11 +346,46 @@ let doctor ~hub_path =
 
 (* === Default manifest for profile === *)
 
+(** Expand a profile name to its package list.
+    engineer => [cnos.core, cnos.eng]
+    pm       => [cnos.core, cnos.pm] *)
 let default_manifest_for_profile profile =
-  let pkg_name = Printf.sprintf "cnos.profile.%s" profile in
-  { schema = "cn.deps.v1";
-    profile;
-    packages = [{ name = pkg_name; version = "^1.0.0" }] }
+  let packages = match String.lowercase_ascii profile with
+    | "pm" -> [
+        { name = "cnos.core"; version = "^1.0.0" };
+        { name = "cnos.pm"; version = "^1.0.0" };
+      ]
+    | _ -> (* engineer is default *)
+      [
+        { name = "cnos.core"; version = "^1.0.0" };
+        { name = "cnos.eng"; version = "^1.0.0" };
+      ]
+  in
+  { schema = "cn.deps.v1"; profile; packages }
+
+(** Create a lockfile with first-party package entries.
+    Uses the current HEAD rev if in a cnos checkout, else empty rev. *)
+let lockfile_for_manifest (m : manifest) =
+  let rev =
+    let (code, output) = Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:["rev-parse"; "HEAD"] () in
+    if code = 0 then String.trim output else ""
+  in
+  let packages = m.packages |> List.map (fun (dep : manifest_dep) ->
+    let source, subdir =
+      if is_first_party dep.name then
+        (default_first_party_source,
+         Printf.sprintf "%s/%s" packages_subdir dep.name)
+      else
+        ("", "")
+    in
+    let version = if dep.version = "" || dep.version.[0] = '^'
+                     || dep.version.[0] = '~'
+      then "1.0.0" else dep.version in
+    { name = dep.name; version; source; rev; subdir;
+      integrity = None }
+  ) in
+  { schema = "cn.deps.lock.v1"; packages }
 
 let empty_lockfile =
   { schema = "cn.deps.lock.v1"; packages = [] }
@@ -365,19 +401,20 @@ let run_list ~hub_path =
     installed |> List.iter (fun (name, version) ->
       print_endline (Printf.sprintf "  %s@%s" name version))
   end;
-  (* Show core status *)
-  match Cn_assets.validate_core ~hub_path with
-  | Ok () -> print_endline (Cn_fmt.ok "Core assets: present")
-  | Error _ -> print_endline (Cn_fmt.warn "Core assets: missing (run 'cn deps restore')")
+  (* Show package validation status *)
+  match Cn_assets.validate_packages ~hub_path with
+  | Ok () -> print_endline (Cn_fmt.ok "Core doctrine: present")
+  | Error _ -> print_endline (Cn_fmt.warn "Core doctrine: missing (run 'cn deps restore')")
 
 let run_restore ~hub_path =
   match restore ~hub_path with
   | Ok () ->
       let summary = Cn_assets.summarize ~hub_path in
+      let pkg_count = List.length summary.packages in
+      let total_skills = List.fold_left (fun acc (_, c) -> acc + c) 0 summary.packages in
       print_endline (Cn_fmt.ok (Printf.sprintf
-        "Restored: %d core mindsets, %d core skills, %d packages"
-        summary.core_mindsets summary.core_skills
-        (List.length summary.packages)))
+        "Restored: %d packages, %d doctrine files, %d mindsets, %d skills"
+        pkg_count summary.doctrine_count summary.mindset_count total_skills))
   | Error msg ->
       print_endline (Cn_fmt.fail msg);
       Cn_ffi.Process.exit 1
