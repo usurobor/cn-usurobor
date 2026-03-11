@@ -20,11 +20,26 @@ let rec find_hub_path dir =
 
 (* === Logging === *)
 
-let log_action _hub_path _action _details =
-  (* Removed: hub log redundant with system log + logs/runs/
-     System log: /var/log/cn-YYYYMMDD.log (cron stdout)
-     Audit trail: logs/runs/ (input + output + meta) *)
-  ()
+let log_action _hub_path action details =
+  (* Compatibility shim: forward to Cn_trace structured events.
+     Infers component/layer from action prefix for richer traceability. *)
+  let component, layer =
+    if String.length action >= 6 && String.sub action 0 6 = "daemon" then
+      "telegram", Cn_trace.Sensor
+    else if String.length action >= 10 && String.sub action 0 10 = "projection" then
+      "projection", Cn_trace.Sensor
+    else if String.length action >= 5 && String.sub action 0 5 = "actor" then
+      "runtime", Cn_trace.Body
+    else if String.length action >= 7 && String.sub action 0 7 = "process" then
+      "runtime", Cn_trace.Body
+    else if String.length action >= 2 && String.sub action 0 2 = "io" then
+      "runtime", Cn_trace.Body
+    else
+      "runtime", Cn_trace.Body
+  in
+  Cn_trace.gemit ~component ~layer
+    ~event:action ~severity:Info ~status:Ok_
+    ~reason:details ()
 
 (* === Peers === *)
 

@@ -37,20 +37,28 @@ let acquire_lock hub_path =
        let stat = Unix.stat path in
        let age = Unix.gettimeofday () -. stat.Unix.st_mtime in
        if age > lock_max_age_sec then begin
-         Cn_hub.log_action hub_path "lock.stale"
-           (Printf.sprintf "age=%.0fs, removing" age);
+         Cn_trace.gemit ~component:"runtime" ~layer:Body
+           ~event:"lock.stale" ~severity:Warn ~status:Ok_
+           ~reason:(Printf.sprintf "age=%.0fs, removing" age) ();
          Cn_ffi.Fs.unlink path
        end
      with _ -> ());
   try
     let fd = Unix.openfile path [Unix.O_CREAT; Unix.O_EXCL; Unix.O_WRONLY] 0o644 in
+    Cn_trace.gemit ~component:"runtime" ~layer:Body
+      ~event:"lock.acquired" ~severity:Info ~status:Ok_ ();
     Ok fd
   with Unix.Unix_error (Unix.EEXIST, _, _) ->
+    Cn_trace.gemit ~component:"runtime" ~layer:Body
+      ~event:"lock.busy" ~severity:Info ~status:Skipped
+      ~reason_code:"lock_busy" ();
     Error "agent already running (state/agent.lock exists)"
 
 let release_lock hub_path fd =
   (try Unix.close fd with _ -> ());
-  (try Cn_ffi.Fs.unlink (lock_path hub_path) with _ -> ())
+  (try Cn_ffi.Fs.unlink (lock_path hub_path) with _ -> ());
+  Cn_trace.gemit ~component:"runtime" ~layer:Body
+    ~event:"lock.released" ~severity:Info ~status:Ok_ ()
 
 (* === Helpers === *)
 
@@ -200,12 +208,229 @@ let clear_ops_done hub_path trigger_id =
   let path = ops_done_path hub_path trigger_id in
   (try Sys.remove path with Sys_error _ -> ())
 
+(* === Shared boot sequence (TRACEABILITY §7) === *)
+
+(** Boot result: asset summary + coherence state for projection writes. *)
+type boot_info = {
+  session : Cn_trace.session;
+  summary : Cn_assets.asset_summary;
+  lock_ok : bool;
+  pkg_names : string list;
+  total_skills : int;
+}
+
+(** Run the full boot/readiness sequence and write projections.
+    Called from daemon, cron, and stdio. Mode is "daemon"/"cron"/"stdio".
+    Returns Ok boot_info on success, Error msg if boot is blocked. *)
+let boot_sequence ~(config : Cn_config.config) ~hub_path ~mode =
+  let session = match Cn_trace.get_global () with
+    | Some s -> s
+    | None -> Cn_trace.init_global hub_path
+  in
+
+  (* 1. boot.start *)
+  Cn_trace.emit_simple session ~component:"runtime" ~layer:Body
+    ~event:"boot.start" ~severity:Info ~status:Ok_
+    ~details:["mode", Cn_json.String mode] ();
+
+  (* 2. config.loaded *)
+  Cn_trace.emit_simple session ~component:"runtime" ~layer:Mind
+    ~event:"config.loaded" ~severity:Info ~status:Ok_
+    ~details:[
+      "model", Cn_json.String config.model;
+      "poll_interval", Cn_json.Int config.poll_interval;
+      "poll_timeout", Cn_json.Int config.poll_timeout;
+    ] ();
+
+  (* 3. deps.lock.loaded *)
+  let lock_ok = Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.lock.json") in
+  Cn_trace.emit_simple session ~component:"runtime" ~layer:Mind
+    ~event:"deps.lock.loaded" ~severity:Info
+    ~status:(if lock_ok then Ok_ else Degraded) ();
+
+  (* 4. assets.validated *)
+  let assets_ok = match Cn_assets.validate_packages ~hub_path with
+    | Ok () ->
+        Cn_trace.emit_simple session ~component:"runtime" ~layer:Mind
+          ~event:"assets.validated" ~severity:Info ~status:Ok_ ();
+        true
+    | Error msg ->
+        Cn_trace.emit_simple session ~component:"runtime" ~layer:Mind
+          ~event:"boot.blocked" ~severity:Error_ ~status:Blocked
+          ~reason_code:"core_doctrine_missing" ~reason:msg ();
+        Cn_trace_state.write_ready hub_path {
+          status = Blocked; boot_id = session.boot_id;
+          updated_at = Cn_fmt.now_iso ();
+          blocked_reason = Some "core_doctrine_missing";
+          mind = None; body = None; sensors_telegram = None;
+        };
+        false
+  in
+  if not assets_ok then
+    Error "Boot blocked: core assets missing"
+  else begin
+    (* 5-8. doctrine, mindsets, skills, capabilities *)
+    let summary = Cn_assets.summarize ~hub_path in
+    let total_skills = List.fold_left (fun acc (_, c) -> acc + c) 0 summary.packages in
+
+    (* Doctrine: per-file detail *)
+    Cn_trace.emit_simple session ~component:"runtime" ~layer:Mind
+      ~event:"doctrine.loaded" ~severity:Info ~status:Ok_
+      ~details:[
+        "count", Cn_json.Int summary.doctrine_count;
+        "required", Cn_json.Array (List.map (fun s ->
+          Cn_json.String s) Cn_assets.required_doctrine);
+      ] ();
+
+    (* Mindsets: count + hub overrides *)
+    Cn_trace.emit_simple session ~component:"runtime" ~layer:Mind
+      ~event:"mindsets.loaded" ~severity:Info ~status:Ok_
+      ~details:[
+        "count", Cn_json.Int summary.mindset_count;
+        "required", Cn_json.Array (List.map (fun s ->
+          Cn_json.String s) Cn_assets.required_mindsets);
+        "hub_overrides", Cn_json.Int summary.hub_overrides_mindsets;
+      ] ();
+
+    (* Skills: per-package breakdown *)
+    Cn_trace.emit_simple session ~component:"runtime" ~layer:Mind
+      ~event:"skills.indexed" ~severity:Info ~status:Ok_
+      ~details:[
+        "count", Cn_json.Int total_skills;
+        "per_package", Cn_json.Object (List.map (fun (pkg, count) ->
+          (pkg, Cn_json.Int count)) summary.packages);
+        "hub_overrides", Cn_json.Int summary.hub_overrides_skills;
+      ] ();
+
+    (* Capabilities: config + profile *)
+    Cn_trace.emit_simple session ~component:"runtime" ~layer:Mind
+      ~event:"capabilities.rendered" ~severity:Info ~status:Ok_
+      ~details:[
+        "profile", Cn_json.String
+          (Option.value ~default:"engineer" summary.profile);
+        "two_pass", Cn_json.String config.shell.two_pass;
+        "apply_mode", Cn_json.String config.shell.apply_mode;
+        "exec_enabled", Cn_json.Bool config.shell.exec_enabled;
+      ] ();
+
+    (* 9. boot.ready *)
+    Cn_trace.emit_simple session ~component:"runtime" ~layer:Body
+      ~event:"boot.ready" ~severity:Info ~status:Ok_ ();
+
+    let pkg_names = List.map (fun (name, _) -> name) summary.packages in
+
+    (* Write ready.json — mode-aware sensor block *)
+    let sensors_telegram = match mode with
+      | "daemon" -> Some {
+          Cn_trace_state.enabled = true;
+          offset = 0; (* daemon will update after offset load *)
+          last_poll_status = "starting";
+          last_poll_at = Cn_fmt.now_iso ();
+        }
+      | _ -> None
+    in
+    Cn_trace_state.write_ready hub_path {
+      status = Ready; boot_id = session.boot_id;
+      updated_at = Cn_fmt.now_iso ();
+      blocked_reason = None;
+      mind = Some {
+        profile = Option.value ~default:"engineer" summary.profile;
+        packages = pkg_names;
+        doctrine_required = List.length Cn_assets.required_doctrine;
+        doctrine_loaded = summary.doctrine_count;
+        doctrine_hash = "";
+        mindsets_required = List.length Cn_assets.required_mindsets;
+        mindsets_loaded = summary.mindset_count;
+        mindsets_hash = "";
+        skills_indexed = total_skills;
+        skills_selected_last = [];
+        capabilities_hash = "";
+        two_pass = config.shell.two_pass;
+        apply_mode = config.shell.apply_mode;
+        exec_enabled = config.shell.exec_enabled;
+      };
+      body = Some {
+        fsm_state = "idle";
+        lock_held = false;
+        current_cycle = None;
+        queue_depth = Cn_agent.queue_depth hub_path;
+      };
+      sensors_telegram;
+    };
+
+    (* Write coherence.json *)
+    Cn_trace_state.write_coherence hub_path {
+      boot_id = session.boot_id;
+      status = "coherent";
+      config = Ok_;
+      lockfile = (if lock_ok then Ok_ else Missing);
+      doctrine = Ok_;
+      mindsets = Ok_;
+      packages = Ok_;
+      capabilities = Ok_;
+      transport = (match mode with "daemon" -> Ok_ | _ -> Missing);
+      updated_at = Cn_fmt.now_iso ();
+    };
+
+    (* Write initial runtime.json — idle state *)
+    Cn_trace_state.write_runtime hub_path {
+      boot_id = session.boot_id;
+      current_cycle_id = None;
+      current_pass = None;
+      active_trigger = None;
+      queue_depth = Cn_agent.queue_depth hub_path;
+      lock_held = false;
+      lock_boot_id = None;
+      pending_projection = None;
+      updated_at = Cn_fmt.now_iso ();
+    };
+
+    Ok { session; summary; lock_ok; pkg_names; total_skills }
+  end
+
+(** Update runtime.json projection for common state transitions. *)
+let update_runtime_projection hub_path ~cycle_id ~pass ~trigger ~lock_held
+    ~pending_projection =
+  match Cn_trace.get_global () with
+  | Some session ->
+      Cn_trace_state.write_runtime hub_path {
+        boot_id = session.boot_id;
+        current_cycle_id = cycle_id;
+        current_pass = pass;
+        active_trigger = trigger;
+        queue_depth = Cn_agent.queue_depth hub_path;
+        lock_held;
+        lock_boot_id = (if lock_held then Some session.boot_id else None);
+        pending_projection;
+        updated_at = Cn_fmt.now_iso ();
+      }
+  | None -> ()
+
+(** Update ready.json body section for FSM state changes.
+    Uses read-modify-write to preserve mind and sensors_telegram fields. *)
+let update_ready_body hub_path ~fsm_state ~lock_held ~current_cycle =
+  match Cn_trace.get_global () with
+  | Some session ->
+      Cn_trace_state.update_ready_body hub_path
+        ~boot_id:session.boot_id
+        ~updated_at:(Cn_fmt.now_iso ())
+        { fsm_state; lock_held; current_cycle;
+          queue_depth = Cn_agent.queue_depth hub_path }
+  | None -> ()
+
 (* === Finalize: archive → execute → project → conversation → cleanup === *)
 
 (** Run the post-LLM pipeline on an existing input.md + output.md pair.
     inbound_message is the original user message (not the full packed context). *)
 let finalize ~(config : Cn_config.config) ~hub_path ~name
       ~trigger_id ~from ~inbound_message ~output_content =
+  Cn_trace.gemit ~component:"runtime" ~layer:Body
+    ~event:"finalize.start" ~severity:Info ~status:Ok_
+    ~trigger_id
+    ~refs:{ input = Some (Printf.sprintf "logs/input/%s.md" trigger_id);
+            output = Some (Printf.sprintf "logs/output/%s.md" trigger_id);
+            receipts = None } ();
+
   (* 1. Archive raw BEFORE effects *)
   archive_raw hub_path ~trigger_id;
 
@@ -216,14 +441,22 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
   let ops = List.map (resolve_payload body) ops in
 
   (* 3. Execute operations (skipped on recovery if already done) *)
-  if ops_already_done hub_path trigger_id then
-    Cn_hub.log_action hub_path "process.ops_skip"
-      (Printf.sprintf "trigger:%s ops already executed" trigger_id)
-  else begin
+  if ops_already_done hub_path trigger_id then begin
+    Cn_trace.gemit ~component:"runtime" ~layer:Body
+      ~event:"effects.execute.skip" ~severity:Info ~status:Skipped
+      ~trigger_id ~reason_code:"ops_already_done" ()
+  end else begin
+    Cn_trace.gemit ~component:"runtime" ~layer:Body
+      ~event:"effects.execute.start" ~severity:Info ~status:Ok_
+      ~trigger_id
+      ~details:["op_count", Cn_json.Int (List.length ops)] ();
     List.iter (fun op ->
       Cn_agent.execute_op hub_path name trigger_id op
     ) ops;
-    mark_ops_done hub_path trigger_id
+    mark_ops_done hub_path trigger_id;
+    Cn_trace.gemit ~component:"runtime" ~layer:Body
+      ~event:"effects.execute.complete" ~severity:Info ~status:Ok_
+      ~trigger_id ()
   end;
 
   (* 4. Project to Telegram if from Telegram.
@@ -240,7 +473,9 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
     if from <> "telegram" then Ok ()
     else match config.telegram_token with
     | None ->
-        Cn_hub.log_action hub_path "process.telegram_skip" "no token";
+        Cn_trace.gemit ~component:"projection" ~layer:Sensor
+          ~event:"projection.skipped" ~severity:Info ~status:Skipped
+          ~trigger_id ~reason_code:"no_token" ();
         Ok ()
     | Some token ->
         let inp = Cn_agent.input_path hub_path in
@@ -252,29 +487,45 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
           if k = "chat_id" then Some v else None) |> Option.value ~default:"" in
         match int_of_string_opt chat_id_str with
         | None ->
-            Cn_hub.log_action hub_path "process.telegram_skip"
-              "no chat_id in input frontmatter";
+            Cn_trace.gemit ~component:"projection" ~layer:Sensor
+              ~event:"projection.skipped" ~severity:Info ~status:Skipped
+              ~trigger_id ~reason_code:"no_chat_id" ();
             Ok ()
         | Some chat_id ->
+            Cn_trace.gemit ~component:"projection" ~layer:Sensor
+              ~event:"projection.start" ~severity:Info ~status:Ok_
+              ~trigger_id
+              ~details:["chat_id", Cn_json.Int chat_id] ();
             match Cn_projection.project_reply ~hub_path
                     ~projection:"telegram" ~trigger_id with
             | `Already_projected ->
-                Cn_hub.log_action hub_path "process.telegram_skip"
-                  (Printf.sprintf "already_projected trigger:%s" trigger_id);
+                Cn_trace.gemit ~component:"projection" ~layer:Sensor
+                  ~event:"projection.marker.exists" ~severity:Info ~status:Skipped
+                  ~trigger_id ~reason_code:"already_projected" ();
                 Ok ()
             | `Send ->
+                Cn_trace.gemit ~component:"projection" ~layer:Sensor
+                  ~event:"projection.marker.created" ~severity:Info ~status:Ok_
+                  ~trigger_id ();
                 let payload = telegram_payload ops body in
                 match Cn_telegram.send_message ~token ~chat_id ~text:payload with
                 | Ok () ->
-                    Cn_hub.log_action hub_path "process.telegram_reply"
-                      (Printf.sprintf "chat_id:%d" chat_id);
+                    Cn_trace.gemit ~component:"projection" ~layer:Sensor
+                      ~event:"projection.ok" ~severity:Info ~status:Ok_
+                      ~trigger_id
+                      ~details:["chat_id", Cn_json.Int chat_id] ();
                     Ok ()
                 | Error msg ->
                     Cn_projection.unmark ~hub_path
                       ~projection:"telegram" ~trigger_id;
-                    Cn_hub.log_action hub_path "process.telegram_error"
-                      (Printf.sprintf "chat_id:%d error:%s retryable:true"
-                         chat_id msg);
+                    Cn_trace.gemit ~component:"projection" ~layer:Sensor
+                      ~event:"projection.error" ~severity:Error_ ~status:Error_status
+                      ~trigger_id ~reason_code:"send_failed"
+                      ~reason:"Telegram send failed"
+                      ~details:["chat_id", Cn_json.Int chat_id] ();
+                    Cn_trace.gemit ~component:"projection" ~layer:Sensor
+                      ~event:"projection.marker.removed" ~severity:Info ~status:Ok_
+                      ~trigger_id ();
                     print_endline (Cn_fmt.warn
                       (Printf.sprintf "Telegram reply failed (retryable): %s"
                          msg));
@@ -300,6 +551,22 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
   cleanup_state hub_path;
   clear_ops_done hub_path trigger_id;
 
+  Cn_trace.gemit ~component:"runtime" ~layer:Body
+    ~event:"finalize.complete" ~severity:Info ~status:Ok_
+    ~trigger_id
+    ~details:["op_count", Cn_json.Int (List.length ops)]
+    ~refs:{ input = Some (Printf.sprintf "logs/input/%s.md" trigger_id);
+            output = Some (Printf.sprintf "logs/output/%s.md" trigger_id);
+            receipts = Some (Printf.sprintf "state/receipts/%s.json" trigger_id) }
+    ();
+
+  (* Update projections: cycle complete, back to idle *)
+  update_runtime_projection hub_path
+    ~cycle_id:None ~pass:None ~trigger:None
+    ~lock_held:true ~pending_projection:None;
+  update_ready_body hub_path ~fsm_state:"idle"
+    ~lock_held:true ~current_cycle:None;
+
   print_endline (Cn_fmt.ok
     (Printf.sprintf "Processed: %s (%d ops)" trigger_id (List.length ops)));
   Ok ()
@@ -315,7 +582,19 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
       print_endline (Cn_fmt.info msg);
       Ok () (* Not an error — normal for cron overlap *)
   | Ok lock_fd ->
-    let finally () = release_lock hub_path lock_fd in
+    let finally () =
+      release_lock hub_path lock_fd;
+      (* Update projections on lock release *)
+      update_runtime_projection hub_path
+        ~cycle_id:None ~pass:None ~trigger:None
+        ~lock_held:false ~pending_projection:None;
+      update_ready_body hub_path ~fsm_state:"idle"
+        ~lock_held:false ~current_cycle:None
+    in
+    (* Update projections on lock acquire *)
+    update_runtime_projection hub_path
+      ~cycle_id:None ~pass:None ~trigger:None
+      ~lock_held:true ~pending_projection:None;
     match
       let inp = Cn_agent.input_path hub_path in
       let outp = Cn_agent.output_path hub_path in
@@ -329,13 +608,18 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
           if key = k then Some v else None) |> Option.value ~default:"unknown" in
         let trigger_id = get "id" in
         let from = get "from" in
-        (* On recovery, extract_body is the full packed context.
-           Extract just the inbound message for conversation history. *)
         let packed_body = match extract_body input_content with
           | Some b -> b | None -> "" in
         let inbound_message = extract_inbound_message packed_body in
-        Cn_hub.log_action hub_path "process.resume_finalize"
-          (Printf.sprintf "id:%s" trigger_id);
+        (* Update projections: recovering *)
+        update_runtime_projection hub_path
+          ~cycle_id:(Some trigger_id) ~pass:None
+          ~trigger:(Some trigger_id) ~lock_held:true
+          ~pending_projection:None;
+        Cn_trace.gemit ~component:"runtime" ~layer:Body
+          ~event:"cycle.recover" ~severity:Info ~status:Ok_
+          ~trigger_id ~reason_code:"recovery_output_present"
+          ~reason:"output.md exists, resuming finalize" ();
         finalize ~config ~hub_path ~name
           ~trigger_id ~from ~inbound_message ~output_content
 
@@ -351,8 +635,15 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
           | Some b -> b | None -> "" in
         let inbound_message = extract_inbound_message packed_body in
 
-        Cn_hub.log_action hub_path "process.resume_llm"
-          (Printf.sprintf "id:%s from:%s" trigger_id from);
+        (* Update projections: recovering with LLM call pending *)
+        update_runtime_projection hub_path
+          ~cycle_id:(Some trigger_id) ~pass:None
+          ~trigger:(Some trigger_id) ~lock_held:true
+          ~pending_projection:None;
+        Cn_trace.gemit ~component:"runtime" ~layer:Body
+          ~event:"cycle.recover" ~severity:Info ~status:Ok_
+          ~trigger_id ~reason_code:"recovery_input_present"
+          ~reason:"input.md exists without output, resuming LLM call" ();
 
         (* Re-pack to get structured system/messages for the API call.
            The audit text in input.md is for humans; the LLM needs the
@@ -360,19 +651,29 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
         let packed = Cn_context.pack ~hub_path ~trigger_id
           ~message:inbound_message ~from ~shell_config:config.shell () in
 
+        Cn_trace.gemit ~component:"runtime" ~layer:Mind
+          ~event:"llm.call.start" ~severity:Info ~status:Ok_
+          ~trigger_id
+          ~details:["model", Cn_json.String config.model] ();
+
         match Cn_llm.call ~api_key:config.anthropic_key
                 ~model:config.model ~max_tokens:config.max_tokens
                 ~system:packed.system ~messages:packed.messages with
         | Error msg ->
-            Cn_hub.log_action hub_path "process.llm_error"
-              (Printf.sprintf "id:%s error:%s" trigger_id msg);
+            Cn_trace.gemit ~component:"runtime" ~layer:Mind
+              ~event:"llm.call.error" ~severity:Error_ ~status:Error_status
+              ~trigger_id ~reason_code:"llm_error" ();
             Error (Printf.sprintf "LLM call failed: %s" msg)
         | Ok response ->
             Cn_ffi.Fs.write outp response.content;
-            Cn_hub.log_action hub_path "process.llm_done"
-              (Printf.sprintf "id:%s in=%d out=%d stop=%s"
-                 trigger_id response.input_tokens response.output_tokens
-                 response.stop_reason);
+            Cn_trace.gemit ~component:"runtime" ~layer:Mind
+              ~event:"llm.call.ok" ~severity:Info ~status:Ok_
+              ~trigger_id
+              ~details:[
+                "input_tokens", Cn_json.Int response.input_tokens;
+                "output_tokens", Cn_json.Int response.output_tokens;
+                "stop_reason", Cn_json.String response.stop_reason;
+              ] ();
             finalize ~config ~hub_path ~name
               ~trigger_id ~from ~inbound_message
               ~output_content:response.content
@@ -399,6 +700,9 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
 
         match Cn_agent.queue_pop hub_path with
         | None ->
+            Cn_trace.gemit ~component:"runtime" ~layer:Body
+              ~event:"cycle.idle" ~severity:Debug ~status:Ok_
+              ~reason_code:"queue_empty" ();
             print_endline (Cn_fmt.ok "Queue empty");
             Ok ()
         | Some raw_content ->
@@ -412,12 +716,33 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
             let inbound_message = match extract_body raw_content with
               | Some b -> b | None -> "" in
 
-            Cn_hub.log_action hub_path "process.start"
-              (Printf.sprintf "id:%s from:%s" trigger_id from);
+            Cn_trace.gemit ~component:"runtime" ~layer:Body
+              ~event:"cycle.start" ~severity:Info ~status:Ok_
+              ~cycle_id:trigger_id ~trigger_id
+              ~reason_code:"fresh_dequeue"
+              ~details:["from", Cn_json.String from] ();
+
+            Cn_trace.gemit ~component:"runtime" ~layer:Body
+              ~event:"queue.dequeue" ~severity:Info ~status:Ok_
+              ~trigger_id ();
+
+            (* Update projections: cycle in progress *)
+            update_runtime_projection hub_path
+              ~cycle_id:(Some trigger_id) ~pass:(Some "A")
+              ~trigger:(Some trigger_id) ~lock_held:true
+              ~pending_projection:None;
+            update_ready_body hub_path ~fsm_state:"processing"
+              ~lock_held:true ~current_cycle:(Some trigger_id);
 
             (* Pack context into structured system blocks + message turns *)
+            Cn_trace.gemit ~component:"runtime" ~layer:Mind
+              ~event:"pack.start" ~severity:Info ~status:Ok_
+              ~trigger_id ();
             let packed = Cn_context.pack ~hub_path ~trigger_id
               ~message:inbound_message ~from ~shell_config:config.shell () in
+            Cn_trace.gemit ~component:"runtime" ~layer:Mind
+              ~event:"pack.complete" ~severity:Info ~status:Ok_
+              ~trigger_id ();
 
             (* Write input.md = frontmatter + audit text (human-readable) *)
             let input_doc = build_input_md ~trigger_id ~from ~chat_id_opt
@@ -426,19 +751,29 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
             Cn_ffi.Fs.write inp input_doc;
 
             (* Call LLM with structured system prompt + message turns *)
+            Cn_trace.gemit ~component:"runtime" ~layer:Mind
+              ~event:"llm.call.start" ~severity:Info ~status:Ok_
+              ~trigger_id
+              ~details:["model", Cn_json.String config.model] ();
+
             match Cn_llm.call ~api_key:config.anthropic_key
                     ~model:config.model ~max_tokens:config.max_tokens
                     ~system:packed.system ~messages:packed.messages with
             | Error msg ->
-                Cn_hub.log_action hub_path "process.llm_error"
-                  (Printf.sprintf "id:%s error:%s" trigger_id msg);
+                Cn_trace.gemit ~component:"runtime" ~layer:Mind
+                  ~event:"llm.call.error" ~severity:Error_ ~status:Error_status
+                  ~trigger_id ~reason_code:"llm_error" ();
                 Error (Printf.sprintf "LLM call failed: %s" msg)
             | Ok response ->
                 Cn_ffi.Fs.write outp response.content;
-                Cn_hub.log_action hub_path "process.llm_done"
-                  (Printf.sprintf "id:%s in=%d out=%d stop=%s"
-                     trigger_id response.input_tokens response.output_tokens
-                     response.stop_reason);
+                Cn_trace.gemit ~component:"runtime" ~layer:Mind
+                  ~event:"llm.call.ok" ~severity:Info ~status:Ok_
+                  ~trigger_id
+                  ~details:[
+                    "input_tokens", Cn_json.Int response.input_tokens;
+                    "output_tokens", Cn_json.Int response.output_tokens;
+                    "stop_reason", Cn_json.String response.stop_reason;
+                  ] ();
                 finalize ~config ~hub_path ~name
                   ~trigger_id ~from ~inbound_message
                   ~output_content:response.content
@@ -450,6 +785,16 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
 (** Cron/daemon entry point. Runs update check when idle, then calls
     process_one which handles all state mutation under lock. *)
 let run_cron ~(config : Cn_config.config) ~hub_path ~name =
+  (* Full boot sequence with projections (shared across all modes) *)
+  (match Cn_trace.get_global () with
+   | Some _ -> () (* Already booted — e.g. resumed from daemon *)
+   | None ->
+       match boot_sequence ~config ~hub_path ~mode:"cron" with
+       | Error msg ->
+           print_endline (Cn_fmt.fail msg);
+           Cn_ffi.Process.exit 1
+       | Ok _ -> ());
+
   (* Auto-update check (only when truly idle — no state files, no lock) *)
   let inp = Cn_agent.input_path hub_path in
   let outp = Cn_agent.output_path hub_path in
@@ -563,15 +908,69 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
       print_endline (Cn_fmt.fail "Daemon mode requires TELEGRAM_TOKEN");
       Cn_ffi.Process.exit 1
   | Some token ->
+      (* Shared boot sequence — writes ready.json, coherence.json, runtime.json *)
+      let boot = match boot_sequence ~config ~hub_path ~mode:"daemon" with
+        | Error msg ->
+            print_endline (Cn_fmt.fail msg);
+            Cn_ffi.Process.exit 1
+        | Ok b -> b
+      in
+
+      (* Daemon-specific: Telegram transport readiness *)
+      let offset = ref (read_offset hub_path) in
+      Cn_trace.emit_simple boot.session ~component:"telegram" ~layer:Sensor
+        ~event:"telegram.offset.loaded" ~severity:Info ~status:Ok_
+        ~details:["offset", Cn_json.Int !offset] ();
+
+      (* Update ready.json with actual telegram offset *)
+      Cn_trace_state.write_ready hub_path {
+        status = Ready; boot_id = boot.session.boot_id;
+        updated_at = Cn_fmt.now_iso ();
+        blocked_reason = None;
+        mind = Some {
+          profile = Option.value ~default:"engineer" boot.summary.profile;
+          packages = boot.pkg_names;
+          doctrine_required = List.length Cn_assets.required_doctrine;
+          doctrine_loaded = boot.summary.doctrine_count;
+          doctrine_hash = "";
+          mindsets_required = List.length Cn_assets.required_mindsets;
+          mindsets_loaded = boot.summary.mindset_count;
+          mindsets_hash = "";
+          skills_indexed = boot.total_skills;
+          skills_selected_last = [];
+          capabilities_hash = "";
+          two_pass = config.shell.two_pass;
+          apply_mode = config.shell.apply_mode;
+          exec_enabled = config.shell.exec_enabled;
+        };
+        body = Some {
+          fsm_state = "idle";
+          lock_held = false;
+          current_cycle = None;
+          queue_depth = Cn_agent.queue_depth hub_path;
+        };
+        sensors_telegram = Some {
+          enabled = true;
+          offset = !offset;
+          last_poll_status = "starting";
+          last_poll_at = Cn_fmt.now_iso ();
+        };
+      };
+
+      (* Daemon poll start *)
+      Cn_trace.emit_simple boot.session ~component:"telegram" ~layer:Sensor
+        ~event:"daemon.poll.start" ~severity:Info ~status:Ok_ ();
+
       print_endline (Cn_fmt.ok (Printf.sprintf
         "Telegram daemon started (poll=%ds timeout=%ds)"
         config.poll_interval config.poll_timeout));
-      Cn_hub.log_action hub_path "daemon.start" "telegram";
-      let offset = ref (read_offset hub_path) in
       while true do
         (match Cn_telegram.get_updates ~token ~offset:!offset
                 ~timeout:config.poll_timeout with
         | Error msg ->
+            Cn_trace.gemit ~component:"telegram" ~layer:Sensor
+              ~event:"daemon.poll.error" ~severity:Warn ~status:Error_status
+              ~reason_code:"poll_error" ();
             print_endline (Cn_fmt.warn (Printf.sprintf "Poll error: %s" msg))
         | Ok messages ->
             (* Sort ascending by update_id for monotonic offset advancement *)
@@ -584,9 +983,10 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
               | [] -> ()
               | (msg : Cn_telegram.message) :: rest ->
                   if not (is_allowed_user config msg.user_id) then begin
-                    (* Rejected: advance offset (handled by dropping) *)
-                    Cn_hub.log_action hub_path "daemon.rejected"
-                      (Printf.sprintf "user_id:%d" msg.user_id);
+                    Cn_trace.gemit ~component:"telegram" ~layer:Sensor
+                      ~event:"daemon.offset.advanced" ~severity:Info ~status:Ok_
+                      ~reason_code:"rejected_user"
+                      ~details:["update_id", Cn_json.Int msg.update_id] ();
                     offset := max !offset (msg.update_id + 1);
                     write_offset hub_path !offset;
                     drain rest
@@ -606,24 +1006,33 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                            a different queued item. *)
                         if not (is_queued hub_path trigger_id)
                            && not (is_in_flight hub_path trigger_id) then begin
-                          (* Clear thinking reaction on successful completion *)
                           Cn_telegram.clear_reaction ~token
                             ~chat_id:msg.chat_id ~message_id:msg.message_id;
+                          Cn_trace.gemit ~component:"telegram" ~layer:Sensor
+                            ~event:"daemon.offset.advanced" ~severity:Info ~status:Ok_
+                            ~trigger_id
+                            ~details:["offset", Cn_json.Int (msg.update_id + 1)] ();
                           offset := max !offset (msg.update_id + 1);
                           write_offset hub_path !offset;
                           drain rest
-                        end else
-                          (* Message still pending — stop and let next
-                             poll cycle retry from current offset *)
-                          Cn_hub.log_action hub_path "daemon.pending"
-                            (Printf.sprintf "id:%s still queued/in-flight, pausing drain"
-                               trigger_id)
+                        end else begin
+                          Cn_trace.gemit ~component:"telegram" ~layer:Sensor
+                            ~event:"daemon.offset.blocked" ~severity:Info ~status:Blocked
+                            ~trigger_id
+                            ~reason_code:(if is_queued hub_path trigger_id
+                                          then "still_queued" else "still_in_flight") ();
+                          Cn_trace.gemit ~component:"telegram" ~layer:Sensor
+                            ~event:"daemon.pending" ~severity:Info ~status:Ok_
+                            ~trigger_id ()
+                        end
                     | Error err ->
-                        (* Do NOT advance offset — Telegram will retry *)
+                        Cn_trace.gemit ~component:"telegram" ~layer:Sensor
+                          ~event:"daemon.offset.blocked" ~severity:Warn ~status:Error_status
+                          ~trigger_id
+                          ~reason_code:"processing_failed" ();
                         print_endline (Cn_fmt.warn (Printf.sprintf
                           "Processing failed for tg-%d: %s (will retry)"
                           msg.update_id err))
-                        (* Stop: do not process later updates *)
                   end
             in
             drain sorted);
@@ -636,6 +1045,16 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
 (** Interactive mode: read from stdin, enqueue, process, print response.
     Each line is a separate message. Ctrl-D to exit. *)
 let run_stdio ~(config : Cn_config.config) ~hub_path ~name =
+  (* Full boot sequence with projections (shared across all modes) *)
+  (match Cn_trace.get_global () with
+   | Some _ -> ()
+   | None ->
+       match boot_sequence ~config ~hub_path ~mode:"stdio" with
+       | Error msg ->
+           print_endline (Cn_fmt.fail msg);
+           Cn_ffi.Process.exit 1
+       | Ok _ -> ());
+
   print_endline (Cn_fmt.info "Interactive mode (stdin -> LLM -> stdout)");
   print_endline (Cn_fmt.dim "Type a message and press Enter. Ctrl-D to exit.");
   let conv_path = conversation_path hub_path in
