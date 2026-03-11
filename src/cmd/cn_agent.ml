@@ -12,6 +12,17 @@ open Cn_lib
 
 let queue_dir hub_path = Cn_ffi.Path.join hub_path "state/queue"
 
+(** Count items currently in the queue. *)
+let queue_depth hub_path =
+  let dir = queue_dir hub_path in
+  if not (Cn_ffi.Fs.exists dir) then 0
+  else
+    try
+      Cn_ffi.Fs.readdir dir
+      |> List.filter Cn_hub.is_md_file
+      |> List.length
+    with _ -> 0
+
 let queue_add hub_path id from content =
   let dir = queue_dir hub_path in
   Cn_ffi.Fs.ensure_dir dir;

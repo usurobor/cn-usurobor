@@ -272,18 +272,42 @@ let boot_sequence ~(config : Cn_config.config) ~hub_path ~mode =
     (* 5-8. doctrine, mindsets, skills, capabilities *)
     let summary = Cn_assets.summarize ~hub_path in
     let total_skills = List.fold_left (fun acc (_, c) -> acc + c) 0 summary.packages in
+
+    (* Doctrine: per-file detail *)
     Cn_trace.emit_simple session ~component:"runtime" ~layer:Mind
       ~event:"doctrine.loaded" ~severity:Info ~status:Ok_
-      ~details:["count", Cn_json.Int summary.doctrine_count] ();
+      ~details:[
+        "count", Cn_json.Int summary.doctrine_count;
+        "required", Cn_json.Array (List.map (fun s ->
+          Cn_json.String s) Cn_assets.required_doctrine);
+      ] ();
+
+    (* Mindsets: count + hub overrides *)
     Cn_trace.emit_simple session ~component:"runtime" ~layer:Mind
       ~event:"mindsets.loaded" ~severity:Info ~status:Ok_
-      ~details:["count", Cn_json.Int summary.mindset_count] ();
+      ~details:[
+        "count", Cn_json.Int summary.mindset_count;
+        "required", Cn_json.Array (List.map (fun s ->
+          Cn_json.String s) Cn_assets.required_mindsets);
+        "hub_overrides", Cn_json.Int summary.hub_overrides_mindsets;
+      ] ();
+
+    (* Skills: per-package breakdown *)
     Cn_trace.emit_simple session ~component:"runtime" ~layer:Mind
       ~event:"skills.indexed" ~severity:Info ~status:Ok_
-      ~details:["count", Cn_json.Int total_skills] ();
+      ~details:[
+        "count", Cn_json.Int total_skills;
+        "per_package", Cn_json.Object (List.map (fun (pkg, count) ->
+          (pkg, Cn_json.Int count)) summary.packages);
+        "hub_overrides", Cn_json.Int summary.hub_overrides_skills;
+      ] ();
+
+    (* Capabilities: config + profile *)
     Cn_trace.emit_simple session ~component:"runtime" ~layer:Mind
       ~event:"capabilities.rendered" ~severity:Info ~status:Ok_
       ~details:[
+        "profile", Cn_json.String
+          (Option.value ~default:"engineer" summary.profile);
         "two_pass", Cn_json.String config.shell.two_pass;
         "apply_mode", Cn_json.String config.shell.apply_mode;
         "exec_enabled", Cn_json.Bool config.shell.exec_enabled;
@@ -329,7 +353,7 @@ let boot_sequence ~(config : Cn_config.config) ~hub_path ~mode =
         fsm_state = "idle";
         lock_held = false;
         current_cycle = None;
-        queue_depth = 0;
+        queue_depth = Cn_agent.queue_depth hub_path;
       };
       sensors_telegram;
     };
@@ -354,7 +378,7 @@ let boot_sequence ~(config : Cn_config.config) ~hub_path ~mode =
       current_cycle_id = None;
       current_pass = None;
       active_trigger = None;
-      queue_depth = 0;
+      queue_depth = Cn_agent.queue_depth hub_path;
       lock_held = false;
       lock_boot_id = None;
       pending_projection = None;
@@ -374,7 +398,7 @@ let update_runtime_projection hub_path ~cycle_id ~pass ~trigger ~lock_held
         current_cycle_id = cycle_id;
         current_pass = pass;
         active_trigger = trigger;
-        queue_depth = 0;
+        queue_depth = Cn_agent.queue_depth hub_path;
         lock_held;
         lock_boot_id = (if lock_held then Some session.boot_id else None);
         pending_projection;
@@ -390,7 +414,8 @@ let update_ready_body hub_path ~fsm_state ~lock_held ~current_cycle =
       Cn_trace_state.update_ready_body hub_path
         ~boot_id:session.boot_id
         ~updated_at:(Cn_fmt.now_iso ())
-        { fsm_state; lock_held; current_cycle; queue_depth = 0 }
+        { fsm_state; lock_held; current_cycle;
+          queue_depth = Cn_agent.queue_depth hub_path }
   | None -> ()
 
 (* === Finalize: archive → execute → project → conversation → cleanup === *)
@@ -922,7 +947,7 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
           fsm_state = "idle";
           lock_held = false;
           current_cycle = None;
-          queue_depth = 0;
+          queue_depth = Cn_agent.queue_depth hub_path;
         };
         sensors_telegram = Some {
           enabled = true;
