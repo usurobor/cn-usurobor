@@ -77,3 +77,11 @@
  (libraries cn_cmd cn_ffi cn_lib unix)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_build tests (ppx_expect) — package assembly from src/agent/
+(library
+ (name cn_build_test)
+ (modules cn_build_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))

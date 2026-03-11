@@ -3,5 +3,41 @@
   "name": "cnos.core",
   "version": "1.0.0",
   "kind": "package",
-  "engines": { "cnos": ">=3.4.0 <4.0.0" }
+  "engines": { "cnos": ">=3.4.0 <4.0.0" },
+  "sources": {
+    "doctrine": ["*"],
+    "mindsets": [
+      "ENGINEERING.md",
+      "PM.md",
+      "WRITING.md",
+      "OPERATIONS.md",
+      "PERSONALITY.md",
+      "MEMES.md",
+      "THINKING.md",
+      "WISDOM.md",
+      "FUNCTIONAL.md"
+    ],
+    "skills": [
+      "agent/agent-ops",
+      "agent/coherence-test",
+      "agent/coherent",
+      "agent/communicating",
+      "agent/configure-agent",
+      "agent/hello-world",
+      "agent/human-interaction",
+      "agent/mca",
+      "agent/mci",
+      "agent/onboarding",
+      "agent/reflect",
+      "agent/self-cohere",
+      "ops/adhoc-thread",
+      "ops/inbox",
+      "ops/peer",
+      "ops/star-sync",
+      "documenting",
+      "release",
+      "skill",
+      "testing"
+    ]
+  }
 }
