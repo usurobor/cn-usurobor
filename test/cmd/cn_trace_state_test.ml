@@ -1,6 +1,6 @@
 (** cn_trace_state_test.ml — Tests for state projection writers *)
 
-open Cn_cmd
+
 
 let%expect_test "ready projection JSON shape" =
   let r : Cn_trace_state.ready_projection = {
@@ -88,9 +88,12 @@ let%expect_test "coherence check rendering" =
 
 (* === Integration tests: projection writes to filesystem === *)
 
+let tmp_counter = ref 0
+
 let make_tmp_hub () =
+  incr tmp_counter;
   let base = Filename.concat (Filename.get_temp_dir_name ())
-    (Printf.sprintf "cn-trace-state-test-%d" (Random.int 100000)) in
+    (Printf.sprintf "cn-trace-state-test-%d-%d" (Unix.getpid ()) !tmp_counter) in
   Cn_ffi.Fs.ensure_dir (Filename.concat base "state");
   base
 
