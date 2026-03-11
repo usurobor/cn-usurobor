@@ -89,6 +89,13 @@ Stop asking. Start doing.
 
 ---
 
+**"Just Do It."**
+— Nike (1988), created by Dan Wieden
+
+Stop overthinking. Act.
+
+---
+
 ## On Learning
 
 **"I never lose. I either win or learn."**
@@ -223,3 +230,5 @@ Built on the shoulders of:
 ---
 
 *Add new wisdom as it emerges. Attribution matters.*
+
+## On Action
