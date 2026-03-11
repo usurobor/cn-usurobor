@@ -20,11 +20,12 @@ let rec find_hub_path dir =
 
 (* === Logging === *)
 
-let log_action _hub_path _action _details =
-  (* Removed: hub log redundant with system log + logs/runs/
-     System log: /var/log/cn-YYYYMMDD.log (cron stdout)
-     Audit trail: logs/runs/ (input + output + meta) *)
-  ()
+let log_action _hub_path action details =
+  (* Compatibility shim: forward to Cn_trace structured events.
+     Maps legacy action strings to event names. *)
+  Cn_trace.gemit ~component:"runtime" ~layer:Body
+    ~event:action ~severity:Info ~status:Ok_
+    ~reason:details ()
 
 (* === Peers === *)
 
