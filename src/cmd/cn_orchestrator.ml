@@ -106,29 +106,45 @@ let run_pass_a ~hub_path ~trigger_id ~config typed_ops =
   let two_pass_needed = Cn_shell.needs_two_pass
       ~two_pass_mode:config.Cn_shell.two_pass typed_ops in
 
+  let observe_count = List.length (List.filter (fun (op : Cn_shell.typed_op) ->
+    not (Cn_shell.is_effect op.kind)) typed_ops) in
+  let effect_count = List.length typed_ops - observe_count in
+
+  Cn_trace.gemit ~component:"orchestrator" ~layer:Body
+    ~event:"pass.selected" ~severity:Info ~status:Ok_
+    ~trigger_id ~pass:"A"
+    ~reason_code:(if two_pass_needed then "observe_detected" else "single_pass")
+    ~details:[
+      "observe_ops", Cn_json.Int observe_count;
+      "effect_ops", Cn_json.Int effect_count;
+      "two_pass", Cn_json.Bool two_pass_needed;
+    ] ();
+
   let receipts =
     if not two_pass_needed then
-      (* Single pass: execute all ops *)
       List.map (fun (op : Cn_shell.typed_op) ->
         let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config op in
         { r with Cn_shell.pass = "A" }
       ) typed_ops
     else
-      (* Two-pass: observe executes, effects deferred *)
       List.map (fun (op : Cn_shell.typed_op) ->
-        if Cn_shell.is_effect op.Cn_shell.kind then
+        if Cn_shell.is_effect op.Cn_shell.kind then begin
+          Cn_trace.gemit ~component:"orchestrator" ~layer:Governance
+            ~event:"ops.classified" ~severity:Info ~status:Skipped
+            ~trigger_id ~pass:"A"
+            ~reason_code:"observe_pass_requires_followup"
+            ~details:["kind", Cn_json.String (Cn_shell.string_of_op_kind op.kind)] ();
           let now = Cn_executor.now_iso () in
           { (Cn_shell.make_receipt ~pass:"A" ~op_id:op.op_id
                ~kind:(Cn_shell.string_of_op_kind op.kind)
                ~status:Skipped ~reason:"observe_pass_requires_followup")
             with start_time = now; end_time = now }
-        else
+        end else
           let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config op in
           { r with Cn_shell.pass = "A" }
       ) typed_ops
   in
 
-  (* Write receipts *)
   if receipts <> [] then
     Cn_executor.write_receipts ~hub_path ~trigger_id ~pass:"A" receipts;
 
@@ -143,20 +159,28 @@ let run_pass_a ~hub_path ~trigger_id ~config typed_ops =
     - All receipts tagged with pass="B"
     - Receipts appended to existing file (Pass A already wrote) *)
 let run_pass_b ~hub_path ~trigger_id ~config typed_ops =
+  Cn_trace.gemit ~component:"orchestrator" ~layer:Body
+    ~event:"pass.selected" ~severity:Info ~status:Ok_
+    ~trigger_id ~pass:"B"
+    ~reason_code:"pass_b_effects" ();
+
   let receipts = List.map (fun (op : Cn_shell.typed_op) ->
-    if not (Cn_shell.is_effect op.Cn_shell.kind) then
-      (* Observe in Pass B → denied *)
+    if not (Cn_shell.is_effect op.Cn_shell.kind) then begin
+      Cn_trace.gemit ~component:"orchestrator" ~layer:Governance
+        ~event:"policy.denied" ~severity:Info ~status:Skipped
+        ~trigger_id ~pass:"B"
+        ~reason_code:"max_passes_exceeded"
+        ~details:["kind", Cn_json.String (Cn_shell.string_of_op_kind op.kind)] ();
       let now = Cn_executor.now_iso () in
       { (Cn_shell.make_receipt ~pass:"B" ~op_id:op.Cn_shell.op_id
            ~kind:(Cn_shell.string_of_op_kind op.kind)
            ~status:Denied ~reason:"max_passes_exceeded")
         with start_time = now; end_time = now }
-    else
+    end else
       let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config op in
       { r with Cn_shell.pass = "B" }
   ) typed_ops in
 
-  (* Append to receipts file *)
   if receipts <> [] then
     Cn_executor.write_receipts ~hub_path ~trigger_id ~pass:"B" receipts;
 

@@ -61,3 +61,19 @@
  (libraries cn_cmd cn_lib)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_trace tests (ppx_expect) — event schema + JSONL writer
+(library
+ (name cn_trace_test)
+ (modules cn_trace_test)
+ (libraries cn_cmd cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
+; cn_trace_state tests (ppx_expect) — state projection writers
+(library
+ (name cn_trace_state_test)
+ (modules cn_trace_state_test)
+ (libraries cn_cmd cn_lib)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
