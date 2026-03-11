@@ -1,32 +1,28 @@
-# v3.5.0 — Unified Package Model + CAA + FOUNDATIONS
+# v3.5.1 — TRACEABILITY: Structured Observability
 
-Everything cognitive is now a package. Doctrine, mindsets, and skills ship as versioned packages with role profiles. The doctrinal capstone — from first principle to runtime — is complete.
+Operators can now answer from files alone: Did the agent boot? What did it load? Why did it transition this way?
 
 ## What's new
 
-**3 cognitive packages:**
+**Append-only event stream** (`logs/events/YYYYMMDD.jsonl`) — every lifecycle event, state transition, and decision carries a `reason_code`. Five layers: sensor, body, mind, governance, world.
 
-| Package | Contents |
-|---------|----------|
-| `cnos.core` | Doctrine (FOUNDATIONS, CAP, CBP, CA-Conduct, COHERENCE, AGENT-OPS) + mindsets (10) + agent/ops/meta skills |
-| `cnos.eng` | Engineering skills (coding, design, functional, OCaml, RCA, review, ship, testing, tool-writing, UX-CLI) |
-| `cnos.pm` | PM skills (follow-up, issue, ship) |
+**State projections** — `state/ready.json` (mind/body/sensors snapshot), `state/runtime.json` (current cycle/lock/pass), `state/coherence.json` (structural checks).
 
-**Role profiles:** `profiles/engineer.json`, `profiles/pm.json` — select which packages an agent loads.
+**Boot telemetry** — 9 mandatory events from `boot.start` to `boot.ready`. If boot fails: `boot.blocked` with specific reason code + `state/ready.json` status `blocked`.
 
-**Two-layer resolution:** Installed packages → hub-local overrides. Simpler than v3.4.0's three-layer model. Same guarantees: local-only wake-up, deterministic context, fail-fast on missing substrate.
+**Cycle telemetry** — Full trace from queue dequeue through LLM call, effects execution, projection, to finalize. Recovery paths are distinguishable from fresh paths.
 
-**CAA v1.0.0** — Coherent Agent Architecture: structural definition of what a coherent agent is, 7 invariants, failure mode table, wake-up strata.
-
-**FOUNDATIONS.md** — Doctrinal capstone: first principle (FEP → CAP) through four doctrinal layers to runtime grammar. The "why" behind every design decision in cnos.
+**CDD v1.1.0** — Coherence-Driven Development design doc: the development method that applies CAP to the development process itself.
 
 ## Upgrade
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/usurobor/cnos/main/install.sh | sh
-cn setup   # materializes packages in existing hubs
+cn doctor   # verify readiness
 ```
+
+After restarting the daemon, check `state/ready.json` and `logs/events/` for boot trace.
 
 ## Full changelog
 
-See [CHANGELOG.md](https://github.com/usurobor/cnos/blob/main/CHANGELOG.md#v350-2026-03-10) for details.
+See [CHANGELOG.md](https://github.com/usurobor/cnos/blob/main/CHANGELOG.md#v351-2026-03-11).

@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.5.1  | A+  | A+          | A+           | A+               | TRACEABILITY: structured event stream, state projections (ready/runtime/coherence), boot sequence telemetry, CDD design doc. |
 | v3.5.0  | A+  | A+          | A+           | A+               | Unified package model + CAA + FOUNDATIONS. Everything cognitive is a package. Doctrinal capstone. Architecture spec. |
 | v3.4.0  | A+  | A+          | A+           | A+               | CAR: three-layer cognitive asset resolver + package system. Fresh hubs wake with full substrate. Git-native deps, lockfile, hub-local overrides. |
 | v3.3.1  | A+  | A+          | A+           | A+               | Agent instruction alignment: canonical ops examples in capabilities block, stale path fixes, output discipline. Prevents hallucinated tool syntaxes. |
@@ -35,6 +36,34 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v3.5.1 (2026-03-11)
+
+**TRACEABILITY: Structured Observability + CDD**
+
+Operators can now answer "did it boot? what did it load? why did it transition?" from files alone.
+
+### Added
+
+- **`cn_trace.ml`** — Append-only JSONL event stream (`logs/events/YYYYMMDD.jsonl`). Schema `cn.events.v1` with boot_id, monotonic seq, severity, layer (sensor/body/mind/governance/world), reason_code on every transition.
+- **`cn_trace_state.ml`** — State projections: `state/ready.json` (mind/body/sensors), `state/runtime.json` (cycle/lock/pass), `state/coherence.json` (structural checks).
+- **Boot telemetry** — Mandatory 9-event boot sequence: `boot.start` → `config.loaded` → `deps.lock.loaded` → `assets.validated` → `doctrine.loaded` → `mindsets.loaded` → `skills.indexed` → `capabilities.rendered` → `boot.ready`. Per-package skill counts and hub-override detection.
+- **Cycle telemetry** — `cycle.start`/`cycle.recover` → `pack.start`/`pack.complete` → `llm.call.start`/`llm.call.ok` → `effects.execute.start`/`effects.execute.complete` → `projection.*` → `finalize.complete`.
+- **Sensor telemetry** — `daemon.poll.*`, `daemon.offset.advanced`/`daemon.offset.blocked` with reason codes (`rejected_user`, `still_queued`, `still_in_flight`, `processing_failed`).
+- **Governance events** — `pass.selected`, `ops.classified`, `policy.denied` from orchestrator with reason codes.
+- **`Cn_hub.log_action` shim** — Resurrected as compatibility bridge to `Cn_trace.gemit`.
+- **`Cn_agent.queue_depth`** — Real queue count in projections.
+- **`docs/design/TRACEABILITY.md`** — Full observability spec (721 lines).
+- **`docs/design/TRACEABILITY-implementation-plan.md`** — 12-step implementation plan.
+- **`docs/design/CDD.md`** — Coherence-Driven Development v1.1.0: development method applying CAP to the development process.
+- **Doc graph updates** — TRACEABILITY wired into README.md, AGENT-RUNTIME.md updated to v3.3.7.
+
+### Fixed
+
+- **Trace test isolation** — `open Cn_cmd` invalid with `wrapped false`; tmp dir collisions from unseeded `Random.int`.
+- **Lockfile `ls-remote` parse** — Stricter: `None -> ""` on malformed output.
 
 ---
 
