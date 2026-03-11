@@ -140,6 +140,8 @@ let init_global ?(min_severity = Info) hub_path =
 
 let get_global () = !global_session
 
+let reset_global () = global_session := None
+
 let boot_id () =
   match !global_session with Some s -> s.boot_id | None -> "unknown"
 
