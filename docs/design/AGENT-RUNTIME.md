@@ -1,14 +1,36 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.3.6
+**Version:** 3.3.7
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
-**Date:** 2026-03-05
+**Date:** 2026-03-11
 **Status:** Draft
 **Reviewers:** usurobor, external
 
 ---
 
 ## Patch Notes
+
+**v3.3.7** — Observability / traceability architecture alignment:
+- Add [`TRACEABILITY.md`](TRACEABILITY.md) as the normative observability spec
+- Clarify that runtime traceability now has three layers:
+  - **events** — append-only lifecycle/state transition log (`logs/events/YYYYMMDD.jsonl`)
+  - **projections** — current truth snapshots (`state/ready.json`, `state/runtime.json`, `state/coherence.json`)
+  - **evidence** — IO pairs, receipts, artifacts (`logs/input/`, `logs/output/`, `state/receipts/`, `state/artifacts/`)
+- Define the operator-facing readiness contract:
+  - a boot is only "ready" after `boot.start → config.loaded → deps.lock.loaded → assets.validated → doctrine.loaded → mindsets.loaded → skills.indexed → capabilities.rendered → boot.ready`
+- Clarify that every runtime state transition must carry:
+  - `prev_state`
+  - `next_state`
+  - `reason_code`
+  - optional evidence refs
+- Clarify "mind / body / sensors" trace layers:
+  - **mind** — doctrine, mindsets, skills, capabilities, LLM call lifecycle
+  - **body** — lock, queue, FSM, pass selection, recovery, finalize
+  - **sensors** — transport ingress/egress, offsets, projection, UX signals
+- Clarify that [`TRACEABILITY.md`](TRACEABILITY.md) supersedes ad hoc runtime lifecycle logging:
+  - IO-pair archives remain authoritative for deliberation
+  - receipts remain authoritative for typed capability execution
+  - structured events become authoritative for lifecycle, readiness, and transition reasoning
 
 **v3.3.6** — CLP pass: α-axis polish (spec precision):
 - **Receipts `pass` field**: moved from container-level to per-receipt entry; two-pass files contain entries with `"pass": "A"` and `"pass": "B"` in one array (self-describing, no ambiguity)
@@ -968,7 +990,7 @@ Observe artifacts are injected into Pass B context as bounded excerpts (see Budg
 3. Apply coordination op phase rules (see table above): execute safe, defer unsafe
 4. Write artifacts to `state/artifacts/<trigger_id>/<op_id>.*`
 5. Write receipts to `state/receipts/<trigger_id>.json`
-6. Archive IO pair (Pass A) per LOGGING.md
+6. Archive IO pair (Pass A) per IO-pair archival invariant (see [TRACEABILITY.md §11.1](TRACEABILITY.md#111-io-pairs-remain-authoritative-for-deliberation))
 
 #### Pass B (decision / effect)
 
@@ -984,7 +1006,7 @@ Observe artifacts are injected into Pass B context as bounded excerpts (see Budg
    - If ALL effect ops completed with `status: ok` → execute coordination ops in listed order; FSM transitions applied
    - If ANY effect op has `status: error` or `status: denied` → skip terminal coordination ops (`done`, `fail`, `delete`, `delegate`, `send`, `defer`) with receipt `status: skipped`, `reason: effects_failed`; allow only `reply`/`surface` so the agent can report the failure
    - If no typed effect ops were proposed → execute coordination ops normally
-7. Archive IO pair (Pass B) per LOGGING.md
+7. Archive IO pair (Pass B) per IO-pair archival invariant (see [TRACEABILITY.md §11.1](TRACEABILITY.md#111-io-pairs-remain-authoritative-for-deliberation))
 
 This ordering ensures the system never advances narrative state (FSM) when the world action didn't succeed — consistent with CAP: act on world, then update model, never the reverse.
 
@@ -2086,7 +2108,8 @@ Running tests and fetching data.
 - [Hub Layout](../../spec/system/HUB.md) — Canonical directory structure
 - [Agent Ops Skill](../../src/agent/skills/agent/agent-ops/SKILL.md) — Authoritative output.md format (key-per-op, pipe-delimited)
 - [Security Model](./SECURITY-MODEL.md) — Agent sandbox, protected files, audit trail
-- [Logging Architecture](./LOGGING.md) — IO-pair archival pattern
+- [Traceability](./TRACEABILITY.md) — event stream, state projections, readiness, and transition reasoning
+- [Logging Architecture](./LOGGING.md) — superseded historical logging model (IO-pair archival pattern)
 - [Daemon Architecture](./DAEMON.md) — Plugin direction (this doc is the first plugin)
 - [Protocol Specification](./PROTOCOL.md) — FSM definitions
 - [Architecture](../ARCHITECTURE.md) — Module layers, data flow, agent I/O protocol
@@ -2101,4 +2124,4 @@ Running tests and fetching data.
 
 ---
 
-*Document version 3.3.6. For comments and iteration, contact reviewers or open a thread in the hub.*
+*Document version 3.3.7. For comments and iteration, contact reviewers or open a thread in the hub.*
