@@ -364,17 +364,17 @@ let default_manifest_for_profile profile =
   { schema = "cn.deps.v1"; profile; packages }
 
 (** Create a lockfile with first-party package entries.
-    Queries the upstream source repo for its HEAD rev via ls-remote. *)
+    Queries the source repo via ls-remote to get the correct HEAD rev. *)
 let lockfile_for_manifest (m : manifest) =
   let rev =
     let (code, output) = Cn_ffi.Process.exec_args ~prog:"git"
       ~args:["ls-remote"; default_first_party_source; "HEAD"] () in
     if code = 0 then
-      (* Output is "<sha>\tHEAD\n"; extract just the hash *)
+      (* ls-remote output: "<sha>\tHEAD\n" — extract the SHA *)
       let trimmed = String.trim output in
-      (match String.index_opt trimmed '\t' with
-       | Some i -> String.sub trimmed 0 i
-       | None -> trimmed)
+      match String.index_opt trimmed '\t' with
+      | Some i -> String.sub trimmed 0 i
+      | None -> ""
     else ""
   in
   let packages = m.packages |> List.map (fun (dep : manifest_dep) ->
