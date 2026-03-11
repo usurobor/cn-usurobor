@@ -226,6 +226,7 @@ Built on the shoulders of:
 - **Eric S. Raymond** — Cathedral and Bazaar
 - **Richard Stallman** — Free software philosophy
 - **Nelson Mandela (attributed)** — Win or learn
+- **Nike / Dan Wieden** — Just Do It
 
 ---
 
