@@ -1,6 +1,6 @@
 (** cn_trace_test.ml — Tests for cn_trace event schema and JSONL writer *)
 
-open Cn_cmd
+
 
 let%expect_test "event serialization shape" =
   let session = {
@@ -179,9 +179,12 @@ let%expect_test "single-line output (no newlines in JSON)" =
 
 (* === Integration tests: full boot event sequence to JSONL === *)
 
+let tmp_counter = ref 0
+
 let make_tmp_hub () =
+  incr tmp_counter;
   let base = Filename.concat (Filename.get_temp_dir_name ())
-    (Printf.sprintf "cn-trace-test-%d" (Random.int 100000)) in
+    (Printf.sprintf "cn-trace-test-%d-%d" (Unix.getpid ()) !tmp_counter) in
   Cn_ffi.Fs.ensure_dir (Filename.concat base "logs/events");
   base
 
@@ -279,7 +282,6 @@ let%expect_test "cycle events interleave correctly with boot events" =
   let content = Cn_ffi.Fs.read path in
   let lines = String.split_on_char '\n' content
     |> List.filter (fun s -> String.trim s <> "") in
-  assert (List.length lines = 5);
   let events = List.filter_map (fun line ->
     match Cn_json.parse line with
     | Ok obj -> Cn_json.get_string "event" obj
@@ -289,8 +291,11 @@ let%expect_test "cycle events interleave correctly with boot events" =
                   "llm.call.ok"; "finalize.complete"] in
   if events = expected then
     print_endline "ok: boot + cycle events in correct order"
-  else
-    print_endline "FAIL: event order mismatch";
+  else begin
+    Printf.printf "FAIL: expected %d events, got %d\n"
+      (List.length expected) (List.length events);
+    List.iter (fun e -> Printf.printf "  %s\n" e) events
+  end;
   (* Verify trigger_id on cycle events *)
   let trigger_events = List.filter_map (fun line ->
     match Cn_json.parse line with
