@@ -222,15 +222,21 @@ let restore_one ~hub_path (dep : locked_dep) =
       if is_first_party dep.name then
         match find_local_package_source dep.name with
         | Ok local_path ->
-            Cn_ffi.Fs.ensure_dir pkg_dir;
-            copy_tree local_path pkg_dir;
-            Some (Ok ())
+            (* Guard: verify packages/ is in sync with src/agent/.
+               Prevents installing stale generated artifacts. *)
+            (match Cn_build.check_package dep.name with
+             | Error msg -> Some (Error msg)
+             | Ok () ->
+                 Cn_ffi.Fs.ensure_dir pkg_dir;
+                 copy_tree local_path pkg_dir;
+                 Some (Ok ()))
         | Error _ -> None
       else None
     in
     match local_result with
     | Some (Ok ()) -> None
-    | _ ->
+    | Some (Error msg) -> Some msg
+    | None ->
       (* Fetch by exact rev using structured argv calls *)
       let tmp_dir = Cn_ffi.Path.join hub_path
         (Printf.sprintf ".cn/tmp/%s-%s" dep.name dep.version) in
