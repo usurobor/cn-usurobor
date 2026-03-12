@@ -25,8 +25,9 @@ CDD owns the full arc from branch to observation:
 6. **Gate** — verify the release checklist (§9)
 7. **Release** — version, tag, CI, merge, announce (§10)
 8. **Observe** — confirm runtime matches design (§10.7)
+9. **Measure** — score the coherence delta, update CHANGELOG TSC table (§11)
 
-Start at step 1. Everything else follows in order.
+Start at step 1. The process is complete when the coherence delta is recorded.
 
 ---
 
@@ -332,6 +333,12 @@ Before merge or release, verify each item. A missing item is a known coherence d
   - ❌ Silently skip a release gate item
   - ✅ "Known debt: L2 transport docs not yet updated — tracked in issue #42"
 
+9.9. **Coherence must not regress**
+  - Score α/β/γ for the release; no axis may drop below the previous release
+  - If an axis regresses, either fix it before release or list it as explicit known debt with a remediation plan
+  - ❌ Ship v3.6.0 with β = B+ when v3.5.1 was β = A+, no explanation
+  - ✅ "β dropped from A+ to A because traceability docs lag — tracked, will fix in v3.6.1"
+
 ---
 
 ## 10. Release and Close
@@ -379,9 +386,50 @@ After the release gate passes, execute the release. CDD orchestrates; sub-skills
 
 ---
 
+## 11. Coherence Measurement
+
+CDD's output is not the feature — it is the measured coherence delta. The feature is the vehicle; coherence improvement is the product.
+
+11.1. **Score before starting**
+  - Record the baseline α/β/γ from the previous release in the coherence contract
+  - This is the starting point the change must improve or hold
+  - ❌ Start work without knowing current coherence state
+  - ✅ "Baseline: v3.5.1 — α A+, β A+, γ A+. This change targets β."
+
+11.2. **Score after release**
+  - Score α/β/γ for the new release using the same triadic axes
+  - Compare against baseline: which axes improved, held, or regressed?
+  - ❌ Ship without scoring — coherence improvement is unverifiable
+  - ✅ "v3.6.0 — α A+, β A+ (held), γ A+ (held). Traceability gap closed."
+
+11.3. **Update the CHANGELOG TSC table**
+  - Every minor and major release adds a row to the TSC table in `CHANGELOG.md`
+  - Include: version, C_Σ, α, β, γ, and a coherence note describing the delta
+  - ❌ Release with no CHANGELOG TSC entry
+  - ✅ `| v3.6.0 | A+ | A+ | A+ | A+ | CDD skill: executable development method, full lifecycle. |`
+
+11.4. **Name what improved**
+  - The coherence note must describe which incoherence was reduced, not what feature was added
+  - ❌ "Added CDD skill"
+  - ✅ "CDD: development method made executable — closes gap between doctrine and practice"
+
+11.5. **Name what regressed or held**
+  - If an axis didn't improve, say why — it's either acceptable (no relevant change) or known debt
+  - ❌ Silent axis stagnation across multiple releases
+  - ✅ "γ held at A+ — no evolution-path changes in this release, expected"
+
+11.6. **The coherence contract closes the loop**
+  - The coherence contract (§4.2) stated the gap and expected triadic effect
+  - Measurement validates whether the expected effect was achieved
+  - If the expected effect was not achieved, record why and what remains
+  - ❌ Contract says "improve β" but no post-release β score recorded
+  - ✅ Contract: "improve β (docs/runtime alignment)" → Result: "β held at A+, alignment verified via runtime telemetry"
+
+---
+
 ## Orchestration
 
-CDD is the main module. It owns the lifecycle from branch to observation. Sub-skills handle execution:
+CDD is the main module. It owns the lifecycle from branch to observation and measurement. Sub-skills handle execution:
 
 | CDD phase | Delegated to |
 |---|---|
@@ -392,6 +440,7 @@ CDD is the main module. It owns the lifecycle from branch to observation. Sub-sk
 | Merge to main | `eng/ship/SKILL.md` |
 | Tag, changelog, GitHub release | `release/SKILL.md` |
 | Review protocol | `eng/review/SKILL.md` |
+| Coherence scoring | `CHANGELOG.md` TSC table |
 
 CDD defines what must happen and in what order. Sub-skills define how.
 
@@ -399,6 +448,7 @@ CDD defines what must happen and in what order. Sub-skills define how.
 
 ## Reference
 
+- Coherence history: `CHANGELOG.md` (TSC table — α/β/γ per release)
 - Theory and rationale: `docs/design/CDD.md`
 - Triadic coherence model: `packages/cnos.core/doctrine/COHERENCE.md`
 - CAP (MCA/MCI): `packages/cnos.core/doctrine/CAP.md`
