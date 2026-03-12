@@ -39,6 +39,14 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 ---
 
+## v3.6.0 (unreleased)
+
+### Fixed
+
+- **`cn update` binary support (Issue #27)** — `cn update` now downloads pre-built binaries from GitHub Releases when no git-based install is detected, mirroring `install.sh`. Eliminates the assumption that `/usr/local/lib/cnos` exists with an OCaml toolchain. Both `run_update` and `self_update_check` now use `Cn_agent`'s dual-path update infrastructure (git or binary) instead of duplicating git-only logic.
+
+---
+
 ## v3.5.1 (2026-03-11)
 
 **TRACEABILITY: Structured Observability + CDD**

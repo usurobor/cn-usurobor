@@ -1005,3 +1005,30 @@ let%expect_test "post-ack guard: neither queued nor in-flight → advance" =
       && not (Cn_runtime.is_in_flight hub_path "tg-400") in
     Printf.printf "advance=%b\n" should_advance);
   [%expect {| advance=true |}]
+
+
+(* === Cn_agent: update infrastructure (Issue #27) ===
+
+   Tests that the update mechanism correctly detects install type
+   and that do_update handles Update_skip gracefully. *)
+
+let%expect_test "get_platform_binary: returns Some on Linux/macOS" =
+  (* On any CI or dev machine, uname should work *)
+  (match Cn_agent.get_platform_binary () with
+   | Some bin -> Printf.printf "binary=%s\n" bin
+   | None -> Printf.printf "binary=None\n");
+  [%expect {| binary=cn-linux-x64 |}]
+
+let%expect_test "do_update: Update_skip returns protocol skip" =
+  let result = Cn_agent.do_update Cn_agent.Update_skip in
+  let label = match result with
+    | Cn_protocol.Update_skip -> "skip"
+    | Cn_protocol.Update_complete -> "complete"
+    | Cn_protocol.Update_fail -> "fail" in
+  Printf.printf "result=%s\n" label;
+  [%expect {| result=skip |}]
+
+let%expect_test "has_git_install: false in test environment" =
+  (* Test env has no /usr/local/lib/cnos git clone *)
+  Printf.printf "git_install=%b\n" (Cn_agent.has_git_install ());
+  [%expect {| git_install=false |}]
