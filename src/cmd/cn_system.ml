@@ -83,6 +83,14 @@ let run_doctor hub_path =
      | Some v -> { name = "git user.email"; passed = true; value = String.trim v }
      | None -> { name = "git user.email"; passed = false; value = "not set" });
 
+    (match Cn_ffi.Child_process.exec "patch --version" with
+     | Some v ->
+         let line = match String.split_on_char '\n' (String.trim v) with
+           | first :: _ -> first | [] -> v in
+         { name = "patch"; passed = true; value = String.trim line }
+     | None -> { name = "patch"; passed = false;
+         value = "not installed (required for fs_patch)" });
+
     (match Cn_ffi.Child_process.exec "curl --version" with
      | Some v ->
          let line = match String.split_on_char '\n' (String.trim v) with

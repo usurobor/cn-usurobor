@@ -24,7 +24,7 @@ let observe_kinds =
   ["fs_read"; "fs_list"; "fs_glob"; "git_status"; "git_diff"; "git_log"; "git_grep"]
 
 let effect_kinds_base =
-  ["fs_write"; "fs_patch"; "git_branch"; "git_commit"]
+  ["fs_write"; "fs_patch"; "git_branch"; "git_stage"; "git_commit"]
 
 (* === Render === *)
 

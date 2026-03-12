@@ -320,16 +320,44 @@ let%expect_test "exec: missing argv field" =
     show_receipt r);
   [%expect {| kind=exec status=error reason=missing required field 'argv' artifacts=0 |}]
 
-(* === fs_glob: not yet implemented === *)
+(* === fs_glob: implemented in v3.8.0 === *)
 
-let%expect_test "fs_glob: not yet implemented" =
+let%expect_test "fs_glob: match *.ml in src/" =
   with_test_hub (fun hub ->
     let op = { Cn_shell.kind = Observe Fs_glob;
                op_id = Some "obs-01";
-               fields = [("pattern", Cn_json.String "**/*.ml")] } in
+               fields = [("pattern", Cn_json.String "*.ml");
+                          ("base", Cn_json.String "src")] } in
     let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
     show_receipt r);
-  [%expect {| kind=fs_glob status=error reason=not_yet_implemented artifacts=0 |}]
+  [%expect {| kind=fs_glob status=ok reason=(none) artifacts=1 |}]
+
+let%expect_test "fs_glob: no matches returns ok" =
+  with_test_hub (fun hub ->
+    let op = { Cn_shell.kind = Observe Fs_glob;
+               op_id = Some "obs-01";
+               fields = [("pattern", Cn_json.String "*.xyz")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r);
+  [%expect {| kind=fs_glob status=ok reason=(none) artifacts=1 |}]
+
+let%expect_test "fs_glob: denied base path (.cn)" =
+  with_test_hub (fun hub ->
+    let op = { Cn_shell.kind = Observe Fs_glob;
+               op_id = Some "obs-01";
+               fields = [("pattern", Cn_json.String "*");
+                          ("base", Cn_json.String ".cn")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r);
+  [%expect {| kind=fs_glob status=denied reason=path_denied artifacts=0 |}]
+
+let%expect_test "fs_glob: missing pattern field" =
+  with_test_hub (fun hub ->
+    let op = { Cn_shell.kind = Observe Fs_glob;
+               op_id = Some "obs-01"; fields = [] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r);
+  [%expect {| kind=fs_glob status=error reason=missing required field 'pattern' artifacts=0 |}]
 
 (* === Artifact: write_artifact with SHA-256 === *)
 
@@ -445,3 +473,74 @@ let%expect_test "execute_op: pass field is blank (orchestrator fills)" =
     let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
     Printf.printf "pass: '%s'\n" r.Cn_shell.pass);
   [%expect {| pass: '' |}]
+
+(* === v3.8.0: fs_read chunking === *)
+
+let%expect_test "fs_read: chunked with offset" =
+  with_test_hub (fun hub ->
+    let op = { Cn_shell.kind = Observe Fs_read;
+               op_id = Some "obs-01";
+               fields = [("path", Cn_json.String "src/main.ml");
+                          ("offset", Cn_json.Int 4);
+                          ("limit", Cn_json.Int 5)] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r;
+    (* Verify artifact content is the chunk *)
+    let art_path = Filename.concat hub (List.hd r.artifacts).Cn_shell.path in
+    let content = Cn_ffi.Fs.read art_path in
+    Printf.printf "chunk: '%s'\n" content);
+  [%expect {|
+    kind=fs_read status=ok reason=(none) artifacts=1
+    chunk: '() = ' |}]
+
+let%expect_test "fs_read: offset beyond file size" =
+  with_test_hub (fun hub ->
+    let op = { Cn_shell.kind = Observe Fs_read;
+               op_id = Some "obs-01";
+               fields = [("path", Cn_json.String "src/main.ml");
+                          ("offset", Cn_json.Int 99999)] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r;
+    let art_path = Filename.concat hub (List.hd r.artifacts).Cn_shell.path in
+    let content = Cn_ffi.Fs.read art_path in
+    Printf.printf "chunk_len: %d\n" (String.length content));
+  [%expect {|
+    kind=fs_read status=ok reason=(none) artifacts=1
+    chunk_len: 0 |}]
+
+let%expect_test "fs_read: no offset/limit defaults to full read" =
+  with_test_hub (fun hub ->
+    let op = { Cn_shell.kind = Observe Fs_read;
+               op_id = Some "obs-01";
+               fields = [("path", Cn_json.String "src/main.ml")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r;
+    let art_path = Filename.concat hub (List.hd r.artifacts).Cn_shell.path in
+    let content = Cn_ffi.Fs.read art_path in
+    Printf.printf "content: %s\n" content);
+  [%expect {|
+    kind=fs_read status=ok reason=(none) artifacts=1
+    content: let () = print_endline "hello" |}]
+
+(* === v3.8.0: git_stage === *)
+
+let%expect_test "git_stage: apply_mode off denied" =
+  with_test_hub (fun hub ->
+    let config = { test_config with apply_mode = "off" } in
+    let op = { Cn_shell.kind = Effect Git_stage;
+               op_id = Some "stage-01"; fields = [] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config op in
+    show_receipt r);
+  [%expect {| kind=git_stage status=denied reason=policy_rejected artifacts=0 |}]
+
+(* === v3.8.0: git_commit version gating === *)
+
+let%expect_test "git_commit: legacy semantics (no ops_version)" =
+  with_test_hub (fun hub ->
+    let config = { test_config with apply_mode = "off" } in
+    let op = { Cn_shell.kind = Effect Git_commit;
+               op_id = Some "commit-01";
+               fields = [("message", Cn_json.String "test")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config op in
+    show_receipt r);
+  [%expect {| kind=git_commit status=denied reason=policy_rejected artifacts=0 |}]

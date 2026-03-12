@@ -115,11 +115,26 @@ let execute_fs_read ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
           status = Cn_shell.Error_status; reason = "file_not_found";
           start_time = start; end_time = now_iso (); artifacts = [] }
       else
-        let content = Cn_ffi.Fs.read full in
+        let full_content = Cn_ffi.Fs.read full in
+        let file_len = String.length full_content in
+        (* v3.8.0: chunking support — offset and limit fields *)
+        let offset = match get_field_int "offset" op with
+          | Some o when o >= 0 -> o | _ -> 0 in
+        let budget = config.Cn_shell.max_artifact_bytes_per_op in
+        let limit = match get_field_int "limit" op with
+          | Some l when l > 0 -> min l budget
+          | _ -> budget in
+        let content =
+          if offset >= file_len then ""
+          else
+            let remaining = file_len - offset in
+            let take = min limit remaining in
+            String.sub full_content offset take
+        in
         let op_id_str = match op.op_id with Some id -> id | None -> "unknown" in
         let artifact = write_artifact ~hub_path ~trigger_id ~op_id:op_id_str
                          ~ext:"txt" ~content
-                         ~max_bytes:config.Cn_shell.max_artifact_bytes_per_op in
+                         ~max_bytes:budget in
         { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_read";
           status = Cn_shell.Ok_status; reason = "";
           start_time = start; end_time = now_iso (); artifacts = [artifact] }
@@ -224,6 +239,110 @@ let execute_git_grep ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
       execute_git_op ~hub_path ~trigger_id ~config ~kind_str:"git_grep"
         ~args:(["grep"; "-n"; query] @ extra_args) op
 
+(* === Glob matching (pure OCaml, no external dependency) === *)
+
+(** Simple glob pattern matching: supports *, **, and ? *)
+let rec glob_match pattern name =
+  match pattern, name with
+  | [], [] -> true
+  | "**" :: rest, _ ->
+    (* ** matches zero or more path segments *)
+    glob_match rest name
+    || (match name with _ :: name_rest -> glob_match pattern name_rest | [] -> false)
+  | pat :: prest, seg :: nrest ->
+    segment_match pat seg && glob_match prest nrest
+  | _ :: _, [] | [], _ :: _ -> false
+
+and segment_match pattern segment =
+  let plen = String.length pattern in
+  let slen = String.length segment in
+  let rec aux pi si =
+    if pi = plen && si = slen then true
+    else if pi = plen then false
+    else
+      match pattern.[pi] with
+      | '*' ->
+        (* * matches zero or more chars within a segment *)
+        let rec try_star si' =
+          if si' > slen then false
+          else if aux (pi + 1) si' then true
+          else try_star (si' + 1)
+        in
+        try_star si
+      | '?' ->
+        if si < slen then aux (pi + 1) (si + 1) else false
+      | c ->
+        if si < slen && segment.[si] = c then aux (pi + 1) (si + 1) else false
+  in
+  aux 0 0
+
+(** Split a glob pattern into path segments *)
+let split_glob_pattern pat =
+  String.split_on_char '/' pat
+  |> List.filter (fun s -> s <> "")
+
+(** Recursively walk a directory tree, returning relative paths *)
+let rec walk_dir base_path rel_prefix =
+  let full = Cn_ffi.Path.join base_path rel_prefix in
+  if not (Cn_ffi.Fs.exists full) then []
+  else
+    let entries = try Cn_ffi.Fs.readdir full with _ -> [] in
+    List.concat_map (fun entry ->
+      let rel = if rel_prefix = "." || rel_prefix = "" then entry
+                else rel_prefix ^ "/" ^ entry in
+      let full_entry = Cn_ffi.Path.join base_path rel in
+      if Sys.is_directory full_entry then
+        rel :: walk_dir base_path rel
+      else
+        [rel]
+    ) entries
+
+(** Check if a relative path is denied by the sandbox denylist *)
+let is_glob_denied path =
+  Cn_sandbox.check_denylist path <> None
+
+let execute_fs_glob ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
+  let start = now_iso () in
+  match require_field_string "pattern" op with
+  | Error msg ->
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_glob";
+      status = Cn_shell.Error_status; reason = msg;
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  | Ok pattern ->
+    let base = match get_field_string "base" op with
+      | Some b -> b | None -> "." in
+    match Cn_sandbox.validate_path ~hub_path ~access:Read_access base with
+    | Error reason ->
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_glob";
+        status = Cn_shell.Denied;
+        reason = Cn_sandbox.string_of_denial_reason reason;
+        start_time = start; end_time = now_iso (); artifacts = [] }
+    | Ok resolved_base ->
+      let base_full = Cn_ffi.Path.join hub_path resolved_base in
+      let all_paths = walk_dir base_full "" in
+      let glob_segs = split_glob_pattern pattern in
+      let matched = List.filter (fun p ->
+        let path_segs = String.split_on_char '/' p
+          |> List.filter (fun s -> s <> "") in
+        glob_match glob_segs path_segs
+      ) all_paths in
+      (* Filter out denylisted paths *)
+      let filtered = List.filter (fun p ->
+        let rel = if resolved_base = "." then p
+                  else resolved_base ^ "/" ^ p in
+        not (is_glob_denied rel)
+        && not (Sys.is_directory (Cn_ffi.Path.join base_full p))
+      ) matched in
+      let sorted = List.sort String.compare filtered in
+      let content = String.concat "\n" sorted in
+      let op_id_str = match op.op_id with Some id -> id | None -> "unknown" in
+      let artifact = write_artifact ~hub_path ~trigger_id ~op_id:op_id_str
+                       ~ext:"txt" ~content
+                       ~max_bytes:config.Cn_shell.max_artifact_bytes_per_op in
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_glob";
+        status = Cn_shell.Ok_status; reason = "";
+        start_time = start; end_time = now_iso (); artifacts = [artifact] }
+
 (* === Effect op executors === *)
 
 let execute_fs_write ~hub_path ~config (op : Cn_shell.typed_op) =
@@ -317,7 +436,64 @@ let execute_git_branch ~hub_path ~config (op : Cn_shell.typed_op) =
         reason = Printf.sprintf "git_exit_%d: %s" code (String.trim output);
         start_time = start; end_time = now_iso (); artifacts = [] }
 
-let execute_git_commit ~hub_path ~config (op : Cn_shell.typed_op) =
+let execute_git_stage ~hub_path ~config (op : Cn_shell.typed_op) =
+  let start = now_iso () in
+  if config.Cn_shell.apply_mode = "off" then
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
+      status = Cn_shell.Denied; reason = "policy_rejected";
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  else
+    (* Check for optional paths field (list of pathspecs) *)
+    let paths = match List.assoc_opt "paths" op.Cn_shell.fields with
+      | Some (Cn_json.Array items) ->
+        Some (List.filter_map (function
+          | Cn_json.String s -> Some s | _ -> None) items)
+      | _ -> None
+    in
+    match paths with
+    | Some pathspecs ->
+      (* Sandbox-check each path before staging *)
+      let bad = List.find_opt (fun p ->
+        match Cn_sandbox.validate_path ~hub_path ~access:Write_access p with
+        | Error _ -> true | Ok _ -> false
+      ) pathspecs in
+      (match bad with
+       | Some denied_path ->
+         { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
+           status = Cn_shell.Denied;
+           reason = Printf.sprintf "path_denied: %s" denied_path;
+           start_time = start; end_time = now_iso (); artifacts = [] }
+       | None ->
+         let code, output =
+           Cn_ffi.Process.exec_args ~prog:"git"
+             ~args:(["-C"; hub_path; "add"] @ pathspecs) ()
+         in
+         if code = 0 then
+           { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
+             status = Cn_shell.Ok_status; reason = "";
+             start_time = start; end_time = now_iso (); artifacts = [] }
+         else
+           { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
+             status = Cn_shell.Error_status;
+             reason = Printf.sprintf "git_add_exit_%d: %s" code (String.trim output);
+             start_time = start; end_time = now_iso (); artifacts = [] })
+    | None ->
+      (* No paths specified: stage all allowed changes *)
+      let code, output =
+        Cn_ffi.Process.exec_args ~prog:"git"
+          ~args:["-C"; hub_path; "add"; "-A"] ()
+      in
+      if code = 0 then
+        { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
+          status = Cn_shell.Ok_status; reason = "";
+          start_time = start; end_time = now_iso (); artifacts = [] }
+      else
+        { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
+          status = Cn_shell.Error_status;
+          reason = Printf.sprintf "git_add_exit_%d: %s" code (String.trim output);
+          start_time = start; end_time = now_iso (); artifacts = [] }
+
+let execute_git_commit ~hub_path ~config ?(ops_version="") (op : Cn_shell.typed_op) =
   let start = now_iso () in
   if config.Cn_shell.apply_mode = "off" then
     { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
@@ -330,30 +506,64 @@ let execute_git_commit ~hub_path ~config (op : Cn_shell.typed_op) =
       status = Cn_shell.Error_status; reason = msg;
       start_time = start; end_time = now_iso (); artifacts = [] }
   | Ok message ->
-    (* Two sequential argv calls — no shell && *)
-    let code1, output1 =
-      Cn_ffi.Process.exec_args ~prog:"git"
-        ~args:["-C"; hub_path; "add"; "-A"] ()
-    in
-    if code1 <> 0 then
-      { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
-        status = Cn_shell.Error_status;
-        reason = Printf.sprintf "git_add_exit_%d: %s" code1 (String.trim output1);
-        start_time = start; end_time = now_iso (); artifacts = [] }
-    else
-      let code2, output2 =
-        Cn_ffi.Process.exec_args ~prog:"git"
-          ~args:["-C"; hub_path; "commit"; "-m"; message] ()
+    (* v3.8.0: ops_version gating for staging behavior *)
+    let new_semantics = ops_version >= "3.8" in
+    let allow_empty = match List.assoc_opt "allow_empty" op.Cn_shell.fields with
+      | Some (Cn_json.Bool true) -> true | _ -> false in
+    if new_semantics then begin
+      (* New semantics: commit current index only, no implicit staging *)
+      let commit_args = ["-C"; hub_path; "commit"; "-m"; message]
+        @ (if allow_empty then ["--allow-empty"] else []) in
+      let code, output =
+        Cn_ffi.Process.exec_args ~prog:"git" ~args:commit_args ()
       in
-      if code2 = 0 then
+      if code = 0 then
         { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
           status = Cn_shell.Ok_status; reason = "";
           start_time = start; end_time = now_iso (); artifacts = [] }
       else
+        (* Check if nothing was staged *)
+        let porcelain_code, porcelain_out =
+          Cn_ffi.Process.exec_args ~prog:"git"
+            ~args:["-C"; hub_path; "diff"; "--cached"; "--quiet"] ()
+        in
+        if porcelain_code = 0 && not allow_empty then
+          (* Nothing in the index — skip *)
+          { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
+            status = Cn_shell.Skipped; reason = "nothing_staged";
+            start_time = start; end_time = now_iso (); artifacts = [] }
+        else
+          { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
+            status = Cn_shell.Error_status;
+            reason = Printf.sprintf "git_commit_exit_%d: %s" code (String.trim output);
+            start_time = start; end_time = now_iso (); artifacts = [] }
+    end else begin
+      (* Legacy semantics: implicit git add -A then commit *)
+      let code1, output1 =
+        Cn_ffi.Process.exec_args ~prog:"git"
+          ~args:["-C"; hub_path; "add"; "-A"] ()
+      in
+      if code1 <> 0 then
         { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
           status = Cn_shell.Error_status;
-          reason = Printf.sprintf "git_commit_exit_%d: %s" code2 (String.trim output2);
+          reason = Printf.sprintf "git_add_exit_%d: %s" code1 (String.trim output1);
           start_time = start; end_time = now_iso (); artifacts = [] }
+      else
+        let code2, output2 =
+          Cn_ffi.Process.exec_args ~prog:"git"
+            ~args:["-C"; hub_path; "commit"; "-m"; message] ()
+        in
+        if code2 = 0 then
+          { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
+            status = Cn_shell.Ok_status;
+            reason = "legacy_git_commit_semantics";
+            start_time = start; end_time = now_iso (); artifacts = [] }
+        else
+          { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
+            status = Cn_shell.Error_status;
+            reason = Printf.sprintf "git_commit_exit_%d: %s" code2 (String.trim output2);
+            start_time = start; end_time = now_iso (); artifacts = [] }
+    end
 
 let execute_exec ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
@@ -419,18 +629,14 @@ let execute_exec ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
 (* === Dispatch === *)
 
 (** Execute a single typed op. Returns a receipt (pass field left blank —
-    the orchestrator fills it in based on which pass is running). *)
-let execute_op ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
+    the orchestrator fills it in based on which pass is running).
+    ops_version: optional, used for git_commit semantics gating (v3.8.0). *)
+let execute_op ~hub_path ~trigger_id ~config ?(ops_version="") (op : Cn_shell.typed_op) =
   match op.Cn_shell.kind with
   (* Observe ops *)
   | Observe Fs_read -> execute_fs_read ~hub_path ~trigger_id ~config op
   | Observe Fs_list -> execute_fs_list ~hub_path ~trigger_id ~config op
-  | Observe Fs_glob ->
-    (* fs_glob: use find or simple readdir-based matching *)
-    let start = now_iso () in
-    { Cn_shell.pass = ""; op_id = op.op_id; kind = "fs_glob";
-      status = Cn_shell.Error_status; reason = "not_yet_implemented";
-      start_time = start; end_time = now_iso (); artifacts = [] }
+  | Observe Fs_glob -> execute_fs_glob ~hub_path ~trigger_id ~config op
   | Observe Git_status -> execute_git_status ~hub_path ~trigger_id ~config op
   | Observe Git_diff -> execute_git_diff ~hub_path ~trigger_id ~config op
   | Observe Git_log -> execute_git_log ~hub_path ~trigger_id ~config op
@@ -439,7 +645,8 @@ let execute_op ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   | Effect Fs_write -> execute_fs_write ~hub_path ~config op
   | Effect Fs_patch -> execute_fs_patch ~hub_path ~config op
   | Effect Git_branch -> execute_git_branch ~hub_path ~config op
-  | Effect Git_commit -> execute_git_commit ~hub_path ~config op
+  | Effect Git_stage -> execute_git_stage ~hub_path ~config op
+  | Effect Git_commit -> execute_git_commit ~hub_path ~config ~ops_version op
   | Effect Exec -> execute_exec ~hub_path ~trigger_id ~config op
 
 (* === Receipt I/O === *)
