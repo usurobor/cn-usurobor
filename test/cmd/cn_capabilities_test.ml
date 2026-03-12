@@ -24,7 +24,7 @@ let%expect_test "default config: exec disabled, apply_mode branch" =
     ## CN Shell Capabilities
 
     observe: fs_read, fs_list, fs_glob, git_status, git_diff, git_log, git_grep
-    effect: fs_write, fs_patch, git_branch, git_commit
+    effect: fs_write, fs_patch, git_branch, git_stage, git_commit
     apply_mode: branch
     exec_enabled: false
     budgets: max_artifact_bytes=65536, max_artifact_bytes_per_op=16384, max_observe_ops=10
@@ -49,7 +49,7 @@ let%expect_test "exec enabled: exec in effects + allowlist shown" =
     ## CN Shell Capabilities
 
     observe: fs_read, fs_list, fs_glob, git_status, git_diff, git_log, git_grep
-    effect: fs_write, fs_patch, git_branch, git_commit, exec
+    effect: fs_write, fs_patch, git_branch, git_stage, git_commit, exec
     apply_mode: branch
     exec_enabled: true
     exec_allowlist: make, dune, ocamlfind
@@ -70,7 +70,7 @@ let%expect_test "exec enabled with empty allowlist" =
     ## CN Shell Capabilities
 
     observe: fs_read, fs_list, fs_glob, git_status, git_diff, git_log, git_grep
-    effect: fs_write, fs_patch, git_branch, git_commit, exec
+    effect: fs_write, fs_patch, git_branch, git_stage, git_commit, exec
     apply_mode: branch
     exec_enabled: true
     exec_allowlist: (none)
@@ -117,7 +117,7 @@ let%expect_test "apply_mode working_tree: effects included" =
     ## CN Shell Capabilities
 
     observe: fs_read, fs_list, fs_glob, git_status, git_diff, git_log, git_grep
-    effect: fs_write, fs_patch, git_branch, git_commit
+    effect: fs_write, fs_patch, git_branch, git_stage, git_commit
     apply_mode: working_tree
     exec_enabled: false
     budgets: max_artifact_bytes=65536, max_artifact_bytes_per_op=16384, max_observe_ops=10
@@ -144,7 +144,7 @@ let%expect_test "custom budgets reflected in block" =
     ## CN Shell Capabilities
 
     observe: fs_read, fs_list, fs_glob, git_status, git_diff, git_log, git_grep
-    effect: fs_write, fs_patch, git_branch, git_commit
+    effect: fs_write, fs_patch, git_branch, git_stage, git_commit
     apply_mode: branch
     exec_enabled: false
     budgets: max_artifact_bytes=131072, max_artifact_bytes_per_op=32768, max_observe_ops=20
@@ -191,7 +191,7 @@ let%expect_test "effect kinds follow declaration order" =
   (match effect_line with
    | Some l -> print_endline l
    | None -> print_endline "not found");
-  [%expect {| effect: fs_write, fs_patch, git_branch, git_commit, exec |}]
+  [%expect {| effect: fs_write, fs_patch, git_branch, git_stage, git_commit, exec |}]
 
 let%expect_test "budget keys in lexical order" =
   let block = Cn_capabilities.render default_config in

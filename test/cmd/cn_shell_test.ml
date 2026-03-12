@@ -38,7 +38,7 @@ let%expect_test "op_kind_of_string: observe kinds" =
   |}]
 
 let%expect_test "op_kind_of_string: effect kinds" =
-  ["fs_write"; "fs_patch"; "git_branch"; "git_commit"; "exec"]
+  ["fs_write"; "fs_patch"; "git_branch"; "git_stage"; "git_commit"; "exec"]
   |> List.iter (fun s ->
     match Cn_shell.op_kind_of_string s with
     | Some (Cn_shell.Effect _) -> Printf.printf "%s -> effect\n" s
@@ -48,6 +48,7 @@ let%expect_test "op_kind_of_string: effect kinds" =
     fs_write -> effect
     fs_patch -> effect
     git_branch -> effect
+    git_stage -> effect
     git_commit -> effect
     exec -> effect
   |}]
@@ -64,7 +65,8 @@ let%expect_test "string_of_op_kind roundtrip" =
   let kinds = [
     Cn_shell.Observe Cn_shell.Fs_read; Observe Fs_list; Observe Fs_glob;
     Observe Git_status; Observe Git_diff; Observe Git_log; Observe Git_grep;
-    Effect Fs_write; Effect Fs_patch; Effect Git_branch; Effect Git_commit; Effect Exec;
+    Effect Fs_write; Effect Fs_patch; Effect Git_branch; Effect Git_stage;
+    Effect Git_commit; Effect Exec;
   ] in
   kinds |> List.iter (fun k ->
     let s = Cn_shell.string_of_op_kind k in
@@ -83,6 +85,7 @@ let%expect_test "string_of_op_kind roundtrip" =
     fs_write -> roundtrip ok
     fs_patch -> roundtrip ok
     git_branch -> roundtrip ok
+    git_stage -> roundtrip ok
     git_commit -> roundtrip ok
     exec -> roundtrip ok
   |}]
@@ -460,4 +463,35 @@ let%expect_test "parse: phase field stripped from fields list" =
   [%expect {|
     fields: 1
       rev
+  |}]
+
+(* === v3.8.0: git_stage parsing === *)
+
+let%expect_test "parse: git_stage with paths" =
+  show_manifest {|[{"kind":"git_stage","op_id":"stage-1","paths":["src/main.ml","docs/README.md"]}]|};
+  [%expect {|
+    ops=1 receipts=0
+      git_stage stage-1
+  |}]
+
+let%expect_test "parse: git_stage without paths (stage all)" =
+  show_manifest {|[{"kind":"git_stage","op_id":"stage-2"}]|};
+  [%expect {|
+    ops=1 receipts=0
+      git_stage stage-2
+  |}]
+
+let%expect_test "parse: git_stage missing op_id denied" =
+  show_manifest {|[{"kind":"git_stage"}]|};
+  [%expect {|
+    ops=0 receipts=1
+      git_stage denied missing_op_id
+  |}]
+
+let%expect_test "parse: git_stage + git_commit compose" =
+  show_manifest {|[{"kind":"git_stage","op_id":"s1","paths":["src/a.ml"]},{"kind":"git_commit","op_id":"c1","message":"fix"}]|};
+  [%expect {|
+    ops=2 receipts=0
+      git_stage s1
+      git_commit c1
   |}]

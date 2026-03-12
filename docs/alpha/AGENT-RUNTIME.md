@@ -1,6 +1,6 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.7.0
+**Version:** 3.8.0
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
 **Date:** 2026-03-12
 **Status:** Draft
@@ -9,6 +9,17 @@
 ---
 
 ## Patch Notes
+
+**v3.8.0** — Syscall Surface Coherence Amendment:
+- Implement `fs_glob` observe op (was advertised but returned `not_yet_implemented`)
+- Add `git_stage` effect op for explicit staging; split from `git_commit`
+- `git_commit` under `ops_version >= "3.8"` commits current index only (no implicit `git add -A`)
+- `git_commit` under `ops_version < "3.8"` or absent retains legacy stage-all-and-commit semantics with `legacy_git_commit_semantics` receipt annotation
+- Add `offset` and `limit` fields to `fs_read` for chunked observation of large files
+- Make `fs_patch` external dependency on `patch(1)` explicit: `cn doctor` checks for it; receipts reflect failure
+- New receipt reasons: `nothing_staged`, `legacy_git_commit_semantics`, `glob_limit_exceeded`
+- `ops_version: "3.8"` is the transition point for new semantics
+- See: [`SYSCALL-SURFACE-v3.8.0.md`](SYSCALL-SURFACE-v3.8.0.md) for full design
 
 **v3.7.0** — Scheduler Unification (one loop, two schedulers):
 - Replace the daemon-vs-cron behavioral split with **one protocol loop, one processing engine, two schedulers**
