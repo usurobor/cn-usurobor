@@ -21,6 +21,7 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
 |--------------|------|
 | Understand what cnos is and how it works | [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | Understand *why* cnos exists | [MANIFESTO.md](./design/MANIFESTO.md) |
+| Understand coherence as the top-level system | [COHERENCE-SYSTEM.md](./design/COHERENCE-SYSTEM.md) |
 | Understand the agent architecture | [CAA.md](./design/CAA.md) |
 | Understand operational observability | [TRACEABILITY.md](./design/TRACEABILITY.md) |
 | Read the formal protocol spec | [WHITEPAPER.md](./design/WHITEPAPER.md) |
@@ -84,6 +85,7 @@ Specifications for specific subsystems.
 
 | Document | What it is |
 |----------|-----------|
+| [COHERENCE-SYSTEM.md](./design/COHERENCE-SYSTEM.md) | Meta-model: coherence as primary; MCP/CMP/CAP/CLP across scales |
 | [CAA.md](./design/CAA.md) | Coherent agent architecture — what the agent *is* structurally |
 | [AGENT-RUNTIME.md](./design/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.7): CN Shell, typed ops, two-pass, receipts |
 | [CLI.md](./design/CLI.md) | CLI command reference — every `cn` command |

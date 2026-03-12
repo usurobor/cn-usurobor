@@ -31,6 +31,14 @@ Features are the operator-facing articulation of that movement.
 
 Formalization — writing explicit contracts (specs, schemas, invariants, acceptance criteria) — is how coherence becomes inspectable. The cnos system already practices formalization through doctrine, design documents, and schemas. CDD names the wider method that gives formalization its purpose.
 
+CDD should be read beneath `COHERENCE-SYSTEM.md`, where:
+- **MCP** = Most Coherent Picture
+- **CMP** = Coherence Mapping Pass
+- **CAP** = the atomic move
+- **CLP** = the reflective law
+
+CDD is γ at the development scale.
+
 ---
 
 ## 1. Definition
@@ -96,6 +104,12 @@ Examples:
 - Runtime behavior wrong, docs correct → MCA (fix the code)
 - Docs wrong, runtime correct → MCI (fix the docs)
 - Both wrong → MCA + MCI, smallest coherent intervention
+
+Before choosing MCA or MCI, development must perform a **CMP**:
+construct the **MCP** of the current project state by mapping:
+- the relevant artifacts (α)
+- their relations (β)
+- the pressures on future movement (γ)
 
 ### 2.2 Boundary with CAP
 
@@ -169,19 +183,23 @@ Every significant review, whether in a thread, a PR, or a design discussion, use
 
 This is the dialogue form from COHERENCE doctrine.
 
-### 4.2 CLP as refinement loop (Seed → Reflect → Check → Patch → Repeat)
+### 4.2 CLP as refinement loop (CMP → Seed → Reflect → Check → Patch → Repeat)
 
 Every substantial artifact undergoes iterative refinement:
 
-1. **Seed** — state the gap clearly. What is incoherent? At which layer? What is the smallest coherent intervention?
+1. **CMP** — build the current MCP. What are the relevant articulations? How do they relate? Where is the real incoherence? Which axis is weakest?
 
-2. **Bohmian reflection** — dialog that seeks the real structure of the problem. Not brainstorming. Questions: What is the system trying to become? What are we implicitly assuming? Where are two truths coexisting? What would make this simpler and truer?
+2. **Seed** — state the gap clearly. What is incoherent? At which layer? What is the smallest coherent intervention?
 
-3. **Triadic check** — score the change across α PATTERN, β RELATION, γ EXIT.
+3. **Bohmian reflection** — dialog that seeks the real structure of the problem. Not brainstorming. Questions: What is the system trying to become? What are we implicitly assuming? Where are two truths coexisting? What would make this simpler and truer?
 
-4. **Patch weakest axis** — do not polish the strongest axis. Fix the weakest one.
+4. **Triadic check** — score the change across α PATTERN, β RELATION, γ EXIT.
 
-5. **Repeat until threshold** — stop when the design is coherent enough to implement. Do not implement into unresolved conceptual fog.
+5. **Choose MCA / MCI** — given the MCP and triadic assessment: choose MCA if the system should change, MCI if the model should change, both when required (MCA first when action is coherent and possible).
+
+6. **Patch weakest axis** — do not polish the strongest axis. Fix the weakest one.
+
+7. **Repeat until threshold** — stop when the design is coherent enough to implement. Do not implement into unresolved conceptual fog.
 
 These two aspects are compatible: the TERMS/POINTER/EXIT structure gives form to each step in the refinement loop.
 
@@ -442,6 +460,7 @@ Reviews use CLP dialogue structure (TERMS → POINTER → EXIT) and check triadi
 
 | Document | Scope | Relationship to CDD |
 |----------|-------|---------------------|
+| COHERENCE-SYSTEM.md | Meta-model / above | CDD is γ at the development scale |
 | FOUNDATIONS.md | Doctrine / why | CDD derives its first principle from here |
 | CAP.md | Doctrine / dynamic | CDD applies CAP to development |
 | COHERENCE.md | Doctrine / review | CDD uses TSC axes and CLP structure |
@@ -471,6 +490,13 @@ Coherence-Driven Development means:
 - scaling down for small changes, scaling up for substantial ones
 
 > **Development organized around reducing incoherence across thought, design, implementation, operation, and evolution.**
+
+More precisely:
+
+> **CMP constructs the MCP.
+> CAP chooses the move.
+> CLP judges the delta.
+> CDD is that logic applied to the evolution of cnos itself.**
 
 Each substantial release is therefore a **measured coherence delta**.
 The feature is not discarded or treated as accidental;

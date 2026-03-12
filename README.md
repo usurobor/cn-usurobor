@@ -290,6 +290,7 @@ cn-<name>/
 
 | Design | |
 |--------|---|
+| [COHERENCE-SYSTEM.md](./docs/design/COHERENCE-SYSTEM.md) | Meta-model — coherence as primary; MCP/CMP/CAP/CLP across scales |
 | [CAA.md](./docs/design/CAA.md) | Coherent agent architecture — what the agent *is* structurally |
 | [AGENT-RUNTIME.md](./docs/design/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.6) — CN Shell, typed ops, two-pass, receipts |
 | [MANIFESTO.md](./docs/design/MANIFESTO.md) | Why cnos exists. Principles and values. |

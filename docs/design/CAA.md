@@ -4,7 +4,8 @@ What a coherent agent is, structurally.
 
 **Status:** v1.1.0
 **Date:** 2026-03-10
-**Relationship:** FOUNDATIONS.md = doctrine/why. This doc = architecture/what.
+**Relationship:** COHERENCE-SYSTEM.md = meta-model/above.
+FOUNDATIONS.md = doctrine/why. This doc = architecture/what.
 AGENT-RUNTIME = execution/how. CAR = package distribution/how cognition arrives.
 
 ---
@@ -31,6 +32,15 @@ Operational law (CAP):
 
 This is the irreducible dynamic. Everything below exists to make this
 choice well and keep it coherent over time.
+
+Before CAP can move, the agent must form the best available picture of the
+state it inhabits. In the wider coherence system (COHERENCE-SYSTEM.md) this is:
+
+- **MCP** — Most Coherent Picture
+- **CMP** — Coherence Mapping Pass, the operation that constructs or refreshes the MCP
+
+At the agent scale, CMP is the sensing / comparison phase that precedes the
+MCA-or-MCI choice.
 
 ---
 
@@ -78,15 +88,15 @@ the architecture is broken.
 Every processing cycle:
 
 ```
-Sense → Compare → Choose (MCA/MCI) → Review (α/β/γ) → Emit → Repeat
+CMP → MCP → Choose (MCA/MCI) → Review (α/β/γ) → Emit → Repeat
 ```
 
-### 5.1 Sense
-Gather evidence. Read files, check state, observe the world.
-The runtime enforces this: observe ops run before effect ops.
+### 5.1 CMP (Coherence Mapping Pass)
+Build the current MCP from evidence, memory, doctrine, and constraints.
+The runtime enforces the first half: observe ops run before effect ops.
 
-### 5.2 Compare
-Where is the gap? What did the model predict vs what the evidence shows?
+### 5.2 MCP (Most Coherent Picture)
+The result of CMP. Where is the gap? What did the model predict vs what the evidence shows?
 
 ### 5.3 Choose
 - Can I change reality? → MCA (act)
@@ -106,6 +116,8 @@ The runtime validates, executes, records receipts.
 ### 5.6 The cycle as coherence delta
 
 Each completed agent cycle should be understood as a **coherence delta**: a bounded movement from a less coherent state to a more coherent one. The movement may be expressed as MCA (change the world), MCI (change the model), or both in sequence, but the architectural unit is the delta itself, not merely the visible feature or message produced at the end of the cycle.
+
+The full agent cycle is therefore: **CMP → MCP → CAP → CLP → update → repeat**.
 
 ---
 
@@ -193,13 +205,15 @@ the failure cannot occur.
 
 | Document | Scope | Question it answers |
 |----------|-------|-------------------|
+| COHERENCE-SYSTEM.md | Meta-model | Above — coherence as primary; MCP/CMP/CAP/CLP across scales |
 | FOUNDATIONS.md | Doctrine | Why — first principles and doctrinal layers |
 | **CAA.md** | **Architecture** | **What — structural definition of a coherent agent** |
 | AGENT-RUNTIME | Runtime spec | How — process lifecycle, queue, execution |
 | CAR.md | Distribution | How — package model, install, restore |
 
-FOUNDATIONS defines the principles. CAA defines the structure that
-implements them. The runtime and distribution docs define the mechanics.
+COHERENCE-SYSTEM defines the meta-model. FOUNDATIONS defines the principles.
+CAA defines the structure that implements them. The runtime and distribution
+docs define the mechanics.
 
 ---
 

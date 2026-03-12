@@ -129,42 +129,48 @@ This is the process that moves the system:
 
 ---
 
-## 3. Coherence Mapping and the Core Algorithm
+## 3. MCP and CMP
 
-### 3.1 Coherence Mapping
+If CAP is the atomic move, then before acting the system needs the best possible picture of where it stands.
 
-Before CAP can act, the system needs the best possible picture of where it stands.
+### 3.1 MCP — Most Coherent Picture
+The **Most Coherent Picture** is the current best picture the system can form of itself and its world.
 
-**Coherence Mapping** is the operation that produces or refreshes this picture.
-It is the system-scale expression of the **Sense → Compare** phase defined in
+It is not omniscience.
+It is the best currently available picture across α, β, and γ.
+
+An MCP includes:
+- the relevant articulations
+- the known relations among them
+- the visible tensions and gaps
+- the current path pressures / likely exits
+
+### 3.2 CMP — Coherence Mapping Pass
+The **Coherence Mapping Pass** is the operation that produces or refreshes the MCP.
+
+CMP is the system-scale expression of the **Sense → Compare** phase defined in
 FOUNDATIONS §3. Where Sense → Compare operates within a single agent cycle,
-Coherence Mapping operates across the full articulation graph — α, β, and γ
-simultaneously.
+CMP operates across the full articulation graph — α, β, and γ simultaneously.
 
-Coherence Mapping asks:
+CMP asks:
 - what are the relevant articulations right now?
 - how do they relate?
 - where are the strongest incoherences?
 - what is the weakest axis?
 - what can be acted on, and what must be re-modeled?
 
-The result is the **most coherent picture** the system can currently form of
-itself and its world. Not omniscience — the best available picture across all
-three axes.
-
-### 3.2 The core coherence algorithm
-
+### 3.3 The core coherence algorithm
 The recurrent algorithm of the system is:
 
-> **Coherence Mapping → CAP (MCA/MCI) → CLP → update articulations → repeat**
+> **CMP → CAP (MCA/MCI) → CLP → update articulations → CMP**
 
 In words:
 
-1. **Map** — build the most coherent picture (system-scale Sense → Compare)
-2. **Move** — choose the coherent move via CAP: MCA, MCI, or both (MCA first)
-3. **Review** — CLP judges the move: seed → reflect → triadic score → patch weakest axis → repeat until coherent enough to proceed
+1. **CMP** — build the MCP (system-scale Sense → Compare)
+2. **CAP** — choose the coherent move: MCA, MCI, or both (MCA first)
+3. **CLP** — review the result: seed → reflect → triadic score → patch weakest axis → repeat until coherent enough to proceed
 4. **Update** — record the result in the articulated system
-5. **Repeat** — the next cycle begins from the new state
+5. **CMP** — build the next picture
 
 This extends the agent-scale loop in FOUNDATIONS §4 (`Sense → Compare → MCA/MCI → Repeat`) to the whole system. CLP is the full review rhythm (COHERENCE.md), not merely a post-move checkpoint.
 
@@ -190,8 +196,8 @@ The system must also inspect:
 So:
 
 - **CAP** gives the move
-- **Coherence Mapping** builds the picture
-- **CLP** judges the move against the picture
+- **CMP** builds the MCP
+- **CLP** judges the move against the MCP
 
 ---
 
@@ -284,7 +290,7 @@ It is a recurrent system in which coherent articulations:
 This recurrence appears at multiple scales.
 
 ### 6.1 Inside one agent cycle
-- the agent maps its situation (Sense → Compare)
+- the agent performs CMP → forms the MCP
 - CAP chooses MCA/MCI
 - the runtime executes under policy
 - receipts and traces are emitted
@@ -318,7 +324,7 @@ Its distinctive property is **agency**.
 
 ### 7.1 What makes an articulation an agent
 An articulation becomes an agent when it can:
-- map its situation (Sense → Compare)
+- perform CMP to form an MCP
 - detect a gap
 - choose MCA or MCI
 - execute a bounded move
@@ -479,7 +485,7 @@ Specifically:
 
 CDD applies CAP to development:
 - identify the gap
-- map the situation (Coherence Mapping)
+- CMP → build the MCP of the current project state
 - choose MCA/MCI
 - write the design
 - plan the move
@@ -554,9 +560,9 @@ It means:
 This is not a metaphor only.
 It is the operating logic of the system.
 
-### 14.1 Coherence Mapping at every scale
+### 14.1 CMP at every scale
 At every scale, the system should ask:
-- what is the most coherent picture right now?
+- what is the MCP right now?
 - what is the weakest incoherence?
 - what move reduces it?
 - what changed after the move?
@@ -599,15 +605,15 @@ This document sits above them:
 
 | This document | Existing term | Source |
 |---------------|---------------|--------|
-| Coherence Mapping | Sense → Compare (agent scale) | FOUNDATIONS §3 |
-| "most coherent picture" | (implicit in Sense → Compare) | FOUNDATIONS §3 |
-| Core algorithm (§3.2) | Sense → Compare → MCA/MCI → Repeat | FOUNDATIONS §4 |
+| MCP (Most Coherent Picture) | (implicit in Sense → Compare) | FOUNDATIONS §3 |
+| CMP (Coherence Mapping Pass) | Sense → Compare (agent scale) | FOUNDATIONS §3 |
+| Core algorithm (§3.3) | Sense → Compare → MCA/MCI → Repeat | FOUNDATIONS §4 |
 | CLP (unchanged) | CLP — seed → reflect → triadic check → patch → repeat | COHERENCE.md |
 | Coherence delta (unchanged) | Coherence delta | CDD.md, CAA.md |
 | α / β / γ (unchanged) | TSC axes | COHERENCE.md |
 
-No new acronyms are introduced. "Coherence Mapping" and "most coherent picture"
-are descriptive phrases for existing operations at system scale.
+MCP and CMP are new named concepts. They name what Sense → Compare does
+implicitly at the agent scale, made explicit at the system scale.
 
 ---
 
@@ -626,7 +632,7 @@ From coherence unfold:
 - traces
 
 CAP gives the atomic move.
-Coherence Mapping builds the most coherent picture.
+CMP builds the MCP.
 CLP judges the move.
 CDD applies the same law to the project itself.
 CAA describes the coherent agent as one special articulation within the larger system.
