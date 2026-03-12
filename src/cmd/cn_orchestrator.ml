@@ -102,7 +102,7 @@ type pass_a_result = {
 
     All receipts tagged with pass="A".
     Writes receipts to state/receipts/<trigger_id>.json. *)
-let run_pass_a ~hub_path ~trigger_id ~config ?(ops_version="") typed_ops =
+let run_pass_a ~hub_path ~trigger_id ~config typed_ops =
   let two_pass_needed = Cn_shell.needs_two_pass
       ~two_pass_mode:config.Cn_shell.two_pass typed_ops in
 
@@ -123,7 +123,7 @@ let run_pass_a ~hub_path ~trigger_id ~config ?(ops_version="") typed_ops =
   let receipts =
     if not two_pass_needed then
       List.map (fun (op : Cn_shell.typed_op) ->
-        let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config ~ops_version op in
+        let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config op in
         { r with Cn_shell.pass = "A" }
       ) typed_ops
     else
@@ -140,7 +140,7 @@ let run_pass_a ~hub_path ~trigger_id ~config ?(ops_version="") typed_ops =
                ~status:Skipped ~reason:"observe_pass_requires_followup")
             with start_time = now; end_time = now }
         end else
-          let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config ~ops_version op in
+          let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config op in
           { r with Cn_shell.pass = "A" }
       ) typed_ops
   in
@@ -158,7 +158,7 @@ let run_pass_a ~hub_path ~trigger_id ~config ?(ops_version="") typed_ops =
     - Effect ops execute normally
     - All receipts tagged with pass="B"
     - Receipts appended to existing file (Pass A already wrote) *)
-let run_pass_b ~hub_path ~trigger_id ~config ?(ops_version="") typed_ops =
+let run_pass_b ~hub_path ~trigger_id ~config typed_ops =
   Cn_trace.gemit ~component:"orchestrator" ~layer:Body
     ~event:"pass.selected" ~severity:Info ~status:Ok_
     ~trigger_id ~pass:"B"
@@ -177,7 +177,7 @@ let run_pass_b ~hub_path ~trigger_id ~config ?(ops_version="") typed_ops =
            ~status:Denied ~reason:"max_passes_exceeded")
         with start_time = now; end_time = now }
     end else
-      let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config ~ops_version op in
+      let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config op in
       { r with Cn_shell.pass = "B" }
   ) typed_ops in
 

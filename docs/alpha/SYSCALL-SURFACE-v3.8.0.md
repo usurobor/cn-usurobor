@@ -121,26 +121,16 @@ If `git_commit` is called with nothing staged and `allow_empty` is false:
 
 ---
 
-## 2.3 Backward compatibility for `git_commit`
+## 2.3 `git_commit` semantics (clean break)
 
 ### Decision
-Use `ops_version` to preserve old behavior during a compatibility window.
-
-#### For `ops_version < "3.8"` or absent
-`git_commit` MAY retain legacy semantics:
-- internally expand to:
-  1. `git_stage` (all allowed changes)
-  2. `git_commit`
-
-Runtime MUST emit:
-- a warning event / receipt annotation that legacy `git_commit` semantics were used
-
-#### For `ops_version >= "3.8"`
-`git_commit` means:
-- **commit currently staged changes only**
+`git_commit` always means **commit currently staged changes only**. There is no
+backward-compatibility window or `ops_version` gating. Use `git_stage` to stage
+changes before committing.
 
 ### Rationale
-This avoids breaking older agents immediately while making the new ABI honest and forward-clean.
+There are no deployed consumers depending on the old implicit-staging behavior.
+A clean break is simpler and avoids version-gating complexity.
 
 ---
 
@@ -239,7 +229,7 @@ They also introduce heavier governance, credentials, and recovery questions.
 | `fs_patch`   | `path`, `unified_diff`         | Patch file; dependency must be explicit |
 | `git_branch` | `name`                         | Create branch |
 | `git_stage`  | `paths?`                       | New in v3.8.0 |
-| `git_commit` | `message`, `allow_empty?`      | Commits current index only in `ops_version >= "3.8"` |
+| `git_commit` | `message`, `allow_empty?`      | Commits current index only; use `git_stage` first |
 | `exec`       | `argv`, `stdin?`               | Opt-in + allowlisted |
 
 ---
@@ -274,26 +264,22 @@ The live capabilities block MUST reflect the actual shipped surface.
 ### Required changes
 - `fs_glob` may only be listed if it is implemented
 - `git_stage` must be included once added
-- `git_commit` description should reflect index-only semantics for `ops_version >= "3.8"`
+- `git_commit` description should reflect index-only semantics
 
 ### Versioning
-Because `git_stage` is a new effect op and `git_commit` semantics change in a versioned way, this is a **minor version** update.
-
-`ops_version: "3.8"` is the transition point.
+Because `git_stage` is a new effect op and `git_commit` semantics change, this is a **minor version** update.
 
 ---
 
 ## 6. Receipts / Events
 
 ### New or revised receipt reasons
-- `nothing_staged`
-- `legacy_git_commit_semantics`
-- `glob_limit_exceeded` (if relevant)
+- `nothing_staged` — git_commit when index has no staged changes
 - existing policy/sandbox reasons remain unchanged
 
 ### Traceability
 The runtime SHOULD emit enough detail for operators to answer:
-- was `git_commit` using legacy or new semantics?
+- did `git_commit` skip due to `nothing_staged`?
 - was `fs_read` truncated or chunked?
 - did `fs_glob` match zero files or hit limits?
 - did `fs_patch` fail because the external tool was unavailable?
@@ -302,20 +288,10 @@ The runtime SHOULD emit enough detail for operators to answer:
 
 ## 7. Migration
 
-### Existing agents / prompts
-Agents already using:
-- `git_commit` without `git_stage`
-
-continue to work under:
-- missing `ops_version`
-- or `ops_version < "3.8"`
-
-But they should receive warnings and gradually migrate.
-
-### New guidance
-From `ops_version >= "3.8"` onward:
-- use `git_stage`
-- then `git_commit`
+### Migration guidance
+Agents must now use `git_stage` before `git_commit`. The old implicit-staging
+behavior is removed — `git_commit` without prior `git_stage` will produce a
+`nothing_staged` skip receipt if no changes are in the index.
 
 ### Documentation updates required
 - `AGENT-RUNTIME.md`

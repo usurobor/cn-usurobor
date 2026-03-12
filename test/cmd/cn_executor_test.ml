@@ -533,9 +533,9 @@ let%expect_test "git_stage: apply_mode off denied" =
     show_receipt r);
   [%expect {| kind=git_stage status=denied reason=policy_rejected artifacts=0 |}]
 
-(* === v3.8.0: git_commit version gating === *)
+(* === v3.8.0: git_commit index-only semantics === *)
 
-let%expect_test "git_commit: legacy semantics (no ops_version)" =
+let%expect_test "git_commit: apply_mode off denied" =
   with_test_hub (fun hub ->
     let config = { test_config with apply_mode = "off" } in
     let op = { Cn_shell.kind = Effect Git_commit;
@@ -544,3 +544,77 @@ let%expect_test "git_commit: legacy semantics (no ops_version)" =
     let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config op in
     show_receipt r);
   [%expect {| kind=git_commit status=denied reason=policy_rejected artifacts=0 |}]
+
+(* === v3.8.0: end-to-end git_stage + git_commit === *)
+
+let init_git_repo hub =
+  let _ = Cn_ffi.Process.exec_args ~prog:"git"
+    ~args:["-C"; hub; "init"; "--initial-branch"; "main"] () in
+  let _ = Cn_ffi.Process.exec_args ~prog:"git"
+    ~args:["-C"; hub; "config"; "user.email"; "test@test.com"] () in
+  let _ = Cn_ffi.Process.exec_args ~prog:"git"
+    ~args:["-C"; hub; "config"; "user.name"; "Test"] () in
+  (* Initial commit so HEAD exists *)
+  let _ = Cn_ffi.Process.exec_args ~prog:"git"
+    ~args:["-C"; hub; "commit"; "--allow-empty"; "-m"; "init"] () in
+  ()
+
+let%expect_test "git_commit: nothing_staged when no changes in index" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    (* Create an unstaged file — don't stage it *)
+    let oc = open_out (Filename.concat hub "src/unstaged.ml") in
+    output_string oc "let x = 1";
+    close_out oc;
+    let op = { Cn_shell.kind = Effect Git_commit;
+               op_id = Some "commit-01";
+               fields = [("message", Cn_json.String "should skip")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r);
+  [%expect {| kind=git_commit status=skipped reason=nothing_staged artifacts=0 |}]
+
+let%expect_test "git_stage then git_commit: succeeds" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    (* Create a new file *)
+    let oc = open_out (Filename.concat hub "src/new_file.ml") in
+    output_string oc "let y = 2";
+    close_out oc;
+    (* Stage it *)
+    let stage_op = { Cn_shell.kind = Effect Git_stage;
+                     op_id = Some "stage-01";
+                     fields = [("paths", Cn_json.Array [Cn_json.String "src/new_file.ml"])] } in
+    let sr = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config stage_op in
+    show_receipt sr;
+    (* Commit *)
+    let commit_op = { Cn_shell.kind = Effect Git_commit;
+                      op_id = Some "commit-01";
+                      fields = [("message", Cn_json.String "add new_file")] } in
+    let cr = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config commit_op in
+    show_receipt cr);
+  [%expect {|
+    kind=git_stage status=ok reason=(none) artifacts=0
+    kind=git_commit status=ok reason=(none) artifacts=0 |}]
+
+let%expect_test "git_stage all then git_commit: succeeds" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    (* Create two new files *)
+    let oc1 = open_out (Filename.concat hub "src/a.ml") in
+    output_string oc1 "let a = 1"; close_out oc1;
+    let oc2 = open_out (Filename.concat hub "docs/b.md") in
+    output_string oc2 "# B"; close_out oc2;
+    (* Stage all (no paths = stage everything) *)
+    let stage_op = { Cn_shell.kind = Effect Git_stage;
+                     op_id = Some "stage-01"; fields = [] } in
+    let sr = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config stage_op in
+    show_receipt sr;
+    (* Commit *)
+    let commit_op = { Cn_shell.kind = Effect Git_commit;
+                      op_id = Some "commit-01";
+                      fields = [("message", Cn_json.String "add a and b")] } in
+    let cr = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config commit_op in
+    show_receipt cr);
+  [%expect {|
+    kind=git_stage status=ok reason=(none) artifacts=0
+    kind=git_commit status=ok reason=(none) artifacts=0 |}]

@@ -478,10 +478,10 @@ let execute_git_stage ~hub_path ~config (op : Cn_shell.typed_op) =
              reason = Printf.sprintf "git_add_exit_%d: %s" code (String.trim output);
              start_time = start; end_time = now_iso (); artifacts = [] })
     | None ->
-      (* No paths specified: stage all allowed changes *)
+      (* No paths specified: stage all changes, excluding denied paths *)
       let code, output =
         Cn_ffi.Process.exec_args ~prog:"git"
-          ~args:["-C"; hub_path; "add"; "-A"] ()
+          ~args:(["-C"; hub_path; "add"; "-A"] @ git_pathspec_exclusions) ()
       in
       if code = 0 then
         { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
@@ -493,7 +493,7 @@ let execute_git_stage ~hub_path ~config (op : Cn_shell.typed_op) =
           reason = Printf.sprintf "git_add_exit_%d: %s" code (String.trim output);
           start_time = start; end_time = now_iso (); artifacts = [] }
 
-let execute_git_commit ~hub_path ~config ?(ops_version="") (op : Cn_shell.typed_op) =
+let execute_git_commit ~hub_path ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
   if config.Cn_shell.apply_mode = "off" then
     { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
@@ -506,64 +506,35 @@ let execute_git_commit ~hub_path ~config ?(ops_version="") (op : Cn_shell.typed_
       status = Cn_shell.Error_status; reason = msg;
       start_time = start; end_time = now_iso (); artifacts = [] }
   | Ok message ->
-    (* v3.8.0: ops_version gating for staging behavior *)
-    let new_semantics = ops_version >= "3.8" in
     let allow_empty = match List.assoc_opt "allow_empty" op.Cn_shell.fields with
       | Some (Cn_json.Bool true) -> true | _ -> false in
-    if new_semantics then begin
-      (* New semantics: commit current index only, no implicit staging *)
-      let commit_args = ["-C"; hub_path; "commit"; "-m"; message]
-        @ (if allow_empty then ["--allow-empty"] else []) in
-      let code, output =
-        Cn_ffi.Process.exec_args ~prog:"git" ~args:commit_args ()
+    (* Commit current index only — no implicit staging.
+       Use git_stage to stage files before git_commit. *)
+    let commit_args = ["-C"; hub_path; "commit"; "-m"; message]
+      @ (if allow_empty then ["--allow-empty"] else []) in
+    let code, output =
+      Cn_ffi.Process.exec_args ~prog:"git" ~args:commit_args ()
+    in
+    if code = 0 then
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
+        status = Cn_shell.Ok_status; reason = "";
+        start_time = start; end_time = now_iso (); artifacts = [] }
+    else
+      (* Check if nothing was staged *)
+      let _porcelain_code, _porcelain_out =
+        Cn_ffi.Process.exec_args ~prog:"git"
+          ~args:["-C"; hub_path; "diff"; "--cached"; "--quiet"] ()
       in
-      if code = 0 then
+      if _porcelain_code = 0 && not allow_empty then
+        (* Nothing in the index — skip *)
         { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
-          status = Cn_shell.Ok_status; reason = "";
+          status = Cn_shell.Skipped; reason = "nothing_staged";
           start_time = start; end_time = now_iso (); artifacts = [] }
       else
-        (* Check if nothing was staged *)
-        let porcelain_code, porcelain_out =
-          Cn_ffi.Process.exec_args ~prog:"git"
-            ~args:["-C"; hub_path; "diff"; "--cached"; "--quiet"] ()
-        in
-        if porcelain_code = 0 && not allow_empty then
-          (* Nothing in the index — skip *)
-          { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
-            status = Cn_shell.Skipped; reason = "nothing_staged";
-            start_time = start; end_time = now_iso (); artifacts = [] }
-        else
-          { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
-            status = Cn_shell.Error_status;
-            reason = Printf.sprintf "git_commit_exit_%d: %s" code (String.trim output);
-            start_time = start; end_time = now_iso (); artifacts = [] }
-    end else begin
-      (* Legacy semantics: implicit git add -A then commit *)
-      let code1, output1 =
-        Cn_ffi.Process.exec_args ~prog:"git"
-          ~args:["-C"; hub_path; "add"; "-A"] ()
-      in
-      if code1 <> 0 then
         { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
           status = Cn_shell.Error_status;
-          reason = Printf.sprintf "git_add_exit_%d: %s" code1 (String.trim output1);
+          reason = Printf.sprintf "git_commit_exit_%d: %s" code (String.trim output);
           start_time = start; end_time = now_iso (); artifacts = [] }
-      else
-        let code2, output2 =
-          Cn_ffi.Process.exec_args ~prog:"git"
-            ~args:["-C"; hub_path; "commit"; "-m"; message] ()
-        in
-        if code2 = 0 then
-          { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
-            status = Cn_shell.Ok_status;
-            reason = "legacy_git_commit_semantics";
-            start_time = start; end_time = now_iso (); artifacts = [] }
-        else
-          { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_commit";
-            status = Cn_shell.Error_status;
-            reason = Printf.sprintf "git_commit_exit_%d: %s" code2 (String.trim output2);
-            start_time = start; end_time = now_iso (); artifacts = [] }
-    end
 
 let execute_exec ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
@@ -629,9 +600,8 @@ let execute_exec ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
 (* === Dispatch === *)
 
 (** Execute a single typed op. Returns a receipt (pass field left blank —
-    the orchestrator fills it in based on which pass is running).
-    ops_version: optional, used for git_commit semantics gating (v3.8.0). *)
-let execute_op ~hub_path ~trigger_id ~config ?(ops_version="") (op : Cn_shell.typed_op) =
+    the orchestrator fills it in based on which pass is running). *)
+let execute_op ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   match op.Cn_shell.kind with
   (* Observe ops *)
   | Observe Fs_read -> execute_fs_read ~hub_path ~trigger_id ~config op
@@ -646,7 +616,7 @@ let execute_op ~hub_path ~trigger_id ~config ?(ops_version="") (op : Cn_shell.ty
   | Effect Fs_patch -> execute_fs_patch ~hub_path ~config op
   | Effect Git_branch -> execute_git_branch ~hub_path ~config op
   | Effect Git_stage -> execute_git_stage ~hub_path ~config op
-  | Effect Git_commit -> execute_git_commit ~hub_path ~config ~ops_version op
+  | Effect Git_commit -> execute_git_commit ~hub_path ~config op
   | Effect Exec -> execute_exec ~hub_path ~trigger_id ~config op
 
 (* === Receipt I/O === *)

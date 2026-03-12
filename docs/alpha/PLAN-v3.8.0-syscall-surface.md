@@ -92,20 +92,15 @@ New function `execute_git_stage`:
 
 ---
 
-### Step 4: Split `git_commit` semantics with `ops_version` gating (`cn_executor.ml`)
+### Step 4: Redefine `git_commit` as index-only (`cn_executor.ml`)
 
 Modify `execute_git_commit`:
 
-- Accept `ops_version` parameter (passed from orchestrator context)
-- If `ops_version >= "3.8"`:
-  - Do NOT run `git add -A` first
-  - Just run `git commit -m <message>`
-  - If nothing staged and `allow_empty` is false: receipt `skipped` / `nothing_staged`
-- If `ops_version < "3.8"` or absent:
-  - Retain current behavior (`git add -A` then `git commit`)
-  - Emit receipt annotation: `legacy_git_commit_semantics`
+- Always commit current index only (no implicit `git add -A`)
+- If nothing staged and `allow_empty` is false: receipt `skipped` / `nothing_staged`
+- No backward-compatibility gating — clean break
 
-**Tests:** new semantics (index-only), legacy semantics, nothing_staged skip, allow_empty
+**Tests:** index-only commit, nothing_staged skip, allow_empty, stage-then-commit
 **Depends on:** nothing
 
 ---
@@ -150,22 +145,13 @@ Add a new check to `run_doctor`:
 
 ---
 
-### Step 8: Wire `ops_version` through orchestrator (`cn_orchestrator.ml`)
-
-Pass `ops_version` from parsed output through to executor for `git_commit` gating.
-
-**Tests:** orchestrator passes ops_version correctly
-**Depends on:** Step 4
-
----
-
-### Step 9: Update all tests
+### Step 8: Update all tests
 
 - `cn_shell_test.ml`: add `git_stage` kind parsing tests
-- `cn_executor_test.ml`: update `fs_glob` test, add `git_stage` tests, add `fs_read` chunking tests, add `git_commit` version-gated tests
-- `cn_capabilities_test.ml` (if exists): verify `git_stage` in rendered output
+- `cn_executor_test.ml`: update `fs_glob` test, add `git_stage` tests, add `fs_read` chunking tests, add `git_commit` index-only tests, add end-to-end stage+commit tests
+- `cn_capabilities_test.ml`: verify `git_stage` in rendered output
 
-**Depends on:** Steps 1–8
+**Depends on:** Steps 1–7
 
 ---
 
@@ -196,7 +182,7 @@ Critical path: 1 → 3 → 7 → 9.
 | `src/cmd/cn_executor.ml` | Edit — implement `fs_glob`, `git_stage`, chunked `fs_read`, split `git_commit` | ~150 |
 | `src/cmd/cn_capabilities.ml` | Edit — add `git_stage` to effect kinds | ~2 |
 | `src/cmd/cn_system.ml` | Edit — add `patch(1)` doctor check | ~8 |
-| `src/cmd/cn_orchestrator.ml` | Edit — wire `ops_version` to executor | ~10 |
+| `src/cmd/cn_orchestrator.ml` | No changes needed | 0 |
 | `test/cmd/cn_shell_test.ml` | Edit — add `git_stage` parsing tests | ~30 |
 | `test/cmd/cn_executor_test.ml` | Edit — update `fs_glob`, add chunking + staging + split commit tests | ~120 |
 | **Total new/changed** | | **~335 lines** |
@@ -209,7 +195,7 @@ Critical path: 1 → 3 → 7 → 9.
 |------|-----------|
 | Glob traversal escapes sandbox | Denylist applied to each result path; base path sandbox-checked |
 | `git_stage` with specific paths bypasses denylist | Sandbox-check each path before staging |
-| Legacy agent breaks on new `git_commit` | `ops_version` gating preserves old behavior; warnings emitted |
+| Agent uses `git_commit` without `git_stage` | Returns `nothing_staged` skip receipt — clear signal to adapt |
 | `fs_read` chunking off-by-one | Unit tests for boundary conditions (offset=0, offset=filesize, limit>remaining) |
 | `patch(1)` missing at runtime | `cn doctor` warns; receipt includes `patch_tool_unavailable` if exec fails |
 
@@ -219,8 +205,8 @@ Critical path: 1 → 3 → 7 → 9.
 
 1. `fs_glob` returns matching files under sandbox/budget rules
 2. `git_stage` exists as a standalone effect op
-3. `git_commit` commits index-only under `ops_version >= "3.8"`
-4. `git_commit` retains legacy behavior for older/absent `ops_version`
+3. `git_commit` always commits index-only (no implicit staging)
+4. `git_commit` returns `nothing_staged` when index is clean
 5. `fs_read` supports `offset` and `limit` for chunked observation
 6. `cn doctor` checks for `patch(1)` availability
 7. Capabilities block includes `git_stage`
