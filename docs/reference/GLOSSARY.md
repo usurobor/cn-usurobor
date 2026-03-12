@@ -197,7 +197,7 @@ Examples: ENGINEERING, PM, WISDOM, OPERATIONS.
 
 Bounded, selected, instrumental cognitive module. Skills are situational amplifiers, not identity. They live under `skills/{name}/` with a `SKILL.md` file defining TERMS, INPUTS, and EFFECTS. Skills are scored and compete for bounded slots at wake-up.
 
-**Location:** `skills/{name}/SKILL.md` in the package source (e.g., `packages/cnos.core/skills/self-cohere/SKILL.md`); installed into `.cn/vendor/packages/{pkg}/skills/{name}/`.
+**Location:** `skills/{category}/{name}/SKILL.md` in the package source (e.g., `packages/cnos.core/skills/agent/self-cohere/SKILL.md`); installed into `.cn/vendor/packages/{pkg}/skills/{category}/{name}/`.
 
 If doctrine competes with task skills, the architecture is already confused.
 
@@ -328,7 +328,7 @@ The agent is the brain. `cn` is the body. Git is the nervous system.
 
 A practice exercise that walks an agent or human through concrete steps to learn or exercise a behavior.
 
-**Location:** `skills/{name}/kata.md` — katas live alongside the skill they exercise (e.g., `skills/self-cohere/kata.md`).
+**Location:** `skills/{category}/{name}/kata.md` — katas live alongside the skill they exercise (e.g., `skills/agent/self-cohere/kata.md`).
 
 ### Coherent Reflection
 
