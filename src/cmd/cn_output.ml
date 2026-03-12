@@ -1,0 +1,174 @@
+(** cn_output.ml — Output Plane Separation (v3.6.0)
+
+    Owns the boundary between control plane and presentation plane.
+    Parses state/output.md once into a structured form, then provides
+    sink-specific renderers that guarantee human-facing sinks never
+    receive raw ops/frontmatter/pseudo-tool syntax.
+
+    Pure module — no I/O. *)
+
+open Cn_lib
+
+(* === Types === *)
+
+type sink =
+  | AuditFile
+  | HumanSurface of [ `Telegram | `Discord | `Generic ]
+  | ConversationStore
+  | PeerOutbox
+
+type render_reason =
+  | Control_plane_leak
+  | Raw_frontmatter
+  | Xml_tool_syntax
+  | No_presentation_payload
+
+type render_result =
+  | Renderable of string
+  | Fallback of string * render_reason  (** fallback text + reason first candidate was blocked *)
+  | Skipped
+  | Invalid of render_reason
+
+type parsed_output = {
+  id : string option;
+  body : string option;
+  coordination_ops : agent_op list;       (** resolved ops (body consumed into Reply/Send) *)
+  raw_coordination_ops : agent_op list;   (** unresolved ops (original frontmatter payloads) *)
+  typed_ops : Cn_shell.typed_op list;
+  ops_receipts : Cn_shell.receipt list;
+  ops_version : string option;
+  raw_output : string;
+}
+
+(* === Reason codes === *)
+
+let string_of_render_reason = function
+  | Control_plane_leak -> "control_plane_leak"
+  | Raw_frontmatter -> "raw_frontmatter"
+  | Xml_tool_syntax -> "xml_tool_syntax"
+  | No_presentation_payload -> "no_presentation_payload"
+
+(* === Control-plane leak detection === *)
+
+(** Detect whether a candidate presentation string contains control-plane
+    syntax that must not reach a human-facing sink.
+
+    Returns Some reason if blocked, None if safe.
+
+    Heuristic: exact/anchored patterns only to avoid over-blocking
+    normal prose that happens to mention "ops" or use angle brackets. *)
+let is_control_plane_like s =
+  let trimmed = String.trim s in
+  (* Empty / blank *)
+  if trimmed = "" then None
+  (* Raw ops: manifest line *)
+  else if starts_with ~prefix:"ops:" trimmed
+       || starts_with ~prefix:"ops_version:" trimmed then
+    Some Control_plane_leak
+  (* Raw frontmatter fences at the start *)
+  else if starts_with ~prefix:"---\n" trimmed
+       || trimmed = "---" then
+    Some Raw_frontmatter
+  (* Legacy frontmatter key-value control lines that must not leak
+     to human-facing sinks. Anchored at start of trimmed string. *)
+  else
+    let control_prefixes = [
+      "id:"; "ack:"; "done:"; "fail:"; "reply:"; "send:";
+      "delegate:"; "defer:"; "delete:"; "surface:"; "mca:";
+    ] in
+    if List.exists (fun prefix -> starts_with ~prefix trimmed) control_prefixes then
+      Some Control_plane_leak
+  (* XML pseudo-tool wrappers the LLM sometimes hallucinates *)
+  else
+    let xml_prefixes = [
+      "<observe>"; "<fs_read>"; "<fs_list>"; "<fs_glob>";
+      "<git_status>"; "<git_diff>"; "<git_log>"; "<git_grep>";
+      "<fs_write>"; "<fs_patch>"; "<git_branch>"; "<git_commit>";
+      "<exec>"; "<tool_call>"; "<function_call>";
+    ] in
+    if List.exists (fun prefix -> starts_with ~prefix trimmed) xml_prefixes then
+      Some Xml_tool_syntax
+    else
+      None
+
+(* === Parsing === *)
+
+(** Parse output content into a structured parsed_output.
+    Extracts frontmatter, body, coordination ops, typed ops, and receipts
+    in a single pass over the raw output string. *)
+let parse_output raw_output =
+  let fm = parse_frontmatter raw_output in
+  let id = fm |> List.find_map (fun (k, v) ->
+    if k = "id" then Some v else None) in
+  let body = extract_body raw_output in
+  let raw_coordination_ops = extract_ops fm in
+  let coordination_ops =
+    List.map (resolve_payload body) raw_coordination_ops in
+  let ops_version = fm |> List.find_map (fun (k, v) ->
+    if k = "ops_version" then Some v else None) in
+  let ops_raw = fm |> List.find_map (fun (k, v) ->
+    if k = "ops" then Some v else None) in
+  let typed_ops, ops_receipts = match ops_raw with
+    | None -> ([], [])
+    | Some raw_value -> Cn_shell.parse_ops_manifest raw_value
+  in
+  { id; body; coordination_ops; raw_coordination_ops;
+    typed_ops; ops_receipts; ops_version; raw_output }
+
+(* === Rendering === *)
+
+(** Find the first Reply payload from coordination ops. *)
+let first_reply_payload ops =
+  ops |> List.find_map (fun (op : agent_op) ->
+    match op with Reply (_, msg) -> Some msg | _ -> None)
+
+(** Resolve the best presentation candidate for human-facing sinks.
+    Precedence: body -> first Reply payload -> "(acknowledged)" fallback.
+
+    Each candidate is checked for control-plane leaks. If the chosen
+    candidate is blocked, falls through to the next. When real candidates
+    existed but were all blocked, returns Fallback with the first block
+    reason so the caller can emit a distinct trace event. *)
+let render_human_facing parsed =
+  (* Candidates: body, then resolved reply, then raw (pre-consumption) reply.
+     The raw reply matters when body was control-plane text that consumed
+     into the reply via resolve_payload — the original notification is
+     still a valid presentation candidate. Dedup to avoid double-checking. *)
+  let resolved_reply = first_reply_payload parsed.coordination_ops in
+  let raw_reply = first_reply_payload parsed.raw_coordination_ops in
+  let real_candidates =
+    (match parsed.body with Some b -> [b] | None -> [])
+    @ (match resolved_reply with Some msg -> [msg] | None -> [])
+    @ (match raw_reply with
+       | Some msg when raw_reply <> resolved_reply -> [msg]
+       | _ -> [])
+  in
+  let rec try_candidates ~first_block = function
+    | [] ->
+      (* All real candidates exhausted — use "(acknowledged)" *)
+      (match first_block with
+       | Some reason -> Fallback ("(acknowledged)", reason)
+       | None -> Renderable "(acknowledged)")
+    | candidate :: rest ->
+        match is_control_plane_like candidate with
+        | Some reason ->
+          let first_block = match first_block with
+            | None -> Some reason | already -> already in
+          try_candidates ~first_block rest
+        | None -> Renderable candidate
+  in
+  try_candidates ~first_block:None real_candidates
+
+(** Render output for a specific sink.
+
+    | Sink              | Rule                                           |
+    |-------------------|------------------------------------------------|
+    | AuditFile         | Always raw_output unchanged                    |
+    | HumanSurface _    | body -> Reply -> "(acknowledged)", leak-checked |
+    | ConversationStore | Same as HumanSurface                           |
+    | PeerOutbox        | Skipped (caller renders Send ops directly)     | *)
+let render_for_sink sink parsed =
+  match sink with
+  | AuditFile -> Renderable parsed.raw_output
+  | HumanSurface _ | ConversationStore -> render_human_facing parsed
+  | PeerOutbox -> Skipped

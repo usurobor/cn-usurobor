@@ -1,6 +1,6 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.3.7
+**Version:** 3.6.0
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
 **Date:** 2026-03-11
 **Status:** Draft
@@ -9,6 +9,13 @@
 ---
 
 ## Patch Notes
+
+**v3.6.0** — Output Plane Separation and sink-safe rendering:
+- Introduce strict separation between **control plane** (frontmatter, coordination ops, typed `ops:` manifest) and **presentation plane** (human-facing text projected to sinks such as Telegram/Discord)
+- Define **output contexts / sinks**: `AuditFile`, `HumanSurface`, `PeerOutbox`, `ConversationStore`
+- Make invalid states unrepresentable: `ops:` is valid only in `state/output.md` frontmatter; human-facing sinks MUST NOT receive raw `ops:` syntax, raw frontmatter, or pseudo-tool wrappers
+- Clarify that Telegram-origin sessions may still execute typed ops post-call under policy; transport origin does not change capability authority — the fix is at the render/projection boundary, not the FSM
+- Add required projection events: `projection.render.start`, `.ok`, `.blocked`, `.fallback`
 
 **v3.3.7** — Observability / traceability architecture alignment:
 - Add [`TRACEABILITY.md`](TRACEABILITY.md) as the normative observability spec
@@ -193,7 +200,7 @@ The runtime (`cn`) is responsible for:
 1. Receiving Telegram messages, enqueuing, and packing `state/input.md` with all needed context
 2. Invoking the LLM (single Claude API call) to transform input text → output text
 3. Writing `state/output.md`, parsing frontmatter ops, and extracting the markdown body
-4. Archiving the raw IO pair (`logs/input/` + `logs/output/`) — before any effects (per LOGGING.md)
+4. Archiving the raw IO pair (`logs/input/` + `logs/output/`) — before any effects (per TRACEABILITY.md §11.1 — IO-pair evidence layer)
 5. Resolving op payloads (body wins over frontmatter notification), executing via `cn_agent.ml:execute_op`, routing Telegram replies, and advancing the actor FSM
 
 Key design decisions:
@@ -326,7 +333,7 @@ The LLM receives a single system prompt + user message. It does NOT see files, t
 | Invoke LLM | Processor | Single Claude API call (text in → text out) |
 | Write output | Processor | Write LLM response as `state/output.md` |
 | Extract body | Processor | Extract markdown body below frontmatter (full payload) |
-| Archive | Processor | IO-pair to `logs/input/` + `logs/output/` — before effects (per LOGGING.md) |
+| Archive | Processor | IO-pair to `logs/input/` + `logs/output/` — before effects (per TRACEABILITY.md §11.1 — IO-pair evidence layer) |
 | Execute legacy ops | Processor | Resolve payloads via Body Consumption Rules, execute via `cn_agent.ml:execute_op` |
 | Execute typed ops | Processor | Parse `ops:` manifest, execute under governance policy (v3.3.0) |
 | Write receipts | Processor | Emit receipt per typed op to `state/receipts/`, archive to `logs/receipts/` (v3.3.0) |
@@ -1283,7 +1290,7 @@ EXAMPLES:
 │  • Extract markdown body (full payload)                     │
 │  • Parse frontmatter ops from LLM response                  │
 │  • Archive raw IO pair: logs/input/ + logs/output/          │
-│    (BEFORE effects — per LOGGING.md audit invariant)        │
+│    (BEFORE effects — per TRACEABILITY.md §11.1)             │
 │  • Resolve payloads: body wins over frontmatter msg         │
 │  • Execute resolved ops via cn_agent.ml:execute_op          │
 │  • Send Telegram reply (full payload, not notification)     │
@@ -1341,7 +1348,7 @@ let process hub_path config =
   let body = Cn_lib.extract_body response.content in
   let output_meta = Cn_lib.parse_frontmatter response.content in
   let ops = Cn_lib.extract_ops output_meta in
-  (* Archive raw IO pair BEFORE effects (per LOGGING.md audit invariant).
+  (* Archive raw IO pair BEFORE effects (per TRACEABILITY.md §11.1).
      Archived output is the original LLM response, pre-resolution. *)
   Cn_agent.archive_io_pair_files hub_path queue_item.trigger;
   (* Resolve payloads via Body Consumption Rules, then execute *)
@@ -1372,7 +1379,7 @@ and resolve_payload body = function
   | op -> op  (* all others: no body consumption *)
 ```
 
-Note: The existing `Cn_agent.archive_io_pair` already archives before executing (per LOGGING.md). The runtime preserves this ordering: archive the raw IO pair first (crash-safe audit trail), then resolve payloads using body, then execute ops. The archived `logs/output/{trigger}.md` is always the original LLM response — payload resolution is an ephemeral execution detail. The `resolve_payload` function is the only new logic — it implements the Body Consumption Rules table above.
+Note: The existing `Cn_agent.archive_io_pair` already archives before executing (per TRACEABILITY.md §11.1 — IO-pair evidence layer). The runtime preserves this ordering: archive the raw IO pair first (crash-safe audit trail), then resolve payloads using body, then execute ops. The archived `logs/output/{trigger}.md` is always the original LLM response — payload resolution is an ephemeral execution detail. The `resolve_payload` function is the only new logic — it implements the Body Consumption Rules table above.
 
 ---
 
@@ -1641,7 +1648,7 @@ The agent interface is `state/input.md → state/output.md` (conceptual). The LL
 
 ### Audit Trail
 
-- Every interaction archived as IO pair: `logs/input/{trigger}.md` + `logs/output/{trigger}.md` (per LOGGING.md)
+- Every interaction archived as IO pair: `logs/input/{trigger}.md` + `logs/output/{trigger}.md` (per TRACEABILITY.md §11.1 — IO-pair evidence layer)
 - Ops extracted from output are logged before execution
 - Errors logged with full context (excluding secrets)
 
@@ -2101,12 +2108,209 @@ Running tests and fetching data.
 
 ---
 
+## Output Plane Separation (v3.6.0)
+
+### Definition
+
+The runtime distinguishes two planes in every `state/output.md`:
+
+1. **Control plane**
+   - `id`
+   - legacy coordination ops (`reply`, `send`, `done`, etc.)
+   - typed capability ops (`ops:`)
+   - metadata (`ops_version`, etc.)
+
+2. **Presentation plane**
+   - markdown body
+   - any human-safe text derived from coordination payloads
+   - sink-specific rendered messages
+
+The agent may emit both planes in one output file, but the runtime MUST project them differently.
+
+### Why this is needed
+
+A single output can contain:
+- internal control syntax that belongs only in `state/output.md`
+- human-facing text that belongs on messaging surfaces
+
+Without explicit separation, the runtime can leak control-plane syntax such as:
+- `ops: [...]`
+- raw frontmatter
+- pseudo-tool wrappers
+
+to human surfaces. This violates the layering contract.
+
+### Parsed output model
+
+Before executing or projecting anything, the runtime MUST parse `state/output.md` into a structured representation containing at least:
+
+- `id`
+- `body`
+- `coordination_ops`
+- `typed_ops`
+- `ops_version`
+
+The runtime MUST NOT make human-surface projection decisions from raw file text.
+
+### Output contexts / sinks
+
+The runtime recognizes distinct sinks:
+
+#### 1. AuditFile
+- destination: `state/output.md`, `logs/output/{trigger}.md`
+- receives the full control plane + presentation plane
+
+#### 2. HumanSurface
+Examples:
+- Telegram
+- Discord
+- future chat / messaging adapters
+
+Receives only the **presentation plane**.
+
+#### 3. PeerOutbox
+- destination: routed peer messages / outbox threads
+- receives coordination payloads, not typed op syntax
+
+#### 4. ConversationStore
+- destination: `state/conversation.json`
+- receives the final projected assistant text, never raw frontmatter
+
+### Rendering rule (normative)
+
+Human-facing sinks MUST be rendered from the parsed output AST, not from raw output text.
+
+For a human-facing sink, the runtime MUST derive a presentation payload using this precedence:
+
+1. markdown body, if present and valid for projection
+2. `reply` coordination payload, if present
+3. `"(acknowledged)"` fallback
+
+The runtime MUST NOT render to human surfaces:
+- raw `ops:` lines
+- raw frontmatter lines
+- XML-like pseudo-tool wrappers such as `<observe>...</observe>`
+- shell commands or pseudo-code intended as control-plane requests
+
+### Invalid human-surface emission
+
+If the presentation candidate is effectively control-plane syntax, the runtime MUST:
+
+1. emit a trace / projection event:
+   - `projection.render.blocked`
+   - with `reason_code` such as:
+     - `control_plane_leak`
+     - `raw_frontmatter`
+     - `xml_tool_syntax`
+     - `no_presentation_payload`
+
+2. attempt a safe fallback:
+   - body if present and safe
+   - else first `reply` payload
+   - else `"(acknowledged)"`
+
+If no safe fallback exists, the runtime MUST skip projection and log the reason.
+
+### Telegram-origin sessions
+
+A Telegram-origin trigger (`from: telegram`, `chat_id: ...`) MAY still execute:
+- coordination ops
+- typed capability ops
+
+under the same runtime policy, sandbox, receipts, and pass rules as any other trigger.
+
+Transport origin affects only:
+- ingress metadata
+- projection target
+- offset / dedup / retry handling
+
+It does NOT grant the model a special tool channel.
+
+### Relationship to the FSM
+
+This boundary is **below** the FSM.
+
+The FSM continues to reason over:
+- coordination intent
+- actor state transitions
+
+It does NOT own:
+- output serialization
+- human-surface rendering
+- typed op leakage prevention
+
+Typed ops still do not directly advance the FSM.
+
+### Relationship to CN Shell
+
+CN Shell remains:
+- post-call
+- bounded
+- governed
+- receipt-producing
+
+This amendment does not change capability authority.
+It changes only how outputs are compiled into:
+- control actions
+- human-visible messages
+
+### Required events / receipts
+
+The runtime SHOULD emit render-specific events under the `projection.render.*` namespace:
+- `projection.render.start`
+- `projection.render.ok`
+- `projection.render.blocked`
+- `projection.render.fallback`
+
+with relevant `reason_code` and refs to:
+- `logs/output/{trigger}.md`
+- `state/receipts/{trigger}.json`
+
+> **Implementation note:** The existing `projection.{start,ok,skipped,error}` events
+> (v3.3.7 / TRACEABILITY) cover the overall projection lifecycle. The `projection.render.*`
+> events defined here are a **sub-namespace** for sink-specific rendering decisions within
+> a projection. They do not replace the existing events; they refine them.
+
+### Example
+
+#### Output file (valid)
+```markdown
+---
+id: tg-123
+reply: tg-123|Gathering evidence first
+ops: [{"kind":"fs_read","path":"README.md"}]
+ops_version: "3.3"
+---
+I'm going to inspect the relevant file and then decide.
+```
+
+**AuditFile** sees:
+- full file as written
+
+**HumanSurface** sees:
+- `I'm going to inspect the relevant file and then decide.`
+
+**Runtime** executes:
+- `reply` coordination op
+- typed observe op
+- receipts/artifacts as normal
+
+#### Non-example (invalid projection)
+```
+ops: [{"kind":"fs_read","path":"state/input.md"}]
+```
+
+This MAY exist in `state/output.md` as control-plane syntax, but MUST NOT be sent to a human surface.
+The renderer MUST block it and use a fallback or skip projection.
+
+---
+
 ## References
 
 ### cnos Internal
 - [Coherent Agent Architecture](./CAA.md) — What the agent *is* structurally
 - [Hub Layout](../../spec/system/HUB.md) — Canonical directory structure
-- [Agent Ops Skill](../../src/agent/skills/agent/agent-ops/SKILL.md) — Authoritative output.md format (key-per-op, pipe-delimited)
+- [Agent Ops Skill](../../src/agent/skills/agent/agent-ops/SKILL.md) — Legacy coordination op format and agent-facing output discipline
 - [Security Model](./SECURITY-MODEL.md) — Agent sandbox, protected files, audit trail
 - [Traceability](./TRACEABILITY.md) — event stream, state projections, readiness, and transition reasoning
 - [Logging Architecture](./LOGGING.md) — superseded historical logging model (IO-pair archival pattern)
@@ -2124,4 +2328,4 @@ Running tests and fetching data.
 
 ---
 
-*Document version 3.3.7. For comments and iteration, contact reviewers or open a thread in the hub.*
+*Document version 3.6.0. For comments and iteration, contact reviewers or open a thread in the hub.*
