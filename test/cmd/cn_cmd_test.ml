@@ -593,7 +593,7 @@ let%expect_test "extract_inbound_message: message with no metadata lines" =
   [%expect {| Just the message |}]
 
 
-(* === Cn_output: render_for_sink (replaces telegram_payload tests) === *)
+(* === Cn_output: render_for_sink (replaces telegram_payload) === *)
 
 let render_result_to_string = function
   | Cn_output.Renderable s -> s
@@ -626,7 +626,7 @@ let%expect_test "render_for_sink: empty output" =
   Printf.printf "%s\n" (render_result_to_string result);
   [%expect {| (acknowledged) |}]
 
-let%expect_test "render_for_sink: blocks control-plane body" =
+let%expect_test "render_for_sink: blocks control-plane body, uses raw reply" =
   let parsed = Cn_output.parse_output "---\nreply: id-1|safe reply\n---\nops: [{\"kind\":\"fs_read\"}]" in
   let result = Cn_output.render_for_sink (HumanSurface `Telegram) parsed in
   Printf.printf "%s\n" (render_result_to_string result);

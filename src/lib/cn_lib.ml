@@ -89,6 +89,10 @@ module Deps = struct
            | Update of string option | Vendor
 end
 
+module Build = struct
+  type cmd = Packages | Check | Clean
+end
+
 module Gtd = struct
   type cmd =
     | Delete of string
@@ -222,6 +226,7 @@ type command =
   | Weekly           (* Create/open weekly reflection *)
   | Setup            (* Hub setup: materialize assets + deps *)
   | Deps of Deps.cmd (* Dependency management *)
+  | Build of Build.cmd (* Package assembly from src/agent/ *)
 
 (* Exhaustive - compiler warns on missing cases *)
 let string_of_command = function
@@ -285,6 +290,9 @@ let string_of_command = function
   | Deps (Deps.Update None) -> "deps update"
   | Deps (Deps.Update (Some pkg)) -> "deps update " ^ pkg
   | Deps Deps.Vendor -> "deps vendor"
+  | Build Build.Packages -> "build"
+  | Build Build.Check -> "build --check"
+  | Build Build.Clean -> "build clean"
 
 (* === Alias Expansion === *)
 
@@ -335,6 +343,12 @@ let parse_deps_cmd = function
   | ["update"] -> Some (Deps.Update None)
   | ["update"; pkg] -> Some (Deps.Update (Some pkg))
   | ["vendor"] -> Some Deps.Vendor
+  | _ -> None
+
+let parse_build_cmd = function
+  | [] -> Some Build.Packages
+  | ["--check"] -> Some Build.Check
+  | ["clean"] -> Some Build.Clean
   | _ -> None
 
 let parse_agent_mode = function
@@ -410,6 +424,7 @@ let rec parse_command = function
   | "peer" :: rest -> parse_peer_cmd rest |> Option.map (fun c -> Peer c)
   | "queue" :: rest -> parse_queue_cmd rest |> Option.map (fun c -> Queue c)
   | "deps" :: rest -> parse_deps_cmd rest |> Option.map (fun c -> Deps c)
+  | "build" :: rest -> parse_build_cmd rest |> Option.map (fun c -> Build c)
   | "mca" :: rest -> parse_mca_cmd rest |> Option.map (fun c -> Mca c)
   | ["sync"] -> Some Sync
   | ["next"] -> Some Next
@@ -653,6 +668,11 @@ Commands:
   deps remove <pkg>   Remove dependency
   deps update [pkg]   Update lockfile (re-resolve within ranges)
   deps vendor         Commit vendor tree for airgapped use
+
+  # Build
+  build               Assemble packages/ from src/agent/ sources
+  build --check       Verify packages/ matches src/agent/ (CI mode)
+  build clean         Remove generated content from packages/
 
   # Hub management
   init [name]         Create new hub

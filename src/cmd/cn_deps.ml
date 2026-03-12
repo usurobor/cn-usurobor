@@ -222,15 +222,21 @@ let restore_one ~hub_path (dep : locked_dep) =
       if is_first_party dep.name then
         match find_local_package_source dep.name with
         | Ok local_path ->
-            Cn_ffi.Fs.ensure_dir pkg_dir;
-            copy_tree local_path pkg_dir;
-            Some (Ok ())
+            (* Guard: verify packages/ is in sync with src/agent/.
+               Prevents installing stale generated artifacts. *)
+            (match Cn_build.check_package dep.name with
+             | Error msg -> Some (Error msg)
+             | Ok () ->
+                 Cn_ffi.Fs.ensure_dir pkg_dir;
+                 copy_tree local_path pkg_dir;
+                 Some (Ok ()))
         | Error _ -> None
       else None
     in
     match local_result with
     | Some (Ok ()) -> None
-    | _ ->
+    | Some (Error msg) -> Some msg
+    | None ->
       (* Fetch by exact rev using structured argv calls *)
       let tmp_dir = Cn_ffi.Path.join hub_path
         (Printf.sprintf ".cn/tmp/%s-%s" dep.name dep.version) in
@@ -364,13 +370,13 @@ let default_manifest_for_profile profile =
   { schema = "cn.deps.v1"; profile; packages }
 
 (** Create a lockfile with first-party package entries.
-    Queries the upstream source repo for its HEAD rev via ls-remote. *)
+    Queries the source repo via ls-remote to get the correct HEAD rev. *)
 let lockfile_for_manifest (m : manifest) =
   let rev =
     let (code, output) = Cn_ffi.Process.exec_args ~prog:"git"
       ~args:["ls-remote"; default_first_party_source; "HEAD"] () in
     if code = 0 then
-      (* Output is "<sha>\tHEAD\n"; extract just the hash *)
+      (* ls-remote output: "<sha>\tHEAD\n" — extract the SHA *)
       let trimmed = String.trim output in
       (match String.index_opt trimmed '\t' with
        | Some i -> String.sub trimmed 0 i

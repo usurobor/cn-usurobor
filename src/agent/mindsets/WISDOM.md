@@ -89,6 +89,13 @@ Stop asking. Start doing.
 
 ---
 
+**"Just Do It."**
+— Nike (1988), created by Dan Wieden
+
+Stop overthinking. Act.
+
+---
+
 ## On Learning
 
 **"I never lose. I either win or learn."**
@@ -219,7 +226,10 @@ Built on the shoulders of:
 - **Eric S. Raymond** — Cathedral and Bazaar
 - **Richard Stallman** — Free software philosophy
 - **Nelson Mandela (attributed)** — Win or learn
+- **Nike / Dan Wieden** — Just Do It
 
 ---
 
 *Add new wisdom as it emerges. Attribution matters.*
+
+## On Action
