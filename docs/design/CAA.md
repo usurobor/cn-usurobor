@@ -1,8 +1,8 @@
-# Coherent Agent Architecture (CAA) v1.0.0
+# Coherent Agent Architecture (CAA) v1.1.0
 
 What a coherent agent is, structurally.
 
-**Status:** v1.0.0
+**Status:** v1.1.0
 **Date:** 2026-03-10
 **Relationship:** FOUNDATIONS.md = doctrine/why. This doc = architecture/what.
 AGENT-RUNTIME = execution/how. CAR = package distribution/how cognition arrives.
@@ -103,6 +103,10 @@ Before emitting, check:
 Output via the governed channel: prose + coordination ops + typed capability ops.
 The runtime validates, executes, records receipts.
 
+### 5.6 The cycle as coherence delta
+
+Each completed agent cycle should be understood as a **coherence delta**: a bounded movement from a less coherent state to a more coherent one. The movement may be expressed as MCA (change the world), MCI (change the model), or both in sequence, but the architectural unit is the delta itself, not merely the visible feature or message produced at the end of the cycle.
+
 ---
 
 ## 6. Runtime Embodiment
@@ -196,3 +200,9 @@ the failure cannot occur.
 
 FOUNDATIONS defines the principles. CAA defines the structure that
 implements them. The runtime and distribution docs define the mechanics.
+
+---
+
+## 10. Coherence as Direction
+
+A coherent agent is not a static equilibrium. Each cycle produces a **coherence delta**: a measured movement through coherence space as the system reduces a specific gap between model and reality. The concrete output of that movement may be a feature, a fix, a refactor, a clarification, or a new piece of evidence, but architecturally the important fact is the change in coherence itself. CAP defines the local move (MCA or MCI, MCA first); COHERENCE defines how that move is judged across α, β, and γ; the runtime exists to make that movement explicit, governed, and recoverable.
