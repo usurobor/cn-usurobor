@@ -853,7 +853,7 @@ let run_cron ~(config : Cn_config.config) ~hub_path ~name =
     let update_info = Cn_agent.check_for_update hub_path in
     match update_info with
     | Cn_agent.Update_skip -> ()
-    | Cn_agent.Update_git ver | Cn_agent.Update_binary ver ->
+    | Cn_agent.Update_available ver ->
         print_endline (Cn_fmt.info
           (Printf.sprintf "Update available: %s -> %s" Cn_lib.version ver));
         Cn_hub.log_action hub_path "actor.update"

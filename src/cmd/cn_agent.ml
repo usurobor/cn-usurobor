@@ -472,16 +472,6 @@ let auto_update_enabled () =
       | Some "0" -> false
       | _ -> true
 
-let install_dir =
-  let candidates = [
-    Sys.getenv_opt "CNOS_DIR";
-    Some "/usr/local/lib/cnos";
-    (Sys.getenv_opt "HOME" |> Option.map (fun h -> h ^ "/.openclaw/workspace/cnos"));
-  ] in
-  candidates
-  |> List.filter_map Fun.id
-  |> List.find_opt (fun d -> Sys.file_exists d && Sys.file_exists (Filename.concat d ".git"))
-  |> Option.value ~default:"/usr/local/lib/cnos"
 let bin_path = "/usr/local/bin/cn"
 let repo = "usurobor/cnos"
 let update_cooldown_sec = 3600.0  (* 1 hour between update checks *)
@@ -489,13 +479,7 @@ let update_cooldown_sec = 3600.0  (* 1 hour between update checks *)
 (* Update info returned from check, passed to do_update — avoids mutable ref *)
 type update_info =
   | Update_skip
-  | Update_git of string     (* remote version *)
-  | Update_binary of string  (* release tag *)
-
-(* Check if git-based install exists *)
-let has_git_install () =
-  Sys.file_exists install_dir &&
-  Sys.file_exists (Filename.concat install_dir ".git")
+  | Update_available of string  (* release tag *)
 
 (* Cooldown: don't check more than once per hour.
    Uses mtime of state/.last-update-check as the timestamp. *)
@@ -537,52 +521,26 @@ let get_platform_binary () =
   else Some (Printf.sprintf "cn-%s-%s" platform arch)
 
 (* Check for updates — returns update_info for do_update.
-   Respects cooldown: skips if checked within the last hour. *)
+   Respects cooldown: skips if checked within the last hour.
+   Always uses GitHub Releases (pre-built binaries). *)
 let check_for_update hub_path =
   if not (auto_update_enabled ()) then Update_skip
   else if not (should_check_update hub_path) then Update_skip
   else begin
-    (* Record that we checked, regardless of outcome *)
     touch_update_check hub_path;
-    if has_git_install () then begin
-      (* Git-based update *)
-      let fetch_cmd = Printf.sprintf "cd %s && git fetch origin main --quiet 2>/dev/null" install_dir in
-      let _ = Cn_ffi.Child_process.exec fetch_cmd in
-      let version_cmd = Printf.sprintf "cd %s && git show origin/main:src/lib/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*\"\\([^\"]*\\)\".*/\\1/'" install_dir in
-      match Cn_ffi.Child_process.exec version_cmd with
-      | None -> Update_skip
-      | Some latest_raw ->
-          let latest = String.trim latest_raw in
-          if is_newer_version latest Cn_lib.version then Update_git latest
-          else Update_skip
-    end else begin
-      (* Release binary update *)
-      match get_latest_release_tag () with
-      | None -> Update_skip
-      | Some tag ->
-          if is_newer_version tag Cn_lib.version then Update_binary tag
-          else Update_skip
-    end
+    match get_latest_release_tag () with
+    | None -> Update_skip
+    | Some tag ->
+        if is_newer_version tag Cn_lib.version then Update_available tag
+        else Update_skip
   end
 
-(* Perform update — takes update_info from check_for_update *)
+(* Perform update — downloads pre-built binary from GitHub Releases.
+   Workflow: detect platform → download → validate → atomic replace. *)
 let do_update info =
   match info with
   | Update_skip -> Cn_protocol.Update_skip
-  | Update_git _ ->
-      (* Git-based update: pull source then rebuild.
-         git pull alone updates source — OCaml is compiled,
-         so the binary at bin_path is stale until we rebuild. *)
-      let pull_cmd = Printf.sprintf "cd %s && git pull --ff-only 2>/dev/null" install_dir in
-      (match Cn_ffi.Child_process.exec pull_cmd with
-       | None -> Cn_protocol.Update_fail
-       | Some _ ->
-           let build_cmd = Printf.sprintf "cd %s && opam exec -- dune build 2>/dev/null && opam exec -- dune install 2>/dev/null" install_dir in
-           match Cn_ffi.Child_process.exec build_cmd with
-           | Some _ -> Cn_protocol.Update_complete
-           | None -> Cn_protocol.Update_fail)
-  | Update_binary tag ->
-      (* Release binary update *)
+  | Update_available tag ->
       match get_platform_binary () with
       | None -> Cn_protocol.Update_fail
       | Some binary ->
@@ -599,7 +557,6 @@ let do_update info =
               let verify_cmd = Printf.sprintf "'%s' --version 2>/dev/null" new_path in
               match Cn_ffi.Child_process.exec verify_cmd with
               | None ->
-                  (* Binary is corrupt or wrong platform *)
                   Sys.remove new_path;
                   Cn_protocol.Update_fail
               | Some _ ->
@@ -704,7 +661,7 @@ let run_inbound hub_path name =
            (match Cn_protocol.actor_transition Cn_protocol.Idle Cn_protocol.Update_skip with
             | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "FSM error: %s" e))
             | Ok _ -> if feed_next_input hub_path then wake_agent hub_path)
-       | Update_git ver | Update_binary ver ->
+       | Update_available ver ->
            (* FSM: Idle + Update_available → Updating *)
            (match Cn_protocol.actor_transition Cn_protocol.Idle Cn_protocol.Update_available with
             | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "FSM error: %s" e))
