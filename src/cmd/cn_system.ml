@@ -151,19 +151,13 @@ let run_doctor hub_path =
 
 (* === Sync === *)
 
+(** cn sync — reuses shared maintenance primitives (SCHEDULER-v3.7.0 §11).
+    Delegates to Cn_maintenance.sync_once to avoid divergence between
+    standalone sync and scheduler-maintenance sync. *)
 let run_sync hub_path name =
   print_endline (Cn_fmt.info "Syncing...");
-  Cn_mail.inbox_check hub_path name;
-  Cn_mail.inbox_process hub_path;
-  Cn_mail.outbox_flush hub_path name;
+  let _ = Cn_maintenance.sync_once ~hub_path ~name in
   update_runtime hub_path;
-  let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git add -A" in
-  let commit_result = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git commit -m 'heartbeat' --allow-empty" in
-  (match commit_result with
-   | Some _ ->
-       let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git push origin 2>/dev/null" in
-       ()
-   | None -> ());
   print_endline (Cn_fmt.ok "Sync complete")
 
 (* === Setup === *)

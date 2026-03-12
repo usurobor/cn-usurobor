@@ -1027,3 +1027,95 @@ let%expect_test "do_update: Update_skip returns protocol skip" =
     | _ -> "other" in
   Printf.printf "result=%s\n" label;
   [%expect {| result=skip |}]
+
+(* === Cn_config: scheduler config (v3.7.0) ===
+
+   Tests scheduler block parsing: defaults, overrides, clamping. *)
+
+let%expect_test "config: scheduler defaults when no scheduler block" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
+  with_temp_hub (fun hub_path ->
+    match Cn_config.load ~hub_path with
+    | Ok cfg ->
+        Printf.printf "sync=%d review=%d oneshot=%d daemon=%d\n"
+          cfg.scheduler.sync_interval_sec
+          cfg.scheduler.review_interval_sec
+          cfg.scheduler.oneshot_drain_limit
+          cfg.scheduler.daemon_drain_limit
+    | Error msg -> Printf.printf "error: %s\n" msg);
+  [%expect {| sync=300 review=300 oneshot=1 daemon=8 |}]
+
+let%expect_test "config: scheduler overrides from config file" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
+  with_temp_hub
+    ~config_json:{|{"runtime":{"scheduler":{"sync_interval_sec":120,"review_interval_sec":600,"oneshot_drain_limit":3,"daemon_drain_limit":16}}}|}
+    (fun hub_path ->
+      match Cn_config.load ~hub_path with
+      | Ok cfg ->
+          Printf.printf "sync=%d review=%d oneshot=%d daemon=%d\n"
+            cfg.scheduler.sync_interval_sec
+            cfg.scheduler.review_interval_sec
+            cfg.scheduler.oneshot_drain_limit
+            cfg.scheduler.daemon_drain_limit
+      | Error msg -> Printf.printf "error: %s\n" msg);
+  [%expect {| sync=120 review=600 oneshot=3 daemon=16 |}]
+
+let%expect_test "config: scheduler values clamped to min 1" =
+  reset_config_env ();
+  Unix.putenv "ANTHROPIC_KEY" "sk-test-key";
+  with_temp_hub
+    ~config_json:{|{"runtime":{"scheduler":{"sync_interval_sec":0,"oneshot_drain_limit":-5}}}|}
+    (fun hub_path ->
+      match Cn_config.load ~hub_path with
+      | Ok cfg ->
+          Printf.printf "sync=%d oneshot=%d\n"
+            cfg.scheduler.sync_interval_sec
+            cfg.scheduler.oneshot_drain_limit
+      | Error msg -> Printf.printf "error: %s\n" msg);
+  [%expect {| sync=1 oneshot=1 |}]
+
+(* === Cn_maintenance: substep status helpers (v3.7.0) === *)
+
+let%expect_test "maintenance: substep status strings" =
+  Printf.printf "%s\n" (Cn_maintenance.string_of_substep Cn_maintenance.Ok);
+  Printf.printf "%s\n" (Cn_maintenance.string_of_substep (Cn_maintenance.Degraded "sync_failed"));
+  Printf.printf "%s\n" (Cn_maintenance.string_of_substep (Cn_maintenance.Skipped "agent_busy"));
+  [%expect {|
+    ok
+    degraded:sync_failed
+    skipped:agent_busy |}]
+
+let%expect_test "maintenance: is_degraded detects degraded substeps" =
+  let all_ok : Cn_maintenance.maintenance_result = {
+    sync_status = Ok; inbox_status = Ok; outbox_status = Ok;
+    update_status = Ok; review_status = Ok; cleanup_status = Ok;
+  } in
+  let sync_bad : Cn_maintenance.maintenance_result = {
+    sync_status = Degraded "net_error"; inbox_status = Ok; outbox_status = Ok;
+    update_status = Ok; review_status = Ok; cleanup_status = Ok;
+  } in
+  let skipped : Cn_maintenance.maintenance_result = {
+    sync_status = Ok; inbox_status = Ok; outbox_status = Ok;
+    update_status = Skipped "busy"; review_status = Skipped "not_due";
+    cleanup_status = Ok;
+  } in
+  Printf.printf "all_ok=%b sync_bad=%b skipped=%b\n"
+    (Cn_maintenance.is_degraded all_ok)
+    (Cn_maintenance.is_degraded sync_bad)
+    (Cn_maintenance.is_degraded skipped);
+  [%expect {| all_ok=false sync_bad=true skipped=false |}]
+
+(* === Cn_runtime: drain_queue stop reason strings (v3.7.0) === *)
+
+let%expect_test "drain: stop reason strings" =
+  Printf.printf "%s\n" (Cn_runtime.string_of_drain_stop Cn_runtime.Queue_empty);
+  Printf.printf "%s\n" (Cn_runtime.string_of_drain_stop Cn_runtime.Drain_limit_reached);
+  Printf.printf "%s\n" (Cn_runtime.string_of_drain_stop Cn_runtime.Lock_busy);
+  Printf.printf "%s\n" (Cn_runtime.string_of_drain_stop (Cn_runtime.Processing_failed "llm error"));
+  [%expect {|
+    queue_empty
+    drain_limit_reached
+    lock_busy
+    processing_failed |}]

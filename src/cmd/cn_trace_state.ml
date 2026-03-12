@@ -39,6 +39,14 @@ type sensor_telegram = {
   last_poll_at : string;
 }
 
+type scheduler_projection = {
+  mode : string;  (* "oneshot" | "daemon" | "stdio" *)
+  last_sync_at : string option;
+  last_sync_status : string option;
+  last_maintenance_at : string option;
+  last_maintenance_status : string option;
+}
+
 type ready_projection = {
   status : ready_status;
   boot_id : string;
@@ -46,6 +54,7 @@ type ready_projection = {
   mind : mind_projection option;
   body : body_projection option;
   sensors_telegram : sensor_telegram option;
+  scheduler : scheduler_projection option;
   blocked_reason : string option;
 }
 
@@ -159,6 +168,19 @@ let write_ready hub_path (r : ready_projection) =
           "last_poll_at", Cn_json.String s.last_poll_at;
         ] in
         fields @ ["sensors", Cn_json.Object ["telegram", tg]]
+  in
+  let fields = match r.scheduler with
+    | None -> fields
+    | Some sc ->
+        let opt_str = function Some s -> Cn_json.String s | None -> Cn_json.Null in
+        let sched = Cn_json.Object [
+          "mode", Cn_json.String sc.mode;
+          "last_sync_at", opt_str sc.last_sync_at;
+          "last_sync_status", opt_str sc.last_sync_status;
+          "last_maintenance_at", opt_str sc.last_maintenance_at;
+          "last_maintenance_status", opt_str sc.last_maintenance_status;
+        ] in
+        fields @ ["scheduler", sched]
   in
   write_json hub_path "ready.json" (Cn_json.Object fields)
 

@@ -36,6 +36,7 @@ let%expect_test "ready projection JSON shape" =
       last_poll_status = "ok";
       last_poll_at = "2026-03-15T14:01:59.000Z";
     };
+    scheduler = None;
   } in
   (* We can't write to disk in pure test, but we can verify the JSON shape
      by calling the internal serialization logic. Test via round-trip. *)
@@ -63,6 +64,7 @@ let%expect_test "blocked ready projection includes reason" =
     mind = None;
     body = None;
     sensors_telegram = None;
+    scheduler = None;
   } in
   ignore r;
   Printf.printf "status: %s\n" (Cn_trace_state.string_of_ready_status Blocked);
@@ -109,6 +111,7 @@ let%expect_test "write_ready creates state/ready.json on disk" =
       current_cycle = None; queue_depth = 0;
     };
     sensors_telegram = None;
+    scheduler = None;
   };
   let path = Filename.concat hub "state/ready.json" in
   assert (Sys.file_exists path);
@@ -200,6 +203,7 @@ let%expect_test "projection update lifecycle: idle -> processing -> idle" =
     body = Some { fsm_state = "idle"; lock_held = false;
                   current_cycle = None; queue_depth = 0; };
     sensors_telegram = None;
+    scheduler = None;
   };
   (* Phase 2: lock acquired, cycle start *)
   Cn_trace_state.write_runtime hub {
@@ -217,6 +221,7 @@ let%expect_test "projection update lifecycle: idle -> processing -> idle" =
     body = Some { fsm_state = "processing"; lock_held = true;
                   current_cycle = Some "tg-99"; queue_depth = 0; };
     sensors_telegram = None;
+    scheduler = None;
   };
   (* Phase 3: finalize complete, back to idle *)
   Cn_trace_state.write_runtime hub {
@@ -233,6 +238,7 @@ let%expect_test "projection update lifecycle: idle -> processing -> idle" =
     body = Some { fsm_state = "idle"; lock_held = false;
                   current_cycle = None; queue_depth = 0; };
     sensors_telegram = None;
+    scheduler = None;
   };
   (* Verify final state *)
   let rt = Cn_ffi.Fs.read (Filename.concat hub "state/runtime.json") in
@@ -287,6 +293,7 @@ let%expect_test "update_ready_body preserves mind and sensors fields" =
       last_poll_status = "ok";
       last_poll_at = "2026-03-15T13:59:00.000Z";
     };
+    scheduler = None;
   };
   (* Now do a body-only update via update_ready_body *)
   Cn_trace_state.update_ready_body hub

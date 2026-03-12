@@ -1,14 +1,27 @@
 # Agent Runtime: Native cnos Agent
 
-**Version:** 3.6.0
+**Version:** 3.7.0
 **Authors:** Sigma (original), Pi (CLP), Axiom (pure-pipe directive)
-**Date:** 2026-03-11
+**Date:** 2026-03-12
 **Status:** Draft
 **Reviewers:** usurobor, external
 
 ---
 
 ## Patch Notes
+
+**v3.7.0** — Scheduler Unification (one loop, two schedulers):
+- Replace the daemon-vs-cron behavioral split with **one protocol loop, one processing engine, two schedulers**
+- Introduce `cn_maintenance.ml` — shared maintenance engine: `sync_once`, `materialize_inbox_once`, `flush_outbox_once`, `update_check_once`, `review_tick_once`, `cleanup_once`, and the composite `maintain_once`
+- Add `drain_queue` to `cn_runtime.ml` — bounded queue processing with configurable limits and stop reasons
+- **Oneshot scheduler** (`cn agent`): boot → `maintain_once` → `drain_queue` → exit (full protocol, not just processing)
+- **Daemon scheduler** (`cn agent --daemon`): fast clock (Telegram poll + immediate drain) + slow clock (periodic `maintain_once` at configurable interval)
+- Daemon no longer requires `TELEGRAM_TOKEN` — can run as peer-only daemon with maintenance ticks
+- `cn sync` now delegates to shared maintenance primitives (no duplicated protocol logic)
+- Add `scheduler` config block: `sync_interval_sec`, `review_interval_sec`, `oneshot_drain_limit`, `daemon_drain_limit`
+- Add scheduler projection to `state/ready.json`: `scheduler.mode`, `last_sync_at`, `last_sync_status`, `last_maintenance_at`, `last_maintenance_status`
+- Add trace events: `maintenance.start/.complete`, `sync.start/.ok/.error`, `inbox.materialized`, `outbox.flushed`, `drain.start/.complete/.stopped`, `scheduler.tick/.idle/.degraded`
+- See [`SCHEDULER-v3.7.0.md`](SCHEDULER-v3.7.0.md) and [`PLAN-v3.7.0.md`](PLAN-v3.7.0.md) for full design and implementation plan
 
 **v3.6.0** — Output Plane Separation and sink-safe rendering:
 - Introduce strict separation between **control plane** (frontmatter, coordination ops, typed `ops:` manifest) and **presentation plane** (human-facing text projected to sinks such as Telegram/Discord)

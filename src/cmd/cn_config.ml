@@ -6,6 +6,20 @@
 
     Uses Cn_json for config file parsing — same parser as API responses. *)
 
+type scheduler_config = {
+  sync_interval_sec : int;
+  review_interval_sec : int;
+  oneshot_drain_limit : int;
+  daemon_drain_limit : int;
+}
+
+let default_scheduler_config = {
+  sync_interval_sec = 300;
+  review_interval_sec = 300;
+  oneshot_drain_limit = 1;
+  daemon_drain_limit = 8;
+}
+
 type config = {
   telegram_token : string option;
   anthropic_key : string;
@@ -16,6 +30,7 @@ type config = {
   allowed_users : int list;  (* [] = deny all Telegram users *)
   hub_path : string;
   shell : Cn_shell.shell_config;
+  scheduler : scheduler_config;
 }
 
 let default_model = "claude-sonnet-4-latest"
@@ -117,6 +132,24 @@ let load ~hub_path =
     max_artifact_bytes = get_int "max_artifact_bytes" d.max_artifact_bytes 1024;
     max_artifact_bytes_per_op = get_int "max_artifact_bytes_per_op" d.max_artifact_bytes_per_op 1024;
   } in
+  (* Scheduler config from runtime.scheduler sub-object *)
+  let scheduler_obj = match runtime with
+    | Some r -> Cn_json.get "scheduler" r
+    | None -> None
+  in
+  let sched_int key default =
+    let raw = match scheduler_obj with
+      | Some s -> (match Cn_json.get_int key s with Some i -> i | None -> default)
+      | None -> default
+    in
+    max raw 1
+  in
+  let scheduler = {
+    sync_interval_sec = sched_int "sync_interval_sec" default_scheduler_config.sync_interval_sec;
+    review_interval_sec = sched_int "review_interval_sec" default_scheduler_config.review_interval_sec;
+    oneshot_drain_limit = sched_int "oneshot_drain_limit" default_scheduler_config.oneshot_drain_limit;
+    daemon_drain_limit = sched_int "daemon_drain_limit" default_scheduler_config.daemon_drain_limit;
+  } in
   match anthropic_key with
   | None -> Error "ANTHROPIC_KEY not set (required for agent runtime)"
   | Some key ->
@@ -130,4 +163,5 @@ let load ~hub_path =
         allowed_users;
         hub_path;
         shell;
+        scheduler;
       }

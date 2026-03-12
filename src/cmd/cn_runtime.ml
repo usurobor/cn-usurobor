@@ -284,6 +284,7 @@ let boot_sequence ~(config : Cn_config.config) ~hub_path ~mode =
           updated_at = Cn_fmt.now_iso ();
           blocked_reason = Some "core_doctrine_missing";
           mind = None; body = None; sensors_telegram = None;
+          scheduler = None;
         };
         false
   in
@@ -340,7 +341,7 @@ let boot_sequence ~(config : Cn_config.config) ~hub_path ~mode =
 
     let pkg_names = List.map (fun (name, _) -> name) summary.packages in
 
-    (* Write ready.json — mode-aware sensor block *)
+    (* Write ready.json — mode-aware sensor and scheduler blocks *)
     let sensors_telegram = match mode with
       | "daemon" -> Some {
           Cn_trace_state.enabled = true;
@@ -349,6 +350,10 @@ let boot_sequence ~(config : Cn_config.config) ~hub_path ~mode =
           last_poll_at = Cn_fmt.now_iso ();
         }
       | _ -> None
+    in
+    let scheduler_mode = match mode with
+      | "cron" -> "oneshot" | "daemon" -> "daemon" | "stdio" -> "stdio"
+      | m -> m
     in
     Cn_trace_state.write_ready hub_path {
       status = Ready; boot_id = session.boot_id;
@@ -377,6 +382,13 @@ let boot_sequence ~(config : Cn_config.config) ~hub_path ~mode =
         queue_depth = Cn_agent.queue_depth hub_path;
       };
       sensors_telegram;
+      scheduler = Some {
+        mode = scheduler_mode;
+        last_sync_at = None;
+        last_sync_status = None;
+        last_maintenance_at = None;
+        last_maintenance_status = None;
+      };
     };
 
     (* Write coherence.json *)
@@ -832,8 +844,75 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
     | result -> finally (); result
     | exception exn -> finally (); raise exn
 
-(** Cron/daemon entry point. Runs update check when idle, then calls
-    process_one which handles all state mutation under lock. *)
+(* === Drain queue (SCHEDULER-v3.7.0 §7) === *)
+
+type drain_stop_reason =
+  | Queue_empty
+  | Drain_limit_reached
+  | Lock_busy
+  | Processing_failed of string
+
+let string_of_drain_stop = function
+  | Queue_empty -> "queue_empty"
+  | Drain_limit_reached -> "drain_limit_reached"
+  | Lock_busy -> "lock_busy"
+  | Processing_failed _ -> "processing_failed"
+
+(** Drain the queue up to [limit] items by calling process_one repeatedly.
+    Returns (items_processed, stop_reason). *)
+let drain_queue ~(config : Cn_config.config) ~hub_path ~name ~limit =
+  Cn_trace.gemit ~component:"runtime" ~layer:Body
+    ~event:"drain.start" ~severity:Info ~status:Ok_
+    ~details:["limit", Cn_json.Int limit] ();
+  let processed = ref 0 in
+  let stop_reason = ref Queue_empty in
+  let continue = ref true in
+  while !continue && !processed < limit do
+    (* Check if queue has items before trying process_one *)
+    let has_work =
+      Cn_agent.queue_depth hub_path > 0
+      || Cn_ffi.Fs.exists (Cn_agent.input_path hub_path)
+      || Cn_ffi.Fs.exists (Cn_agent.output_path hub_path)
+    in
+    if not has_work then begin
+      stop_reason := Queue_empty;
+      continue := false
+    end else
+      match process_one ~config ~hub_path ~name with
+      | Ok () ->
+          incr processed;
+          (* Check if queue is now empty *)
+          if Cn_agent.queue_depth hub_path = 0
+             && not (Cn_ffi.Fs.exists (Cn_agent.input_path hub_path))
+             && not (Cn_ffi.Fs.exists (Cn_agent.output_path hub_path))
+          then begin
+            stop_reason := Queue_empty;
+            continue := false
+          end
+      | Error msg ->
+          if Cn_lib.starts_with ~prefix:"agent already running" msg then begin
+            stop_reason := Lock_busy;
+            continue := false
+          end else begin
+            stop_reason := Processing_failed msg;
+            continue := false
+          end
+  done;
+  if !processed >= limit && !continue then
+    stop_reason := Drain_limit_reached;
+  Cn_trace.gemit ~component:"runtime" ~layer:Body
+    ~event:(if !stop_reason = Queue_empty || !stop_reason = Drain_limit_reached
+            then "drain.complete" else "drain.stopped")
+    ~severity:Info ~status:Ok_
+    ~reason_code:(string_of_drain_stop !stop_reason)
+    ~details:[
+      "processed", Cn_json.Int !processed;
+      "limit", Cn_json.Int limit;
+    ] ();
+  (!processed, !stop_reason)
+
+(** Oneshot scheduler entry point (SCHEDULER-v3.7.0 §3.1).
+    Runs: boot → maintain_once → drain_queue → exit. *)
 let run_cron ~(config : Cn_config.config) ~hub_path ~name =
   (* Full boot sequence with projections (shared across all modes) *)
   (match Cn_trace.get_global () with
@@ -845,36 +924,51 @@ let run_cron ~(config : Cn_config.config) ~hub_path ~name =
            Cn_ffi.Process.exit 1
        | Ok _ -> ());
 
-  (* Auto-update check (only when truly idle — no state files, no lock) *)
-  let inp = Cn_agent.input_path hub_path in
-  let outp = Cn_agent.output_path hub_path in
-  if not (Cn_ffi.Fs.exists inp) && not (Cn_ffi.Fs.exists outp)
-     && not (Cn_ffi.Fs.exists (lock_path hub_path)) then begin
-    let update_info = Cn_agent.check_for_update hub_path in
-    match update_info with
-    | Cn_agent.Update_skip -> ()
-    | Cn_agent.Update_available ver ->
-        print_endline (Cn_fmt.info
-          (Printf.sprintf "Update available: %s -> %s" Cn_lib.version ver));
-        Cn_hub.log_action hub_path "actor.update"
-          (Printf.sprintf "checking:%s" ver);
-        let result = Cn_agent.do_update update_info in
-        match result with
-        | Cn_protocol.Update_complete ->
-            Cn_hub.log_action hub_path "actor.update"
-              (Printf.sprintf "complete:%s" ver);
-            print_endline (Cn_fmt.ok
-              (Printf.sprintf "Updated to %s, re-executing..." ver));
-            Cn_agent.re_exec ()
-        | Cn_protocol.Update_fail ->
-            Cn_hub.log_action hub_path "actor.update" "failed";
-            print_endline (Cn_fmt.warn
-              "Update failed, continuing with current version")
-        | _ -> ()
-  end;
+  Cn_trace.gemit ~component:"scheduler" ~layer:Body
+    ~event:"scheduler.tick" ~severity:Info ~status:Ok_
+    ~reason_code:"timer_invocation"
+    ~details:["mode", Cn_json.String "oneshot"] ();
 
-  (* process_one handles inbox queueing + all recovery states under lock *)
-  ignore (process_one ~config ~hub_path ~name)
+  (* 1. Maintenance tick — full protocol duties *)
+  let maint_result = Cn_maintenance.maintain_once ~config ~hub_path ~name in
+  let maint_status = if Cn_maintenance.is_degraded maint_result
+    then "degraded" else "ok" in
+
+  (* 2. Drain queue up to configured limit *)
+  let limit = config.scheduler.oneshot_drain_limit in
+  let (processed, _stop) = drain_queue ~config ~hub_path ~name ~limit in
+
+  (* 3. Update scheduler projection *)
+  let now = Cn_fmt.now_iso () in
+  (match Cn_trace.get_global () with
+   | Some session ->
+       Cn_trace_state.write_ready hub_path {
+         status = (if Cn_maintenance.is_degraded maint_result
+                   then Degraded else Ready);
+         boot_id = session.boot_id;
+         updated_at = now;
+         blocked_reason = None;
+         mind = None; body = None; sensors_telegram = None;
+         scheduler = Some {
+           mode = "oneshot";
+           last_sync_at = Some now;
+           last_sync_status = Some maint_status;
+           last_maintenance_at = Some now;
+           last_maintenance_status = Some maint_status;
+         };
+       }
+   | None -> ());
+
+  Cn_trace.gemit ~component:"scheduler" ~layer:Body
+    ~event:"scheduler.idle" ~severity:Info ~status:Ok_
+    ~details:[
+      "processed", Cn_json.Int processed;
+      "maintenance_status", Cn_json.String maint_status;
+    ] ();
+
+  print_endline (Cn_fmt.ok
+    (Printf.sprintf "Oneshot complete: %d processed, maintenance %s"
+       processed maint_status))
 
 (* === Telegram daemon === *)
 
@@ -944,77 +1038,146 @@ let enqueue_telegram hub_path (msg : Cn_telegram.message) =
       (Printf.sprintf "id:%s chat_id:%d" trigger_id msg.chat_id)
   end
 
-(** Telegram long-poll daemon. Polls for updates, enqueues accepted
-    messages, processes one per update, persists offset after success.
-    Loops forever. Per v3.1.3:
-    - allowed_users = [] → deny all
-    - Offset persisted to state/telegram.offset
-    - Offset advanced only after successful processing (ack boundary)
-    - Rejected users advance offset immediately (handled by dropping)
-    - Messages processed in ascending update_id order; stops at first failure *)
+(** Unified daemon scheduler (SCHEDULER-v3.7.0 §3.2).
+    Two clocks:
+    - Fast clock: Telegram long-poll + immediate queue drain
+    - Slow clock: periodic maintenance (sync, inbox, outbox, review)
+    Telegram is optional — daemon can run peer-only without TELEGRAM_TOKEN. *)
 let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
-  match config.telegram_token with
-  | None ->
-      print_endline (Cn_fmt.fail "Daemon mode requires TELEGRAM_TOKEN");
-      Cn_ffi.Process.exit 1
-  | Some token ->
-      (* Shared boot sequence — writes ready.json, coherence.json, runtime.json *)
-      let boot = match boot_sequence ~config ~hub_path ~mode:"daemon" with
-        | Error msg ->
-            print_endline (Cn_fmt.fail msg);
-            Cn_ffi.Process.exit 1
-        | Ok b -> b
-      in
+  let has_telegram = config.telegram_token <> None in
 
-      (* Daemon-specific: Telegram transport readiness *)
-      let offset = ref (read_offset hub_path) in
+  (* Shared boot sequence — writes ready.json, coherence.json, runtime.json *)
+  let boot = match boot_sequence ~config ~hub_path ~mode:"daemon" with
+    | Error msg ->
+        print_endline (Cn_fmt.fail msg);
+        Cn_ffi.Process.exit 1
+    | Ok b -> b
+  in
+
+  (* Daemon state tracking *)
+  let last_maintenance_at = ref 0.0 in
+  let last_maintenance_status = ref "none" in
+
+  (* Telegram-specific state (only if token present) *)
+  let offset = ref (
+    if has_telegram then begin
+      let o = read_offset hub_path in
       Cn_trace.emit_simple boot.session ~component:"telegram" ~layer:Sensor
         ~event:"telegram.offset.loaded" ~severity:Info ~status:Ok_
-        ~details:["offset", Cn_json.Int !offset] ();
+        ~details:["offset", Cn_json.Int o] ();
+      o
+    end else 0
+  ) in
 
-      (* Update ready.json with actual telegram offset *)
-      Cn_trace_state.write_ready hub_path {
-        status = Ready; boot_id = boot.session.boot_id;
-        updated_at = Cn_fmt.now_iso ();
-        blocked_reason = None;
-        mind = Some {
-          profile = Option.value ~default:"engineer" boot.summary.profile;
-          packages = boot.pkg_names;
-          doctrine_required = List.length Cn_assets.required_doctrine;
-          doctrine_loaded = boot.summary.doctrine_count;
-          doctrine_hash = "";
-          mindsets_required = List.length Cn_assets.required_mindsets;
-          mindsets_loaded = boot.summary.mindset_count;
-          mindsets_hash = "";
-          skills_indexed = boot.total_skills;
-          skills_selected_last = [];
-          capabilities_hash = "";
-          two_pass = config.shell.two_pass;
-          apply_mode = config.shell.apply_mode;
-          exec_enabled = config.shell.exec_enabled;
-        };
-        body = Some {
-          fsm_state = "idle";
-          lock_held = false;
-          current_cycle = None;
-          queue_depth = Cn_agent.queue_depth hub_path;
-        };
-        sensors_telegram = Some {
-          enabled = true;
-          offset = !offset;
-          last_poll_status = "starting";
-          last_poll_at = Cn_fmt.now_iso ();
-        };
+  let token_opt = config.telegram_token in
+
+  (* Write initial ready.json with scheduler projection *)
+  let write_daemon_ready ?(tg_poll_status = "starting") () =
+    let now = Cn_fmt.now_iso () in
+    Cn_trace_state.write_ready hub_path {
+      status = Ready; boot_id = boot.session.boot_id;
+      updated_at = now;
+      blocked_reason = None;
+      mind = Some {
+        profile = Option.value ~default:"engineer" boot.summary.profile;
+        packages = boot.pkg_names;
+        doctrine_required = List.length Cn_assets.required_doctrine;
+        doctrine_loaded = boot.summary.doctrine_count;
+        doctrine_hash = "";
+        mindsets_required = List.length Cn_assets.required_mindsets;
+        mindsets_loaded = boot.summary.mindset_count;
+        mindsets_hash = "";
+        skills_indexed = boot.total_skills;
+        skills_selected_last = [];
+        capabilities_hash = "";
+        two_pass = config.shell.two_pass;
+        apply_mode = config.shell.apply_mode;
+        exec_enabled = config.shell.exec_enabled;
       };
+      body = Some {
+        fsm_state = "idle";
+        lock_held = false;
+        current_cycle = None;
+        queue_depth = Cn_agent.queue_depth hub_path;
+      };
+      sensors_telegram = (if has_telegram then Some {
+        enabled = true;
+        offset = !offset;
+        last_poll_status = tg_poll_status;
+        last_poll_at = now;
+      } else None);
+      scheduler = Some {
+        mode = "daemon";
+        last_sync_at = (let t = !last_maintenance_at in
+                        if t > 0.0 then Some (Cn_fmt.now_iso ()) else None);
+        last_sync_status = Some !last_maintenance_status;
+        last_maintenance_at = (let t = !last_maintenance_at in
+                               if t > 0.0 then Some (Cn_fmt.now_iso ()) else None);
+        last_maintenance_status = Some !last_maintenance_status;
+      };
+    }
+  in
+  write_daemon_ready ();
 
-      (* Daemon poll start *)
-      Cn_trace.emit_simple boot.session ~component:"telegram" ~layer:Sensor
-        ~event:"daemon.poll.start" ~severity:Info ~status:Ok_ ();
+  (* Initial maintenance tick on boot *)
+  Cn_trace.gemit ~component:"scheduler" ~layer:Body
+    ~event:"scheduler.tick" ~severity:Info ~status:Ok_
+    ~reason_code:"boot_maintenance"
+    ~details:["mode", Cn_json.String "daemon"] ();
+  let maint_result = Cn_maintenance.maintain_once ~config ~hub_path ~name in
+  last_maintenance_at := Unix.gettimeofday ();
+  last_maintenance_status := (if Cn_maintenance.is_degraded maint_result
+    then "degraded" else "ok");
+  write_daemon_ready ();
 
-      print_endline (Cn_fmt.ok (Printf.sprintf
-        "Telegram daemon started (poll=%ds timeout=%ds)"
-        config.poll_interval config.poll_timeout));
-      while true do
+  (* Daemon poll start *)
+  Cn_trace.emit_simple boot.session ~component:"telegram" ~layer:Sensor
+    ~event:"daemon.poll.start" ~severity:Info ~status:Ok_
+    ~details:["telegram_enabled", Cn_json.Bool has_telegram] ();
+
+  let mode_desc = if has_telegram
+    then Printf.sprintf "Daemon started (telegram poll=%ds timeout=%ds, sync=%ds)"
+           config.poll_interval config.poll_timeout config.scheduler.sync_interval_sec
+    else Printf.sprintf "Daemon started (peer-only, sync=%ds)"
+           config.scheduler.sync_interval_sec
+  in
+  print_endline (Cn_fmt.ok mode_desc);
+
+  while true do
+    (* === Slow clock: periodic maintenance === *)
+    let now = Unix.gettimeofday () in
+    let sync_interval = float_of_int config.scheduler.sync_interval_sec in
+    if now -. !last_maintenance_at >= sync_interval then begin
+      Cn_trace.gemit ~component:"scheduler" ~layer:Body
+        ~event:"scheduler.tick" ~severity:Info ~status:Ok_
+        ~reason_code:"sync_due"
+        ~details:["mode", Cn_json.String "daemon";
+                   "elapsed", Cn_json.Int (int_of_float (now -. !last_maintenance_at))] ();
+      let maint_result = Cn_maintenance.maintain_once ~config ~hub_path ~name in
+      last_maintenance_at := Unix.gettimeofday ();
+      last_maintenance_status := (if Cn_maintenance.is_degraded maint_result
+        then "degraded" else "ok");
+      (* Drain any newly materialized work *)
+      let limit = config.scheduler.daemon_drain_limit in
+      let _ = drain_queue ~config ~hub_path ~name ~limit in
+      write_daemon_ready ~tg_poll_status:"ok" ();
+      (* Check degraded state *)
+      if Cn_maintenance.is_degraded maint_result then
+        Cn_trace.gemit ~component:"scheduler" ~layer:Body
+          ~event:"scheduler.degraded" ~severity:Warn ~status:Degraded
+          ~reason_code:"maintenance_degraded" ()
+    end;
+
+    (* === Fast clock: Telegram poll + immediate drain === *)
+    (match token_opt with
+    | None ->
+        (* Peer-only daemon: just drain any existing queue work *)
+        if Cn_agent.queue_depth hub_path > 0 then begin
+          let limit = config.scheduler.daemon_drain_limit in
+          let _ = drain_queue ~config ~hub_path ~name ~limit in
+          ()
+        end
+    | Some token ->
         (match Cn_telegram.get_updates ~token ~offset:!offset
                 ~timeout:config.poll_timeout with
         | Error msg ->
@@ -1029,7 +1192,7 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                 compare a.update_id b.update_id)
               messages in
             (* Process sequentially; stop at first failure *)
-            let rec drain = function
+            let rec drain_tg = function
               | [] -> ()
               | (msg : Cn_telegram.message) :: rest ->
                   if not (is_allowed_user config msg.user_id) then begin
@@ -1039,21 +1202,17 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                       ~details:["update_id", Cn_json.Int msg.update_id] ();
                     offset := max !offset (msg.update_id + 1);
                     write_offset hub_path !offset;
-                    drain rest
+                    drain_tg rest
                   end else begin
                     let trigger_id = Printf.sprintf "tg-%d" msg.update_id in
                     (* Visual feedback: react to inbound + show typing *)
                     Cn_telegram.set_reaction ~token
                       ~chat_id:msg.chat_id ~message_id:msg.message_id
-                      ~emoji:"\xF0\x9F\xA4\x94"; (* 🤔 *)
+                      ~emoji:"\xF0\x9F\xA4\x94"; (* thinking *)
                     Cn_telegram.send_typing ~token ~chat_id:msg.chat_id;
                     enqueue_telegram hub_path msg;
                     match process_one ~config ~hub_path ~name with
                     | Ok () ->
-                        (* Only ack if no longer queued or in-flight.
-                           Handles the case where process_one returned Ok ()
-                           because the lock was busy (overlap) or it processed
-                           a different queued item. *)
                         if not (is_queued hub_path trigger_id)
                            && not (is_in_flight hub_path trigger_id) then begin
                           Cn_telegram.clear_reaction ~token
@@ -1064,7 +1223,7 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                             ~details:["offset", Cn_json.Int (msg.update_id + 1)] ();
                           offset := max !offset (msg.update_id + 1);
                           write_offset hub_path !offset;
-                          drain rest
+                          drain_tg rest
                         end else begin
                           Cn_trace.gemit ~component:"telegram" ~layer:Sensor
                             ~event:"daemon.offset.blocked" ~severity:Info ~status:Blocked
@@ -1085,10 +1244,10 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                           msg.update_id err))
                   end
             in
-            drain sorted);
-        (* Always sleep poll_interval between cycles *)
-        Unix.sleepf (float_of_int config.poll_interval)
-      done
+            drain_tg sorted));
+    (* Always sleep poll_interval between cycles *)
+    Unix.sleepf (float_of_int config.poll_interval)
+  done
 
 (* === Interactive stdio mode === *)
 
