@@ -13,7 +13,7 @@
     - Cn_assets.contains_sub (substring containment)
     - Cn_context.pack (mindsets + role-weighted skills integration)
     - Cn_runtime.extract_inbound_message (message slicing from packed context)
-    - Cn_runtime.telegram_payload (Telegram reply fallback chain)
+    - Cn_output.render_for_sink (output plane separation)
     - Cn_config.load (config loading: defaults, env override, clamping, errors)
     - Cn_runtime.is_in_flight (frontmatter id matching in state/input.md|output.md)
     - Cn_runtime.is_queued (filename suffix matching in state/queue/)
@@ -593,36 +593,44 @@ let%expect_test "extract_inbound_message: message with no metadata lines" =
   [%expect {| Just the message |}]
 
 
-(* === Cn_runtime: telegram_payload === *)
+(* === Cn_output: render_for_sink (replaces telegram_payload tests) === *)
 
-let%expect_test "telegram_payload: body takes priority" =
-  let ops : Cn_lib.agent_op list = [Reply ("id-1", "reply text")] in
-  let result = Cn_runtime.telegram_payload ops (Some "Body content") in
-  Printf.printf "%s\n" result;
+let render_result_to_string = function
+  | Cn_output.Renderable s -> s
+  | Cn_output.Fallback (text, reason) ->
+      Printf.sprintf "<fallback:%s:%s>" (Cn_output.string_of_render_reason reason) text
+  | Cn_output.Skipped -> "<skipped>"
+  | Cn_output.Invalid r -> Printf.sprintf "<invalid:%s>" (Cn_output.string_of_render_reason r)
+
+let%expect_test "render_for_sink: body takes priority" =
+  let parsed = Cn_output.parse_output "---\nreply: id-1|reply text\n---\nBody content" in
+  let result = Cn_output.render_for_sink (HumanSurface `Telegram) parsed in
+  Printf.printf "%s\n" (render_result_to_string result);
   [%expect {| Body content |}]
 
-let%expect_test "telegram_payload: falls back to Reply op message" =
-  let ops : Cn_lib.agent_op list = [Ack "id-1"; Reply ("id-2", "The reply")] in
-  let result = Cn_runtime.telegram_payload ops None in
-  Printf.printf "%s\n" result;
+let%expect_test "render_for_sink: falls back to Reply op message" =
+  let parsed = Cn_output.parse_output "---\nack: id-1\nreply: id-2|The reply\n---\n" in
+  let result = Cn_output.render_for_sink (HumanSurface `Telegram) parsed in
+  Printf.printf "%s\n" (render_result_to_string result);
   [%expect {| The reply |}]
 
-let%expect_test "telegram_payload: no body and no Reply op" =
-  let ops : Cn_lib.agent_op list = [Ack "id-1"; Done "id-2"] in
-  let result = Cn_runtime.telegram_payload ops None in
-  Printf.printf "%s\n" result;
+let%expect_test "render_for_sink: no body and no Reply op" =
+  let parsed = Cn_output.parse_output "---\nack: id-1\ndone: id-2\n---\n" in
+  let result = Cn_output.render_for_sink (HumanSurface `Telegram) parsed in
+  Printf.printf "%s\n" (render_result_to_string result);
   [%expect {| (acknowledged) |}]
 
-let%expect_test "telegram_payload: empty ops and no body" =
-  let result = Cn_runtime.telegram_payload [] None in
-  Printf.printf "%s\n" result;
+let%expect_test "render_for_sink: empty output" =
+  let parsed = Cn_output.parse_output "" in
+  let result = Cn_output.render_for_sink (HumanSurface `Telegram) parsed in
+  Printf.printf "%s\n" (render_result_to_string result);
   [%expect {| (acknowledged) |}]
 
-let%expect_test "telegram_payload: body=Some empty string still wins" =
-  let ops : Cn_lib.agent_op list = [Reply ("id-1", "reply")] in
-  let result = Cn_runtime.telegram_payload ops (Some "") in
-  Printf.printf "%S\n" result;
-  [%expect {| "" |}]
+let%expect_test "render_for_sink: blocks control-plane body" =
+  let parsed = Cn_output.parse_output "---\nreply: id-1|safe reply\n---\nops: [{\"kind\":\"fs_read\"}]" in
+  let result = Cn_output.render_for_sink (HumanSurface `Telegram) parsed in
+  Printf.printf "%s\n" (render_result_to_string result);
+  [%expect {| safe reply |}]
 
 
 (* === Cn_config: load ===

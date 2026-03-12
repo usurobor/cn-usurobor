@@ -211,7 +211,7 @@ before proposing effects. Do not assume you can observe and mutate in one step.
 2. Multiple operations are allowed in a single output
 3. Legacy coordination ops execute in frontmatter order
 4. Typed capability ops are validated under policy; unknown or invalid ops are denied
-5. IO pair is archived to logs/input/ + logs/output/ before executing effects (per LOGGING.md)
+5. IO pair is archived to logs/input/ + logs/output/ before executing effects (per TRACEABILITY.md §11.1 — IO-pair evidence layer)
 6. `cn` logs operations to system log (stdout, captured by systemd/cron)
 7. Never emit XML-style pseudo-tool syntax
 

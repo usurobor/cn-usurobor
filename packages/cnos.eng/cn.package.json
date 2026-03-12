@@ -3,19 +3,5 @@
   "name": "cnos.eng",
   "version": "1.0.0",
   "kind": "package",
-  "engines": { "cnos": ">=3.4.0 <4.0.0" },
-  "sources": {
-    "skills": [
-      "eng/coding",
-      "eng/design",
-      "eng/functional",
-      "eng/ocaml",
-      "eng/rca",
-      "eng/review",
-      "eng/ship",
-      "eng/testing",
-      "eng/tool-writing",
-      "eng/ux-cli"
-    ]
-  }
+  "engines": { "cnos": ">=3.4.0 <4.0.0" }
 }

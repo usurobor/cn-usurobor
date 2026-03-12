@@ -181,14 +181,6 @@ Native OCaml binary. Built with `dune build src/cli/cn.exe`.
 | `cn daily` | Create or show daily reflection |
 | `cn weekly` | Create or show weekly reflection |
 
-### Build (package assembly)
-
-| Command | What it does |
-|---------|-------------|
-| `cn build` | Assemble `packages/` from `src/agent/` sources |
-| `cn build --check` | Verify `packages/` matches `src/agent/` (CI mode) |
-| `cn build clean` | Remove generated content from `packages/` |
-
 ### Hub management
 
 | Command | What it does |
@@ -223,14 +215,10 @@ cnos/
   src/                 Native OCaml CLI and libraries
     cli/cn.ml          CLI dispatch (~100 lines)
     lib/               Pure types, JSON, protocol FSMs
-    cmd/               Runtime modules (cn_runtime, cn_build, cn_shell, ...)
+    cmd/               Runtime modules (cn_runtime, cn_shell, cn_executor, ...)
     ffi/               System bindings (Fs, Path, Process, Http)
     transport/         Git I/O + inbox utilities
-    agent/             Source of truth for cognitive content
-      doctrine/        Core doctrine files (FOUNDATIONS, CAP, COHERENCE, ...)
-      mindsets/        Behavioral frames (ENGINEERING, PM, WISDOM, ...)
-      skills/          Task-specific skills (agent/, eng/, pm/, ops/)
-  packages/            Built output — assembled by 'cn build' from src/agent/
+  packages/            Cognitive packages (installed into hubs by cn setup)
     cnos.core/         Doctrine, mindsets, core skills
     cnos.eng/          Engineering skills
     cnos.pm/           PM skills

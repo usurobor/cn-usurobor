@@ -309,6 +309,10 @@ Examples:
 - `projection.ok`
 - `projection.skipped`
 - `projection.error`
+- `projection.render.start`
+- `projection.render.ok`
+- `projection.render.blocked`
+- `projection.render.fallback`
 - `daemon.poll.start`
 - `daemon.poll.ok`
 - `daemon.poll.error`
@@ -542,11 +546,30 @@ Events SHOULD reference artifacts, not inline them.
 
 ### 12.1 Projection events
 
-Required events:
+Required lifecycle events:
 - `projection.start`
 - `projection.ok`
 - `projection.skipped`
 - `projection.error`
+
+#### 12.1.1 Render sub-events (v3.6.0)
+
+The `projection.render.*` namespace covers sink-specific rendering decisions
+within a projection lifecycle. These refine the render step; they do not
+replace the lifecycle events above.
+
+- `projection.render.start` — render attempt for a specific sink
+- `projection.render.ok` — sink received safe presentation text
+- `projection.render.blocked` — control-plane syntax detected, candidate rejected
+- `projection.render.fallback` — blocked candidate replaced by fallback text
+
+Each blocked/fallback event SHOULD include a `reason_code`:
+- `control_plane_leak` — raw `ops:` or typed-op syntax in candidate
+- `raw_frontmatter` — frontmatter fences or key-value control lines
+- `xml_tool_syntax` — pseudo-tool XML wrappers (`<observe>`, `<fs_read>`, etc.)
+- `no_presentation_payload` — no safe candidate available
+
+See: [AGENT-RUNTIME §v3.6.0](./AGENT-RUNTIME.md) for the output-plane separation spec.
 
 ### 12.2 Idempotency trace
 

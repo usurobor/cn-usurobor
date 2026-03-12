@@ -85,18 +85,39 @@ let extract_inbound_message packed_body =
       String.concat "\n" body_lines |> String.trim
   | (false, _) -> packed_body (* fallback: no marker found *)
 
-(** Derive the Telegram payload from resolved ops and body.
-    Priority: body (if present) > first Reply msg > "(acknowledged)" *)
-let telegram_payload (ops : agent_op list) body =
-  match body with
-  | Some b -> b
-  | None ->
-      (* Look for a Reply op with a message *)
-      let reply_msg = ops |> List.find_map (fun (op : agent_op) ->
-        match op with Reply (_, msg) -> Some msg | _ -> None) in
-      match reply_msg with
-      | Some msg -> msg
-      | None -> "(acknowledged)"
+(** Resolve a render_result to a string, emitting projection.render.* events.
+    Returns the rendered text for the sink. *)
+let resolve_render ~trigger_id ~sink_name result =
+  match result with
+  | Cn_output.Renderable s ->
+      Cn_trace.gemit ~component:"projection" ~layer:Body
+        ~event:"projection.render.ok" ~severity:Info ~status:Ok_
+        ~trigger_id
+        ~details:["sink", Cn_json.String sink_name] ();
+      s
+  | Cn_output.Fallback (text, reason) ->
+      (* Real candidates existed but were all blocked — fell back *)
+      Cn_trace.gemit ~component:"projection" ~layer:Body
+        ~event:"projection.render.fallback" ~severity:Warn ~status:Degraded
+        ~trigger_id
+        ~reason_code:(Cn_output.string_of_render_reason reason)
+        ~details:["sink", Cn_json.String sink_name;
+                   "fallback_text", Cn_json.String text] ();
+      text
+  | Cn_output.Skipped ->
+      Cn_trace.gemit ~component:"projection" ~layer:Body
+        ~event:"projection.render.ok" ~severity:Info ~status:Skipped
+        ~trigger_id
+        ~details:["sink", Cn_json.String sink_name] ();
+      "(acknowledged)"
+  | Cn_output.Invalid reason ->
+      (* All candidates were exhausted — emit blocked event *)
+      Cn_trace.gemit ~component:"projection" ~layer:Body
+        ~event:"projection.render.blocked" ~severity:Warn ~status:Blocked
+        ~trigger_id
+        ~reason_code:(Cn_output.string_of_render_reason reason)
+        ~details:["sink", Cn_json.String sink_name] ();
+      "(acknowledged)"
 
 (* === Conversation persistence === *)
 
@@ -434,11 +455,9 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
   (* 1. Archive raw BEFORE effects *)
   archive_raw hub_path ~trigger_id;
 
-  (* 2. Parse output *)
-  let output_meta = parse_frontmatter output_content in
-  let ops = extract_ops output_meta in
-  let body = extract_body output_content in
-  let ops = List.map (resolve_payload body) ops in
+  (* 2. Parse output via output plane separation *)
+  let parsed = Cn_output.parse_output output_content in
+  let ops = parsed.coordination_ops in
 
   (* 3. Execute operations (skipped on recovery if already done) *)
   if ops_already_done hub_path trigger_id then begin
@@ -446,13 +465,34 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
       ~event:"effects.execute.skip" ~severity:Info ~status:Skipped
       ~trigger_id ~reason_code:"ops_already_done" ()
   end else begin
+    (* 3a. Execute coordination ops (Reply, Send, Delegate, etc.) *)
     Cn_trace.gemit ~component:"runtime" ~layer:Body
       ~event:"effects.execute.start" ~severity:Info ~status:Ok_
       ~trigger_id
-      ~details:["op_count", Cn_json.Int (List.length ops)] ();
+      ~details:["op_count", Cn_json.Int (List.length ops);
+                 "typed_op_count", Cn_json.Int (List.length parsed.typed_ops);
+                 "denial_count", Cn_json.Int (List.length parsed.ops_receipts)] ();
     List.iter (fun op ->
       Cn_agent.execute_op hub_path name trigger_id op
     ) ops;
+
+    (* 3b. Write parser denial receipts (unknown_op_kind, missing_kind, etc.) *)
+    if parsed.ops_receipts <> [] then
+      Cn_orchestrator.write_denial_receipts ~hub_path ~trigger_id
+        ~pass:"A" parsed.ops_receipts;
+
+    (* 3c. Execute typed ops via orchestrator Pass A *)
+    if parsed.typed_ops <> [] then begin
+      let _pass_a_result =
+        Cn_orchestrator.run_pass_a ~hub_path ~trigger_id
+          ~config:config.shell parsed.typed_ops in
+      Cn_trace.gemit ~component:"runtime" ~layer:Body
+        ~event:"effects.typed_ops.complete" ~severity:Info ~status:Ok_
+        ~trigger_id
+        ~details:["typed_op_count", Cn_json.Int (List.length parsed.typed_ops);
+                   "needs_pass_b", Cn_json.Bool _pass_a_result.needs_pass_b] ()
+    end;
+
     mark_ops_done hub_path trigger_id;
     Cn_trace.gemit ~component:"runtime" ~layer:Body
       ~event:"effects.execute.complete" ~severity:Info ~status:Ok_
@@ -507,7 +547,14 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
                 Cn_trace.gemit ~component:"projection" ~layer:Sensor
                   ~event:"projection.marker.created" ~severity:Info ~status:Ok_
                   ~trigger_id ();
-                let payload = telegram_payload ops body in
+                Cn_trace.gemit ~component:"projection" ~layer:Body
+                  ~event:"projection.render.start" ~severity:Info ~status:Ok_
+                  ~trigger_id
+                  ~details:["sink", Cn_json.String "telegram"] ();
+                let render_result =
+                  Cn_output.render_for_sink (HumanSurface `Telegram) parsed in
+                let payload = resolve_render ~trigger_id
+                  ~sink_name:"telegram" render_result in
                 match Cn_telegram.send_message ~token ~chat_id ~text:payload with
                 | Ok () ->
                     Cn_trace.gemit ~component:"projection" ~layer:Sensor
@@ -535,8 +582,11 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
   | Error msg -> Error msg
   | Ok () ->
 
-  (* 5. Append to conversation history *)
-  let assistant_text = telegram_payload ops body in
+  (* 5. Append to conversation history — presentation plane only *)
+  let conv_render =
+    Cn_output.render_for_sink ConversationStore parsed in
+  let assistant_text = resolve_render ~trigger_id
+    ~sink_name:"conversation" conv_render in
   append_conversation hub_path ~trigger_id
     ~user_msg:inbound_message ~assistant_msg:assistant_text;
 
