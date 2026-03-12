@@ -13,16 +13,20 @@ Apply Coherence-Driven Development to substantial changes.
 
 Incoherence not named is incoherence not reduced. Artifacts not aligned are drift waiting to happen.
 
-## First Moves
+## Lifecycle
 
-For a substantial change, the first four moves are:
+CDD owns the full arc from branch to observation:
 
-1. Create the branch
-2. Name the gap
-3. Choose MCA or MCI
-4. Create or amend the design doc
+1. **Branch** — create the branch (§1.4)
+2. **Gap** — name the incoherence (§2)
+3. **Mode** — choose MCA or MCI (§3)
+4. **Artifacts** — design → contract → plan → tests → code → docs (§4)
+5. **Review** — CLP with another CA until convergence (§7)
+6. **Gate** — verify the release checklist (§9)
+7. **Release** — version, tag, CI, merge, announce (§10)
+8. **Observe** — confirm runtime matches design (§10.7)
 
-Everything else follows from there.
+Start at step 1. Everything else follows in order.
 
 ---
 
@@ -327,6 +331,69 @@ Before merge or release, verify each item. A missing item is a known coherence d
   - If anything is deferred, say so explicitly
   - ❌ Silently skip a release gate item
   - ✅ "Known debt: L2 transport docs not yet updated — tracked in issue #42"
+
+---
+
+## 10. Release and Close
+
+After the release gate passes, execute the release. CDD orchestrates; sub-skills execute.
+
+10.1. **Assign the version**
+  - Apply §6 version rules — patch, minor, or major
+  - Bump version in code before tagging
+  - ❌ Tag without bumping the version constant in source
+  - ✅ `sed -i 's/2.4.3/2.5.0/' cn_lib.ml` → commit → tag
+
+10.2. **Tag and release**
+  - Delegate to `release/SKILL.md` for the full procedure
+  - Tag, push tags, create GitHub release with notes
+  - ❌ Merge to main with no tag or release notes
+  - ✅ `git tag v2.5.0` → `git push --tags` → `gh release create v2.5.0`
+
+10.3. **Verify CI produced release artifacts**
+  - Do not assume the release succeeded — confirm it
+  - ❌ Push tag, move on
+  - ✅ Check CI completed, artifacts exist, release page is populated
+
+10.4. **Merge and ship**
+  - Delegate to `ship/SKILL.md` for merge discipline
+  - Author never self-merges; reviewer merges
+  - ❌ Author merges their own PR
+  - ✅ Reviewer approves → reviewer merges → author notified
+
+10.5. **Delete the branch**
+  - Only the branch creator deletes — local and remote
+  - ❌ Leave merged branches accumulating on remote
+  - ✅ `git branch -d feature-branch` → `git push origin --delete feature-branch`
+
+10.6. **Announce**
+  - Notify peers that the change shipped
+  - ❌ Merge silently — peers discover it later via stale branches
+  - ✅ Outbox message: "Shipped X to main — branch deleted"
+
+10.7. **Observe the running system**
+  - CDD does not end at merge — confirm runtime matches design
+  - Check structural coherence: packages installed, capabilities rendered, state = ready
+  - ❌ Ship and forget
+  - ✅ Verify boot, check telemetry, confirm no silent fallback
+
+---
+
+## Orchestration
+
+CDD is the main module. It owns the lifecycle from branch to observation. Sub-skills handle execution:
+
+| CDD phase | Delegated to |
+|---|---|
+| Design doc creation | `eng/design/SKILL.md` |
+| Code implementation | `eng/coding/SKILL.md` |
+| Test structure | `testing/SKILL.md` |
+| Doc updates | `documenting/SKILL.md` |
+| Merge to main | `eng/ship/SKILL.md` |
+| Tag, changelog, GitHub release | `release/SKILL.md` |
+| Review protocol | `eng/review/SKILL.md` |
+
+CDD defines what must happen and in what order. Sub-skills define how.
 
 ---
 
