@@ -1023,6 +1023,7 @@ let%expect_test "do_update: Update_skip returns protocol skip" =
   let label = match result with
     | Cn_protocol.Update_skip -> "skip"
     | Cn_protocol.Update_complete -> "complete"
-    | Cn_protocol.Update_fail -> "fail" in
+    | Cn_protocol.Update_fail -> "fail"
+    | _ -> "other" in
   Printf.printf "result=%s\n" label;
   [%expect {| result=skip |}]
