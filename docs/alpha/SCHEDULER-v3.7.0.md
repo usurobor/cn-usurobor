@@ -26,8 +26,8 @@ The goal of v3.7.0 is:
 > **one protocol loop, one processing engine, two schedulers**
 
 The schedulers differ only in *how they wake the loop*:
-- oneshot/timer
-- service/daemon
+- oneshot/timer (interoception — self-driven, periodic)
+- service/daemon (exteroception — sensor-driven, plus interoception)
 
 They do not differ in protocol responsibilities.
 
@@ -51,9 +51,15 @@ The architectural distinction is:
 - cron mode
 - daemon mode
 
-### But two schedulers for one behavior
-- **oneshot scheduler** — run the loop periodically, then exit
-- **daemon scheduler** — run the loop continuously, with fast and slow clocks
+### But two trigger sources for one behavior
+- **Interoception** (internal triggers) — timer-driven maintenance, self-checks, periodic sync.
+  This is the maintenance engine. Both schedulers have it.
+- **Exteroception** (external triggers) — Telegram messages, future transports (webhooks, etc.).
+  These are sensor/ingress adapters. Only present when configured.
+
+### Two schedulers
+- **oneshot scheduler** — one interoceptive tick, then exit
+- **daemon scheduler** — continuous interoceptive ticks + exteroceptive sensors
 
 ---
 
@@ -61,27 +67,35 @@ The architectural distinction is:
 
 The unified loop has three components:
 
-### 2.1 Ingress adapters
-Sources of work:
-- Telegram updates
-- git-native peer inbox materialization
-- existing queued items
-- stdio/manual injection
+### 2.1 Ingress adapters (exteroception)
+Sources of work from external sensors:
+- Telegram updates (external human interaction)
+- stdio/manual injection (external operator interaction)
 
 Ingress adapters only create or reveal work.
 They do not execute the processing engine directly.
 
-### 2.2 Maintenance engine
-Periodic protocol duties (in order):
-- sync peers: fetch inbound branches, triage inbox, stage changes, commit heartbeat, push to origin
+### 2.2 Maintenance engine (interoception)
+Self-driven protocol duties (in order):
+- inbox check: fetch inbound peer branches, triage to inbox
+- git sync: stage local changes, heartbeat commit, push to origin
 - materialize inbox items into processing queue
 - flush outbox: send pending messages to peer repos
 - update checks (when idle)
 - MCA/review tick (time-gated by `review_interval_sec`)
 - stale state cleanup
 
-Note: sync includes a heartbeat commit (`git commit --allow-empty`) to advance
+Note: git sync includes a heartbeat commit (`git commit --allow-empty`) to advance
 HEAD even when idle, keeping peers informed of liveness via git log.
+
+Primitive boundaries (each does exactly one thing):
+- `inbox_check_once`: fetch inbound branches, triage to inbox (protocol-level)
+- `sync_once`: git fetch, add, heartbeat commit, push (transport-level)
+- `materialize_inbox_once`: queue inbox items for processing
+- `flush_outbox_once`: send pending outbox to peer repos
+- `update_check_once`: binary update check
+- `review_tick_once`: time-gated MCA review
+- `cleanup_once`: GC stale finalized markers
 
 Maintenance changes what work is available and what state the runtime is in.
 
@@ -127,21 +141,23 @@ It is a different scheduler for the same protocol loop.
 Runs the same unified loop continuously.
 
 ### Behavior
-The daemon has two clocks:
+The daemon has two activity sources:
 
-#### Fast clock
-For latency-sensitive ingress:
-- Telegram long-poll
-- immediate queue processing after ingress
+#### Exteroception (sensor-driven)
+External triggers that create work:
+- Telegram long-poll (when configured)
+- immediate queue drain after ingress
+- future: webhooks, other transports
 
-#### Slow clock
-For protocol maintenance:
-- sync peers
-- materialize inbox
-- outbox flush
+#### Interoception (self-driven)
+Internal maintenance on a periodic timer:
+- inbox check + git sync
+- materialize inbox + outbox flush
 - update checks
 - review/MCA tick
 - stale state cleanup
+
+Telegram is optional. A peer-only daemon runs interoception only.
 
 ### Invariant
 A daemon that reports `ready` is not just listening to Telegram.
@@ -335,7 +351,7 @@ Add scheduler-related runtime config under `.cn/config.json`:
 ```
 
 ### Notes
-- `sync_interval_sec` controls daemon maintenance cadence (slow clock interval)
+- `sync_interval_sec` controls daemon interoception cadence (maintenance timer interval)
 - `review_interval_sec` controls MCA review tick (wall-clock gated via `state/.last-review-at`)
 - `oneshot_drain_limit` preserves backward-compatible conservative behavior
 - `daemon_drain_limit` prevents unbounded burst starvation

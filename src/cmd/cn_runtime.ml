@@ -900,10 +900,13 @@ let drain_queue ~(config : Cn_config.config) ~hub_path ~name ~limit =
   done;
   if !processed >= limit && !continue then
     stop_reason := Drain_limit_reached;
+  let drain_event, drain_severity, drain_status = match !stop_reason with
+    | Queue_empty | Drain_limit_reached -> "drain.complete", Info, Ok_
+    | Lock_busy -> "drain.stopped", Warn, Blocked
+    | Processing_failed _ -> "drain.stopped", Warn, Degraded
+  in
   Cn_trace.gemit ~component:"runtime" ~layer:Body
-    ~event:(if !stop_reason = Queue_empty || !stop_reason = Drain_limit_reached
-            then "drain.complete" else "drain.stopped")
-    ~severity:Info ~status:Ok_
+    ~event:drain_event ~severity:drain_severity ~status:drain_status
     ~reason_code:(string_of_drain_stop !stop_reason)
     ~details:[
       "processed", Cn_json.Int !processed;
@@ -938,25 +941,21 @@ let run_cron ~(config : Cn_config.config) ~hub_path ~name =
   let limit = config.scheduler.oneshot_drain_limit in
   let (processed, _stop) = drain_queue ~config ~hub_path ~name ~limit in
 
-  (* 3. Update scheduler projection *)
+  (* 3. Update scheduler projection — read-modify-write to preserve mind/body/sensors *)
   let now = Cn_fmt.now_iso () in
   (match Cn_trace.get_global () with
    | Some session ->
-       Cn_trace_state.write_ready hub_path {
-         status = (if Cn_maintenance.is_degraded maint_result
-                   then Degraded else Ready);
-         boot_id = session.boot_id;
-         updated_at = now;
-         blocked_reason = None;
-         mind = None; body = None; sensors_telegram = None;
-         scheduler = Some {
+       Cn_trace_state.update_ready_scheduler hub_path
+         ~boot_id:session.boot_id ~updated_at:now
+         ~status:(if Cn_maintenance.is_degraded maint_result
+                  then Degraded else Ready)
+         {
            mode = "oneshot";
            last_sync_at = Some now;
            last_sync_status = Some maint_status;
            last_maintenance_at = Some now;
            last_maintenance_status = Some maint_status;
-         };
-       }
+         }
    | None -> ());
 
   Cn_trace.gemit ~component:"scheduler" ~layer:Body
@@ -1039,10 +1038,10 @@ let enqueue_telegram hub_path (msg : Cn_telegram.message) =
   end
 
 (** Unified daemon scheduler (SCHEDULER-v3.7.0 §3.2).
-    Two clocks:
-    - Fast clock: Telegram long-poll + immediate queue drain
-    - Slow clock: periodic maintenance (sync, inbox, outbox, review)
-    Telegram is optional — daemon can run peer-only without TELEGRAM_TOKEN. *)
+    Two activity sources:
+    - Exteroception (sensor-driven): Telegram long-poll + immediate queue drain
+    - Interoception (self-driven): periodic maintenance (sync, inbox, outbox, review)
+    Telegram is optional — daemon can run peer-only (interoception only). *)
 let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
   let has_telegram = config.telegram_token <> None in
 
@@ -1144,7 +1143,7 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
   print_endline (Cn_fmt.ok mode_desc);
 
   while true do
-    (* === Slow clock: periodic maintenance === *)
+    (* === Interoception: periodic maintenance (self-driven) === *)
     let now = Unix.gettimeofday () in
     let sync_interval = float_of_int config.scheduler.sync_interval_sec in
     if now -. !last_maintenance_at >= sync_interval then begin
@@ -1168,10 +1167,10 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
           ~reason_code:"maintenance_degraded" ()
     end;
 
-    (* === Fast clock: Telegram poll + immediate drain === *)
+    (* === Exteroception: Telegram poll + immediate drain (sensor-driven) === *)
     (match token_opt with
     | None ->
-        (* Peer-only daemon: just drain any existing queue work *)
+        (* Peer-only daemon (interoception only): drain any existing queue work *)
         if Cn_agent.queue_depth hub_path > 0 then begin
           let limit = config.scheduler.daemon_drain_limit in
           let _ = drain_queue ~config ~hub_path ~name ~limit in

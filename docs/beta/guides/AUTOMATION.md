@@ -120,9 +120,9 @@ cat state/ready.json    # scheduler section shows last_sync_at, last_maintenance
 
 ## Daemon Setup
 
-The daemon runs the unified scheduler loop continuously. It supports two clocks:
-- **Fast clock:** Telegram poll (if token configured) → immediate drain after new work
-- **Slow clock:** Periodic maintenance tick (sync, inbox, outbox, update, review, cleanup) → bounded drain
+The daemon runs the unified scheduler loop continuously. It has two activity sources:
+- **Exteroception** (sensor-driven): Telegram poll (if token configured) → immediate drain after new work
+- **Interoception** (self-driven): Periodic maintenance tick (sync, inbox, outbox, update, review, cleanup) → bounded drain
 
 The daemon works with or without Telegram. A peer-only daemon (no `TELEGRAM_TOKEN`)
 runs maintenance ticks on the configured `sync_interval_sec` interval.
@@ -239,10 +239,13 @@ WantedBy=multi-user.target
 └──────────────────────────────────────────────┘
 
 Daemon adds:
-┌──────────────────┐
-│  Fast clock      │ Telegram poll → enqueue → immediate drain
-│  Slow clock      │ Periodic maintain_once → bounded drain
-└──────────────────┘
+┌──────────────────────┐
+│  Exteroception       │ Telegram poll → enqueue → immediate drain
+│  (sensor-driven)     │ (only when TELEGRAM_TOKEN configured)
+├──────────────────────┤
+│  Interoception       │ Periodic maintain_once → bounded drain
+│  (self-driven timer) │ (always active, configurable interval)
+└──────────────────────┘
 ```
 
 ---

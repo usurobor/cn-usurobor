@@ -154,10 +154,11 @@ let run_doctor hub_path =
 (** cn sync — reuses shared maintenance primitives (SCHEDULER-v3.7.0 §11).
     Delegates to Cn_maintenance primitives to avoid divergence between
     standalone sync and scheduler-maintenance sync.
-    Runs: sync (fetch+commit+push) + outbox flush + runtime update. *)
+    Runs: inbox check + git sync + outbox flush + runtime update. *)
 let run_sync hub_path name =
   print_endline (Cn_fmt.info "Syncing...");
-  let _ = Cn_maintenance.sync_once ~hub_path ~name in
+  let _ = Cn_maintenance.inbox_check_once ~hub_path ~name in
+  let _ = Cn_maintenance.sync_once ~hub_path in
   let _ = Cn_maintenance.flush_outbox_once ~hub_path ~name in
   update_runtime hub_path;
   print_endline (Cn_fmt.ok "Sync complete")
