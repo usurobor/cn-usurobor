@@ -13,6 +13,17 @@ Apply Coherence-Driven Development to substantial changes.
 
 Incoherence not named is incoherence not reduced. Artifacts not aligned are drift waiting to happen.
 
+## First Moves
+
+For a substantial change, the first four moves are:
+
+1. Create the branch
+2. Name the gap
+3. Choose MCA or MCI
+4. Create or amend the design doc
+
+Everything else follows from there.
+
 ---
 
 ## 1. When
@@ -40,6 +51,14 @@ Incoherence not named is incoherence not reduced. Artifacts not aligned are drif
   - Large change: full pipeline — design → contract → plan → tests → code → docs → release
   - ❌ Same ceremony for every change regardless of size
   - ✅ Pipeline depth proportional to coherence risk
+
+1.4. **Branch before artifacts**
+  - Create the branch before the design doc
+  - Branch name encodes the change scope
+  - ❌ Work on `main`, commit design doc directly
+  - ✅ `claude/v3.9.0-workspace-constitution-abc` — version + focus + suffix
+  - ✅ `claude/cdd-executable-skill-PfdYZ` — feature + suffix
+  - ✅ `claude/fix-heartbeat-silent-death-xQ2` — fix + dominant incoherence + suffix
 
 ---
 
@@ -131,15 +150,17 @@ Follow the pipeline. Each step feeds the next.
   - ✅ Update `docs/design/AGENT-RUNTIME.md`, bump version header
 
 5.2. **New subsystem — create a versioned design doc**
-  - Path: `docs/design/<NAME>-v<MAJOR>.md`
+  - Pattern: `docs/design/NAME-vMAJOR.md`
   - ❌ `docs/design/new-thing.md` (no version)
   - ✅ `docs/design/CAA-v1.md`
+  - ✅ `docs/design/CAR-v3.4.md`
 
 5.3. **Implementation plan**
-  - Feature/release scoped: `docs/design/PLAN-vX.Y.Z.md`
-  - Subsystem scoped: `docs/design/<NAME>-implementation-plan.md`
+  - Feature/release scoped: `docs/design/PLAN-vX.Y.Z.md` (e.g. `PLAN-v3.6.0.md`)
+  - Subsystem scoped: `docs/design/NAME-implementation-plan.md` (e.g. `CAR-implementation-plan.md`)
   - ❌ Plan buried in a thread or issue comment
   - ✅ `docs/design/CAR-implementation-plan.md`
+  - ✅ `docs/design/PLAN-v3.6.0.md`
 
 5.4. **Tests mirror module location**
   - Pure logic: `test/lib/...`
