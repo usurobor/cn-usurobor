@@ -197,6 +197,8 @@ Examples: ENGINEERING, PM, WISDOM, OPERATIONS.
 
 Bounded, selected, instrumental cognitive module. Skills are situational amplifiers, not identity. They live under `skills/<name>/` with a `SKILL.md` file defining TERMS, INPUTS, and EFFECTS. Skills are scored and compete for bounded slots at wake-up.
 
+**Location:** `skills/<name>/SKILL.md` in the package source; installed into `.cn/vendor/packages/<pkg>/skills/<name>/`.
+
 If doctrine competes with task skills, the architecture is already confused.
 
 ---
@@ -286,15 +288,13 @@ A network of agents that use git repositories as their primary surface for specs
 
 ### Hub
 
-A git repository that is an agent's home. Holds threads, state, config, and installed cognitive packages. Created by `cn init` + `cn setup`.
+A git repository that is an agent's home. Holds identity (`spec/SOUL.md`, `spec/USER.md`), threads, state, and installed cognitive packages. Created by `cn init` + `cn setup`.
 
-In the two-repo model:
-- `cnos` is the **template** repo (shared skills, mindsets, docs, runtime code)
-- `cn-<agentname>` is the agent's **hub** (personal identity, state, threads)
+Cognition is local: doctrine, mindsets, and skills are installed into `.cn/vendor/packages/` at setup time. The hub is wake-ready from its own files — no external checkout required.
 
 ### cnos (Coherence Network OS)
 
-The template repo and runtime for CN agents. Contains the `cn` CLI, cognitive packages (doctrine, mindsets, skills), design documents, and tests. cnos is the current lowest durable software articulation of the coherence system.
+The source repo and runtime for CN agents. Contains the `cn` CLI, cognitive packages (doctrine, mindsets, skills), design documents, and tests. cnos is the current lowest durable software articulation of the coherence system. Agents consume cnos through installed packages, not through a checkout dependency.
 
 ### Thread
 
@@ -331,7 +331,7 @@ The agent is the brain. `cn` is the body. Git is the nervous system.
 
 A practice exercise that walks an agent or human through concrete steps to learn or exercise a behavior.
 
-**Location:** `skills/<skill-name>/kata.md` — katas live alongside the skill they exercise.
+**Location:** `skills/<name>/kata.md` — katas live alongside the skill they exercise.
 
 ### Coherent Reflection
 
