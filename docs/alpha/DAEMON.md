@@ -1,7 +1,12 @@
 # CN Daemon Architecture
 
-**Status:** Future design  
+**Status:** Partially realized (v3.7.0 unified scheduler)
 **Created:** 2026-02-05
+**Updated:** 2026-03-12
+
+> **See also:** [SCHEDULER-v3.7.0](SCHEDULER-v3.7.0.md) — the unified scheduler
+> design that implements the core of this vision. The plugin architecture below
+> remains a future direction.
 
 ---
 
@@ -9,17 +14,21 @@
 
 cn evolves from CLI tool to lightweight agent runtime service, replacing OpenClaw for cnos deployments.
 
-## Current State
+## Implemented (v3.7.0)
+
+The daemon now runs the unified protocol loop:
 
 ```
-[System Cron] → cn inbox check → [OpenClaw] → Agent
-                                      ↑
-                              (messaging, LLM invocation)
+[cn agent --daemon]
+├── fast clock     → Telegram poll (optional) → immediate drain
+├── slow clock     → maintain_once (sync, inbox, outbox, update, review, cleanup) → bounded drain
+└── process_one    → shared processing engine (same as oneshot)
 ```
 
-OpenClaw provides: cron, telegram integration, LLM invocation, session management.
+cn is the service. Agent is passive — cn invokes it when needed.
+Telegram is optional — daemon works peer-only.
 
-## Future State
+## Original Future Vision (plugin architecture)
 
 ```
 [cn daemon]
@@ -29,7 +38,7 @@ OpenClaw provides: cron, telegram integration, LLM invocation, session managemen
 └── git plugin       → coordination (fetch, push, branch ops)
 ```
 
-cn becomes the service. Agent is passive — cn invokes it when needed.
+The plugin interface remains a future direction beyond v3.7.0.
 
 ## Design Principles
 
@@ -90,9 +99,10 @@ type plugin = {
 
 ## Migration Path
 
-1. **Now**: System cron + OC for agent invocation
-2. **Next**: cn daemon with cron plugin, still uses OC for telegram/LLM
-3. **Later**: cn daemon with all plugins, OC optional
+1. ~~**Now**: System cron + OC for agent invocation~~ (completed)
+2. ~~**Next**: cn daemon with cron plugin, still uses OC for telegram/LLM~~ (completed — v3.7.0)
+3. **Current**: Unified scheduler — daemon and oneshot both run full protocol loop
+4. **Later**: Plugin architecture for extensible transports and capabilities
 
 ## Security Model
 
@@ -110,12 +120,12 @@ See [SECURITY-MODEL.md](./SECURITY-MODEL.md) for full details.
 
 ## Open Questions
 
-- Daemon process management (systemd? pm2? native?)
-- Plugin discovery and loading
-- Config format (extend cn.json?)
-- How to handle telegram auth/tokens
-- LLM API key management
+- ~~Daemon process management~~ → systemd (documented in [AUTOMATION.md](../how-to/AUTOMATION.md))
+- Plugin discovery and loading (future)
+- ~~Config format~~ → `.cn/config.json` with `runtime.scheduler` block
+- ~~Telegram auth/tokens~~ → `.cn/secrets.env` or env vars
+- ~~LLM API key management~~ → ANTHROPIC_KEY via Cn_dotenv
 
 ---
 
-*This doc captures direction. Implementation TBD.*
+*Original vision doc. See [SCHEDULER-v3.7.0](SCHEDULER-v3.7.0.md) for current implementation.*
