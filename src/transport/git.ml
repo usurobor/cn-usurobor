@@ -35,6 +35,9 @@ let add_all ~cwd =
 let commit ~cwd ~msg =
   exec ~cwd (Printf.sprintf "git commit -m %s" (Filename.quote msg)) |> Option.is_some
 
+let commit_allow_empty ~cwd ~msg =
+  exec ~cwd (Printf.sprintf "git commit --allow-empty -m %s" (Filename.quote msg)) |> Option.is_some
+
 let push ~cwd =
   exec ~cwd "git push origin HEAD" |> Option.is_some
 

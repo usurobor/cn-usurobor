@@ -1,25 +1,19 @@
 (** cn_maintenance.ml — Unified maintenance engine (SCHEDULER-v3.7.0)
 
-    Canonical maintenance primitives reusable from both daemon and oneshot
-    schedulers. No scheduler logic or Telegram logic inside this module.
-
-    Responsibilities:
-    - peer sync (fetch from peers, commit+push to origin)
-    - inbox check + materialization
-    - outbox flush
-    - update checks
-    - MCA/review tick (time-gated via review_interval_sec)
-    - stale state cleanup
+    Interoceptive (self-driven) protocol duties reusable from both daemon
+    and oneshot schedulers. No scheduler logic or Telegram logic inside
+    this module — exteroceptive concerns live in cn_runtime.ml.
 
     Each primitive emits trace events via the global trace session.
+    Uses Git module for argv-style execution (no shell strings).
 
     Primitive boundaries (each does exactly one thing):
-    - sync_once: git fetch from peers, stage changes, commit, push
     - inbox_check_once: fetch inbound peer branches, triage to inbox
+    - sync_once: git fetch, add, heartbeat commit, push (transport-level)
     - materialize_inbox_once: queue inbox items for processing
     - flush_outbox_once: send pending outbox messages to peers
     - update_check_once: check for binary updates
-    - review_tick_once: time-gated MCA review
+    - review_tick_once: time-gated MCA review (wall-clock via review_interval_sec)
     - cleanup_once: GC stale finalized markers *)
 
 open Cn_lib
@@ -68,25 +62,17 @@ let write_last_review_at hub_path =
 
 (* === Sync primitive === *)
 
-(** Peer sync: fetch from peers, stage local changes, commit, push.
-    This is pure git-level sync — no inbox triage or outbox transport.
-    The heartbeat commit ensures the hub's HEAD advances even when idle,
-    keeping peers informed of liveness via git log. *)
-let sync_once ~hub_path ~name =
+(** Peer sync: fetch inbound branches, stage local changes, heartbeat commit, push.
+    Uses Git module for argv-style execution (no shell strings).
+    The heartbeat commit advances HEAD even when idle, signaling liveness to peers. *)
+let sync_once ~hub_path =
   Cn_trace.gemit ~component:"maintenance" ~layer:Body
     ~event:"sync.start" ~severity:Info ~status:Ok_ ();
   try
-    Cn_mail.inbox_check hub_path name;
-    Cn_mail.inbox_process hub_path;
-    let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git add -A" in
-    let commit_result = Cn_ffi.Child_process.exec_in ~cwd:hub_path
-      "git commit -m 'heartbeat' --allow-empty" in
-    (match commit_result with
-     | Some _ ->
-         let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path
-           "git push origin 2>/dev/null" in
-         ()
-     | None -> ());
+    let _ = Git.fetch ~cwd:hub_path in
+    let _ = Git.add_all ~cwd:hub_path in
+    if Git.commit_allow_empty ~cwd:hub_path ~msg:"heartbeat" then
+      ignore (Git.push ~cwd:hub_path);
     Cn_trace.gemit ~component:"maintenance" ~layer:Body
       ~event:"sync.ok" ~severity:Info ~status:Ok_ ();
     Ok
@@ -95,6 +81,25 @@ let sync_once ~hub_path ~name =
     Cn_trace.gemit ~component:"maintenance" ~layer:Body
       ~event:"sync.error" ~severity:Warn ~status:Degraded
       ~reason_code:"sync_failed" ~reason:msg ();
+    Degraded msg
+
+(* === Inbox check primitive === *)
+
+(** Fetch inbound peer branches and triage to inbox.
+    Separate from sync_once: this is protocol-level inbox work,
+    not git-level transport. *)
+let inbox_check_once ~hub_path ~name =
+  try
+    Cn_mail.inbox_check hub_path name;
+    Cn_mail.inbox_process hub_path;
+    Cn_trace.gemit ~component:"maintenance" ~layer:Body
+      ~event:"inbox.checked" ~severity:Info ~status:Ok_ ();
+    Ok
+  with exn ->
+    let msg = Printexc.to_string exn in
+    Cn_trace.gemit ~component:"maintenance" ~layer:Body
+      ~event:"inbox.checked" ~severity:Warn ~status:Degraded
+      ~reason_code:"inbox_check_failed" ~reason:msg ();
     Degraded msg
 
 (* === Inbox materialization primitive === *)
@@ -252,22 +257,25 @@ let cleanup_once ~hub_path =
 
 (* === Unified maintain_once === *)
 
-(** Run one full maintenance tick: sync, inbox, outbox, update, review, cleanup.
+(** Run one full maintenance tick (interoception — self-driven protocol duties).
     Returns a maintenance_result describing what happened.
     Sub-step failures degrade but do not crash the scheduler.
 
     Primitive sequence:
-    1. sync_once — fetch peers, stage, commit heartbeat, push
-    2. materialize_inbox_once — queue inbox items
-    3. flush_outbox_once — send pending outbox to peers
-    4. update_check_once — binary update (when idle)
-    5. review_tick_once — MCA review (time-gated)
-    6. cleanup_once — GC stale markers *)
+    1. inbox_check_once — fetch inbound peer branches, triage to inbox
+    2. sync_once — stage, heartbeat commit, push (git-only)
+    3. materialize_inbox_once — queue inbox items for processing
+    4. flush_outbox_once — send pending outbox to peers
+    5. update_check_once — binary update (when idle)
+    6. review_tick_once — MCA review (time-gated)
+    7. cleanup_once — GC stale markers *)
 let maintain_once ~(config : Cn_config.config) ~hub_path ~name =
   Cn_trace.gemit ~component:"maintenance" ~layer:Body
     ~event:"maintenance.start" ~severity:Info ~status:Ok_ ();
 
-  let sync_status = sync_once ~hub_path ~name in
+  (* Inbox check before sync: fetch peer branches so sync commits include them *)
+  let _inbox_check = inbox_check_once ~hub_path ~name in
+  let sync_status = sync_once ~hub_path in
   let inbox_status = materialize_inbox_once ~hub_path in
   let outbox_status = flush_outbox_once ~hub_path ~name in
   let update_status =
