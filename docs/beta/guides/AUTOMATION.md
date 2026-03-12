@@ -1,6 +1,6 @@
 # Automation: Cron + Daemon Setup
 
-cnos uses system cron or a Telegram daemon for automation. This follows the principle:
+cnos uses system cron or a long-running daemon for automation. This follows the principle:
 
 > *"Tokens for thinking. Electrons for clockwork."*
 
@@ -8,24 +8,29 @@ Cron handles orchestration. The LLM handles response. Zero tokens wasted on rout
 
 ---
 
-## Two Modes
+## Two Modes (Unified Scheduler — v3.7.0)
+
+Both schedulers run the **same protocol loop**: maintenance (sync, inbox, outbox,
+update check, MCA review, cleanup) → queue drain → exit/loop. The only difference
+is cadence.
 
 | Mode | Entry point | Best for |
 |------|-------------|----------|
-| **Cron** | `cn sync && cn agent` (every 5 min) | Peer-based agents (git sync) |
-| **Daemon** | `cn agent --daemon` (long-running) | Telegram-connected agents |
+| **Oneshot** | `cn agent` (via cron/timer) | Peer-based agents, minimal resource use |
+| **Daemon** | `cn agent --daemon` (long-running) | Telegram-connected agents, or peer-only agents needing faster sync |
 
-Both modes use the same runtime pipeline under the hood. The daemon just replaces
-cron polling with Telegram long-poll.
+The daemon no longer requires a Telegram token. A peer-only daemon runs maintenance
+ticks on its configured interval without any external transport.
 
 ---
 
-## Cron Setup
+## Cron / Oneshot Setup
 
-`cn agent` runs the full runtime cycle under atomic lock:
-1. Queue inbox items to `state/queue/`
-2. Dequeue → pack context → call LLM → execute ops → archive
-3. Recovery: handles crash at any point (resumes from correct step)
+`cn agent` runs one full maintenance cycle + bounded queue drain under atomic lock:
+1. Maintenance: sync peers, materialize inbox, flush outbox, update check, MCA review, cleanup
+2. Drain queue: dequeue → pack context → call LLM → execute ops → archive (up to `oneshot_drain_limit`)
+3. Exit
+4. Recovery: handles crash at any point (resumes from correct step)
 
 ### 1. Install cn
 
@@ -57,10 +62,27 @@ Optionally create `.cn/config.json` for non-secret settings:
     "model": "claude-sonnet-4-6",
     "max_tokens": 4096,
     "poll_interval": 30,
-    "allowed_users": [12345678]
+    "allowed_users": [12345678],
+    "scheduler": {
+      "sync_interval_sec": 300,
+      "review_interval_sec": 300,
+      "oneshot_drain_limit": 1,
+      "daemon_drain_limit": 8
+    }
   }
 }
 ```
+
+**Scheduler settings** (all optional, shown with defaults):
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `sync_interval_sec` | 300 | Daemon slow-clock interval (seconds between maintenance ticks) |
+| `review_interval_sec` | 300 | MCA review interval |
+| `oneshot_drain_limit` | 1 | Max items to process per oneshot run |
+| `daemon_drain_limit` | 8 | Max items to drain per daemon maintenance cycle |
+
+All values are clamped to minimum 1.
 
 ### 3. Add to crontab
 
@@ -70,36 +92,46 @@ crontab -e
 
 Add:
 ```cron
-# cn runtime: sync + agent every 5 minutes
-*/5 * * * * cd /path/to/your-hub && cn sync && cn agent >> /var/log/cn.log 2>&1
+# cn runtime: agent every 5 minutes (maintenance + drain built-in)
+*/5 * * * * cd /path/to/your-hub && cn agent >> /var/log/cn.log 2>&1
 ```
 
 Replace `/path/to/your-hub` with your actual hub path.
+
+> **Note (v3.7.0):** `cn agent` now includes maintenance (sync, inbox, outbox)
+> automatically. A separate `cn sync` before `cn agent` is no longer required
+> but remains available as a standalone command.
 
 ### 4. Verify
 
 ```bash
 # Manual test
 cd /path/to/your-hub
-cn sync
 cn agent
 
 # Check logs
 tail -f /var/log/cn.log
+
+# Check state projections
+cat state/ready.json    # scheduler section shows last_sync_at, last_maintenance_status
 ```
 
 ---
 
-## Daemon Setup (Telegram)
+## Daemon Setup
 
-For Telegram-connected agents, use `cn agent --daemon` instead of cron.
-The daemon long-polls Telegram, enqueues messages, and processes them.
+The daemon runs the unified scheduler loop continuously. It supports two clocks:
+- **Fast clock:** Telegram poll (if token configured) → immediate drain after new work
+- **Slow clock:** Periodic maintenance tick (sync, inbox, outbox, update, review, cleanup) → bounded drain
+
+The daemon works with or without Telegram. A peer-only daemon (no `TELEGRAM_TOKEN`)
+runs maintenance ticks on the configured `sync_interval_sec` interval.
 
 ### 1. Set environment variables
 
 ```bash
 export ANTHROPIC_KEY="sk-ant-..."
-export TELEGRAM_TOKEN="123456:ABC..."
+export TELEGRAM_TOKEN="123456:ABC..."   # optional — daemon works without it
 ```
 
 ### 2. Configure allowed users
@@ -160,39 +192,57 @@ WantedBy=multi-user.target
 
 ---
 
-## How It Works
+## How It Works (v3.7.0 Unified Scheduler)
 
 ```
-┌──────────────────┐
-│  System cron     │    OR    ┌──────────────────┐
-│  (every 5 min)   │         │  Telegram daemon  │
-└────────┬─────────┘         │  (long-poll loop) │
-         │                    └────────┬─────────┘
-         ▼                             ▼
 ┌──────────────────┐         ┌──────────────────┐
-│    cn sync       │         │  get_updates()   │
-│  (fetch/send)    │         │  enqueue to queue │
+│  System cron     │    OR   │  Daemon loop     │
+│  (every 5 min)   │         │  (long-running)  │
 └────────┬─────────┘         └────────┬─────────┘
          │                             │
          ▼                             ▼
 ┌──────────────────────────────────────────────┐
-│              cn agent (process_one)           │
+│          Shared Maintenance Engine            │
+│  (cn_maintenance.maintain_once):              │
+│  1. Peer sync (fetch, inbox, outbox flush)    │
+│  2. Update check (when idle)                  │
+│  3. MCA review tick                           │
+│  4. Stale state cleanup                       │
+└────────────────────┬─────────────────────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────┐
+│        Shared Queue Drain (drain_queue)       │
+│  Repeats process_one until:                   │
+│  - queue empty                                │
+│  - drain limit reached                        │
+│  - lock busy / error                          │
+└────────────────────┬─────────────────────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────┐
+│          process_one (per item)               │
 │  Under atomic lock (state/agent.lock):        │
-│  1. GC stale markers (idle only)              │
-│  2. Queue inbox items                         │
-│  3. Dequeue from state/queue/                 │
-│  4. Pack context (identity, skills, caps,     │
+│  1. Queue inbox items                         │
+│  2. Dequeue from state/queue/                 │
+│  3. Pack context (identity, skills, caps,     │
 │     conversation, message)                    │
-│  5. Write state/input.md                      │
-│  6. Call Claude API (body-only prompt)         │
-│  7. Write state/output.md                     │
-│  8. Archive to logs/ (before effects)         │
-│  9. CN Shell: two-pass execute (observe →     │
+│  4. Write state/input.md                      │
+│  5. Call Claude API (body-only prompt)         │
+│  6. Write state/output.md                     │
+│  7. Archive to logs/ (before effects)         │
+│  8. CN Shell: two-pass execute (observe →     │
 │     effect) + write receipts                  │
-│  10. Project to Telegram (idempotent)         │
-│  11. Update conversation (dedup by trigger)   │
-│  12. Cleanup state files + clear marker       │
+│  9. Project to Telegram (idempotent)          │
+│  10. Update conversation (dedup by trigger)   │
+│  11. Cleanup state files + clear marker       │
 └──────────────────────────────────────────────┘
+
+Daemon adds:
+┌──────────────────┐
+│  Fast clock      │ Telegram poll → enqueue → immediate drain
+│  Slow clock      │ Periodic maintain_once → bounded drain
+└──────────────────┘
 ```
 
 ---
