@@ -43,7 +43,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 ### Fixed
 
-- **`cn update` binary support (Issue #27)** — `cn update` now downloads pre-built binaries from GitHub Releases when no git-based install is detected, mirroring `install.sh`. Eliminates the assumption that `/usr/local/lib/cnos` exists with an OCaml toolchain. Both `run_update` and `self_update_check` now use `Cn_agent`'s dual-path update infrastructure (git or binary) instead of duplicating git-only logic.
+- **`cn update` binary-only (Issue #27)** — `cn update` now exclusively downloads pre-built binaries from GitHub Releases, mirroring `install.sh`. Removed the git-based update path entirely: no more `/usr/local/lib/cnos` assumption, no `opam exec -- dune build`, no `has_git_install()` detection. One install method, one update method. `Update_git` variant removed from `update_info` type; replaced by `Update_available`. Self-update check at CLI startup uses the same binary-download path.
 
 ---
 

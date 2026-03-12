@@ -272,51 +272,25 @@ let run_update () =
   print_endline (Cn_fmt.info "Checking for updates...");
   print_endline (Printf.sprintf "Current version: %s" version);
 
-  (* Detect install method: git clone or pre-built binary.
-     Uses Cn_agent's flexible install_dir detection — not hardcoded path. *)
-  if Cn_agent.has_git_install () then begin
-    (* Git-based update: fetch, compare, pull, build *)
-    let fetch_cmd = Printf.sprintf "cd %s && git fetch origin main --quiet 2>&1" Cn_agent.install_dir in
-    let _ = Cn_ffi.Child_process.exec fetch_cmd in
-    let version_cmd = Printf.sprintf "cd %s && git show origin/main:src/lib/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*\"\\([^\"]*\\)\".*/\\1/'" Cn_agent.install_dir in
-    match Cn_ffi.Child_process.exec version_cmd with
-    | None ->
-        print_endline (Cn_fmt.fail "Could not check remote version from git");
-        Cn_ffi.Process.exit 1
-    | Some latest_raw ->
-        let latest = String.trim latest_raw in
-        if not (Cn_lib.is_newer_version latest version) then
-          print_endline (Cn_fmt.ok "Already up to date")
-        else begin
-          print_endline (Cn_fmt.info (Printf.sprintf "New version available: %s" latest));
-          print_endline (Cn_fmt.info "Updating via git...");
-          let result = Cn_agent.do_update (Cn_agent.Update_git latest) in
-          match result with
-          | Cn_protocol.Update_complete ->
-              print_endline (Cn_fmt.ok (Printf.sprintf "Updated to v%s" latest))
-          | _ ->
-              print_endline (Cn_fmt.fail "Build failed after pull. Source updated but binary may be stale.")
-        end
-  end else begin
-    (* Binary update: query GitHub Releases, download, atomic replace *)
-    match Cn_agent.get_latest_release_tag () with
-    | None ->
-        print_endline (Cn_fmt.fail "Could not check for updates (GitHub API unreachable)");
-        Cn_ffi.Process.exit 1
-    | Some tag ->
-        if not (Cn_lib.is_newer_version tag version) then
-          print_endline (Cn_fmt.ok "Already up to date")
-        else begin
-          print_endline (Cn_fmt.info (Printf.sprintf "New version available: %s" tag));
-          print_endline (Cn_fmt.info "Downloading pre-built binary...");
-          let result = Cn_agent.do_update (Cn_agent.Update_binary tag) in
-          match result with
-          | Cn_protocol.Update_complete ->
-              print_endline (Cn_fmt.ok (Printf.sprintf "Updated to %s" tag))
-          | _ ->
-              print_endline (Cn_fmt.fail "Binary download failed. Check network and try again.")
-        end
-  end
+  (* One update path: pre-built binaries from GitHub Releases.
+     Mirrors install.sh — no git clone, no OCaml toolchain required. *)
+  match Cn_agent.get_latest_release_tag () with
+  | None ->
+      print_endline (Cn_fmt.fail "Could not check for updates (GitHub API unreachable)");
+      Cn_ffi.Process.exit 1
+  | Some tag ->
+      if not (Cn_lib.is_newer_version tag version) then
+        print_endline (Cn_fmt.ok "Already up to date")
+      else begin
+        print_endline (Cn_fmt.info (Printf.sprintf "New version available: %s" tag));
+        print_endline (Cn_fmt.info "Downloading pre-built binary...");
+        let result = Cn_agent.do_update (Cn_agent.Update_available tag) in
+        match result with
+        | Cn_protocol.Update_complete ->
+            print_endline (Cn_fmt.ok (Printf.sprintf "Updated to %s" tag))
+        | _ ->
+            print_endline (Cn_fmt.fail "Binary download failed. Check network and try again.")
+      end
 
 let run_update_with_cron hub_path =
   run_update ();
@@ -352,33 +326,13 @@ let self_update_check () =
     a = "--help" || a = "-h" || a = "--version" || a = "-V" || a = "help"
   ) args in
   if is_skip_cmd then ()
-  else if Cn_agent.has_git_install () then begin
-    (* Git-based install: fetch + compare + pull *)
-    let fetch_cmd = Printf.sprintf "cd %s && git fetch origin main --quiet 2>/dev/null" Cn_agent.install_dir in
-    let _ = Cn_ffi.Child_process.exec fetch_cmd in
-    let version_cmd = Printf.sprintf "cd %s && git show origin/main:src/lib/cn_lib.ml 2>/dev/null | grep 'let version' | head -1 | sed 's/.*\"\\([^\"]*\\)\".*/\\1/'" Cn_agent.install_dir in
-    match Cn_ffi.Child_process.exec version_cmd with
-    | None -> ()
-    | Some latest_raw ->
-        let latest = String.trim latest_raw in
-        if Cn_lib.is_newer_version latest version then begin
-          print_endline (Cn_fmt.info (Printf.sprintf "Updating cn %s → %s..." version latest));
-          let result = Cn_agent.do_update (Cn_agent.Update_git latest) in
-          match result with
-          | Cn_protocol.Update_complete ->
-              print_endline (Cn_fmt.ok (Printf.sprintf "Updated to cn %s" latest));
-              Cn_agent.re_exec ()
-          | _ ->
-              print_endline (Cn_fmt.warn "Self-update failed - continuing with current version")
-        end
-  end else begin
-    (* Binary install: query GitHub Releases, download, atomic replace *)
+  else
     match Cn_agent.get_latest_release_tag () with
     | None -> ()
     | Some tag ->
         if Cn_lib.is_newer_version tag version then begin
           print_endline (Cn_fmt.info (Printf.sprintf "Updating cn %s → %s..." version tag));
-          let result = Cn_agent.do_update (Cn_agent.Update_binary tag) in
+          let result = Cn_agent.do_update (Cn_agent.Update_available tag) in
           match result with
           | Cn_protocol.Update_complete ->
               print_endline (Cn_fmt.ok (Printf.sprintf "Updated to cn %s" tag));
@@ -386,7 +340,6 @@ let self_update_check () =
           | _ ->
               print_endline (Cn_fmt.warn "Self-update failed - continuing with current version")
         end
-  end
 
 (* === Release === *)
 
