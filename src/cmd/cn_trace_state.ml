@@ -225,6 +225,37 @@ let update_ready_body hub_path ~boot_id ~updated_at (body : body_projection) =
   ] in
   write_json hub_path "ready.json" (Cn_json.Object fields)
 
+(** Update only the scheduler + status sections of ready.json, preserving mind,
+    body, and sensors. Used by oneshot/cron to avoid clobbering boot state. *)
+let update_ready_scheduler hub_path ~boot_id ~updated_at ~status
+    (sched : scheduler_projection) =
+  let existing = read_ready_json hub_path in
+  let base_fields = match existing with
+    | Some (Cn_json.Object fields) -> fields
+    | _ -> [
+        "schema", Cn_json.String "cn.ready.v1";
+        "boot_id", Cn_json.String boot_id;
+      ]
+  in
+  let opt_str = function Some s -> Cn_json.String s | None -> Cn_json.Null in
+  let sched_json = Cn_json.Object [
+    "mode", Cn_json.String sched.mode;
+    "last_sync_at", opt_str sched.last_sync_at;
+    "last_sync_status", opt_str sched.last_sync_status;
+    "last_maintenance_at", opt_str sched.last_maintenance_at;
+    "last_maintenance_status", opt_str sched.last_maintenance_status;
+  ] in
+  let fields = base_fields
+    |> List.filter (fun (k, _) ->
+         k <> "scheduler" && k <> "status" && k <> "updated_at")
+  in
+  let fields = fields @ [
+    "status", Cn_json.String (string_of_ready_status status);
+    "scheduler", sched_json;
+    "updated_at", Cn_json.String updated_at;
+  ] in
+  write_json hub_path "ready.json" (Cn_json.Object fields)
+
 let write_runtime hub_path (r : runtime_projection) =
   let opt_str = function Some s -> Cn_json.String s | None -> Cn_json.Null in
   let fields = [

@@ -16,17 +16,19 @@ cn evolves from CLI tool to lightweight agent runtime service, replacing OpenCla
 
 ## Implemented (v3.7.0)
 
-The daemon now runs the unified protocol loop:
+The daemon now runs the unified protocol loop with two activity sources:
 
 ```
 [cn agent --daemon]
-├── fast clock     → Telegram poll (optional) → immediate drain
-├── slow clock     → maintain_once (sync, inbox, outbox, update, review, cleanup) → bounded drain
+├── exteroception  → Telegram poll (optional) → immediate drain
+│   (sensor-driven)  Future: webhooks, other transports
+├── interoception  → maintain_once (sync, inbox, outbox, update, review, cleanup) → bounded drain
+│   (self-driven)    Periodic timer at sync_interval_sec
 └── process_one    → shared processing engine (same as oneshot)
 ```
 
 cn is the service. Agent is passive — cn invokes it when needed.
-Telegram is optional — daemon works peer-only.
+Telegram is optional — daemon works peer-only (interoception only).
 
 ## Original Future Vision (plugin architecture)
 
