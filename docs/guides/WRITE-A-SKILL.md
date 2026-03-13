@@ -17,7 +17,7 @@ How to add a new skill to cnos.
 1. Read all three docs above.
 2. Create `skills/<name>/`.
 3. Write `SKILL.md` following the algorithm in `skills/skill/SKILL.md`.
-4. Write `kata.md` — a minimal exercise that runs the skill end-to-end. See [DOJO.md](../tutorials/DOJO.md) for kata format.
+4. Write `kata.md` — a minimal exercise that runs the skill end-to-end. See [DOJO.md](../guides/DOJO.md) for kata format.
 5. Reference the skill from a spec (e.g. `spec/HEARTBEAT.md`) so the agent knows when to invoke it.
 6. Commit and push.
 

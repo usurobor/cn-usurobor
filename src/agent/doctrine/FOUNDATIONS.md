@@ -158,4 +158,4 @@ If any answer is wrong, realign before continuing.
 
 ## Further Reading
 
-- `docs/design/CAA.md` — Coherent agent architecture (structural runtime view)
+- `docs/architecture/CAA.md` — Coherent agent architecture (structural runtime view)

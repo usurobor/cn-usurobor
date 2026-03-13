@@ -578,7 +578,7 @@ A release is a milestone on the coherence gradient:
 ## 15. Relationship to Other Documents
 
 ### System thesis / Above
-- `docs/explanation/THESIS.md` — the public-facing thesis: cnos as a recurrent coherence system
+- `docs/identity/THESIS.md` — the public-facing thesis: cnos as a recurrent coherence system
 
 ### Doctrine / Why
 - `packages/cnos.core/doctrine/FOUNDATIONS.md`
@@ -589,16 +589,16 @@ A release is a milestone on the coherence gradient:
 - `AGENT-OPS.md`
 
 ### Agent architecture / What the coherent agent is
-- `docs/design/CAA.md`
+- `docs/architecture/CAA.md`
 
 ### Runtime embodiment / How it runs
-- `docs/design/AGENT-RUNTIME.md`
+- `docs/architecture/AGENT-RUNTIME.md`
 
 ### Cognitive substrate / How cognition arrives locally
-- `docs/design/CAR.md`
+- `docs/architecture/CAR.md`
 
 ### Development method / How cnos evolves coherently
-- `docs/design/CDD.md`
+- `docs/method/CDD.md`
 
 This document sits between the whitepaper and the individual design docs:
 - the whitepaper defines the thesis for external audiences

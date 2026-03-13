@@ -17,7 +17,7 @@
 |----------|--------|--------|-------|
 | **ARCHITECTURE.md** | NEW | Created | Top-level entry point. See [../ARCHITECTURE.md](../ARCHITECTURE.md) |
 | **MANIFESTO.md** | Current | Keep | Foundational values doc. Not a technical spec. |
-| **WHITEPAPER.md** | Moved | Moved to `docs/explanation/WHITEPAPER.md` | Protocol spec (v2.0.4). System thesis now in `docs/explanation/THESIS.md`. |
+| **WHITEPAPER.md** | Moved | Moved to `docs/identity/WHITEPAPER.md` | Protocol spec (v2.0.4). System thesis now in `docs/identity/THESIS.md`. |
 | **WHITEPAPER-v2.0.3.pdf** | Current | Keep | PDF companion to whitepaper. |
 | **PROTOCOL.md** | Current | Keep | FSM design spec. Matches `cn_protocol.ml` implementation exactly. |
 | **AGILE-PROCESS.md** | Current | Keep | Team process doc, not technical spec. |
@@ -76,7 +76,7 @@ Content worth noting that lives only in archived docs:
 
 | Content | Source | Recommendation |
 |---------|--------|----------------|
-| 2026-02-05 incident RCA | ACTOR-MODEL-DESIGN.md s1 | Preserved in archive; consider extracting to docs/rca/ |
+| 2026-02-05 incident RCA | ACTOR-MODEL-DESIGN.md s1 | Preserved in archive; consider extracting to docs/evidence/rca/ |
 | "event = commit, trigger = hash" | ACTOR-MODEL-DESIGN.md s4.4 | Captured in PROTOCOL.md implementation |
 | Cadence types (daily/weekly/monthly/quarterly/yearly) | AGENT-MODEL.md | Aspirational; not yet implemented |
 | "Tokens for thinking, electrons for clockwork" | INBOX-ARCHITECTURE.md | Motto; preserved in archive |

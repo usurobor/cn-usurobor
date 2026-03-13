@@ -175,9 +175,9 @@ The vision is worth building. The work is implementation.
 
 ## Further Reading
 
-- `docs/design/CAA.md` — Coherent agent architecture (structural runtime view)
+- `docs/architecture/CAA.md` — Coherent agent architecture (structural runtime view)
 - `tsc/spec/tsc-core.md` — TSC measurement specification
 - `tsc-practice/ctb/spec/` — CTB language reference
-- `docs/explanation/THESIS.md` — System thesis: cnos as a recurrent coherence system
-- `docs/explanation/WHITEPAPER.md` — CN protocol specification
-- `docs/design/EXECUTABLE-SKILLS.md` — CTB integration architecture
+- `docs/identity/THESIS.md` — System thesis: cnos as a recurrent coherence system
+- `docs/identity/WHITEPAPER.md` — CN protocol specification
+- `docs/method/EXECUTABLE-SKILLS.md` — CTB integration architecture

@@ -83,7 +83,7 @@ Rules:
 
 All protocol state machines live in `cn_protocol.ml`. States are algebraic types. Transitions are total functions returning `Ok state | Error string`. Invalid transitions are errors, not exceptions. Terminal states are idempotent.
 
-For full state diagrams and transition tables, see [PROTOCOL.md](design/PROTOCOL.md).
+For full state diagrams and transition tables, see [PROTOCOL.md](architecture/PROTOCOL.md).
 
 ### FSM 1: Thread Lifecycle
 
@@ -310,15 +310,15 @@ Example: `pi/20260211-143022-review-request` is a thread from pi.
 
 | Document | Purpose |
 |----------|---------|
-| [MANIFESTO.md](explanation/MANIFESTO.md) | Principles and values |
-| [THESIS.md](explanation/THESIS.md) | System thesis — cnos as a recurrent coherence system |
-| [WHITEPAPER.md](explanation/WHITEPAPER.md) | CN protocol specification |
-| [PROTOCOL.md](design/PROTOCOL.md) | FSM design, state diagrams, transition tables |
-| [AGILE-PROCESS.md](design/AGILE-PROCESS.md) | Team process and workflow |
-| [EXECUTABLE-SKILLS.md](design/EXECUTABLE-SKILLS.md) | Vision: skills as programs |
-| [SECURITY-MODEL.md](design/SECURITY-MODEL.md) | Security architecture |
-| [CLI.md](design/CLI.md) | CLI command reference |
-| [AGENT-RUNTIME.md](design/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.6): CN Shell, typed ops, two-pass, receipts |
-| [LOGGING.md](design/LOGGING.md) | Logging architecture |
+| [MANIFESTO.md](identity/MANIFESTO.md) | Principles and values |
+| [THESIS.md](identity/THESIS.md) | System thesis — cnos as a recurrent coherence system |
+| [WHITEPAPER.md](identity/WHITEPAPER.md) | CN protocol specification |
+| [PROTOCOL.md](architecture/PROTOCOL.md) | FSM design, state diagrams, transition tables |
+| [AGILE-PROCESS.md](method/AGILE-PROCESS.md) | Team process and workflow |
+| [EXECUTABLE-SKILLS.md](method/EXECUTABLE-SKILLS.md) | Vision: skills as programs |
+| [SECURITY-MODEL.md](architecture/SECURITY-MODEL.md) | Security architecture |
+| [CLI.md](architecture/CLI.md) | CLI command reference |
+| [AGENT-RUNTIME.md](architecture/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.6): CN Shell, typed ops, two-pass, receipts |
+| [LOGGING.md](evidence/LOGGING.md) | Logging architecture |
 
-For the full docs audit and archive decisions, see [AUDIT.md](design/AUDIT.md).
+For the full docs audit and archive decisions, see [AUDIT.md](evidence/AUDIT.md).
