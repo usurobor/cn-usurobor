@@ -189,4 +189,4 @@ Content of the reply goes here.
 
 - `skills/peer/SKILL.md` — Adding peers
 - `skills/peer-sync/SKILL.md` — Checking for inbound coordination
-- `docs/α/WHITEPAPER.md` — CN protocol specification
+- `docs/alpha/WHITEPAPER.md` — CN protocol specification

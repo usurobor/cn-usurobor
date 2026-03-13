@@ -53,7 +53,7 @@ referenced here as architectural constraints:
 | Layer | Doctrine file | Architectural role |
 |-------|--------------|-------------------|
 | Dynamic atom | CAP | When and how to act or learn |
-| Review geometry | COHERENCE | Whether the result remained whole (α/β/γ) |
+| Review geometry | COHERENCE | Whether the result remained whole (alpha/β/γ) |
 | Relational boundary | CBP + CA-Conduct | Whether the action preserved trust |
 | Runtime grammar | AGENT-OPS | How the agent emits output |
 
@@ -89,7 +89,7 @@ the architecture is broken.
 Every processing cycle:
 
 ```
-CMP → MCP → Choose (MCA/MCI) → Review (α/β/γ) → Emit → Repeat
+CMP → MCP → Choose (MCA/MCI) → Review (alpha/β/γ) → Emit → Repeat
 ```
 
 ### 5.1 CMP (Coherence Mapping Pass)

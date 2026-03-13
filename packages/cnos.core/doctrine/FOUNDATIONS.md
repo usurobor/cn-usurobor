@@ -158,5 +158,5 @@ If any answer is wrong, realign before continuing.
 
 ## Further Reading
 
-- `docs/α/COHERENCE-SYSTEM.md` — Meta-system: how these doctrinal layers compose across agent, runtime, packages, repository, and development (MCP/CMP/CAP/CLP)
-- `docs/α/CAA.md` — Coherent agent architecture (structural runtime view)
+- `docs/alpha/COHERENCE-SYSTEM.md` — Meta-system: how these doctrinal layers compose across agent, runtime, packages, repository, and development (MCP/CMP/CAP/CLP)
+- `docs/alpha/CAA.md` — Coherent agent architecture (structural runtime view)

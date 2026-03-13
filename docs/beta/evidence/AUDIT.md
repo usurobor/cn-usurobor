@@ -76,7 +76,7 @@ Content worth noting that lives only in archived docs:
 
 | Content | Source | Recommendation |
 |---------|--------|----------------|
-| 2026-02-05 incident RCA | ACTOR-MODEL-DESIGN.md s1 | Preserved in archive; consider extracting to docs/β/evidence/rca/ |
+| 2026-02-05 incident RCA | ACTOR-MODEL-DESIGN.md s1 | Preserved in archive; consider extracting to docs/beta/evidence/rca/ |
 | "event = commit, trigger = hash" | ACTOR-MODEL-DESIGN.md s4.4 | Captured in PROTOCOL.md implementation |
 | Cadence types (daily/weekly/monthly/quarterly/yearly) | AGENT-MODEL.md | Aspirational; not yet implemented |
 | "Tokens for thinking, electrons for clockwork" | INBOX-ARCHITECTURE.md | Motto; preserved in archive |

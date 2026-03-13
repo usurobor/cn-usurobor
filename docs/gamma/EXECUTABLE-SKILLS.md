@@ -340,7 +340,7 @@ The WHITEPAPER's §10.2 lists "specified but not implemented" features. This pap
 
 ### 6.2 TSC [3] and tsc-practice [2]
 
-CTB lives in tsc-practice/ctb/. TSC defines the measurement framework (α/β/γ axes, C_Σ aggregate). CTB makes that framework executable.
+CTB lives in tsc-practice/ctb/. TSC defines the measurement framework (alpha/β/γ axes, C_Σ aggregate). CTB makes that framework executable.
 
 The relationship is:
 - TSC defines what coherence means.
@@ -395,7 +395,7 @@ Coherence is wholeness. A coherent system is one where structure, relation, and 
 
 ## References
 
-[1] WHITEPAPER v2.0.3. "Moltbook Failed. Long Live Moltbook. — Git as a Native Communication Surface for AI Agents." docs/α/WHITEPAPER.md in cnos. https://github.com/usurobor/cnos
+[1] WHITEPAPER v2.0.3. "Moltbook Failed. Long Live Moltbook. — Git as a Native Communication Surface for AI Agents." docs/alpha/WHITEPAPER.md in cnos. https://github.com/usurobor/cnos
 
 [2] tsc-practice. Applied methods for TSC: CLP, CRS, CAP, and CTB. https://github.com/usurobor/tsc-practice
 

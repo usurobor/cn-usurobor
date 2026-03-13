@@ -63,9 +63,9 @@ Operators can now answer "did it boot? what did it load? why did it transition?"
 - **Governance events** — `pass.selected`, `ops.classified`, `policy.denied` from orchestrator with reason codes.
 - **`Cn_hub.log_action` shim** — Resurrected as compatibility bridge to `Cn_trace.gemit`.
 - **`Cn_agent.queue_depth`** — Real queue count in projections.
-- **`docs/α/TRACEABILITY.md`** — Full observability spec (721 lines).
-- **`docs/γ/plans/TRACEABILITY-implementation-plan.md`** — 12-step implementation plan.
-- **`docs/γ/CDD.md`** — Coherence-Driven Development v1.1.0: development method applying CAP to the development process.
+- **`docs/alpha/TRACEABILITY.md`** — Full observability spec (721 lines).
+- **`docs/gamma/plans/TRACEABILITY-implementation-plan.md`** — 12-step implementation plan.
+- **`docs/gamma/CDD.md`** — Coherence-Driven Development v1.1.0: development method applying CAP to the development process.
 - **Doc graph updates** — TRACEABILITY wired into README.md, AGENT-RUNTIME.md updated to v3.3.7.
 
 ### Fixed
@@ -88,7 +88,7 @@ Everything cognitive is now a package. Three packages ship: `cnos.core` (doctrin
 - **`cnos.eng` package** — engineering skills (coding, design, functional, OCaml, RCA, review, ship, testing, tool-writing, UX-CLI)
 - **`cnos.pm` package** — PM skills (follow-up, issue, ship)
 - **Role profiles** — `profiles/engineer.json`, `profiles/pm.json` — select packages per role
-- **CAA v1.0.0** (`docs/α/CAA.md`) — Coherent Agent Architecture spec: structural definition of a coherent agent, 7 invariants, failure mode table, wake-up strata
+- **CAA v1.0.0** (`docs/alpha/CAA.md`) — Coherent Agent Architecture spec: structural definition of a coherent agent, 7 invariants, failure mode table, wake-up strata
 - **FOUNDATIONS.md** (`docs/explanation/`, `packages/cnos.core/doctrine/`) — doctrinal capstone: first principle through runtime, four doctrinal layers, cognitive loop, hierarchy of guidance
 - **Doc graph cleanup** — version numbers removed from design doc filenames (AGENT-RUNTIME-v3.md → AGENT-RUNTIME.md, CAR-v3.4.md → CAR.md, PLAN-v3.3.md → PLAN.md)
 
@@ -103,7 +103,7 @@ Everything cognitive is now a package. Three packages ship: `cnos.core` (doctrin
 
 ### Removed
 
-- **`docs/design/CAR-v3.4.md`** — superseded by `docs/α/CAR.md` (unified model)
+- **`docs/design/CAR-v3.4.md`** — superseded by `docs/alpha/CAR.md` (unified model)
 - Template-repo assumption throughout docs
 
 ---
@@ -123,7 +123,7 @@ Fresh hubs now wake with the full cognitive substrate — mindsets, skills, and 
 - **`cn doctor`** checks for `.cn/vendor/core/`, deps manifest, and lockfile
 - **`cn setup`** and `cn init` now materialize cognitive assets automatically — hub is wake-ready out of the box
 - **CAR design doc** (`docs/design/CAR-v3.4.md`) — problem statement, three-layer model, package format, resolution spec
-- **Implementation plan** (`docs/γ/plans/CAR-implementation-plan.md`) — 8 ordered steps
+- **Implementation plan** (`docs/gamma/plans/CAR-implementation-plan.md`) — 8 ordered steps
 
 ### Changed
 
@@ -223,7 +223,7 @@ After  (v3.2):  { system: [stable_block, dynamic_block], messages: [turn, turn, 
 - **Design doc** — `docs/DESIGN-LLM-SCHEMA.md` covers problem, schema, OCaml serialization decision, and all tradeoffs
 - **Mindsets in context packer** (v3.1.x) — `src/agent/mindsets/` loaded in deterministic order between USER and reflections
 - **Role-weighted skill scoring** (v3.1.x) — `runtime.role` from `.cn/config.json` applies +2 bonus to matching skill paths
-- **Setup installer design doc** — `docs/α/SETUP-INSTALLER.md`: guided `cn setup` flow with Telegram auto-detection, persona picker, secrets management
+- **Setup installer design doc** — `docs/alpha/SETUP-INSTALLER.md`: guided `cn setup` flow with Telegram auto-detection, persona picker, secrets management
 - **UX-CLI terminal conventions** — Color-to-semantics map, `NO_COLOR` support, actionable error messages
 - **New skills** — `agent/coherent`, `eng/coding`, `eng/functional`, `eng/testing`
 
@@ -489,7 +489,7 @@ Core architectural principle established: Agent = brain (decisions only), cn = b
 - **Audit skill** — `skills/audit/`: periodic health checks
 - **Adhoc-thread skill** — `skills/adhoc-thread/`: when/how to create threads (β test)
 - **THINKING mindset** — evidence-based reasoning, know vs guess
-- **AGILE-PROCESS** — `docs/γ/AGILE-PROCESS.md`: backlog to done workflow
+- **AGILE-PROCESS** — `docs/gamma/AGILE-PROCESS.md`: backlog to done workflow
 - **THREADS-UNIFIED** — `docs/design/THREADS-UNIFIED.md`: backlog as threads, GTD everywhere
 
 ### Changed
@@ -515,7 +515,7 @@ Major coordination upgrade. Agents now use Erlang-inspired actor model: your rep
 ### Added
 - **inbox tool** — replaces peer-sync. GTD triage with Do/Defer/Delegate/Delete
 - **Actor model design** — `docs/design/ACTOR-MODEL-DESIGN.md`
-- **RCA process** — `docs/β/evidence/rca/` with template and first incident
+- **RCA process** — `docs/beta/evidence/rca/` with template and first incident
 - **FUNCTIONAL.md** — mindset for OCaml/FP patterns
 - **PM.md** — product management mindset with user stories, no self-merge
 - **FOUNDATIONS.md** — the coherence stack explained (C≡ → TSC → CTB → cnos)

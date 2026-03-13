@@ -101,7 +101,7 @@ CDD (γ) governs how every layer evolves. The relation:
 
 ### Guides → Operator
 
-Guides (β/guides/) connect operators to the system. The relation:
+Guides (beta/guides/) connect operators to the system. The relation:
 
 - HANDSHAKE → WHITEPAPER §7 (transport levels), `cn_mail.ml`
 - AUTOMATION → DAEMON, `cn_agent.ml`, `cn_telegram.ml`
@@ -110,7 +110,7 @@ Guides (β/guides/) connect operators to the system. The relation:
 
 ### Evidence → Model
 
-Evidence (β/evidence/) tests whether model matches reality. The relation:
+Evidence (beta/evidence/) tests whether model matches reality. The relation:
 
 - RCAs reveal where runtime behavior diverged from spec
 - AUDIT tracks doc health — which articulations are stale, which are current
@@ -188,7 +188,7 @@ All state machines live in `cn_protocol.ml`. States are algebraic types. Transit
 | Transport Sender | Pending → BranchCreated → Pushing → Pushed → Delivered | Outbox delivery |
 | Transport Receiver | Fetched → Materializing → Materialized → Cleaned | Inbox materialization |
 
-Full state diagrams and transition tables: [PROTOCOL.md](../α/PROTOCOL.md).
+Full state diagrams and transition tables: [PROTOCOL.md](../alpha/PROTOCOL.md).
 
 ### How they compose
 
@@ -253,9 +253,9 @@ hub/
 | Document | Relation |
 |----------|----------|
 | [THESIS.md](../THESIS.md) | The whole — this doc maps its internal relations |
-| [COHERENCE-SYSTEM.md](../α/COHERENCE-SYSTEM.md) | Meta-model that this doc makes relational |
-| [CAA.md](../α/CAA.md) | Agent structure — this doc maps it to runtime modules |
-| [AGENT-RUNTIME.md](../α/AGENT-RUNTIME.md) | Runtime spec — this doc shows how it relates to FSMs and observability |
-| [PROTOCOL.md](../α/PROTOCOL.md) | FSM design — this doc shows how FSMs compose |
-| [CDD.md](../γ/CDD.md) | Development method — governs how all these relations evolve |
+| [COHERENCE-SYSTEM.md](../alpha/COHERENCE-SYSTEM.md) | Meta-model that this doc makes relational |
+| [CAA.md](../alpha/CAA.md) | Agent structure — this doc maps it to runtime modules |
+| [AGENT-RUNTIME.md](../alpha/AGENT-RUNTIME.md) | Runtime spec — this doc shows how it relates to FSMs and observability |
+| [PROTOCOL.md](../alpha/PROTOCOL.md) | FSM design — this doc shows how FSMs compose |
+| [CDD.md](../gamma/CDD.md) | Development method — governs how all these relations evolve |
 | [AUDIT.md](./evidence/AUDIT.md) | Evidence — tracks which relations are current vs stale |
