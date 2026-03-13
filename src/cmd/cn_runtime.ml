@@ -1071,6 +1071,7 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
   let last_maintenance_at = ref 0.0 in
   let last_maintenance_status = ref "none" in
   let last_sync_status = ref "none" in
+  let last_drain_degraded = ref false in
 
   (* Telegram-specific state (only if token present) *)
   let offset = ref (
@@ -1088,8 +1089,11 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
   (* Write initial ready.json with scheduler projection *)
   let write_daemon_ready ?(tg_poll_status = "starting") () =
     let now = Cn_fmt.now_iso () in
+    let maint_deg = !last_maintenance_status = "degraded" in
+    let overall_degraded = maint_deg || !last_drain_degraded in
     Cn_trace_state.write_ready hub_path {
-      status = Ready; boot_id = boot.session.boot_id;
+      status = (if overall_degraded then Degraded else Ready);
+      boot_id = boot.session.boot_id;
       updated_at = now;
       blocked_reason = None;
       mind = Some {
@@ -1175,13 +1179,19 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
       last_sync_status := Cn_maintenance.status_string maint_result.sync_status;
       (* Drain any newly materialized work *)
       let limit = config.scheduler.daemon_drain_limit in
-      let _ = drain_queue ~config ~hub_path ~name ~limit in
+      let (_processed, drain_stop) = drain_queue ~config ~hub_path ~name ~limit in
+      last_drain_degraded := (match drain_stop with
+        | Lock_busy | Processing_failed _ -> true
+        | Queue_empty | Drain_limit_reached -> false);
       write_daemon_ready ~tg_poll_status:"ok" ();
       (* Check degraded state *)
-      if Cn_maintenance.is_degraded maint_result then
+      let maint_deg = Cn_maintenance.is_degraded maint_result in
+      if maint_deg || !last_drain_degraded then
         Cn_trace.gemit ~component:"scheduler" ~layer:Body
           ~event:"scheduler.degraded" ~severity:Warn ~status:Degraded
-          ~reason_code:"maintenance_degraded" ()
+          ~reason_code:(if !last_drain_degraded then
+                          string_of_drain_stop drain_stop
+                        else "maintenance_degraded") ()
     end;
 
     (* === Exteroception: Telegram poll + immediate drain (sensor-driven) === *)
@@ -1190,8 +1200,14 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
         (* Peer-only daemon (interoception only): drain any existing queue work *)
         if Cn_agent.queue_depth hub_path > 0 then begin
           let limit = config.scheduler.daemon_drain_limit in
-          let _ = drain_queue ~config ~hub_path ~name ~limit in
-          ()
+          let (_processed, drain_stop) = drain_queue ~config ~hub_path ~name ~limit in
+          let drain_deg = match drain_stop with
+            | Lock_busy | Processing_failed _ -> true
+            | Queue_empty | Drain_limit_reached -> false in
+          if drain_deg <> !last_drain_degraded then begin
+            last_drain_degraded := drain_deg;
+            write_daemon_ready ~tg_poll_status:"ok" ()
+          end
         end
     | Some token ->
         (match Cn_telegram.get_updates ~token ~offset:!offset
