@@ -1,6 +1,8 @@
 # Foundations: The Coherence Stack
 
-Why cnos exists and how it connects to a deeper theory.
+The intellectual lineage of cnos — where the ideas came from and how they connect.
+
+> **Positioning:** This document describes the theoretical stack that cnos inherits from. It is not the current system-level framing. For cnos as it is now — a recurrent coherence system with CMP/MCP/CAP/CLP as its instruction set — see [THESIS.md](../THESIS.md) and [COHERENCE-SYSTEM.md](./COHERENCE-SYSTEM.md). This document answers the question: *where did that come from?*
 
 ---
 
@@ -21,7 +23,7 @@ Current solutions fail because they're built on:
 
 ## The Stack
 
-cnos isn't standalone. It's the coordination layer of a coherent stack:
+cnos inherits from a deeper theoretical stack. Each layer shaped what came after it:
 
 ```
 C≡ (Coherence Calculus)      ← foundational theory
@@ -33,7 +35,9 @@ CTB (C-Triplebar)            ← executable language
 cnos (CN)            ← coordination substrate
 ```
 
-Each layer inherits triadic structure from the one above. This isn't metaphor — it's literal architecture.
+Each layer inherits triadic structure from the one above.
+
+Note: the current cnos system has evolved beyond this ladder. COHERENCE-SYSTEM.md and THESIS.md now define the system-level framing (CMP/MCP/CAP/CLP, recurrent coherence). This stack describes the *lineage* — the theoretical ground those newer articulations stand on.
 
 ---
 
