@@ -900,7 +900,8 @@ let drain_queue ~(config : Cn_config.config) ~hub_path ~name ~limit =
   done;
   if !processed >= limit && !continue then
     stop_reason := Drain_limit_reached;
-  let drain_event, drain_severity, drain_status = match !stop_reason with
+  let drain_event, (drain_severity : Cn_trace.severity), (drain_status : Cn_trace.status) =
+    match !stop_reason with
     | Queue_empty | Drain_limit_reached -> "drain.complete", Info, Ok_
     | Lock_busy -> "drain.stopped", Warn, Blocked
     | Processing_failed _ -> "drain.stopped", Warn, Degraded
@@ -968,7 +969,7 @@ let run_cron ~(config : Cn_config.config) ~hub_path ~name =
          }
    | None -> ());
 
-  let idle_status = if overall_degraded then Degraded else Ok_ in
+  let idle_status : Cn_trace.status = if overall_degraded then Degraded else Ok_ in
   Cn_trace.gemit ~component:"scheduler" ~layer:Body
     ~event:"scheduler.idle" ~severity:(if overall_degraded then Warn else Info)
     ~status:idle_status
@@ -1195,7 +1196,7 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
       (* Emit idle/degraded — symmetric with oneshot scheduler.idle *)
       let maint_deg = Cn_maintenance.is_degraded maint_result in
       let tick_degraded = maint_deg || !last_drain_degraded in
-      let idle_status = if tick_degraded then Degraded else Ok_ in
+      let idle_status : Cn_trace.status = if tick_degraded then Degraded else Ok_ in
       Cn_trace.gemit ~component:"scheduler" ~layer:Body
         ~event:"scheduler.idle" ~severity:(if tick_degraded then Warn else Info)
         ~status:idle_status
