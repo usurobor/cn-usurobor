@@ -577,6 +577,9 @@ A release is a milestone on the coherence gradient:
 
 ## 15. Relationship to Other Documents
 
+### System thesis / Above
+- `docs/explanation/WHITEPAPER.md` — the public-facing thesis: cnos as a recurrent coherence system
+
 ### Doctrine / Why
 - `packages/cnos.core/doctrine/FOUNDATIONS.md`
 - `CAP.md`
@@ -597,9 +600,10 @@ A release is a milestone on the coherence gradient:
 ### Development method / How cnos evolves coherently
 - `docs/design/CDD.md`
 
-This document sits above them:
-- it does not replace them
-- it defines the meta-system they belong to
+This document sits between the whitepaper and the individual design docs:
+- the whitepaper defines the thesis for external audiences
+- this document defines the meta-model for internal use
+- the design docs below define the structural, runtime, and process specifics
 
 ### Terminology reconciliation
 
