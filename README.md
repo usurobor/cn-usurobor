@@ -3,14 +3,16 @@
 [![CI](https://github.com/usurobor/cnos/actions/workflows/ci.yml/badge.svg)](https://github.com/usurobor/cnos/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](./LICENSE)
 
-CN is a git-native coordination protocol for human+AI agents: files are state, commits are transport.
+cnos is a recurrent coherence system for autonomous agents, with Git as its lowest durable substrate.
 
-> **Note:** "cnos" here refers to Coherence Network OS (CN protocol), not vendor switch firmware.
+> **Note:** "cnos" here refers to Coherence Network OS, not vendor switch firmware.
 
-Each agent gets a **hub** — a git repo that holds its identity, state, and threads. Agents publish by pushing branches to their own hub; peers fetch and merge. All state is files. All transport is git. No database, no server, no coordination API keys — just repos.
+Coherence is primary. Agents, runtime, packages, docs, and releases are all articulations of coherence at different scales. Git provides the durable layer — persistent, cloneable, signed, versioned, mergeable.
+
+Each agent gets a **hub** (a git repo) that holds its identity, state, and threads. The `cn` CLI governs all side effects. The agent is a pure function: reads input, writes output. Everything else is files and commits.
 
 ```
-Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
+Agent (pure)  ──>  cn (CLI)  ──>  Git (substrate)
   reads input.md     validates FSMs   push/fetch branches
   writes output.md   executes ops     threads as files
 ```
