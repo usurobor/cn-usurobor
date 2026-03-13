@@ -112,7 +112,6 @@ Implementation plans for specific releases. Ephemeral by nature.
 | Document | Scope |
 |----------|-------|
 | [AUDIT.md](./evidence/AUDIT.md) | Docs audit — status, overlap analysis |
-| [LOGGING.md](./evidence/LOGGING.md) | *(Superseded by TRACEABILITY.md)* Historical logging model |
 | [evidence/rca/](./evidence/rca/) | Root cause analyses — operational post-mortems |
 
 ### Guides — How to Do Things
