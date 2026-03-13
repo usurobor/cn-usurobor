@@ -83,11 +83,11 @@ New function `execute_git_stage`:
 
 1. Check `apply_mode` is not `"off"`
 2. Extract optional `paths` field (list of literal file paths — not pathspecs)
-3. If `paths` present: sandbox-check each, reject directories, then `git --literal-pathspecs add -- <paths>`
-4. If `paths` absent: `git add -A` with pathspec exclusions for denylisted dirs and protected files
+3. If `paths` present: sandbox-check each via `validate_path ~access:Write_access`, reject directories, then `git --literal-pathspecs add -- <paths>`
+4. If `paths` absent: enumerate candidates via `git status --porcelain=v1 -z --no-renames -uall` (NUL-delimited, machine-safe), validate each through `Cn_sandbox.validate_path ~access:Write_access` (resolves symlinks), reject directories, then `git --literal-pathspecs add -- <validated_paths>`
 5. Return receipt
 
-**Tests:** stage all, stage specific paths, apply_mode off denial, path sandbox, directory rejection, protected file exclusion
+**Tests:** stage all, stage specific paths, apply_mode off denial, path sandbox, directory rejection, protected file exclusion, symlink to .cn/ excluded, symlink to protected file excluded, file with spaces, rename, non-repo error
 **Depends on:** Step 1
 
 ---
@@ -165,8 +165,7 @@ Step 5 (fs_read chunking)    ─── independent
 Step 6 (cn doctor patch)     ─── independent
 Step 3 (git_stage executor)  ─── depends on Step 1
 Step 7 (capabilities block)  ─── depends on Step 1
-Step 8 (orchestrator wire)   ─── depends on Step 4
-Step 9 (tests)               ─── depends on Steps 1–8
+Step 8 (tests)               ─── depends on Steps 1–7
 ```
 
 Parallelizable: Steps 1, 2, 4, 5, 6 can start simultaneously.

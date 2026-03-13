@@ -496,18 +496,29 @@ let execute_git_stage ~hub_path ~config (op : Cn_shell.typed_op) =
       (* No paths specified: enumerate all changed/untracked files,
          validate each through the sandbox, stage only the validated set.
          This ensures symlink resolution and protected file rules apply
-         identically to stage-all and explicit-path modes. *)
-      let _, porcelain =
+         identically to stage-all and explicit-path modes.
+
+         We use --porcelain=v1 -z --no-renames -uall for safe machine
+         parsing: -z gives NUL-delimited output with unquoted paths,
+         --no-renames suppresses the "<orig> -> <new>" rename format. *)
+      let status_code, porcelain =
         Cn_ffi.Process.exec_args ~prog:"git"
-          ~args:["-C"; hub_path; "status"; "--porcelain"; "-uall"] ()
+          ~args:["-C"; hub_path; "status"; "--porcelain=v1"; "-z";
+                 "--no-renames"; "-uall"] ()
       in
+      if status_code <> 0 then
+        { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
+          status = Cn_shell.Error_status;
+          reason = Printf.sprintf "git_status_exit_%d: %s" status_code
+                     (String.trim porcelain);
+          start_time = start; end_time = now_iso (); artifacts = [] }
+      else
       let candidates =
-        String.split_on_char '\n' porcelain
-        |> List.filter_map (fun line ->
-          if String.length line < 4 then None
+        String.split_on_char '\000' porcelain
+        |> List.filter_map (fun entry ->
+          if String.length entry < 4 then None
           else
-            let path = String.sub line 3 (String.length line - 3) in
-            let path = String.trim path in
+            let path = String.sub entry 3 (String.length entry - 3) in
             if path = "" then None else Some path)
       in
       let safe_paths = List.filter (fun p ->

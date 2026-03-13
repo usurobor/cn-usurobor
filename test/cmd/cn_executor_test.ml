@@ -773,3 +773,55 @@ let%expect_test "git_stage explicit: symlink to .cn/ denied" =
     let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
     show_receipt r);
   [%expect {| kind=git_stage status=denied reason=path_denied: src/link.env artifacts=0 |}]
+
+let%expect_test "git_stage all: file with spaces in name staged correctly" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    let oc = open_out (Filename.concat hub "src/my file.ml") in
+    output_string oc "let x = 1"; close_out oc;
+    let stage_op = { Cn_shell.kind = Effect Git_stage;
+                     op_id = Some "stage-01"; fields = [] } in
+    let sr = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config stage_op in
+    show_receipt sr;
+    let staged = staged_files hub in
+    Printf.printf "staged: %s\n" staged);
+  [%expect {|
+    kind=git_stage status=ok reason=(none) artifacts=0
+    staged: src/my file.ml |}]
+
+let%expect_test "git_stage all: renamed file staged correctly" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    (* Create a file, commit it, then rename it *)
+    let oc = open_out (Filename.concat hub "src/old.ml") in
+    output_string oc "let old = 1"; close_out oc;
+    let _ = Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:["-C"; hub; "add"; "src/old.ml"] () in
+    let _ = Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:["-C"; hub; "commit"; "-m"; "add old"] () in
+    (* Rename via git mv *)
+    let _ = Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:["-C"; hub; "mv"; "src/old.ml"; "src/new.ml"] () in
+    (* Unstage to let stage-all pick it up fresh *)
+    let _ = Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:["-C"; hub; "reset"; "HEAD"; "--"; "src/old.ml"; "src/new.ml"] () in
+    let stage_op = { Cn_shell.kind = Effect Git_stage;
+                     op_id = Some "stage-01"; fields = [] } in
+    let sr = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config stage_op in
+    show_receipt sr;
+    let staged = staged_files hub in
+    Printf.printf "staged: %s\n" staged);
+  [%expect {|
+    kind=git_stage status=ok reason=(none) artifacts=0
+    staged: src/new.ml |}]
+
+let%expect_test "git_stage all: non-repo hub returns error" =
+  with_test_hub (fun hub ->
+    (* hub is not initialized as a git repo *)
+    let oc = open_out (Filename.concat hub "src/x.ml") in
+    output_string oc "let x = 1"; close_out oc;
+    let stage_op = { Cn_shell.kind = Effect Git_stage;
+                     op_id = Some "stage-01"; fields = [] } in
+    let sr = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config stage_op in
+    show_receipt sr);
+  [%expect {| kind=git_stage status=error reason=git_status_exit_128: fatal: not a git repository (or any of the parent directories): .git artifacts=0 |}]
