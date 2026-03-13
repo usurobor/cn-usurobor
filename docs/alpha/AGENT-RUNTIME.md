@@ -1506,7 +1506,7 @@ WantedBy=multi-user.target
 
 ## Migration Path
 
-*v3.0 migration (OC → native runtime) is complete. Phase-by-phase build plan moved to [PLAN.md](../../PLAN.md).*
+*v3.0 migration (OC → native runtime) is complete. Phase-by-phase build plan moved to [PLAN.md](../gamma/plans/PLAN.md).*
 
 ### Success Criteria
 
