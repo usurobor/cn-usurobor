@@ -319,21 +319,21 @@ let%expect_test "I4: all XML pseudo-tool variants blocked" =
     | None -> Printf.printf "LEAKED: %s\n" input
   ) xml_variants;
   [%expect {|
-    blocked: <observe>x</observe
-    blocked: <fs_read>p</fs_read
-    blocked: <fs_list>p</fs_list
+    blocked: <observe>x</observe>
+    blocked: <fs_read>p</fs_read>
+    blocked: <fs_list>p</fs_list>
     blocked: <fs_glob>p</fs_glob>
-    blocked: <git_status>x</git_
-    blocked: <git_diff>x</git_d
-    blocked: <git_log>x</git_lo
-    blocked: <git_grep>x</git_g
-    blocked: <fs_write>x</fs_wr
-    blocked: <fs_patch>x</fs_pa
-    blocked: <git_branch>x</git
-    blocked: <git_commit>x</git
+    blocked: <git_status>x</git_s
+    blocked: <git_diff>x</git_dif
+    blocked: <git_log>x</git_log>
+    blocked: <git_grep>x</git_gre
+    blocked: <fs_write>x</fs_writ
+    blocked: <fs_patch>x</fs_patc
+    blocked: <git_branch>x</git_b
+    blocked: <git_commit>x</git_c
     blocked: <exec>x</exec>
-    blocked: <tool_call>x</tool
-    blocked: <function_call>x</
+    blocked: <tool_call>x</tool_c
+    blocked: <function_call>x</fu
   |}]
 
 let%expect_test "I4: all legacy coordination op prefixes blocked on human surface" =
@@ -360,10 +360,10 @@ let%expect_test "I4: all legacy coordination op prefixes blocked on human surfac
     blocked: id: some-id
     blocked: ack: some-id
     blocked: done: some-id
-    blocked: fail: some-id|
-    blocked: reply: some-id
+    blocked: fail: some-id|r
+    blocked: reply: some-id|
     blocked: send: peer|msg
-    blocked: delegate: id|
+    blocked: delegate: id|pe
     blocked: defer: id
     blocked: delete: id
     blocked: surface: desc
