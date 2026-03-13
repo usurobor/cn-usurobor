@@ -5,7 +5,9 @@
     this module — exteroceptive concerns live in cn_runtime.ml.
 
     Each primitive emits trace events via the global trace session.
-    Uses Git module for argv-style execution (no shell strings).
+    sync_once uses Git result variants (argv-style via Process.exec_args)
+    for error propagation. Other git callers in Git module still use
+    shell-based Child_process.exec_in for convenience.
 
     Primitive boundaries (each does exactly one thing):
     - inbox_check_once: fetch inbound peer branches, triage to inbox
@@ -23,8 +25,9 @@ open Cn_lib
 type substep_status = Ok | Degraded of string | Skipped of string
 
 type maintenance_result = {
+  inbox_check_status : substep_status;
   sync_status : substep_status;
-  inbox_status : substep_status;
+  inbox_status : substep_status;  (* materialization *)
   outbox_status : substep_status;
   update_status : substep_status;
   review_status : substep_status;
@@ -33,9 +36,10 @@ type maintenance_result = {
 
 let is_degraded result =
   let check = function Degraded _ -> true | _ -> false in
-  check result.sync_status || check result.inbox_status ||
-  check result.outbox_status || check result.update_status ||
-  check result.review_status || check result.cleanup_status
+  check result.inbox_check_status || check result.sync_status ||
+  check result.inbox_status || check result.outbox_status ||
+  check result.update_status || check result.review_status ||
+  check result.cleanup_status
 
 let string_of_substep = function
   | Ok -> "ok"
@@ -62,20 +66,45 @@ let write_last_review_at hub_path =
 
 (* === Sync primitive === *)
 
-(** Peer sync: fetch inbound branches, stage local changes, heartbeat commit, push.
-    Uses Git module for argv-style execution (no shell strings).
-    The heartbeat commit advances HEAD even when idle, signaling liveness to peers. *)
+(** Peer sync: fetch, stage local changes, heartbeat commit, push.
+    Uses argv-style Git result variants (Git.fetch_r etc.) for proper
+    error propagation — a failed git op produces Degraded, not silent Ok.
+    The heartbeat commit advances HEAD even when idle, signaling liveness. *)
 let sync_once ~hub_path =
   Cn_trace.gemit ~component:"maintenance" ~layer:Body
     ~event:"sync.start" ~severity:Info ~status:Ok_ ();
-  try
-    let _ = Git.fetch ~cwd:hub_path in
-    let _ = Git.add_all ~cwd:hub_path in
-    if Git.commit_allow_empty ~cwd:hub_path ~msg:"heartbeat" then
-      ignore (Git.push ~cwd:hub_path);
+  let degrade step code out =
+    let msg = Printf.sprintf "%s failed (exit %d): %s" step code (String.trim out) in
     Cn_trace.gemit ~component:"maintenance" ~layer:Body
-      ~event:"sync.ok" ~severity:Info ~status:Ok_ ();
-    Ok
+      ~event:"sync.error" ~severity:Warn ~status:Degraded
+      ~reason_code:"sync_failed" ~reason:msg ();
+    Degraded msg
+  in
+  try
+    (* Fetch — network failure is non-fatal; we can still stage+commit+push local *)
+    let fetch_warn = match Git.fetch_r ~cwd:hub_path with
+      | Ok _ -> None
+      | Error (code, out) -> Some (degrade "git-fetch" code out)
+    in
+    (* Stage — failure is fatal for commit *)
+    (match Git.add_all_r ~cwd:hub_path with
+     | Error (code, out) -> degrade "git-add" code out
+     | Ok _ ->
+    (* Commit — failure is fatal for push *)
+    match Git.commit_allow_empty_r ~cwd:hub_path ~msg:"heartbeat" with
+     | Error (code, out) -> degrade "git-commit" code out
+     | Ok _ ->
+    (* Push — failure degrades *)
+    match Git.push_r ~cwd:hub_path with
+     | Error (code, out) -> degrade "git-push" code out
+     | Ok _ ->
+    (* All local ops succeeded; report fetch warning if any *)
+    match fetch_warn with
+     | Some status -> status
+     | None ->
+         Cn_trace.gemit ~component:"maintenance" ~layer:Body
+           ~event:"sync.ok" ~severity:Info ~status:Ok_ ();
+         Ok)
   with exn ->
     let msg = Printexc.to_string exn in
     Cn_trace.gemit ~component:"maintenance" ~layer:Body
@@ -274,7 +303,7 @@ let maintain_once ~(config : Cn_config.config) ~hub_path ~name =
     ~event:"maintenance.start" ~severity:Info ~status:Ok_ ();
 
   (* Inbox check before sync: fetch peer branches so sync commits include them *)
-  let _inbox_check = inbox_check_once ~hub_path ~name in
+  let inbox_check_status = inbox_check_once ~hub_path ~name in
   let sync_status = sync_once ~hub_path in
   let inbox_status = materialize_inbox_once ~hub_path in
   let outbox_status = flush_outbox_once ~hub_path ~name in
@@ -294,14 +323,16 @@ let maintain_once ~(config : Cn_config.config) ~hub_path ~name =
   in
   let cleanup_status = cleanup_once ~hub_path in
 
-  let result = { sync_status; inbox_status; outbox_status;
-                 update_status; review_status; cleanup_status } in
+  let result = { inbox_check_status; sync_status; inbox_status;
+                 outbox_status; update_status; review_status;
+                 cleanup_status } in
 
   let overall_status = if is_degraded result then "degraded" else "ok" in
   Cn_trace.gemit ~component:"maintenance" ~layer:Body
     ~event:"maintenance.complete" ~severity:Info
     ~status:(if is_degraded result then Degraded else Ok_)
     ~details:[
+      "inbox_check", Cn_json.String (string_of_substep inbox_check_status);
       "sync", Cn_json.String (string_of_substep sync_status);
       "inbox", Cn_json.String (string_of_substep inbox_status);
       "outbox", Cn_json.String (string_of_substep outbox_status);

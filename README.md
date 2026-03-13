@@ -42,13 +42,16 @@ Four concepts:
 | **Thread** | Unit of work or conversation. A markdown file with YAML frontmatter. |
 | **Agent** | Pure function: input → output. Never touches files or git directly — `cn` handles all I/O. |
 
-The core loop, driven by `cn agent` on cron (or `cn agent --daemon` for Telegram):
+The core loop, driven by `cn agent` on cron or `cn agent --daemon`:
 
 ```
 1. cn sync           Fetch peer branches, send outbox
 2. cn agent          Dequeue → pack context → call LLM → execute ops → archive
 3. cn save           Commit + push hub state
 ```
+
+In daemon mode, sync and save happen automatically as part of periodic maintenance.
+Telegram is optional — the daemon works peer-only without `TELEGRAM_TOKEN`.
 
 All state mutation happens under atomic lock with crash recovery. The LLM sees
 packed context (identity, skills, conversation, capabilities, message) and produces
@@ -139,7 +142,7 @@ Do **not** use GitHub PRs, Issues, or Discussions.
 |-------------|-----|
 | Unix-like OS | Linux, macOS, or WSL |
 | curl | Runtime uses curl for Claude API + Telegram API |
-| System cron or systemd | Automation via `cn agent` on cron, or `cn agent --daemon` ([setup](./docs/beta/guides/AUTOMATION.md)) |
+| System cron or systemd | Automation via `cn agent` on cron, or `cn agent --daemon` (Telegram optional) ([setup](./docs/beta/guides/AUTOMATION.md)) |
 | Always-on server | Agents need to be reachable (VPS recommended) |
 
 ---
@@ -166,7 +169,7 @@ Native OCaml binary. Built with `dune build src/cli/cn.exe`.
 |---------|-------------|
 | `cn agent` | Run one cycle: dequeue → LLM → execute (alias: `cn in`) |
 | `cn agent --process` | Single-shot: process one queued item |
-| `cn agent --daemon` | Telegram long-poll loop (requires `TELEGRAM_TOKEN`) |
+| `cn agent --daemon` | Continuous loop: maintenance + optional Telegram poll |
 | `cn agent --stdio` | Interactive mode (stdin → LLM → stdout) |
 | `cn sync` | Fetch inbound + flush outbound |
 | `cn inbox` | List inbox threads |

@@ -14,17 +14,59 @@
     - Portable: git.ml works for any git workflow
     - Clear: CN protocol lives in cn_io, not here
 
-    All functions are thin wrappers over git CLI.
-    Uses Cn_ffi.Child_process for shell execution.
-    Returns Option for operations that can fail.
+    Execution:
+    - Core sync operations (fetch, add, commit, push) use argv-style
+      execution via Process.exec_args for safety and error propagation.
+    - Branch/query operations use shell execution via Child_process.exec_in
+      for convenience (pipelines, redirects). These are read-only or
+      developer-workflow operations where shell is acceptable.
 *)
 
+(* Shell-based execution — used by branch/query operations *)
 let exec = Cn_ffi.Child_process.exec_in
+
+(* Argv-style execution — used by core sync operations.
+   Returns (exit_code, output). No shell involved. *)
+let exec_argv ~cwd args =
+  Cn_ffi.Process.exec_args ~prog:"git"
+    ~args:("-C" :: cwd :: args) ()
 
 let split_lines s =
   s |> String.trim |> String.split_on_char '\n' |> List.filter (fun s -> String.length s > 0)
 
-(* === Core Operations === *)
+(* === Core Sync Operations (argv-style, result-returning) === *)
+
+(** Fetch from origin. Returns Ok output or Error (code, output). *)
+let fetch_r ~cwd =
+  match exec_argv ~cwd ["fetch"; "origin"] with
+  | (0, out) -> Ok out
+  | (code, out) -> Error (code, out)
+
+(** Stage all changes. Returns Ok output or Error (code, output). *)
+let add_all_r ~cwd =
+  match exec_argv ~cwd ["add"; "-A"] with
+  | (0, out) -> Ok out
+  | (code, out) -> Error (code, out)
+
+(** Commit with message. Returns Ok output or Error (code, output). *)
+let commit_r ~cwd ~msg =
+  match exec_argv ~cwd ["commit"; "-m"; msg] with
+  | (0, out) -> Ok out
+  | (code, out) -> Error (code, out)
+
+(** Commit with --allow-empty. Returns Ok output or Error (code, output). *)
+let commit_allow_empty_r ~cwd ~msg =
+  match exec_argv ~cwd ["commit"; "--allow-empty"; "-m"; msg] with
+  | (0, out) -> Ok out
+  | (code, out) -> Error (code, out)
+
+(** Push HEAD to origin. Returns Ok output or Error (code, output). *)
+let push_r ~cwd =
+  match exec_argv ~cwd ["push"; "origin"; "HEAD"] with
+  | (0, out) -> Ok out
+  | (code, out) -> Error (code, out)
+
+(* === Legacy boolean API (used by existing callers) === *)
 
 let fetch ~cwd =
   exec ~cwd "git fetch origin" |> Option.is_some

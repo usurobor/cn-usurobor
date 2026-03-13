@@ -1089,23 +1089,49 @@ let%expect_test "maintenance: substep status strings" =
 
 let%expect_test "maintenance: is_degraded detects degraded substeps" =
   let all_ok : Cn_maintenance.maintenance_result = {
-    sync_status = Ok; inbox_status = Ok; outbox_status = Ok;
-    update_status = Ok; review_status = Ok; cleanup_status = Ok;
+    inbox_check_status = Ok; sync_status = Ok; inbox_status = Ok;
+    outbox_status = Ok; update_status = Ok; review_status = Ok;
+    cleanup_status = Ok;
   } in
   let sync_bad : Cn_maintenance.maintenance_result = {
+    inbox_check_status = Ok;
     sync_status = Degraded "net_error"; inbox_status = Ok; outbox_status = Ok;
     update_status = Ok; review_status = Ok; cleanup_status = Ok;
   } in
-  let skipped : Cn_maintenance.maintenance_result = {
+  let inbox_check_bad : Cn_maintenance.maintenance_result = {
+    inbox_check_status = Degraded "peer_timeout";
     sync_status = Ok; inbox_status = Ok; outbox_status = Ok;
-    update_status = Skipped "busy"; review_status = Skipped "not_due";
-    cleanup_status = Ok;
+    update_status = Ok; review_status = Ok; cleanup_status = Ok;
   } in
-  Printf.printf "all_ok=%b sync_bad=%b skipped=%b\n"
+  let skipped : Cn_maintenance.maintenance_result = {
+    inbox_check_status = Ok; sync_status = Ok; inbox_status = Ok;
+    outbox_status = Ok; update_status = Skipped "busy";
+    review_status = Skipped "not_due"; cleanup_status = Ok;
+  } in
+  Printf.printf "all_ok=%b sync_bad=%b inbox_check_bad=%b skipped=%b\n"
     (Cn_maintenance.is_degraded all_ok)
     (Cn_maintenance.is_degraded sync_bad)
+    (Cn_maintenance.is_degraded inbox_check_bad)
     (Cn_maintenance.is_degraded skipped);
-  [%expect {| all_ok=false sync_bad=true skipped=false |}]
+  [%expect {| all_ok=false sync_bad=true inbox_check_bad=true skipped=false |}]
+
+let%expect_test "maintenance: inbox_check degradation propagates to overall status" =
+  (* Verify that inbox_check_status degradation makes the whole result degraded,
+     even when all other substeps are Ok. Regression test for the dropped
+     inbox_check_once result. *)
+  let inbox_only_bad : Cn_maintenance.maintenance_result = {
+    inbox_check_status = Degraded "peer_unreachable";
+    sync_status = Ok; inbox_status = Ok; outbox_status = Ok;
+    update_status = Ok; review_status = Ok; cleanup_status = Ok;
+  } in
+  Printf.printf "inbox_only_bad=%b\n"
+    (Cn_maintenance.is_degraded inbox_only_bad);
+  (* Also verify string_of_substep renders degraded reason *)
+  Printf.printf "inbox_check=%s\n"
+    (Cn_maintenance.string_of_substep inbox_only_bad.inbox_check_status);
+  [%expect {|
+    inbox_only_bad=true
+    inbox_check=degraded:peer_unreachable |}]
 
 (* === Cn_runtime: drain_queue stop reason strings (v3.7.0) === *)
 
