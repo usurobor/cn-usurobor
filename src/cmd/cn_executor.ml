@@ -71,9 +71,12 @@ let scrub_env ~extra_keys =
 
 (* === Git path exclusion === *)
 
-(** Standard denylist pathspec exclusions for git ops. *)
+(** Standard denylist pathspec exclusions for git ops.
+    Includes protected files from Cn_sandbox to prevent stage-all
+    from staging files that are write-denied. *)
 let git_pathspec_exclusions =
   ["--"; "."; ":!.cn"; ":!state"; ":!logs"]
+  @ List.map (fun f -> ":!" ^ f) Cn_sandbox.protected_files
 
 (* === Op field extraction helpers === *)
 
@@ -452,16 +455,25 @@ let execute_git_stage ~hub_path ~config (op : Cn_shell.typed_op) =
     in
     match paths with
     | Some literal_paths ->
-      (* Sandbox-check each path before staging *)
+      (* Sandbox-check each path: must pass write validation AND must
+         not be a directory (directories would stage descendants that
+         were never individually validated) *)
       let bad = List.find_opt (fun p ->
         match Cn_sandbox.validate_path ~hub_path ~access:Write_access p with
-        | Error _ -> true | Ok _ -> false
+        | Error _ -> true
+        | Ok _ ->
+          let full = Filename.concat hub_path p in
+          try Sys.is_directory full with Sys_error _ -> false
       ) literal_paths in
       (match bad with
        | Some denied_path ->
+         let is_dir = try Sys.is_directory (Filename.concat hub_path denied_path)
+           with Sys_error _ -> false in
+         let reason = if is_dir
+           then Printf.sprintf "directory_not_allowed: %s" denied_path
+           else Printf.sprintf "path_denied: %s" denied_path in
          { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
-           status = Cn_shell.Denied;
-           reason = Printf.sprintf "path_denied: %s" denied_path;
+           status = Cn_shell.Denied; reason;
            start_time = start; end_time = now_iso (); artifacts = [] }
        | None ->
          (* Use --literal-pathspecs to prevent glob/magic interpretation,

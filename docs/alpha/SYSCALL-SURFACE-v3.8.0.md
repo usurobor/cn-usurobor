@@ -95,8 +95,8 @@ and change the meaning of:
 Stages changes into the index.
 
 Fields:
-- `paths` (optional list of pathspecs)
-- if omitted, stage all allowed changes under the runtime's path exclusions
+- `paths` (optional list of literal file paths — directories are rejected, no glob/pathspec magic)
+- if omitted, stage all allowed changes under the runtime's path exclusions (denylisted dirs and protected files excluded)
 
 #### `git_commit`
 Commits the **current index only**.

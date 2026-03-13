@@ -660,3 +660,61 @@ let%expect_test "git_commit: allow_empty succeeds with nothing staged" =
     let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
     show_receipt r);
   [%expect {| kind=git_commit status=ok reason=(none) artifacts=0 |}]
+
+(* === v3.8.0: git_stage directory path rejection === *)
+
+let%expect_test "git_stage: directory path '.' rejected" =
+  with_test_hub (fun hub ->
+    let op = { Cn_shell.kind = Effect Git_stage;
+               op_id = Some "stage-01";
+               fields = [("paths", Cn_json.Array [Cn_json.String "."])] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r);
+  [%expect {| kind=git_stage status=denied reason=directory_not_allowed: . artifacts=0 |}]
+
+let%expect_test "git_stage: directory path 'src' rejected" =
+  with_test_hub (fun hub ->
+    let op = { Cn_shell.kind = Effect Git_stage;
+               op_id = Some "stage-01";
+               fields = [("paths", Cn_json.Array [Cn_json.String "src"])] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r);
+  [%expect {| kind=git_stage status=denied reason=directory_not_allowed: src artifacts=0 |}]
+
+let%expect_test "git_stage: directory path 'spec' rejected" =
+  with_test_hub (fun hub ->
+    let op = { Cn_shell.kind = Effect Git_stage;
+               op_id = Some "stage-01";
+               fields = [("paths", Cn_json.Array [Cn_json.String "spec"])] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r);
+  [%expect {| kind=git_stage status=denied reason=directory_not_allowed: spec artifacts=0 |}]
+
+(* === v3.8.0: stage-all excludes protected files === *)
+
+let staged_files hub =
+  let _, out = Cn_ffi.Process.exec_args ~prog:"git"
+    ~args:["-C"; hub; "diff"; "--cached"; "--name-only"] () in
+  String.trim out
+
+let%expect_test "git_stage all: protected files remain unstaged" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    (* Create a normal file and modify a protected file *)
+    let oc1 = open_out (Filename.concat hub "src/safe.ml") in
+    output_string oc1 "let safe = true"; close_out oc1;
+    let oc2 = open_out (Filename.concat hub "spec/SOUL.md") in
+    output_string oc2 "# Modified SOUL"; close_out oc2;
+    let oc3 = open_out (Filename.concat hub "spec/USER.md") in
+    output_string oc3 "# Modified USER"; close_out oc3;
+    (* Stage all *)
+    let stage_op = { Cn_shell.kind = Effect Git_stage;
+                     op_id = Some "stage-01"; fields = [] } in
+    let sr = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config stage_op in
+    show_receipt sr;
+    (* Check what actually got staged *)
+    let staged = staged_files hub in
+    Printf.printf "staged: %s\n" staged);
+  [%expect {|
+    kind=git_stage status=ok reason=(none) artifacts=0
+    staged: src/safe.ml |}]

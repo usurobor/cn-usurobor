@@ -82,12 +82,12 @@ Glob matching: implement simple glob (`*`, `**`, `?`) in pure OCaml — no exter
 New function `execute_git_stage`:
 
 1. Check `apply_mode` is not `"off"`
-2. Extract optional `paths` field (list of pathspecs)
-3. If `paths` present: sandbox-check each, then `git add <paths>`
-4. If `paths` absent: `git add -A` (stage all allowed changes)
+2. Extract optional `paths` field (list of literal file paths — not pathspecs)
+3. If `paths` present: sandbox-check each, reject directories, then `git --literal-pathspecs add -- <paths>`
+4. If `paths` absent: `git add -A` with pathspec exclusions for denylisted dirs and protected files
 5. Return receipt
 
-**Tests:** stage all, stage specific paths, apply_mode off denial, path sandbox
+**Tests:** stage all, stage specific paths, apply_mode off denial, path sandbox, directory rejection, protected file exclusion
 **Depends on:** Step 1
 
 ---
