@@ -174,6 +174,23 @@ In words:
 
 This extends the agent-scale loop in FOUNDATIONS §4 (`Sense → Compare → MCA/MCI → Repeat`) to the whole system. CLP is the full review rhythm (COHERENCE.md), not merely a post-move checkpoint.
 
+### 3.4 The instruction set
+
+CMP, MCP, CAP, and CLP are not acronyms. They are **operations** — four verbs that compose into the coherence loop.
+
+| Operation | Verb | Input | Output |
+|-----------|------|-------|--------|
+| **CMP** | look | current articulations, evidence, constraints | MCP |
+| **MCP** | (the picture) | — | gaps, weakest axis, available moves |
+| **CAP** | move | MCP + gap | MCA (act on world) or MCI (update model) |
+| **CLP** | check | the move + α/β/γ scores | converge or iterate |
+
+The loop is: `look → move → check → repeat`.
+
+Everything else in the system — doctrine, architecture, runtime, packages, traces, releases — is either **data these operations consume**, **data they produce**, or **infrastructure that makes them observable and recoverable**.
+
+When this instruction set is implicit (humans execute it, the runtime doesn't name it), the system works but cannot observe its own coherence process. When the instruction set is explicit in the runtime — trace events for `cmp.complete`, `cap.move`, `clp.score` — the system can audit, score, and evolve its own coherence loop. That is the direction of runtime evolution (see issue #34).
+
 ---
 
 ## 4. CLP: The Reflective Law
