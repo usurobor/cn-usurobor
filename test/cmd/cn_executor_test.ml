@@ -825,3 +825,80 @@ let%expect_test "git_stage all: non-repo hub returns error" =
     let sr = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config stage_op in
     show_receipt sr);
   [%expect {| kind=git_stage status=error reason=git_status_exit_128: fatal: not a git repository (or any of the parent directories): .git artifacts=0 |}]
+
+(* Helper to read artifact content back from disk *)
+let read_artifact hub (r : Cn_shell.receipt) =
+  match r.artifacts with
+  | [] -> "(no artifacts)"
+  | a :: _ ->
+    let path = Filename.concat hub a.Cn_shell.path in
+    let ic = open_in path in
+    let n = in_channel_length ic in
+    let s = really_input_string ic n in
+    close_in ic; s
+
+let%expect_test "git_diff observes spec/SOUL.md changes" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    (* Commit initial SOUL.md, then modify it *)
+    let _ = Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:["-C"; hub; "add"; "spec/SOUL.md"] () in
+    let _ = Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:["-C"; hub; "commit"; "-m"; "add soul"] () in
+    let oc = open_out (Filename.concat hub "spec/SOUL.md") in
+    output_string oc "# Modified SOUL"; close_out oc;
+    (* git_diff with no paths should see the change *)
+    let diff_op = { Cn_shell.kind = Observe Git_diff;
+                    op_id = Some "obs-01"; fields = [] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config diff_op in
+    show_receipt r;
+    let content = read_artifact hub r in
+    Printf.printf "sees_soul: %b\n" (String.length content > 0 &&
+      try let _ = Str.search_forward (Str.regexp_string "SOUL.md") content 0 in true
+      with Not_found -> false));
+  [%expect {|
+    kind=git_diff status=ok reason=(none) artifacts=1
+    sees_soul: true |}]
+
+let%expect_test "git_grep observes spec/SOUL.md content" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    (* Commit SOUL.md with searchable content *)
+    let oc = open_out (Filename.concat hub "spec/SOUL.md") in
+    output_string oc "SOUL_MARKER_42"; close_out oc;
+    let _ = Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:["-C"; hub; "add"; "spec/SOUL.md"] () in
+    let _ = Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:["-C"; hub; "commit"; "-m"; "add soul content"] () in
+    (* git_grep should find the marker *)
+    let grep_op = { Cn_shell.kind = Observe Git_grep;
+                    op_id = Some "obs-02";
+                    fields = [("query", Cn_json.String "SOUL_MARKER_42")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config grep_op in
+    show_receipt r;
+    let content = read_artifact hub r in
+    Printf.printf "finds_marker: %b\n" (String.length content > 0 &&
+      try let _ = Str.search_forward (Str.regexp_string "SOUL_MARKER_42") content 0 in true
+      with Not_found -> false));
+  [%expect {|
+    kind=git_grep status=ok reason=(none) artifacts=1
+    finds_marker: true |}]
+
+let%expect_test "git_stage all: spec/SOUL.md still write-denied" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    (* Modify protected file and a safe file *)
+    let oc1 = open_out (Filename.concat hub "spec/SOUL.md") in
+    output_string oc1 "# Tampered SOUL"; close_out oc1;
+    let oc2 = open_out (Filename.concat hub "src/good.ml") in
+    output_string oc2 "let good = true"; close_out oc2;
+    (* Stage all *)
+    let stage_op = { Cn_shell.kind = Effect Git_stage;
+                     op_id = Some "stage-01"; fields = [] } in
+    let sr = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config stage_op in
+    show_receipt sr;
+    let staged = staged_files hub in
+    Printf.printf "staged: %s\n" staged);
+  [%expect {|
+    kind=git_stage status=ok reason=(none) artifacts=0
+    staged: src/good.ml |}]

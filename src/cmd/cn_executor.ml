@@ -71,12 +71,12 @@ let scrub_env ~extra_keys =
 
 (* === Git path exclusion === *)
 
-(** Standard denylist pathspec exclusions for git ops.
-    Includes protected files from Cn_sandbox to prevent stage-all
-    from staging files that are write-denied. *)
-let git_pathspec_exclusions =
+(** Pathspec exclusions for git observe ops (diff, log, grep).
+    Excludes internal dirs only — protected files are readable.
+    Write-protection for protected files is enforced per-candidate
+    in git_stage via Cn_sandbox.validate_path ~access:Write_access. *)
+let git_observe_exclusions =
   ["--"; "."; ":!.cn"; ":!state"; ":!logs"]
-  @ List.map (fun f -> ":!" ^ f) Cn_sandbox.protected_files
 
 (* === Op field extraction helpers === *)
 
@@ -203,7 +203,7 @@ let execute_git_diff ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
     | None -> []
   in
   execute_git_op ~hub_path ~trigger_id ~config ~kind_str:"git_diff"
-    ~args:(["diff"] @ rev @ git_pathspec_exclusions) op
+    ~args:(["diff"] @ rev @ git_observe_exclusions) op
 
 let execute_git_log ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   let max_n = match get_field_int "max" op with
@@ -215,7 +215,7 @@ let execute_git_log ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
     | None -> []
   in
   execute_git_op ~hub_path ~trigger_id ~config ~kind_str:"git_log"
-    ~args:(["log"; "--oneline"] @ max_n @ rev @ git_pathspec_exclusions) op
+    ~args:(["log"; "--oneline"] @ max_n @ rev @ git_observe_exclusions) op
 
 let execute_git_grep ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
@@ -231,7 +231,7 @@ let execute_git_grep ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
          | Error reason ->
            Error (Cn_sandbox.string_of_denial_reason reason)
          | Ok resolved -> Ok ["--"; resolved])
-      | None -> Ok git_pathspec_exclusions
+      | None -> Ok git_observe_exclusions
     in
     match path_args with
     | Error reason ->
