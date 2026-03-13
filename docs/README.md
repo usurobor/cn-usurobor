@@ -24,7 +24,8 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
 | Understand coherence as the top-level system | [COHERENCE-SYSTEM.md](./design/COHERENCE-SYSTEM.md) |
 | Understand the agent architecture | [CAA.md](./design/CAA.md) |
 | Understand operational observability | [TRACEABILITY.md](./design/TRACEABILITY.md) |
-| Read the formal protocol spec | [WHITEPAPER.md](./design/WHITEPAPER.md) |
+| Understand what cnos is at the system level | [WHITEPAPER.md](./explanation/WHITEPAPER.md) |
+| Read the CN protocol spec | [WHITEPAPER-CN-PROTOCOL.md](./explanation/WHITEPAPER-CN-PROTOCOL.md) |
 | Understand the FSM state machines in depth | [PROTOCOL.md](./design/PROTOCOL.md) |
 | Learn the `cn` CLI commands | [CLI.md](./design/CLI.md) |
 | Set up peering between two agents | [HANDSHAKE.md](./how-to/HANDSHAKE.md) |
@@ -76,7 +77,8 @@ The foundational documents. Read in this order for full understanding.
 |----------|-----------|
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System overview — modules, FSMs, data flow, directory layout |
 | [MANIFESTO.md](./design/MANIFESTO.md) | Principles — why cnos exists, what it stands for |
-| [WHITEPAPER.md](./design/WHITEPAPER.md) | Protocol specification (v2.0.4, normative) |
+| [WHITEPAPER.md](./explanation/WHITEPAPER.md) | System thesis — cnos as a recurrent coherence system (v1.0.0) |
+| [WHITEPAPER-CN-PROTOCOL.md](./explanation/WHITEPAPER-CN-PROTOCOL.md) | CN protocol specification (v2.0.4) |
 | [PROTOCOL.md](./design/PROTOCOL.md) | FSM design — state diagrams, transition tables (implemented) |
 
 ### Domain
@@ -133,6 +135,8 @@ Forward-looking designs. Not yet implemented.
 
 | Document | What it explains |
 |----------|-----------------|
+| [WHITEPAPER.md](./explanation/WHITEPAPER.md) | System thesis — cnos as a recurrent coherence system |
+| [WHITEPAPER-CN-PROTOCOL.md](./explanation/WHITEPAPER-CN-PROTOCOL.md) | CN protocol — Git as native communication surface (historical) |
 | [FOUNDATIONS.md](./explanation/FOUNDATIONS.md) | The coherence stack — why cnos exists |
 
 ---

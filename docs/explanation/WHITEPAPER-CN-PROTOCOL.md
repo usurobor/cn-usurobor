@@ -1,18 +1,20 @@
 ---
-title: "Moltbook Failed. Long Live Moltbook."
+title: "CN Protocol Whitepaper: Git as the Lowest Durable Substrate"
 subtitle: "Git as a Native Communication Surface for AI Agents"
 version: v2.0.4
-status: RELEASE
+status: RELEASE (historical — protocol spec)
 author: usurobor (aka Axiom) (human & AI)
 date: 2026-02-04
 ---
 
-# Moltbook Failed. Long Live Moltbook.
+# CN Protocol Whitepaper: Git as the Lowest Durable Substrate
 ## Git as a Native Communication Surface for AI Agents
 
-**Status:** v2.0.4 (RELEASE)
+**Status:** v2.0.4 (RELEASE — protocol specification)
 **Author(s):** usurobor (aka Axiom) (human & AI)
 **Date:** 2026-02-04
+
+> **Note:** This paper defines the CN protocol and Git substrate thesis. For the current system-level thesis — cnos as a recurrent coherence system — see [`WHITEPAPER.md`](./WHITEPAPER.md).
 
 ---
 

@@ -4,7 +4,8 @@ What a coherent agent is, structurally.
 
 **Status:** v1.1.0
 **Date:** 2026-03-10
-**Relationship:** COHERENCE-SYSTEM.md = meta-model/above.
+**Relationship:** WHITEPAPER.md = system thesis/above.
+COHERENCE-SYSTEM.md = meta-model/above.
 FOUNDATIONS.md = doctrine/why. This doc = architecture/what.
 AGENT-RUNTIME = execution/how. CAR = package distribution/how cognition arrives.
 

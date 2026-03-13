@@ -17,7 +17,7 @@
 |----------|--------|--------|-------|
 | **ARCHITECTURE.md** | NEW | Created | Top-level entry point. See [../ARCHITECTURE.md](../ARCHITECTURE.md) |
 | **MANIFESTO.md** | Current | Keep | Foundational values doc. Not a technical spec. |
-| **WHITEPAPER.md** | Current | Keep | Authoritative protocol spec (v2.0.4 RELEASE). Normative. |
+| **WHITEPAPER.md** | Moved | Moved to `docs/explanation/WHITEPAPER-CN-PROTOCOL.md` | Protocol spec (v2.0.4). Superseded as system thesis by `docs/explanation/WHITEPAPER.md`. |
 | **WHITEPAPER-v2.0.3.pdf** | Current | Keep | PDF companion to whitepaper. |
 | **PROTOCOL.md** | Current | Keep | FSM design spec. Matches `cn_protocol.ml` implementation exactly. |
 | **AGILE-PROCESS.md** | Current | Keep | Team process doc, not technical spec. |
@@ -66,7 +66,7 @@ All describe: materialize-triage-execute pipeline.
 
 ### Cluster C: Philosophy/Strategy (3 docs, low redundancy)
 
-MANIFESTO, WHITEPAPER, EXECUTABLE-SKILLS
+MANIFESTO, WHITEPAPER-CN-PROTOCOL (moved to explanation/), EXECUTABLE-SKILLS
 
 Each serves a distinct purpose (pitch, spec, vision). No action needed.
 
@@ -92,8 +92,8 @@ docs/
  +-- design/
  |    +-- AUDIT.md                <-- THIS FILE
  |    +-- MANIFESTO.md         Keep
- |    +-- WHITEPAPER.md        Keep
- |    +-- WHITEPAPER-v2.0.3.pdf Keep
+ |    +-- WHITEPAPER.md        Moved → explanation/WHITEPAPER-CN-PROTOCOL.md
+ |    +-- WHITEPAPER-v2.0.3.pdf Keep (companion to protocol paper)
  |    +-- PROTOCOL.md         Keep (matches implementation)
  |    +-- AGILE-PROCESS.md        Keep
  |    +-- EXECUTABLE-SKILLS.md Keep
