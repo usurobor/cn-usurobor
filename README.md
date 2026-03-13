@@ -52,7 +52,7 @@ Daemon:   boot → maintain_once → loop { interoception + exteroception }
 - **Interoception** (periodic): `maintain_once` (sync, inbox, outbox, update, review, cleanup) → `drain_queue`
 - **Exteroception** (event-driven): Telegram poll → enqueue → process (optional — daemon works peer-only without `TELEGRAM_TOKEN`)
 
-Individual steps can also be run manually: `cn sync`, `cn agent --once`, `cn save`.
+Individual steps can also be run manually: `cn sync`, `cn agent --process`, `cn save`.
 
 All state mutation happens under atomic lock with crash recovery. The LLM sees
 packed context (identity, skills, conversation, capabilities, message) and produces

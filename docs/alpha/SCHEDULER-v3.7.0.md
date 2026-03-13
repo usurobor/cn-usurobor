@@ -280,6 +280,7 @@ Scheduler unification must integrate with `TRACEABILITY.md`.
 
 #### Maintenance
 - `maintenance.start`
+- `inbox.checked`
 - `sync.start`
 - `sync.ok`
 - `sync.error`
@@ -296,8 +297,7 @@ Scheduler unification must integrate with `TRACEABILITY.md`.
 
 #### Scheduler
 - `scheduler.tick`
-- `scheduler.idle`
-- `scheduler.degraded`
+- `scheduler.idle` (status=Ok_ when clean, status=Degraded + severity=Warn when degraded)
 
 ### Required reason codes
 Examples:

@@ -1087,6 +1087,15 @@ let%expect_test "maintenance: substep status strings" =
     degraded:sync_failed
     skipped:agent_busy |}]
 
+let%expect_test "maintenance: status_string returns short status" =
+  Printf.printf "%s\n" (Cn_maintenance.status_string Cn_maintenance.Ok);
+  Printf.printf "%s\n" (Cn_maintenance.status_string (Cn_maintenance.Degraded "sync_failed"));
+  Printf.printf "%s\n" (Cn_maintenance.status_string (Cn_maintenance.Skipped "agent_busy"));
+  [%expect {|
+    ok
+    degraded
+    skipped |}]
+
 let%expect_test "maintenance: is_degraded detects degraded substeps" =
   let all_ok : Cn_maintenance.maintenance_result = {
     inbox_check_status = Ok; sync_status = Ok; inbox_status = Ok;

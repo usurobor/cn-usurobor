@@ -1117,14 +1117,16 @@ The two layers are complementary. A single output.md MAY contain both. There is 
 
 | Module | Responsibility | Lines (est.) |
 |--------|----------------|--------------|
-| `cn_daemon.ml` | Telegram polling loop | ~50 |
+| `cn_runtime.ml` | Scheduler orchestration: boot, oneshot tick, daemon loop, drain, projection | ~1300 |
+| `cn_maintenance.ml` | Maintenance engine: 7 primitives (sync, inbox, outbox, update, review, cleanup) | ~350 |
+| `cn_trace_state.ml` | Projection writers: ready.json, runtime.json, coherence.json | ~300 |
 | `cn_telegram.ml` | Telegram API client | ~150 |
 | `cn_llm.ml` | Claude API client (single call, no tool loop) | ~200 |
 | `cn_context.ml` | Context packer (builds input.md from hub artifacts) | ~200 |
-| `cn_runtime.ml` | Orchestrator: pack → call → write → archive → resolve/execute → projection | ~150 |
-| **Total** | | **~750** |
+| `cn_config.ml` | Config loading with scheduler block (sync/review intervals, drain limits) | ~160 |
+| **Total** | | **~2660** |
 
-Note: No `cn_tools.ml`. The LLM has no tools.
+Note: No `cn_tools.ml`. The LLM has no tools. No `cn_daemon.ml` — daemon logic lives in `cn_runtime.ml:run_daemon`.
 
 ### Types
 
@@ -1212,10 +1214,18 @@ type packed_context = {
    ============================================================ *)
 
 type agent_config = {
-  telegram : config;
+  telegram_token : string option;
   model : model_id;
   api_key : string;
   hub_path : string;
+  scheduler : scheduler_config;
+}
+
+and scheduler_config = {
+  sync_interval_sec : int;      (* default: 300 *)
+  review_interval_sec : int;    (* default: 300 *)
+  oneshot_drain_limit : int;    (* default: 1 *)
+  daemon_drain_limit : int;     (* default: 8 *)
 }
 ```
 
@@ -1225,9 +1235,9 @@ type agent_config = {
 cn agent [MODE] [OPTIONS]
 
 MODES:
-  (default)         Cron entry point — queue inbox, check MCA, process one item
-  --process         Process one queued item (dequeue, pack, call LLM, execute)
-  --daemon          Run as Telegram polling daemon (long-running)
+  (default)         Oneshot scheduler — maintain_once + drain_queue, then exit
+  --process         Single-shot: process one queued item and exit
+  --daemon          Daemon scheduler — continuous loop + optional Telegram poll
   --stdio           Interactive mode for testing (read stdin, write stdout)
 
 OPTIONS:
@@ -1237,7 +1247,7 @@ OPTIONS:
   --verbose         Enable debug logging
 
 ENVIRONMENT:
-  TELEGRAM_TOKEN    Bot token (required for --daemon)
+  TELEGRAM_TOKEN    Bot token (optional; enables Telegram poll in daemon)
   ANTHROPIC_KEY     Claude API key (required for --process, --daemon)
   CN_MODEL          Model override (default: claude-sonnet-4-latest)
 
@@ -1248,7 +1258,7 @@ EXAMPLES:
   # Process one item directly (also used by daemon internally)
   cn agent --process
 
-  # Start Telegram bridge (optional, systemd-managed)
+  # Start daemon scheduler (optional Telegram, systemd-managed)
   cn agent --daemon
 
   # Interactive testing
@@ -1314,85 +1324,33 @@ EXAMPLES:
 
 ### FSM Integration
 
-The runtime reuses the existing `cn_protocol.ml` actor FSM — no new state machine:
+The runtime reuses the existing `cn_protocol.ml` actor FSM — no new state machine.
+Both oneshot and daemon call `process_one` in-process (no subprocess fork):
 
 ```
-cn agent --daemon                    cn agent --process
-─────────────────                    ──────────────────
+cn agent (oneshot)                   cn agent --daemon
+──────────────────                   ─────────────────
 
-poll → message arrives
-  enqueue to state/queue/
-  exec --process
-    ─── Queue_pop ──→ InputReady
-    dequeue + pack context → state/input.md
-    ─── Wake ──→ Processing
-                                       build LLM request from input.md text
-                                       single Claude API call
-                                       write state/output.md
-                                     ─── Output_received ──→ OutputReady
-                                       extract body, parse ops
-                                       archive raw IO pair (before effects):
-                                         state/input.md  → logs/input/{trigger}.md
-                                         state/output.md → logs/output/{trigger}.md
-                                       resolve payloads (body wins)
-                                       execute resolved ops
-                                       send Telegram (full payload)
-                                       clean up state files
-                                     ─── Archive_complete ──→ Idle
+boot_sequence                        boot_sequence
+maintain_once (7 primitives)         maintain_once (boot tick)
+drain_queue (up to limit)            while true:
+  for each item:                       if sync_due: maintain_once + drain_queue
+    process_one in-process               for each item:
+      ─── Queue_pop ──→ InputReady         process_one in-process (same as oneshot)
+      dequeue + pack context               ─── same FSM transitions ──→
+      ─── Wake ──→ Processing            if telegram: poll + enqueue + process_one
+      call LLM, write output.md          sleep poll_interval
+      ─── Output_received ──→ OutputReady
+      archive IO pair, resolve ops
+      execute ops
+      ─── Archive_complete ──→ Idle
+write ready.json projection          write ready.json projection (after each tick)
+exit                                 (loop continues)
 ```
 
-```ocaml
-(* cn_runtime.ml — process entry point *)
-let process hub_path config =
-  let ( let* ) = Result.bind in
-  (* Dequeue → pack context → write state/input.md *)
-  let* _s = Cn_protocol.actor_transition Cn_protocol.Idle Cn_protocol.Queue_pop in
-  let queue_item = dequeue hub_path in
-  let packed = Cn_context.pack hub_path queue_item in
-  Cn_ffi.Fs.write (input_path hub_path) packed;
-  (* InputReady → Processing: call LLM *)
-  let* s = Cn_protocol.actor_transition Cn_protocol.InputReady Cn_protocol.Wake in
-  let input_text = Cn_ffi.Fs.read (input_path hub_path) in
-  let response = Cn_llm.call config.api_key config.model input_text in
-  (* Write output.md — LLM response in key-per-op frontmatter format *)
-  Cn_ffi.Fs.write (output_path hub_path) response.content;
-  let* s = Cn_protocol.actor_transition s Cn_protocol.Output_received in
-  (* Extract body + parse ops *)
-  let body = Cn_lib.extract_body response.content in
-  let output_meta = Cn_lib.parse_frontmatter response.content in
-  let ops = Cn_lib.extract_ops output_meta in
-  (* Archive raw IO pair BEFORE effects (per TRACEABILITY.md §11.1).
-     Archived output is the original LLM response, pre-resolution. *)
-  Cn_agent.archive_io_pair_files hub_path queue_item.trigger;
-  (* Resolve payloads via Body Consumption Rules, then execute *)
-  ops |> List.iter (fun op ->
-    let resolved_op = resolve_payload body op in
-    Cn_agent.execute_op hub_path config.name queue_item.trigger resolved_op);
-  (* Telegram projection: send full payload *)
-  if queue_item.from_telegram then begin
-    let full_payload = match body with
-      | Some b -> b
-      | None ->
-          (* Fallback: prefer reply notification, else acknowledged *)
-          ops |> List.find_map (function
-            | Cn_lib.Reply (_, msg) -> Some msg
-            | _ -> None)
-          |> Option.value ~default:"(acknowledged)" in
-    Telegram.send_message config.telegram queue_item.chat_id full_payload
-  end;
-  let* _s = Cn_protocol.actor_transition s Cn_protocol.Archive_complete in
-  Ok ()
-
-(* Resolve body into op payload per Body Consumption Rules *)
-and resolve_payload body = function
-  | Cn_lib.Reply (id, msg) ->
-      Cn_lib.Reply (id, Option.value body ~default:msg)
-  | Cn_lib.Send (peer, msg, None) ->
-      Cn_lib.Send (peer, msg, body)  (* body as fallback for missing 3rd segment *)
-  | op -> op  (* all others: no body consumption *)
-```
-
-Note: The existing `Cn_agent.archive_io_pair` already archives before executing (per TRACEABILITY.md §11.1 — IO-pair evidence layer). The runtime preserves this ordering: archive the raw IO pair first (crash-safe audit trail), then resolve payloads using body, then execute ops. The archived `logs/output/{trigger}.md` is always the original LLM response — payload resolution is an ephemeral execution detail. The `resolve_payload` function is the only new logic — it implements the Body Consumption Rules table above.
+Note: `process_one` is called directly — no `exec "cn agent --process"` subprocess.
+The archived `logs/output/{trigger}.md` is always the original LLM response — payload
+resolution is an ephemeral execution detail.
 
 ---
 
@@ -1410,35 +1368,39 @@ Note: The existing `Cn_agent.archive_io_pair` already archives before executing 
 ┌─────────────────────────────────────────────────────────────┐
 │                   cn agent --daemon                         │
 │                                                             │
-│   offset ← read state/telegram.offset                      │
+│   boot_sequence → ready.json (Starting)                     │
+│   maintain_once (boot tick)                                 │
 │   loop:                                                     │
-│     messages ← Telegram.get_updates(offset)                │
-│     for msg in messages:                                    │
-│       enqueue msg to state/queue/ (raw Telegram envelope)   │
-│       exec "cn agent --process"                             │
-│       offset ← msg.update_id + 1                            │
-│       write state/telegram.offset ← offset                  │
+│     ── Interoception (periodic, sync_interval_sec) ──       │
+│     if sync_due:                                            │
+│       maintain_once → drain_queue → write ready.json        │
+│     ── Exteroception (event-driven, optional) ──            │
+│     if telegram_token:                                      │
+│       messages ← Telegram.get_updates(offset)               │
+│       for msg in messages:                                  │
+│         enqueue → process_one (in-process)                  │
+│         offset ← msg.update_id + 1                          │
+│     else:                                                   │
+│       if queue_depth > 0: drain_queue                       │
 │     sleep poll_interval                                      │
 │                                                             │
-│   Responsibilities: Receive, enqueue, invoke, loop          │
-│   Intelligence: None                                        │
-│   Context packing: None (that's the processor's job)        │
+│   Telegram is optional — daemon works peer-only.            │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 | Concern | Owner | Rationale |
 |---------|-------|-----------|
 | Process lifecycle | systemd | Battle-tested, handles crashes, logging, dependencies |
-| Telegram I/O | Daemon | Poll + enqueue; isolated failure domain; trivial to restart |
-| Context packing | Processor | Reads hub artifacts, builds `state/input.md` from queue item |
-| LLM invocation | Processor | Single Claude API call |
-| Op execution + archive | Processor | Parses output.md, executes ops, routes Telegram reply, archives IO pair |
+| Maintenance | `maintain_once` | 7 primitives: sync, inbox, outbox, update, review, cleanup |
+| Telegram I/O | Daemon loop | Poll + enqueue; isolated failure domain; trivial to restart |
+| Queue drain | `drain_queue` / `process_one` | In-process execution (no subprocess fork) |
+| Projection | `write_daemon_ready` | Writes ready.json with scheduler + sensor state |
 
 ### Idempotence
 
 - Telegram `update_id` offset persisted to `state/telegram.offset`
 - Offset only advanced after successful processing + response send
-- If processor crashes mid-message, the update is reprocessed on next poll
+- If daemon crashes mid-message, the update is reprocessed on next poll
 
 ---
 
@@ -1484,6 +1446,12 @@ CN_MODEL          Model override (optional; default from config.json)
     "max_artifact_bytes": 65536,
     "max_artifact_bytes_per_op": 16384,
     "exec_allowlist": ["git", "rg", "sed"]
+  },
+  "scheduler": {
+    "sync_interval_sec": 300,
+    "review_interval_sec": 300,
+    "oneshot_drain_limit": 1,
+    "daemon_drain_limit": 8
   }
 }
 ```

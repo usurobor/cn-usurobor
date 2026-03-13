@@ -1191,14 +1191,21 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
         | Lock_busy | Processing_failed _ -> true
         | Queue_empty | Drain_limit_reached -> false);
       write_daemon_ready ~tg_poll_status:"ok" ();
-      (* Check degraded state *)
+      (* Emit idle/degraded — symmetric with oneshot scheduler.idle *)
       let maint_deg = Cn_maintenance.is_degraded maint_result in
-      if maint_deg || !last_drain_degraded then
-        Cn_trace.gemit ~component:"scheduler" ~layer:Body
-          ~event:"scheduler.degraded" ~severity:Warn ~status:Degraded
-          ~reason_code:(if !last_drain_degraded then
-                          string_of_drain_stop drain_stop
-                        else "maintenance_degraded") ()
+      let tick_degraded = maint_deg || !last_drain_degraded in
+      let idle_status = if tick_degraded then Degraded else Ok_ in
+      Cn_trace.gemit ~component:"scheduler" ~layer:Body
+        ~event:"scheduler.idle" ~severity:(if tick_degraded then Warn else Info)
+        ~status:idle_status
+        ~reason_code:(if !last_drain_degraded then
+                        string_of_drain_stop drain_stop
+                      else if maint_deg then "maintenance_degraded"
+                      else "clean")
+        ~details:[
+          "mode", Cn_json.String "daemon";
+          "maintenance_status", Cn_json.String !last_maintenance_status;
+        ] ()
     end;
 
     (* === Exteroception: Telegram poll + immediate drain (sensor-driven) === *)
@@ -1274,6 +1281,8 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                             ~trigger_id ()
                         end
                     | Error err ->
+                        last_drain_degraded := true;
+                        write_daemon_ready ~tg_poll_status:"ok" ();
                         Cn_trace.gemit ~component:"telegram" ~layer:Sensor
                           ~event:"daemon.offset.blocked" ~severity:Warn ~status:Error_status
                           ~trigger_id

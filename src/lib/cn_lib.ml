@@ -697,15 +697,15 @@ Flags:
   --dry-run           Show what would happen
 
 Runtime:
-  cn agent runs on cron (every 5 min). It:
-  1. Queues inbox items to state/queue/
-  2. Pops from queue → packs context → calls LLM → executes ops
+  Oneshot scheduler (cn agent) runs one cycle on cron:
+  1. maintain_once: sync, inbox, outbox, update check, review, cleanup
+  2. drain_queue: dequeue → pack context → call LLM → execute ops
   All state mutation under atomic lock. Recovery handles crash at any point.
   Daemon scheduler (--daemon) runs continuous loop with periodic maintenance.
   Telegram poll is enabled when TELEGRAM_TOKEN is set.
 |}
 
-let version = "3.6.0"
+let version = "3.7.0"
 let cnos_commit = Cn_build_info.cnos_commit
 
 (* === Version Comparison (pure, semantic) === *)
