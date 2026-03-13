@@ -443,7 +443,7 @@ let execute_git_stage ~hub_path ~config (op : Cn_shell.typed_op) =
       status = Cn_shell.Denied; reason = "policy_rejected";
       start_time = start; end_time = now_iso (); artifacts = [] }
   else
-    (* Check for optional paths field (list of pathspecs) *)
+    (* Check for optional paths field (list of literal paths) *)
     let paths = match List.assoc_opt "paths" op.Cn_shell.fields with
       | Some (Cn_json.Array items) ->
         Some (List.filter_map (function
@@ -451,12 +451,12 @@ let execute_git_stage ~hub_path ~config (op : Cn_shell.typed_op) =
       | _ -> None
     in
     match paths with
-    | Some pathspecs ->
+    | Some literal_paths ->
       (* Sandbox-check each path before staging *)
       let bad = List.find_opt (fun p ->
         match Cn_sandbox.validate_path ~hub_path ~access:Write_access p with
         | Error _ -> true | Ok _ -> false
-      ) pathspecs in
+      ) literal_paths in
       (match bad with
        | Some denied_path ->
          { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
@@ -464,9 +464,12 @@ let execute_git_stage ~hub_path ~config (op : Cn_shell.typed_op) =
            reason = Printf.sprintf "path_denied: %s" denied_path;
            start_time = start; end_time = now_iso (); artifacts = [] }
        | None ->
+         (* Use --literal-pathspecs to prevent glob/magic interpretation,
+            and -- to separate options from filenames *)
          let code, output =
            Cn_ffi.Process.exec_args ~prog:"git"
-             ~args:(["-C"; hub_path; "add"] @ pathspecs) ()
+             ~args:(["--literal-pathspecs"; "-C"; hub_path; "add"; "--"]
+                    @ literal_paths) ()
          in
          if code = 0 then
            { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
