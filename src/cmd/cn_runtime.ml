@@ -1067,8 +1067,10 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
     | Ok b -> b
   in
 
-  (* Daemon state tracking *)
-  let last_maintenance_at = ref 0.0 in
+  (* Daemon state tracking — store ISO timestamps at event time for truthful projection *)
+  let last_maintenance_at = ref 0.0 in  (* Unix timestamp for interval comparison *)
+  let last_maintenance_at_iso = ref "" in  (* ISO string for projection *)
+  let last_sync_at_iso = ref "" in  (* ISO string for projection *)
   let last_maintenance_status = ref "none" in
   let last_sync_status = ref "none" in
   let last_drain_degraded = ref false in
@@ -1126,11 +1128,9 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
       } else None);
       scheduler = Some {
         mode = "daemon";
-        last_sync_at = (let t = !last_maintenance_at in
-                        if t > 0.0 then Some (Cn_fmt.now_iso ()) else None);
+        last_sync_at = (if !last_sync_at_iso <> "" then Some !last_sync_at_iso else None);
         last_sync_status = Some !last_sync_status;
-        last_maintenance_at = (let t = !last_maintenance_at in
-                               if t > 0.0 then Some (Cn_fmt.now_iso ()) else None);
+        last_maintenance_at = (if !last_maintenance_at_iso <> "" then Some !last_maintenance_at_iso else None);
         last_maintenance_status = Some !last_maintenance_status;
       };
     }
@@ -1143,7 +1143,10 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
     ~reason_code:"boot_maintenance"
     ~details:["mode", Cn_json.String "daemon"] ();
   let maint_result = Cn_maintenance.maintain_once ~config ~hub_path ~name in
+  let boot_maint_ts = Cn_fmt.now_iso () in
   last_maintenance_at := Unix.gettimeofday ();
+  last_maintenance_at_iso := boot_maint_ts;
+  last_sync_at_iso := boot_maint_ts;
   last_maintenance_status := (if Cn_maintenance.is_degraded maint_result
     then "degraded" else "ok");
   last_sync_status := Cn_maintenance.status_string maint_result.sync_status;
@@ -1173,7 +1176,10 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
         ~details:["mode", Cn_json.String "daemon";
                    "elapsed", Cn_json.Int (int_of_float (now -. !last_maintenance_at))] ();
       let maint_result = Cn_maintenance.maintain_once ~config ~hub_path ~name in
+      let tick_ts = Cn_fmt.now_iso () in
       last_maintenance_at := Unix.gettimeofday ();
+      last_maintenance_at_iso := tick_ts;
+      last_sync_at_iso := tick_ts;
       last_maintenance_status := (if Cn_maintenance.is_degraded maint_result
         then "degraded" else "ok");
       last_sync_status := Cn_maintenance.status_string maint_result.sync_status;
