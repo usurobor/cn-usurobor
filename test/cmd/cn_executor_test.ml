@@ -718,3 +718,58 @@ let%expect_test "git_stage all: protected files remain unstaged" =
   [%expect {|
     kind=git_stage status=ok reason=(none) artifacts=0
     staged: src/safe.ml |}]
+
+let%expect_test "git_stage all: symlink to .cn/ excluded" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    (* Create a normal file *)
+    let oc = open_out (Filename.concat hub "src/normal.ml") in
+    output_string oc "let n = 1"; close_out oc;
+    (* Create a symlink from src/sneaky.env -> .cn/secrets.env *)
+    Unix.symlink
+      (Filename.concat hub ".cn/secrets.env")
+      (Filename.concat hub "src/sneaky.env");
+    (* Stage all *)
+    let stage_op = { Cn_shell.kind = Effect Git_stage;
+                     op_id = Some "stage-01"; fields = [] } in
+    let sr = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config stage_op in
+    show_receipt sr;
+    let staged = staged_files hub in
+    Printf.printf "staged: %s\n" staged);
+  [%expect {|
+    kind=git_stage status=ok reason=(none) artifacts=0
+    staged: src/normal.ml |}]
+
+let%expect_test "git_stage all: symlink to protected file excluded" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    (* Create a normal file *)
+    let oc = open_out (Filename.concat hub "src/ok.ml") in
+    output_string oc "let ok = true"; close_out oc;
+    (* Create a symlink from docs/soul_link.md -> spec/SOUL.md *)
+    Unix.symlink
+      (Filename.concat hub "spec/SOUL.md")
+      (Filename.concat hub "docs/soul_link.md");
+    (* Stage all *)
+    let stage_op = { Cn_shell.kind = Effect Git_stage;
+                     op_id = Some "stage-01"; fields = [] } in
+    let sr = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config stage_op in
+    show_receipt sr;
+    let staged = staged_files hub in
+    Printf.printf "staged: %s\n" staged);
+  [%expect {|
+    kind=git_stage status=ok reason=(none) artifacts=0
+    staged: src/ok.ml |}]
+
+let%expect_test "git_stage explicit: symlink to .cn/ denied" =
+  with_test_hub (fun hub ->
+    (* Create a symlink from src/link.env -> .cn/secrets.env *)
+    Unix.symlink
+      (Filename.concat hub ".cn/secrets.env")
+      (Filename.concat hub "src/link.env");
+    let op = { Cn_shell.kind = Effect Git_stage;
+               op_id = Some "stage-01";
+               fields = [("paths", Cn_json.Array [Cn_json.String "src/link.env"])] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r);
+  [%expect {| kind=git_stage status=denied reason=path_denied: src/link.env artifacts=0 |}]

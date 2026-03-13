@@ -493,20 +493,49 @@ let execute_git_stage ~hub_path ~config (op : Cn_shell.typed_op) =
              reason = Printf.sprintf "git_add_exit_%d: %s" code (String.trim output);
              start_time = start; end_time = now_iso (); artifacts = [] })
     | None ->
-      (* No paths specified: stage all changes, excluding denied paths *)
-      let code, output =
+      (* No paths specified: enumerate all changed/untracked files,
+         validate each through the sandbox, stage only the validated set.
+         This ensures symlink resolution and protected file rules apply
+         identically to stage-all and explicit-path modes. *)
+      let _, porcelain =
         Cn_ffi.Process.exec_args ~prog:"git"
-          ~args:(["-C"; hub_path; "add"; "-A"] @ git_pathspec_exclusions) ()
+          ~args:["-C"; hub_path; "status"; "--porcelain"; "-uall"] ()
       in
-      if code = 0 then
+      let candidates =
+        String.split_on_char '\n' porcelain
+        |> List.filter_map (fun line ->
+          if String.length line < 4 then None
+          else
+            let path = String.sub line 3 (String.length line - 3) in
+            let path = String.trim path in
+            if path = "" then None else Some path)
+      in
+      let safe_paths = List.filter (fun p ->
+        match Cn_sandbox.validate_path ~hub_path ~access:Write_access p with
+        | Ok _ ->
+          let full = Filename.concat hub_path p in
+          not (try Sys.is_directory full with Sys_error _ -> false)
+        | Error _ -> false
+      ) candidates in
+      if safe_paths = [] then
         { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
           status = Cn_shell.Ok_status; reason = "";
           start_time = start; end_time = now_iso (); artifacts = [] }
       else
-        { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
-          status = Cn_shell.Error_status;
-          reason = Printf.sprintf "git_add_exit_%d: %s" code (String.trim output);
-          start_time = start; end_time = now_iso (); artifacts = [] }
+        let code, output =
+          Cn_ffi.Process.exec_args ~prog:"git"
+            ~args:(["--literal-pathspecs"; "-C"; hub_path; "add"; "--"]
+                   @ safe_paths) ()
+        in
+        if code = 0 then
+          { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
+            status = Cn_shell.Ok_status; reason = "";
+            start_time = start; end_time = now_iso (); artifacts = [] }
+        else
+          { Cn_shell.pass = ""; op_id = op.op_id; kind = "git_stage";
+            status = Cn_shell.Error_status;
+            reason = Printf.sprintf "git_add_exit_%d: %s" code (String.trim output);
+            start_time = start; end_time = now_iso (); artifacts = [] }
 
 let execute_git_commit ~hub_path ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
