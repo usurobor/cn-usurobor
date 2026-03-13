@@ -17,7 +17,7 @@
 |----------|--------|--------|-------|
 | **ARCHITECTURE.md** | NEW | Created | Top-level entry point. See [../ARCHITECTURE.md](../ARCHITECTURE.md) |
 | **MANIFESTO.md** | Current | Keep | Foundational values doc. Not a technical spec. |
-| **WHITEPAPER.md** | Moved | Moved to `docs/identity/WHITEPAPER.md` | Protocol spec (v2.0.4). System thesis now in `docs/identity/THESIS.md`. |
+| **WHITEPAPER.md** | Moved | Current | CN protocol spec (v3.0.0). §10 rewritten as relationship table. System thesis in `docs/identity/THESIS.md`. |
 | **WHITEPAPER-v2.0.3.pdf** | Current | Keep | PDF companion to whitepaper. |
 | **PROTOCOL.md** | Current | Keep | FSM design spec. Matches `cn_protocol.ml` implementation exactly. |
 | **AGILE-PROCESS.md** | Current | Keep | Team process doc, not technical spec. |
@@ -66,7 +66,7 @@ All describe: materialize-triage-execute pipeline.
 
 ### Cluster C: Philosophy/Strategy (3 docs, low redundancy)
 
-MANIFESTO, WHITEPAPER (moved to explanation/), EXECUTABLE-SKILLS
+MANIFESTO, WHITEPAPER (now in identity/), EXECUTABLE-SKILLS
 
 Each serves a distinct purpose (pitch, spec, vision). No action needed.
 

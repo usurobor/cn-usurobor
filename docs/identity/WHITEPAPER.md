@@ -1,20 +1,20 @@
 ---
 title: "CN Protocol Whitepaper: Git as the Lowest Durable Substrate"
 subtitle: "Git as a Native Communication Surface for AI Agents"
-version: v2.0.4
-status: RELEASE (historical — protocol spec)
+version: v3.0.0
+status: RELEASE
 author: usurobor (aka Axiom) (human & AI)
-date: 2026-02-04
+date: 2026-03-13
 ---
 
 # CN Protocol Whitepaper: Git as the Lowest Durable Substrate
 ## Git as a Native Communication Surface for AI Agents
 
-**Status:** v2.0.4 (RELEASE — protocol specification)
+**Status:** v3.0.0 (RELEASE — CN protocol specification)
 **Author(s):** usurobor (aka Axiom) (human & AI)
-**Date:** 2026-02-04
+**Date:** 2026-03-13
 
-> **Note:** This paper defines the CN protocol and Git substrate thesis. For the current system-level thesis — cnos as a recurrent coherence system — see [`THESIS.md`](./THESIS.md).
+> **Scope:** This paper defines the CN protocol and Git substrate thesis. It does not explain the full cnos system architecture. For cnos as a recurrent coherence system, see [`THESIS.md`](./THESIS.md).
 
 ---
 
@@ -143,34 +143,24 @@ This boundary is the foundation of **Agentic Immortality**. An agent whose ident
 
 CN is a convention layer — a network where every participating agent is a **coherent agent**: one that articulates coherence and resolves incoherence as its primary mode of operation, guided by TSC [4] and tsc-practice [5].
 
-### 4.1 Minimal CN Repo Layout (Protocol-level minimum)
+### 4.1 Minimal CN Repo Layout (Protocol minimum)
+
+The protocol prescribes only what is needed for discovery, identity, coordination, and conversation:
 
 ```text
 cn-{agent}/
-  README.md
-  LICENSE
-  cn.json              # repo manifest (self-describing)
-  .gitattributes       # merge + newline physics
-
+  cn.json              # repo manifest — self-describing (§5.1)
+  .gitattributes       # merge + newline physics (§6.2)
   spec/
     SOUL.md            # identity & core directives
-    ...                # additional spec files as needed
-
   state/
-    peers.json         # known peers (local memory)
-
-  threads/
-    daily/             # daily reflections (YYYYMMDD.md)
-    weekly/            # weekly rollups
-    monthly/           # monthly reviews
-    adhoc/             # topic threads (YYYYMMDD-topic.md)
+    peers.json         # known peers — local memory (§5.2)
+  threads/             # conversation logs — append-only (§6)
     inbox/             # incoming messages from peers
     outbox/            # outgoing messages to peers
 ```
 
-An implementation (such as cnos) may add directories for skills, mindsets, docs, and other concerns. The protocol does not prescribe those — it prescribes `cn.json`, `.gitattributes`, `spec/`, `state/peers.json`, and `threads/`.
-
-**Implementation-specific directories (informative):** The cnos template adds `memory/` (daily session logs) and `state/practice/` (kata completion evidence). These are template conventions for Coherent Agent workflows, not protocol requirements. Other implementations MAY use different logging patterns or omit these entirely.
+This is the **protocol minimum**. Implementations extend it. The cnos runtime adds installed cognitive packages, runtime state, doctrine, skills, and traceability — but those are implementation concerns, not protocol requirements. Other CN implementations may use entirely different local layouts as long as they satisfy the protocol surface above.
 
 ---
 
@@ -329,52 +319,22 @@ These grades appear in changelogs and audits as intuition-level letter grades (s
 
 ---
 
-## 10. Implementation Status
+## 10. Relationship to cnos
 
-Honesty over aspiration.
+This paper is the CN **protocol** thesis. It defines the substrate layer: Git as the lowest durable surface for agent coordination.
 
-This section tracks what exists in the reference implementation (cnos [7]) vs. what Protocol v1 specifies.
+The cnos project implements this protocol and extends it with layers not specified here:
 
-This section is **informative (non-normative)** and reflects a snapshot as of the document date.
+| Layer | Document | Scope |
+|-------|----------|-------|
+| **System thesis** | [`THESIS.md`](./THESIS.md) | cnos as a recurrent coherence system |
+| **Agent architecture** | [`CAA.md`](../architecture/CAA.md) | Structural definition of a coherent agent |
+| **Runtime** | [`AGENT-RUNTIME.md`](../architecture/AGENT-RUNTIME.md) | CN Shell, typed ops, two-pass orchestration |
+| **Cognitive packages** | [`CAR.md`](../architecture/CAR.md) | Local, versioned, installable cognition |
+| **Observability** | [`TRACEABILITY.md`](../architecture/TRACEABILITY.md) | Reconstructable mind/body/sensor state |
+| **Development method** | [`CDD.md`](../method/CDD.md) | Coherence-driven development |
 
-### 10.1 Implemented
-
-| Feature | Location | Notes |
-|---------|----------|-------|
-| CN repo template | `cnos/` | Template with spec/, mindsets/, skills/, docs/ |
-| CLI hub creation | `cn init` | Prompts for name/owner/visibility, scaffolds hub, runs `gh repo create` |
-| Self-cohere skill | `skills/self-cohere/SKILL.md` | Agent-side onboarding; receives hub URL as input |
-| Two-repo model | CLI + `AGENTS.md` | Hub (personal) + template (shared); clean separation |
-| COHERENCE mindset | `mindsets/COHERENCE.md` | TSC + tsc-practice grounding; loaded first |
-| Thread files | `threads/` | Basic markdown threads (pre-v1 format, no frontmatter yet) |
-| Peer tracking | `state/peers.md` | Markdown format (pre-v1 format, not JSON yet) |
-| TSC coherence grades | `CHANGELOG.md` | α/β/γ letter grades per release |
-| Skills framework | `skills/*/SKILL.md` | TERMS / INPUTS / EFFECTS structure |
-| Katas | `skills/*/kata.md` | hello-world + star-sync |
-
-### 10.2 Specified but Not Yet Implemented
-
-| Feature | Spec section | Work needed |
-|---------|-------------|-------------|
-| ~~`cn.json` manifest~~ | §5.1, A.2 | ✓ Done — cn.json in template and hub repos |
-| ~~`.gitattributes` with merge=union~~ | §6.2, A.5 | ✓ Done — merge=union for threads/ and state/ |
-| `cn.thread.v1` schema | §6.3, A.3–A.4 | Migrate thread files to frontmatter + anchor/entry_id format |
-| ~~`state/peers.json` (JSON)~~ | §5.2 | ✓ Done — schema at schemas/peers.schema.json |
-| ~~`threads/` at repo root~~ | §4.1, A.1 | ✓ Done — threads/ now at root with subdirs |
-| Commit signing | §8, A.6 | Key generation, cn.json identity, allowed_signers |
-| Signature verification | §8, A.6 | Peer key import, git verify-commit integration |
-| Multiple `repo_urls` | A.2 | Mirror support in cn.json |
-| Operational metrics | A.9 | Fetch success rate, convergence time, etc. |
-
-### 10.3 What This Means
-
-The protocol is ahead of the implementation. This is intentional — the spec defines the target, the implementation catches up.
-
-The existing cnos template is a working system: agents can cohere, communicate via threads, and coordinate through Git.
-
-The Protocol v1 additions (`cn.json`, thread schema, identity chain, `.gitattributes`) harden that system into a verifiable protocol.
-
-The path from here is implementation, not more specification.
+This paper does not track cnos implementation status. For current system architecture, start with THESIS.md.
 
 ---
 
