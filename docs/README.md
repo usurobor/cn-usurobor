@@ -2,154 +2,138 @@
 
 A recurrent coherence system with Git as its lowest durable substrate.
 
-```
-Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
-  |                  |                |
-  reads input.md     validates FSMs   push/fetch branches
-  writes output.md   executes ops     threads as files
-```
-
 ---
 
 ## Start Here
 
-[THESIS.md](./THESIS.md) — what cnos is: a recurrent coherence system. Start here.
+[THESIS.md](./THESIS.md) — what cnos is. Start here.
 
-[ARCHITECTURE.md](./architecture/ARCHITECTURE.md) — system overview: module structure, the four FSMs, data flow, directory layout, and transport protocol.
+[ARCHITECTURE.md](./architecture/ARCHITECTURE.md) — system overview: modules, FSMs, data flow, directory layout.
 
 ### Reading Path
 
 | I want to... | Read |
 |--------------|------|
-| Understand what cnos is and how it works | [ARCHITECTURE.md](./architecture/ARCHITECTURE.md) |
+| Understand what cnos is | [THESIS.md](./THESIS.md) |
 | Understand *why* cnos exists | [MANIFESTO.md](./foundations/MANIFESTO.md) |
 | Understand coherence as the top-level system | [COHERENCE-SYSTEM.md](./foundations/COHERENCE-SYSTEM.md) |
 | Understand the agent architecture | [CAA.md](./architecture/CAA.md) |
+| Understand the runtime mechanics | [AGENT-RUNTIME.md](./architecture/AGENT-RUNTIME.md) |
 | Understand operational observability | [TRACEABILITY.md](./architecture/TRACEABILITY.md) |
-| Understand what cnos is at the system level | [THESIS.md](../THESIS.md) |
 | Read the CN protocol spec | [WHITEPAPER.md](./architecture/WHITEPAPER.md) |
-| Understand the FSM state machines in depth | [PROTOCOL.md](./architecture/PROTOCOL.md) |
-| Learn the `cn` CLI commands | [CLI.md](./architecture/CLI.md) |
-| Set up peering between two agents | [HANDSHAKE.md](./guides/HANDSHAKE.md) |
-| Set up cron or Telegram daemon | [AUTOMATION.md](./guides/AUTOMATION.md) |
-| Migrate from an older version | [MIGRATION.md](./guides/MIGRATION.md) |
-| Write a new skill | [WRITE-A-SKILL.md](./guides/WRITE-A-SKILL.md) |
-| Practice with exercises | [DOJO.md](./guides/DOJO.md) |
+| Understand the FSM state machines | [PROTOCOL.md](./architecture/PROTOCOL.md) |
+| Learn the `cn` CLI | [CLI.md](./architecture/CLI.md) |
+| Understand how cnos evolves | [CDD.md](./method/CDD.md) |
 | Look up a term | [GLOSSARY.md](./reference/GLOSSARY.md) |
 
 ---
 
-## Architecture at a Glance
+## System at a Glance
 
-Four concepts: **hub** (git repo = agent home), **peer** (another hub), **thread** (unit of work, markdown file), **agent** (pure function, reads input.md, writes output.md).
+**Coherence is primary.** cnos minimizes the gap between model and reality through four operations:
 
-Four FSMs in `cn_protocol.ml`, all with typed states and total transition functions:
+| Operation | Verb | What it does |
+|-----------|------|-------------|
+| **CMP** | look | Build the most coherent picture from evidence and constraints |
+| **MCP** | (the picture) | The gaps, the weakest axis, the available moves |
+| **CAP** | move | MCA (act on the world) or MCI (update the model) — MCA first |
+| **CLP** | check | Score α/β/γ, patch the weakest axis, converge or iterate |
 
-```
-Thread Lifecycle    Received → Queued → Active → Doing → Archived
-                                         |→ Deferred  |→ Delegated  |→ Deleted
-
-Actor Loop          Idle → InputReady → Processing → OutputReady → Idle
-
-Transport Sender    Pending → BranchCreated → Pushing → Pushed → Delivered
-
-Transport Receiver  Fetched → Materializing → Materialized → Cleaned
-```
-
-Data flow:
+**The agent** is one articulation of this loop:
 
 ```
-peer pushes branch → cn materializes to inbox → queued → input.md
-→ agent decides → output.md → cn executes ops → outbox → push to peer
+CMP (sense)  →  MCP (picture)  →  CAP (act)  →  CLP (review)  →  update  →  repeat
 ```
 
-Full details: [ARCHITECTURE.md](./architecture/ARCHITECTURE.md)
+In the runtime, this becomes: `input.md → agent → output.md → cn executes ops → push/fetch`.
+
+**Four FSMs** govern execution (`cn_protocol.ml`):
+
+| FSM | Flow |
+|-----|------|
+| Thread Lifecycle | Received → Queued → Active → Doing → Archived |
+| Actor Loop | Idle → InputReady → Processing → OutputReady → Idle |
+| Transport Sender | Pending → BranchCreated → Pushing → Pushed → Delivered |
+| Transport Receiver | Fetched → Materializing → Materialized → Cleaned |
+
+**Git** is the lowest durable substrate — persistent, cloneable, signed, versioned, mergeable. Not the whole thesis, but the foundation everything rests on.
 
 ---
 
-## Design Documents
+## Document Taxonomy
 
-Design docs are specifications, not tutorials. Organized by [Diataxis](https://diataxis.fr/).
+Docs are organized by their role in the system's self-model. See [DOCUMENTATION-SYSTEM.md](./method/DOCUMENTATION-SYSTEM.md) for the full rules.
 
-### Core
+### Foundations — Why
 
-The foundational documents. Read in this order for full understanding.
+| Document | Scope |
+|----------|-------|
+| [THESIS.md](./THESIS.md) | System thesis — cnos as a recurrent coherence system |
+| [MANIFESTO.md](./foundations/MANIFESTO.md) | Principles and values |
+| [COHERENCE-SYSTEM.md](./foundations/COHERENCE-SYSTEM.md) | Meta-model: coherence as primary; the instruction set |
+| [FOUNDATIONS.md](./foundations/FOUNDATIONS.md) | The coherence stack — doctrinal layers |
 
-| Document | What it is |
-|----------|-----------|
-| [ARCHITECTURE.md](./architecture/ARCHITECTURE.md) | System overview — modules, FSMs, data flow, directory layout |
-| [MANIFESTO.md](./foundations/MANIFESTO.md) | Principles — why cnos exists, what it stands for |
-| [THESIS.md](../THESIS.md) | System thesis — cnos as a recurrent coherence system (v1.0.0) |
+### Architecture — What
+
+| Document | Scope |
+|----------|-------|
+| [ARCHITECTURE.md](./architecture/ARCHITECTURE.md) | System overview — modules, FSMs, data flow |
+| [CAA.md](./architecture/CAA.md) | Coherent agent architecture |
+| [AGENT-RUNTIME.md](./architecture/AGENT-RUNTIME.md) | Runtime spec: CN Shell, typed ops, two-pass, receipts |
+| [CAR.md](./architecture/CAR.md) | Cognitive asset resolver — local, versioned, installable cognition |
 | [WHITEPAPER.md](./architecture/WHITEPAPER.md) | CN protocol specification (v3.0.0) |
-| [PROTOCOL.md](./architecture/PROTOCOL.md) | FSM design — state diagrams, transition tables (implemented) |
-
-### Domain
-
-Specifications for specific subsystems.
-
-| Document | What it is |
-|----------|-----------|
-| [COHERENCE-SYSTEM.md](./foundations/COHERENCE-SYSTEM.md) | Meta-model: coherence as primary; MCP/CMP/CAP/CLP across scales |
-| [CAA.md](./architecture/CAA.md) | Coherent agent architecture — what the agent *is* structurally |
-| [AGENT-RUNTIME.md](./architecture/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.7): CN Shell, typed ops, two-pass, receipts |
-| [CLI.md](./architecture/CLI.md) | CLI command reference — every `cn` command |
+| [PROTOCOL.md](./architecture/PROTOCOL.md) | FSM design — state diagrams, transition tables |
+| [TRACEABILITY.md](./architecture/TRACEABILITY.md) | Observability — event stream, state projections, readiness |
 | [SECURITY-MODEL.md](./architecture/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |
+| [CLI.md](./architecture/CLI.md) | CLI command reference |
+| [DAEMON.md](./architecture/DAEMON.md) | Daemon mode design |
 | [SETUP-INSTALLER.md](./architecture/SETUP-INSTALLER.md) | Install script specification |
-| [PLAN.md](./plans/PLAN.md) | Implementation plan for v3.3 (CN Shell) |
-| [TRACEABILITY.md](./architecture/TRACEABILITY.md) | Observability — event stream, state projections, readiness, transition reasoning |
-| [LOGGING.md](./evidence/LOGGING.md) | *(Superseded)* Historical logging model — IO pair archives |
+
+### Method — How it Evolves
+
+| Document | Scope |
+|----------|-------|
+| [CDD.md](./method/CDD.md) | Coherence-driven development |
 | [AGILE-PROCESS.md](./method/AGILE-PROCESS.md) | Team process — backlog, review, sync cadence |
+| [EXECUTABLE-SKILLS.md](./method/EXECUTABLE-SKILLS.md) | Vision: skills as programs (CTB language) |
+| [DOCUMENTATION-SYSTEM.md](./method/DOCUMENTATION-SYSTEM.md) | How docs are organized and evolve |
 
-### Vision
+### Plans — Current Intentions
 
-Forward-looking designs. Not yet implemented.
+Implementation plans for specific releases. Ephemeral by nature.
 
-| Document | What it is |
-|----------|-----------|
-| [EXECUTABLE-SKILLS.md](./method/EXECUTABLE-SKILLS.md) | Skills as programs (CTB language) |
-| [DAEMON.md](./architecture/DAEMON.md) | cn as runtime service with plugins |
+| Document | Scope |
+|----------|-------|
+| [PLAN-v3.6.0.md](./plans/PLAN-v3.6.0.md) | v3.6.0 Output Plane Separation |
+| [CAR-implementation-plan.md](./plans/CAR-implementation-plan.md) | Cognitive asset resolver |
+| [TRACEABILITY-implementation-plan.md](./plans/TRACEABILITY-implementation-plan.md) | Traceability implementation |
 
----
+### Evidence — What Happened
 
-## How-To Guides
+| Document | Scope |
+|----------|-------|
+| [AUDIT.md](./evidence/AUDIT.md) | Docs audit — status, overlap analysis |
+| [LOGGING.md](./evidence/LOGGING.md) | *(Superseded by TRACEABILITY.md)* Historical logging model |
+| [evidence/rca/](./evidence/rca/) | Root cause analyses — operational post-mortems |
 
-| Guide | When you need it |
-|-------|-----------------|
-| [HANDSHAKE.md](./guides/HANDSHAKE.md) | Establishing peering between two agents |
-| [AUTOMATION.md](./guides/AUTOMATION.md) | Setting up cron or Telegram daemon |
-| [MIGRATION.md](./guides/MIGRATION.md) | Migrating from older versions |
-| [WRITE-A-SKILL.md](./guides/WRITE-A-SKILL.md) | Adding a new skill to cnos |
+### Guides — How to Do Things
 
-## Tutorials
+| Guide | Scope |
+|-------|-------|
+| [HANDSHAKE.md](./guides/HANDSHAKE.md) | Establish peering between two agents |
+| [AUTOMATION.md](./guides/AUTOMATION.md) | Set up cron or Telegram daemon |
+| [MIGRATION.md](./guides/MIGRATION.md) | Migrate from older versions |
+| [BUILD-RELEASE.md](./guides/BUILD-RELEASE.md) | Build and release process |
+| [WRITE-A-SKILL.md](./guides/WRITE-A-SKILL.md) | Write a new skill |
+| [DOJO.md](./guides/DOJO.md) | Practice exercises |
 
-| Tutorial | What you learn |
-|----------|---------------|
-| [DOJO.md](./guides/DOJO.md) | Practice exercises for agent skills |
+### Reference — Lookup
 
-## Reference
-
-| Reference | What it covers |
-|-----------|---------------|
+| Document | Scope |
+|----------|-------|
 | [GLOSSARY.md](./reference/GLOSSARY.md) | Terms and definitions |
 | [NAMING.md](./reference/NAMING.md) | Naming conventions (CN, cnos, cn) |
 
-## Explanation
+### Archive — Lineage
 
-| Document | What it explains |
-|----------|-----------------|
-| [THESIS.md](../THESIS.md) | System thesis — cnos as a recurrent coherence system |
-| [WHITEPAPER.md](./architecture/WHITEPAPER.md) | CN protocol — Git as native communication surface |
-| [FOUNDATIONS.md](./foundations/FOUNDATIONS.md) | The coherence stack — why cnos exists |
-
----
-
-## RCA (Root Cause Analysis)
-
-Operational post-mortems. Not part of Diataxis — incident records.
-
-See [rca/](./rca/)
-
-## Audit
-
-- [AUDIT.md](./evidence/AUDIT.md) — docs audit (2026-02-11): status, actions, overlap analysis
-- [_archive/](./design/_archive/) — superseded docs, preserved for reference
+[_archive/](./_archive/) — superseded designs, preserved for historical traceability.
