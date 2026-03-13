@@ -618,3 +618,45 @@ let%expect_test "git_stage all then git_commit: succeeds" =
   [%expect {|
     kind=git_stage status=ok reason=(none) artifacts=0
     kind=git_commit status=ok reason=(none) artifacts=0 |}]
+
+(* === v3.8.0: git_stage path sandbox regressions === *)
+
+let%expect_test "git_stage: denied path (.cn/) with explicit paths" =
+  with_test_hub (fun hub ->
+    let op = { Cn_shell.kind = Effect Git_stage;
+               op_id = Some "stage-01";
+               fields = [("paths", Cn_json.Array [Cn_json.String ".cn/secrets.env"])] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r);
+  [%expect {| kind=git_stage status=denied reason=path_denied: .cn/secrets.env artifacts=0 |}]
+
+let%expect_test "git_stage: denied protected file with explicit paths" =
+  with_test_hub (fun hub ->
+    let op = { Cn_shell.kind = Effect Git_stage;
+               op_id = Some "stage-01";
+               fields = [("paths", Cn_json.Array [Cn_json.String "spec/SOUL.md"])] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r);
+  [%expect {| kind=git_stage status=denied reason=path_denied: spec/SOUL.md artifacts=0 |}]
+
+let%expect_test "git_stage: absolute path denied" =
+  with_test_hub (fun hub ->
+    let op = { Cn_shell.kind = Effect Git_stage;
+               op_id = Some "stage-01";
+               fields = [("paths", Cn_json.Array [Cn_json.String "/etc/passwd"])] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r);
+  [%expect {| kind=git_stage status=denied reason=path_denied: /etc/passwd artifacts=0 |}]
+
+(* === v3.8.0: git_commit allow_empty === *)
+
+let%expect_test "git_commit: allow_empty succeeds with nothing staged" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    let op = { Cn_shell.kind = Effect Git_commit;
+               op_id = Some "commit-01";
+               fields = [("message", Cn_json.String "empty commit");
+                          ("allow_empty", Cn_json.Bool true)] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r);
+  [%expect {| kind=git_commit status=ok reason=(none) artifacts=0 |}]
