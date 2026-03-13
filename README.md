@@ -42,16 +42,17 @@ Four concepts:
 | **Thread** | Unit of work or conversation. A markdown file with YAML frontmatter. |
 | **Agent** | Pure function: input → output. Never touches files or git directly — `cn` handles all I/O. |
 
-The core loop, driven by `cn agent` on cron or `cn agent --daemon`:
+The scheduler runs as oneshot (`cn agent`) or long-lived (`cn agent --daemon`):
 
 ```
-1. cn sync           Fetch peer branches, send outbox
-2. cn agent          Dequeue → pack context → call LLM → execute ops → archive
-3. cn save           Commit + push hub state
+Oneshot:  boot → maintain_once → drain_queue → exit
+Daemon:   boot → maintain_once → loop { interoception + exteroception }
 ```
 
-In daemon mode, sync and save happen automatically as part of periodic maintenance.
-Telegram is optional — the daemon works peer-only without `TELEGRAM_TOKEN`.
+- **Interoception** (periodic): `maintain_once` (sync, inbox, outbox, update, review, cleanup) → `drain_queue`
+- **Exteroception** (event-driven): Telegram poll → enqueue → process (optional — daemon works peer-only without `TELEGRAM_TOKEN`)
+
+Individual steps can also be run manually: `cn sync`, `cn agent --once`, `cn save`.
 
 All state mutation happens under atomic lock with crash recovery. The LLM sees
 packed context (identity, skills, conversation, capabilities, message) and produces
