@@ -934,40 +934,54 @@ let run_cron ~(config : Cn_config.config) ~hub_path ~name =
 
   (* 1. Maintenance tick — full protocol duties *)
   let maint_result = Cn_maintenance.maintain_once ~config ~hub_path ~name in
-  let maint_status = if Cn_maintenance.is_degraded maint_result
-    then "degraded" else "ok" in
+  let maint_degraded = Cn_maintenance.is_degraded maint_result in
+  let sync_status_str = Cn_maintenance.status_string maint_result.sync_status in
+  let maint_status_str = if maint_degraded then "degraded" else "ok" in
 
   (* 2. Drain queue up to configured limit *)
   let limit = config.scheduler.oneshot_drain_limit in
-  let (processed, _stop) = drain_queue ~config ~hub_path ~name ~limit in
+  let (processed, drain_stop) = drain_queue ~config ~hub_path ~name ~limit in
+  let drain_degraded = match drain_stop with
+    | Lock_busy | Processing_failed _ -> true
+    | Queue_empty | Drain_limit_reached -> false
+  in
 
-  (* 3. Update scheduler projection — read-modify-write to preserve mind/body/sensors *)
+  (* 3. Derive overall scheduler status from maintenance ∪ drain *)
+  let overall_degraded = maint_degraded || drain_degraded in
+  let overall_status = if overall_degraded then Degraded else Ready in
+
+  (* 4. Update scheduler projection — read-modify-write to preserve mind/body/sensors *)
   let now = Cn_fmt.now_iso () in
   (match Cn_trace.get_global () with
    | Some session ->
        Cn_trace_state.update_ready_scheduler hub_path
          ~boot_id:session.boot_id ~updated_at:now
-         ~status:(if Cn_maintenance.is_degraded maint_result
-                  then Degraded else Ready)
+         ~status:overall_status
          {
            mode = "oneshot";
            last_sync_at = Some now;
-           last_sync_status = Some maint_status;
+           last_sync_status = Some sync_status_str;
            last_maintenance_at = Some now;
-           last_maintenance_status = Some maint_status;
+           last_maintenance_status = Some maint_status_str;
          }
    | None -> ());
 
+  let idle_status = if overall_degraded then Degraded else Ok_ in
   Cn_trace.gemit ~component:"scheduler" ~layer:Body
-    ~event:"scheduler.idle" ~severity:Info ~status:Ok_
+    ~event:"scheduler.idle" ~severity:(if overall_degraded then Warn else Info)
+    ~status:idle_status
+    ~reason_code:(if drain_degraded then string_of_drain_stop drain_stop
+                  else if maint_degraded then "maintenance_degraded"
+                  else "clean")
     ~details:[
       "processed", Cn_json.Int processed;
-      "maintenance_status", Cn_json.String maint_status;
+      "maintenance_status", Cn_json.String maint_status_str;
+      "drain_stop", Cn_json.String (string_of_drain_stop drain_stop);
     ] ();
 
   print_endline (Cn_fmt.ok
-    (Printf.sprintf "Oneshot complete: %d processed, maintenance %s"
-       processed maint_status))
+    (Printf.sprintf "Oneshot complete: %d processed, maintenance %s, drain %s"
+       processed maint_status_str (string_of_drain_stop drain_stop)))
 
 (* === Telegram daemon === *)
 
@@ -1056,6 +1070,7 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
   (* Daemon state tracking *)
   let last_maintenance_at = ref 0.0 in
   let last_maintenance_status = ref "none" in
+  let last_sync_status = ref "none" in
 
   (* Telegram-specific state (only if token present) *)
   let offset = ref (
@@ -1109,7 +1124,7 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
         mode = "daemon";
         last_sync_at = (let t = !last_maintenance_at in
                         if t > 0.0 then Some (Cn_fmt.now_iso ()) else None);
-        last_sync_status = Some !last_maintenance_status;
+        last_sync_status = Some !last_sync_status;
         last_maintenance_at = (let t = !last_maintenance_at in
                                if t > 0.0 then Some (Cn_fmt.now_iso ()) else None);
         last_maintenance_status = Some !last_maintenance_status;
@@ -1127,6 +1142,7 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
   last_maintenance_at := Unix.gettimeofday ();
   last_maintenance_status := (if Cn_maintenance.is_degraded maint_result
     then "degraded" else "ok");
+  last_sync_status := Cn_maintenance.status_string maint_result.sync_status;
   write_daemon_ready ();
 
   (* Daemon poll start *)
@@ -1156,6 +1172,7 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
       last_maintenance_at := Unix.gettimeofday ();
       last_maintenance_status := (if Cn_maintenance.is_degraded maint_result
         then "degraded" else "ok");
+      last_sync_status := Cn_maintenance.status_string maint_result.sync_status;
       (* Drain any newly materialized work *)
       let limit = config.scheduler.daemon_drain_limit in
       let _ = drain_queue ~config ~hub_path ~name ~limit in

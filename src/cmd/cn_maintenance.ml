@@ -46,6 +46,12 @@ let string_of_substep = function
   | Degraded msg -> Printf.sprintf "degraded:%s" msg
   | Skipped msg -> Printf.sprintf "skipped:%s" msg
 
+(** Short status string for projection fields: "ok", "degraded", or "skipped". *)
+let status_string = function
+  | Ok -> "ok"
+  | Degraded _ -> "degraded"
+  | Skipped _ -> "skipped"
+
 (* === Review timestamp tracking === *)
 
 let last_review_path hub_path =
