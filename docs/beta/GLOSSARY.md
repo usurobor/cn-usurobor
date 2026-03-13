@@ -14,7 +14,7 @@ The degree to which a system's model matches reality. Incoherence is the gap bet
 
 Measured across three axes: α (Pattern), β (Relation), γ (Exit). See **TSC**.
 
-Defined in: `packages/cnos.core/doctrine/COHERENCE.md`, `docs/α/COHERENCE-SYSTEM.md`.
+Defined in: `packages/cnos.core/doctrine/COHERENCE.md`, `docs/alpha/COHERENCE-SYSTEM.md`.
 
 ### Coherence delta
 
@@ -22,7 +22,7 @@ A bounded movement from a less coherent state to a more coherent one. The archit
 
 A coherence delta is not merely a feature or a fix — it is the change in coherence itself, of which the feature or fix is the concrete, operator-visible articulation.
 
-Used in: `docs/α/CAA.md` §5.6, §10; `docs/γ/CDD.md` §3.4, §9.5.
+Used in: `docs/alpha/CAA.md` §5.6, §10; `docs/gamma/CDD.md` §3.4, §9.5.
 
 ### CAP (Coherent Agent Principle)
 
@@ -67,7 +67,7 @@ An MCP includes:
 
 MCP is what Sense → Compare (FOUNDATIONS §3) produces implicitly at the agent scale, named explicitly at the system scale.
 
-Defined in: `docs/α/COHERENCE-SYSTEM.md` §3.1; used in `docs/α/CAA.md` §5.2, `docs/γ/CDD.md` §2.1.
+Defined in: `docs/alpha/COHERENCE-SYSTEM.md` §3.1; used in `docs/alpha/CAA.md` §5.2, `docs/gamma/CDD.md` §2.1.
 
 ### CMP (Coherence Mapping Pass)
 
@@ -77,7 +77,7 @@ At the agent scale, CMP is the sensing / comparison phase that precedes the MCA-
 
 CMP asks: what are the relevant articulations right now? How do they relate? Where are the strongest incoherences? What is the weakest axis?
 
-Defined in: `docs/α/COHERENCE-SYSTEM.md` §3.2; used in `docs/α/CAA.md` §5.1, `docs/γ/CDD.md` §4.2.
+Defined in: `docs/alpha/COHERENCE-SYSTEM.md` §3.2; used in `docs/alpha/CAA.md` §5.1, `docs/gamma/CDD.md` §4.2.
 
 ### CLP (Coherence Ladder Process)
 
@@ -151,7 +151,7 @@ If α < β, invest in PATTERN. If β < α, invest in RELATION. Balance two, let 
 
 Any durable expression of coherence at a particular scale. Doctrine, code, skills, packages, traces, release notes, and agents are all articulations. cnos is a network of recurrent coherent articulations that generate, constrain, package, execute, observe, and repair one another.
 
-Defined in: `docs/α/COHERENCE-SYSTEM.md` §5.
+Defined in: `docs/alpha/COHERENCE-SYSTEM.md` §5.
 
 ---
 
@@ -215,13 +215,13 @@ An articulation of coherence that can sense, compare, choose, act or learn, and 
 - review the result via CLP
 - continue the loop
 
-Defined in: `docs/α/CAA.md`, `docs/α/COHERENCE-SYSTEM.md` §7.
+Defined in: `docs/alpha/CAA.md`, `docs/alpha/COHERENCE-SYSTEM.md` §7.
 
 ### CAA (Coherent Agent Architecture)
 
 The design document that specifies what a coherent agent is structurally: definition, first principle, doctrinal layers, cognitive strata at wake-up, the agent loop, runtime embodiment, invariants, and failure modes.
 
-Document: `docs/α/CAA.md`.
+Document: `docs/alpha/CAA.md`.
 
 ### CDD (Coherence-Driven Development)
 
@@ -229,7 +229,7 @@ The development method in which every meaningful change is treated as an interve
 
 Each substantial release is a **measured coherence delta**. Features are the operator-facing articulation of that movement.
 
-Document: `docs/γ/CDD.md`.
+Document: `docs/gamma/CDD.md`.
 
 ### CN Shell
 
@@ -240,7 +240,7 @@ The capability runtime that mediates between the agent and the world. The agent 
 
 This is CAP made runtime-real: sensing is first-class, action is governed.
 
-Defined in: `docs/α/AGENT-RUNTIME.md`.
+Defined in: `docs/alpha/AGENT-RUNTIME.md`.
 
 ### Two-pass structure
 
@@ -264,19 +264,19 @@ The process by which a coherent agent reconstitutes itself from local, versioned
 
 No network. No sibling checkout. Local files only.
 
-Defined in: `packages/cnos.core/doctrine/FOUNDATIONS.md` §6, `docs/α/CAA.md` §4.
+Defined in: `packages/cnos.core/doctrine/FOUNDATIONS.md` §6, `docs/alpha/CAA.md` §4.
 
 ### CAR (Cognitive Asset Resolver)
 
 The package distribution system. Defines how cognitive assets (doctrine, mindsets, skills) are packaged, versioned, installed, and resolved locally. CAR ensures wake-up is deterministic: same lockfile + same hub state → same packed context.
 
-Document: `docs/α/CAR.md`.
+Document: `docs/alpha/CAR.md`.
 
 ### Coherence Contract
 
-A lightweight declaration that accompanies every substantial change under CDD. Answers: what gap is being closed? Is this MCA or MCI? Which layer is affected? What is the expected triadic effect (α/β/γ)? What fails if skipped? What is the expected coherence delta?
+A lightweight declaration that accompanies every substantial change under CDD. Answers: what gap is being closed? Is this MCA or MCI? Which layer is affected? What is the expected triadic effect (alpha/β/γ)? What fails if skipped? What is the expected coherence delta?
 
-Defined in: `docs/γ/CDD.md` §6.
+Defined in: `docs/gamma/CDD.md` §6.
 
 ---
 

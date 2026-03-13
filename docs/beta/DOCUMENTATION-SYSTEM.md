@@ -14,9 +14,9 @@ The docs tree unfolds along the three ontological axes of coherence. Each docume
 | Directory | Axis | Question it answers |
 |-----------|------|-------------------|
 | (root) | The whole | What is cnos? (`THESIS.md`) How to read these docs? (`README.md`) |
-| `α/` | **Pattern** | What has been articulated? Doctrine, specs, definitions, protocol. |
-| `β/` | **Relation** | Do the parts reveal one system? System overview, vocabulary, guides, evidence. |
-| `γ/` | **Evolution** | How does it change? Method, plans, checklists. |
+| `alpha/` | **Pattern** | What has been articulated? Doctrine, specs, definitions, protocol. |
+| `beta/` | **Relation** | Do the parts reveal one system? System overview, vocabulary, guides, evidence. |
+| `gamma/` | **Evolution** | How does it change? Method, plans, checklists. |
 
 ### Root-level documents
 
@@ -76,9 +76,9 @@ Do not maintain parallel "v1" and "v2" files in active directories.
 
 When adding a new document, ask: **what is its dominant ontological character?**
 
-1. **Does it articulate substance?** (doctrine, spec, definition, protocol) → `α/`
-2. **Does it define relation?** (how parts connect, vocabulary, operator connection, model↔reality evidence) → `β/`
-3. **Does it govern movement?** (method, process, plans, gates) → `γ/`
+1. **Does it articulate substance?** (doctrine, spec, definition, protocol) → `alpha/`
+2. **Does it define relation?** (how parts connect, vocabulary, operator connection, model↔reality evidence) → `beta/`
+3. **Does it govern movement?** (method, process, plans, gates) → `gamma/`
 
 Within each axis:
 - `β/guides/` — task-oriented procedures (operator ↔ system relation)
@@ -97,8 +97,8 @@ The docs tree is itself an articulation of coherence. Its structure is triadic: 
 The reading order for CMP:
 
 1. `THESIS.md` — the whole
-2. `α/` — what has been articulated?
-3. `β/` — do the parts cohere?
-4. `γ/` — how does it move?
+2. `alpha/` — what has been articulated?
+3. `beta/` — do the parts cohere?
+4. `gamma/` — how does it move?
 
 This is the MCP formation sequence. If a document disrupts this order — if a reader must cross axes to form a coherent picture — the document is probably on the wrong axis.

@@ -3,7 +3,7 @@
 **Version:** 1.2.0
 **Status:** Draft
 **Date:** 2026-03-11
-**Placement:** γ document (`docs/γ/`)
+**Placement:** γ document (`docs/gamma/`)
 **Audience:** Contributors, reviewers, maintainers, release operators
 **Scope:** Defines the development method used to evolve cnos coherently
 
@@ -220,14 +220,14 @@ In cnos, the intended sequence is:
 
 ### 5.1 Relationship to AGILE-PROCESS.md
 
-The workflow states (Backlog → Claimed → In Progress → Review → Done) defined in `docs/γ/AGILE-PROCESS.md` govern how work moves through the team. CDD governs what coherence means at each stage:
+The workflow states (Backlog → Claimed → In Progress → Review → Done) defined in `docs/gamma/AGILE-PROCESS.md` govern how work moves through the team. CDD governs what coherence means at each stage:
 
 | Agile state | CDD concern |
 |-------------|-------------|
 | Backlog | Gap identified, prioritized by coherence impact |
 | Claimed | Coherence contract drafted |
 | In Progress | Design → plan → test → code pipeline |
-| Review | Triadic check (α/β/γ), CLP dialogue |
+| Review | Triadic check (alpha/β/γ), CLP dialogue |
 | Done | Release criteria met (§10) |
 
 CDD does not replace the agile workflow. It defines the quality function the workflow optimizes for.
@@ -291,14 +291,14 @@ CDD uses the standard cnos artifact set.
 Role: define first principles and normative boundaries.
 
 ### 7.2 Design artifacts
-- `docs/α/CAA.md`
-- `docs/α/AGENT-RUNTIME.md`
-- `docs/α/CAR.md`
+- `docs/alpha/CAA.md`
+- `docs/alpha/AGENT-RUNTIME.md`
+- `docs/alpha/CAR.md`
 
 Role: define the structural system.
 
 ### 7.3 Process artifacts
-- `docs/γ/AGILE-PROCESS.md`
+- `docs/gamma/AGILE-PROCESS.md`
 - `RULES.md`
 - `RELEASE.md`
 
@@ -306,7 +306,7 @@ Role: define workflow, governance, and release procedure.
 
 ### 7.4 Implementation plans
 - `PLAN.md`
-- Feature-specific plans (e.g., `docs/γ/plans/CAR-implementation-plan.md`)
+- Feature-specific plans (e.g., `docs/gamma/plans/CAR-implementation-plan.md`)
 
 Role: define build order and scope.
 

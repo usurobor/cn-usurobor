@@ -47,6 +47,9 @@ jobs:
         run: |
           opam install dune ppx_expect ppxlib mdx --yes
 
+      - name: Check contract copy matches source
+        run: diff docs/alpha/schemas/protocol-contract.json test/cmd/protocol-contract.json
+
       - name: Run invariant tests
         run: |
           eval $(opam env)

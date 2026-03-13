@@ -75,7 +75,7 @@ If `packages/` does not match what `src/agent/` would generate, the build fails.
 The runtime and the documented protocol surface must match.
 
 **Requirement:**
-A structured protocol contract (`docs/α/schemas/protocol-contract.json`) must exist in machine-readable form and be checked against code.
+A structured protocol contract (`docs/alpha/schemas/protocol-contract.json`) must exist in machine-readable form and be checked against code.
 
 Things that must match:
 - Legacy coordination op vocabulary: `ack`, `done`, `fail`, `reply`, `send`, `delegate`, `defer`, `delete`, `surface`, `mca`

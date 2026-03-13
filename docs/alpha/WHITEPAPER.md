@@ -332,7 +332,7 @@ The cnos project implements this protocol and extends it with layers not specifi
 | **Runtime** | [`AGENT-RUNTIME.md`](./AGENT-RUNTIME.md) | CN Shell, typed ops, two-pass orchestration |
 | **Cognitive packages** | [`CAR.md`](./CAR.md) | Local, versioned, installable cognition |
 | **Observability** | [`TRACEABILITY.md`](./TRACEABILITY.md) | Reconstructable mind/body/sensor state |
-| **Development method** | [`CDD.md`](../γ/CDD.md) | Coherence-driven development |
+| **Development method** | [`CDD.md`](../gamma/CDD.md) | Coherence-driven development |
 
 This paper does not track cnos implementation status. For current system architecture, start with THESIS.md.
 

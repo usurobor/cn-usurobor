@@ -1,6 +1,6 @@
 (** cn_contract_test.ml — Protocol contract consistency checks (I2)
 
-    Verifies that code constants match docs/α/schemas/protocol-contract.json.
+    Verifies that code constants match docs/alpha/schemas/protocol-contract.json.
     This is a deterministic structural check — no I/O to external systems.
 
     The contract is loaded at test time from the repo root.
@@ -14,10 +14,6 @@ let find_contract_path () =
   let candidates = [
     (* dune deps makes this available in the sandbox *)
     "protocol-contract.json";
-    (* direct run from repo root *)
-    "docs/α/schemas/protocol-contract.json";
-    (* symlink in test dir *)
-    "test/cmd/protocol-contract.json";
   ] in
   match List.find_opt Sys.file_exists candidates with
   | Some p -> p

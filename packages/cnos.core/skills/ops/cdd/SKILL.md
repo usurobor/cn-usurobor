@@ -152,20 +152,20 @@ Follow the pipeline. Each step feeds the next.
   - If changing an existing design lineage, update the existing file
   - Add patch notes or version bump inside it
   - ❌ Create `AGENT-RUNTIME-v2.md` alongside the original
-  - ✅ Update `docs/α/AGENT-RUNTIME.md`, bump version header
+  - ✅ Update `docs/alpha/AGENT-RUNTIME.md`, bump version header
 
 5.2. **New subsystem — create a versioned design doc**
-  - Pattern: `docs/α/NAME-vMAJOR.md`
-  - ❌ `docs/α/new-thing.md` (no version)
-  - ✅ `docs/α/CAA-v1.md`
-  - ✅ `docs/α/CAR-v3.4.md`
+  - Pattern: `docs/alpha/NAME-vMAJOR.md`
+  - ❌ `docs/alpha/new-thing.md` (no version)
+  - ✅ `docs/alpha/CAA-v1.md`
+  - ✅ `docs/alpha/CAR-v3.4.md`
 
 5.3. **Implementation plan**
-  - Feature/release scoped: `docs/γ/plans/PLAN-vX.Y.Z.md` (e.g. `PLAN-v3.6.0.md`)
-  - Subsystem scoped: `docs/γ/plans/NAME-implementation-plan.md` (e.g. `CAR-implementation-plan.md`)
+  - Feature/release scoped: `docs/gamma/plans/PLAN-vX.Y.Z.md` (e.g. `PLAN-v3.6.0.md`)
+  - Subsystem scoped: `docs/gamma/plans/NAME-implementation-plan.md` (e.g. `CAR-implementation-plan.md`)
   - ❌ Plan buried in a thread or issue comment
-  - ✅ `docs/γ/plans/CAR-implementation-plan.md`
-  - ✅ `docs/γ/plans/PLAN-v3.6.0.md`
+  - ✅ `docs/gamma/plans/CAR-implementation-plan.md`
+  - ✅ `docs/gamma/plans/PLAN-v3.6.0.md`
 
 5.4. **Tests mirror module location**
   - Pure logic: `test/lib/...`
@@ -449,10 +449,10 @@ CDD defines what must happen and in what order. Sub-skills define how.
 ## Reference
 
 - Coherence history: `CHANGELOG.md` (TSC table — α/β/γ per release)
-- Theory and rationale: `docs/γ/CDD.md`
+- Theory and rationale: `docs/gamma/CDD.md`
 - Triadic coherence model: `packages/cnos.core/doctrine/COHERENCE.md`
 - CAP (MCA/MCI): `packages/cnos.core/doctrine/CAP.md`
-- Agile workflow integration: `docs/γ/AGILE-PROCESS.md`
+- Agile workflow integration: `docs/gamma/AGILE-PROCESS.md`
 - Release procedure: `packages/cnos.core/skills/release/SKILL.md`
 - Design doc creation: `packages/cnos.eng/skills/eng/design/SKILL.md`
 - Code coherence: `packages/cnos.eng/skills/eng/coding/SKILL.md`

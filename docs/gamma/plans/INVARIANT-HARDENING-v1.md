@@ -2,7 +2,7 @@
 ## Implementation Plan
 
 **Status:** Active
-**Implements:** `docs/γ/INVARIANTS.md`
+**Implements:** `docs/gamma/INVARIANTS.md`
 **Mode:** MCA
 **Goal:** Make the current coherent repo structure self-enforcing.
 
@@ -58,7 +58,7 @@ Use existing `cn build --check`.
 
 Create a machine-readable protocol contract.
 
-**Path:** `docs/α/schemas/protocol-contract.json`
+**Path:** `docs/alpha/schemas/protocol-contract.json`
 
 **Contents:**
 - Legacy coordination op names
@@ -134,9 +134,9 @@ Update CI workflow so deterministic checks are required.
 ## 3. File Layout
 
 ### New files
-- `docs/γ/INVARIANTS.md` — canonical invariant catalog
-- `docs/γ/plans/INVARIANT-HARDENING-v1.md` — this plan
-- `docs/α/schemas/protocol-contract.json` — machine-readable protocol contract
+- `docs/gamma/INVARIANTS.md` — canonical invariant catalog
+- `docs/gamma/plans/INVARIANT-HARDENING-v1.md` — this plan
+- `docs/alpha/schemas/protocol-contract.json` — machine-readable protocol contract
 - `test/cmd/cn_contract_test.ml` — protocol contract consistency test
 - `test/cmd/cn_traceability_test.ml` — readiness projection smoke test
 - `.github/workflows/coherence.yml` — coherence-specific CI jobs

@@ -707,19 +707,19 @@ It is a milestone on the coherence gradient.
 - `AGENT-OPS.md`
 
 ### Agent architecture / What the coherent agent is
-- `docs/α/CAA.md`
+- `docs/alpha/CAA.md`
 
 ### Runtime embodiment / How it runs
-- `docs/α/AGENT-RUNTIME.md`
+- `docs/alpha/AGENT-RUNTIME.md`
 
 ### Cognitive substrate / How cognition arrives locally
-- `docs/α/CAR.md`
+- `docs/alpha/CAR.md`
 
 ### Traceability / How the system explains itself
-- `docs/α/TRACEABILITY.md`
+- `docs/alpha/TRACEABILITY.md`
 
 ### Development method / How cnos evolves coherently
-- `docs/γ/CDD.md`
+- `docs/gamma/CDD.md`
 
 This document sits above them:
 - not to replace them

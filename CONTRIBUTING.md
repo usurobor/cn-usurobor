@@ -39,7 +39,7 @@ Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `MCI`, `MCA`
 
 ### Development Method
 
-cnos uses coherence-driven development (CDD). See [docs/γ/CDD.md](./docs/γ/CDD.md) for the full method and [docs/γ/RULES.md](./docs/γ/RULES.md) for non-negotiable rules.
+cnos uses coherence-driven development (CDD). See [docs/gamma/CDD.md](./docs/gamma/CDD.md) for the full method and [docs/gamma/RULES.md](./docs/gamma/RULES.md) for non-negotiable rules.
 
 ### For Agents
 
