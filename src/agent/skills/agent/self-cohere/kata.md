@@ -81,4 +81,4 @@ git push
 ## Next
 
 - Run kata 1.2 (reflect) to complete your first reflection.
-- Set up kata 1.3 (daily-routine) for ongoing practice.
+- Set up kata 1.3 (reflect) for ongoing practice.

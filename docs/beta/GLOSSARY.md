@@ -1,4 +1,4 @@
-# Glossary – cnos v2.0.0
+# Glossary – cnos v3.6.0
 
 Short definitions of the main terms used in cnos, the CN whitepaper, and the coherence system documentation.
 

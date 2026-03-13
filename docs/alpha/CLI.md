@@ -89,6 +89,26 @@ cn daily                     Create/show daily reflection
 cn weekly                    Create/show weekly reflection
 ```
 
+### Dependencies
+
+```
+cn deps [list]               List installed packages
+cn deps restore              Install from lockfile (deterministic)
+cn deps doctor               Verify installed assets match lockfile
+cn deps add <pkg>            Add dependency to .cn/deps.json
+cn deps remove <pkg>         Remove dependency
+cn deps update [pkg]         Update lockfile (re-resolve within ranges)
+cn deps vendor               Commit vendor tree for airgapped use
+```
+
+### Build
+
+```
+cn build                     Assemble packages/ from src/agent/ sources
+cn build --check             Verify packages/ matches src/agent/ (CI mode)
+cn build clean               Remove generated content from packages/
+```
+
 ### Hub Management
 
 ```
@@ -100,6 +120,7 @@ cn update                    Update cn to latest version
 cn commit [message]          Stage + commit
 cn push                      Push to origin
 cn save [message]            Commit + push (shorthand)
+cn release [version]         Tag + create GitHub release (default: current version)
 cn peer [list]               List peers
 cn peer add <name> <url>     Add peer
 cn peer remove <name>        Remove peer
@@ -150,6 +171,9 @@ type command =
   | Update | Setup
   | Adhoc of string
   | Daily | Weekly
+  | Release of string option   (* Tag + GH release; optional version override *)
+  | Deps of Deps.cmd           (* List | Restore | Doctor | Add | Remove | Update | Vendor *)
+  | Build of Build.cmd          (* Packages | Check | Clean *)
 ```
 
 ## Dispatch
