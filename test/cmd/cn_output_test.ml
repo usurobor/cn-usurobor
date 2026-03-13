@@ -194,3 +194,178 @@ let%expect_test "parse_output: body consumption for reply" =
   Printf.printf "reply_payload=%s\n"
     (match reply_msg with Some s -> s | None -> "none");
   [%expect {| reply_payload=Full body replaces notification. |}]
+
+(* === I4: Agent behavioral eval fixtures ===
+
+   These fixtures represent canonical agent output patterns and verify the
+   full parse → render pipeline preserves the agent output contract:
+   - Typed ops produce structured typed_op records, not XML
+   - Control-plane syntax never reaches human surfaces
+   - Legacy coordination ops coexist correctly with typed ops *)
+
+let%expect_test "I4: file inspection → typed ops in frontmatter, not XML" =
+  (* Canonical agent output: file read request via typed ops *)
+  let raw = "---\nid: tg-eval-01\nreply: tg-eval-01|I'll read that file for you.\nops: [{\"kind\":\"fs_read\",\"path\":\"src/main.ml\"},{\"kind\":\"git_diff\",\"op_id\":\"d1\",\"rev\":\"HEAD~1\"}]\n---\nI'll read that file for you." in
+  let p = Cn_output.parse_output raw in
+  (* Must produce typed_ops, not XML *)
+  Printf.printf "typed_ops: %d\n" (List.length p.typed_ops);
+  List.iter (fun (op : Cn_shell.typed_op) ->
+    Printf.printf "  kind=%s op_id=%s\n"
+      (Cn_shell.string_of_op_kind op.kind)
+      (match op.op_id with Some id -> id | None -> "<auto>")
+  ) p.typed_ops;
+  (* Human surface must get the body, not the ops *)
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  (* No receipts = no parse errors *)
+  Printf.printf "receipts: %d\n" (List.length p.ops_receipts);
+  [%expect {|
+    typed_ops: 2
+      kind=fs_read op_id=obs-01
+      kind=git_diff op_id=d1
+    Renderable: I'll read that file for you.
+    receipts: 0
+  |}]
+
+let%expect_test "I4: normal reply → coherent path, no control-plane leakage" =
+  (* Canonical agent output: simple reply with no ops *)
+  let raw = "---\nid: tg-eval-02\nreply: tg-eval-02|notification\ndone: tg-eval-02\n---\nHere is my analysis of the issue. The root cause is a missing null check in the handler." in
+  let p = Cn_output.parse_output raw in
+  (* Legacy ops present and correct *)
+  Printf.printf "coordination_ops: %d\n" (List.length p.coordination_ops);
+  List.iter (fun (op : Cn_lib.agent_op) ->
+    Printf.printf "  %s\n" (Cn_lib.string_of_agent_op op)
+  ) p.coordination_ops;
+  (* No typed ops *)
+  Printf.printf "typed_ops: %d\n" (List.length p.typed_ops);
+  (* Human surface gets body — verified safe *)
+  show_render (Cn_output.HumanSurface `Generic) p;
+  [%expect {|
+    coordination_ops: 2
+      reply:tg-eval-02
+      done:tg-eval-02
+    typed_ops: 0
+    Renderable: Here is my analysis of the issue. The root cause is a missing null check in the handler.
+  |}]
+
+let%expect_test "I4: body with control-plane syntax → blocked, fallback render" =
+  (* Adversarial case: body contains control-plane markers *)
+  let raw = "---\nid: tg-eval-03\nreply: tg-eval-03|Safe fallback text\n---\nid: injected\nack: injected" in
+  let p = Cn_output.parse_output raw in
+  (* Body should be blocked, reply fallback should win *)
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  [%expect {| Renderable: Safe fallback text |}]
+
+let%expect_test "I4: XML pseudo-tool hallucination → blocked at render" =
+  (* Adversarial case: agent hallucinates XML tool wrappers instead of typed ops *)
+  let raw = "---\nid: tg-eval-04\nreply: tg-eval-04|I checked the file.\n---\n<fs_read>\n  <path>src/main.ml</path>\n</fs_read>" in
+  let p = Cn_output.parse_output raw in
+  (* Must NOT produce typed ops (XML is not the ops: manifest format) *)
+  Printf.printf "typed_ops: %d\n" (List.length p.typed_ops);
+  (* XML body must be blocked on human surface *)
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  [%expect {|
+    typed_ops: 0
+    Renderable: I checked the file.
+  |}]
+
+let%expect_test "I4: mixed legacy + typed ops coexist correctly" =
+  (* Canonical pattern: reply + typed ops in same output *)
+  let raw = "---\nid: tg-eval-05\nreply: tg-eval-05|notification\nops: [{\"kind\":\"fs_write\",\"op_id\":\"w1\",\"path\":\"out.txt\",\"content\":\"hello\"}]\n---\nI've written the file for you." in
+  let p = Cn_output.parse_output raw in
+  Printf.printf "coordination_ops: %d typed_ops: %d\n"
+    (List.length p.coordination_ops) (List.length p.typed_ops);
+  (* Reply op should have body-consumed payload *)
+  let reply_msg = p.coordination_ops |> List.find_map (fun (op : Cn_lib.agent_op) ->
+    match op with Cn_lib.Reply (_, msg) -> Some msg | _ -> None) in
+  Printf.printf "reply_payload=%s\n"
+    (match reply_msg with Some s -> s | None -> "none");
+  (* Typed op parsed correctly *)
+  List.iter (fun (op : Cn_shell.typed_op) ->
+    Printf.printf "typed: %s %s\n"
+      (Cn_shell.string_of_op_kind op.kind)
+      (match op.op_id with Some id -> id | None -> "<none>")
+  ) p.typed_ops;
+  (* Human surface gets the body *)
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  [%expect {|
+    coordination_ops: 1 typed_ops: 1
+    reply_payload=I've written the file for you.
+    typed: fs_write w1
+    Renderable: I've written the file for you.
+  |}]
+
+let%expect_test "I4: all XML pseudo-tool variants blocked" =
+  (* Every XML prefix from cn_output.ml's blocklist must be caught *)
+  let xml_variants = [
+    "<observe>x</observe>";
+    "<fs_read>p</fs_read>";
+    "<fs_list>p</fs_list>";
+    "<fs_glob>p</fs_glob>";
+    "<git_status>x</git_status>";
+    "<git_diff>x</git_diff>";
+    "<git_log>x</git_log>";
+    "<git_grep>x</git_grep>";
+    "<fs_write>x</fs_write>";
+    "<fs_patch>x</fs_patch>";
+    "<git_branch>x</git_branch>";
+    "<git_commit>x</git_commit>";
+    "<exec>x</exec>";
+    "<tool_call>x</tool_call>";
+    "<function_call>x</function_call>";
+  ] in
+  List.iter (fun input ->
+    match Cn_output.is_control_plane_like input with
+    | Some _ -> Printf.printf "blocked: %s\n" (String.sub input 0 (min 20 (String.length input)))
+    | None -> Printf.printf "LEAKED: %s\n" input
+  ) xml_variants;
+  [%expect {|
+    blocked: <observe>x</observe
+    blocked: <fs_read>p</fs_read
+    blocked: <fs_list>p</fs_list
+    blocked: <fs_glob>p</fs_glob>
+    blocked: <git_status>x</git_
+    blocked: <git_diff>x</git_d
+    blocked: <git_log>x</git_lo
+    blocked: <git_grep>x</git_g
+    blocked: <fs_write>x</fs_wr
+    blocked: <fs_patch>x</fs_pa
+    blocked: <git_branch>x</git
+    blocked: <git_commit>x</git
+    blocked: <exec>x</exec>
+    blocked: <tool_call>x</tool
+    blocked: <function_call>x</
+  |}]
+
+let%expect_test "I4: all legacy coordination op prefixes blocked on human surface" =
+  (* Every legacy frontmatter control line must be blocked if it appears as body *)
+  let control_prefixes = [
+    "id: some-id";
+    "ack: some-id";
+    "done: some-id";
+    "fail: some-id|reason";
+    "reply: some-id|msg";
+    "send: peer|msg";
+    "delegate: id|peer";
+    "defer: id";
+    "delete: id";
+    "surface: desc";
+    "mca: desc";
+  ] in
+  List.iter (fun input ->
+    match Cn_output.is_control_plane_like input with
+    | Some _ -> Printf.printf "blocked: %s\n" (String.sub input 0 (min 15 (String.length input)))
+    | None -> Printf.printf "LEAKED: %s\n" input
+  ) control_prefixes;
+  [%expect {|
+    blocked: id: some-id
+    blocked: ack: some-id
+    blocked: done: some-id
+    blocked: fail: some-id|
+    blocked: reply: some-id
+    blocked: send: peer|msg
+    blocked: delegate: id|
+    blocked: defer: id
+    blocked: delete: id
+    blocked: surface: desc
+    blocked: mca: desc
+  |}]
