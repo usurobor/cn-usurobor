@@ -1,162 +1,217 @@
-# FOUNDATIONS
+# Foundations
 
-The cognitive architecture of a coherent agent, from first principle to runtime.
+## Theory and Practice of Coherence
 
----
+Why cnos exists, what coherence means, and how theory becomes practice.
 
-## 1. First Principle
-
-A coherent agent exists inside a world it does not fully control or fully know.
-At every moment there is a possible gap between **model** (what the agent believes)
-and **reality** (what the world is).
-
-> A coherent agent minimizes the gap between model and reality.
-
-This is the agent-form of Friston's Free Energy Principle. In cnos it is
-operationalized as **CAP**.
+**Version:** 2.0.0
+**Date:** 2026-03-13
 
 ---
 
-## 2. The Four Doctrinal Layers
+## 1. The Core Claim
 
-### Layer 1 — CAP: the dynamic atom
+cnos is built from **coherence first**.
 
-When the agent detects a gap, there are two coherent responses:
+The theoretical claim:
 
-- **MCA** — change reality (act on the world)
-- **MCI** — change the model (update understanding)
+> A coherent system preserves wholeness while articulating itself into parts.
 
-Priority rule: **MCA before MCI.** If you can act, act first. If you cannot
-act, learn. If both are needed, act then learn from the result.
+The practical claim:
 
-> Gap → MCA or MCI → MCA first
+> cnos makes coherence operational.
 
-Everything else exists to make that choice well.
+The stack that connects them:
 
-### Layer 2 — COHERENCE: the review geometry
+- C≡ gives the axiom
+- TSC gives the measurement
+- CTB gives the executable form
+- cnos gives the coordination practice
 
-CAP says how to move. COHERENCE says how to judge whether the movement
-remained whole.
-
-Three axes (TSC):
-- **α PATTERN** — internal consistency
-- **β RELATION** — alignment across views and articulations
-- **γ EXIT** — viable next step, system can evolve without losing itself
-
-CLP is the review rhythm: seed → reflect → triadic check → patch weakest axis → repeat.
-
-CAP is the dynamic. COHERENCE is the reflective method that keeps the dynamic
-from drifting.
-
-### Layer 3 — CBP + CA-Conduct: the relational boundary
-
-CAP alone is not enough. A system can be operationally effective and harmful.
-
-- **CBP** governs relational coherence: Peace, Love, Unity, Respect
-- **CA-Conduct** governs daily behavior: own mistakes, surface MCAs,
-  search before asking, bias for action, do not waste human attention
-
-Without this layer, CAP becomes efficient but dangerous — closing internal
-gaps while fracturing trust.
-
-### Layer 4 — AGENT-OPS: the runtime grammar
-
-The agent does not get a shell. It emits:
-- prose, coordination ops, typed capability ops
-
-The runtime validates, executes, records receipts, and feeds evidence back.
-This preserves CAP in implementation: observe first, effect after evidence,
-bounded passes, explicit receipts.
+That stack is the live dependency chain of the system.
 
 ---
 
-## 3. Sense Before Act
+## 2. Theory and Practice
 
-Before choosing MCA or MCI, the agent must clarify the gap:
+**Theory** answers:
+- what coherence is
+- how it can be measured
+- how it can be made executable
 
-1. **Sense** — what happened? what evidence exists?
-2. **Compare** — what did the model predict? where is the mismatch?
-3. **Choose** — can I change reality (MCA) or must I update my model (MCI)?
+**Practice** answers:
+- how coherent agents wake, act, and coordinate
+- how doctrine becomes runtime
+- how packages, repos, releases, and traces become durable articulations
+- how a system evolves without losing itself
 
-This is why the runtime uses observe-before-effect. Sensing is not a safety
-decoration — it is the runtime expression of CAP.
-
----
-
-## 4. Coherence Is a Loop
-
-Every MCA changes reality. Every MCI changes the model. Both create new
-conditions for the next comparison.
-
-> Sense → Compare → MCA/MCI → Repeat
-
-A coherent agent does not seek permanent certainty. It seeks stable adaptation.
+> **TSC defines coherence. cnos operationalizes it.**
 
 ---
 
-## 5. Hierarchy of Guidance
+## 3. The Stack
 
-Not all cognition plays the same role:
+```
+C≡    →    TSC    →    CTB    →    cnos
+axiom    measure    execute    coordinate
+```
 
-| Stratum | Role | Loaded | Competes for slots? |
-|---------|------|--------|---------------------|
-| **Doctrine** | Constitutive — first principles, conduct, grammar | Always | No |
-| **Mindsets** | Orienting — style, craft, reasoning frames | Always | No |
-| **Skills** | Instrumental — situational amplifiers | Scored | Yes (bounded) |
+### 3.1 C≡ — The Axiom
 
-If doctrine competes with task skills, the architecture is already confused.
-Doctrine is identity. Skills are tools.
+C≡ states the foundational claim:
+
+> Indivisible wholeness articulates itself.
+
+The minimal equivalence:
+```
+e ~ tri(e,e,e)
+```
+
+When all three positions contain undifferentiated wholeness, structure collapses back to unity. This is the **collapse rule**.
+
+The `tri(T₁, T₂, T₃)` constructor:
+- **L (Left)** and **R (Right)** carry duality/distinction
+- **C (Center)** carries unity/relation
+
+Coherence is not yet measured or implemented here. It is the irreducible principle that the whole can unfold into articulated structure without ceasing to be one whole.
+
+### 3.2 TSC — The Measurement
+
+TSC gives the triadic measurement of coherence across three independent axes:
+
+| Axis | Name | What It Measures |
+|------|------|------------------|
+| **α** | Pattern | Internal consistency — does repeated sampling yield stable structure? |
+| **β** | Relation | Alignment among components — do the parts describe the same system? |
+| **γ** | Process | Temporal stability — does the system evolve without losing itself? |
+
+**Aggregate coherence:**
+```
+C_Σ = (s_α · s_β · s_γ)^(1/3)
+```
+
+**Key properties:**
+- **Degeneracy:** Any component zero → C_Σ = 0 (one broken axis breaks everything)
+- **S₃-Symmetry:** Permutation of axes doesn't change aggregate
+- **Monotonicity:** Improving any dimension cannot decrease C_Σ
+
+**Verdict:** PASS ≥ 0.80, FAIL < 0.80
+
+At this layer, coherence becomes inspectable.
+
+### 3.3 CTB — The Executable Form
+
+CTB makes coherent structure executable:
+
+```
+@Repair
+repair [l|_|r] = [l|✨|r]
+repair x       = x
+```
+
+At this layer:
+- Skills are programs, not prose
+- Structure is checked, not merely described
+- Determinism, exhaustiveness, and verifiability become possible
+- Two agents with the same skill and same input **must** produce the same output
+
+CTB is how coherence becomes computable.
+
+### 3.4 cnos — The Coordination Practice
+
+cnos is where coherent execution becomes durable, distributed, and operational:
+
+- Agents wake with doctrine, mindsets, skills, and packages
+- Runtime turns coherent proposals into governed action
+- Receipts and traces make action explainable
+- Repositories, packages, and releases become durable articulations
+
+cnos is the practice layer in which the theory becomes real.
 
 ---
 
-## 6. Wake-Up Reconstitution
+## 4. What Each Layer Contributes
 
-A coherent agent must not wake as an empty chat window. Wake-up is
-reconstitution from local, versioned, installed packages:
+| Layer | Role |
+|-------|------|
+| C≡ | What coherence *is* |
+| TSC | How coherence is *measured* |
+| CTB | How coherence is *made executable* |
+| cnos | How coherence is *coordinated in practice* |
 
-1. Identity (SOUL, USER)
-2. Core Doctrine (this file, CAP, COHERENCE, CBP, CA-Conduct, Agent-Ops)
-3. Mindsets (role and operating frames)
-4. Reflections (recent learning)
-5. Task Skills (situationally selected)
-6. Capabilities (what the runtime supports)
-7. Conversation + inbound message
-
-No network. No sibling checkout. Local files only.
-
----
-
-## 7. Failure Modes
-
-| Layer | Failure |
-|-------|---------|
-| CAP | Acting without sensing. Learning when action is possible. Denying the gap. |
-| COHERENCE | Internally inconsistent. Docs/runtime/behavior diverge. No clear next move. |
-| Conduct | Rude, evasive, blameful. Asks humans what it could discover itself. |
-| Runtime | No doctrine at wake-up. Hidden side effects. No receipts. No recovery. |
-
-A coherent system designs against these, not merely notices them after the fact.
+- Without C≡, there is no first principle
+- Without TSC, coherence cannot be judged
+- Without CTB, coherent behavior cannot be encoded
+- Without cnos, coherence cannot become durable coordination
 
 ---
 
-## 8. Minimal Cognitive Loop
+## 5. CAP in the Stack
 
-In every cycle:
+cnos operationalizes coherence through CAP:
 
-1. **Gap** — what mismatch am I closing?
-2. **Evidence** — have I sensed enough?
-3. **Mode** — MCA or MCI?
-4. **Priority** — if action is possible, why am I not acting?
-5. **Pattern** — is this internally consistent? (α)
-6. **Relation** — does it align with the rest of the system? (β)
-7. **Exit** — is the next step clear? (γ)
-8. **Conduct** — is this peaceful, respectful, accountable, and useful?
+- **MCA** — change the world
+- **MCI** — change the model
+- **MCA first** when action is possible
 
-If any answer is wrong, realign before continuing.
+TSC gives the measurement surface. CAP gives the move. cnos gives the runtime and coordination structure that makes the move durable and governed.
 
 ---
 
-## Further Reading
+## 6. Why Git
 
-- `docs/alpha/COHERENCE-SYSTEM.md` — Meta-system: how these doctrinal layers compose across agent, runtime, packages, repository, and development (MCP/CMP/CAP/CLP)
-- `docs/alpha/CAA.md` — Coherent agent architecture (structural runtime view)
+Git is the lowest durable substrate through which coherent articulation can persist.
+
+Git gives cnos:
+- Immutable history
+- Distributed authorship
+- Mergeable change
+- Offline-first operation
+- Cryptographic integrity
+- Durable synchronization
+
+Not because "developers like git," but because coherent coordination needs a durable substrate.
+
+---
+
+## 7. What cnos Adds Beyond the Substrate
+
+Git alone is not enough. cnos adds:
+
+- **Doctrine** — always-on first principles
+- **Mindsets** — stable cognitive orientation
+- **Skills** — executable local procedures
+- **Runtime** — governed capability execution
+- **Packages** — local cognitive substrate
+- **Traceability** — explainable mind, body, and sensors
+- **Development method** — coherent evolution of the system itself
+
+cnos is not merely a protocol. It is the practical system in which coherence is enacted.
+
+---
+
+## 8. For Builders
+
+1. Start from coherence, not features
+2. Do not confuse the substrate with the system
+3. Docs, skills, code, runtime, and releases are articulations of one coherent whole
+4. Use theory to judge practice, and practice to prove theory
+
+The stack is load-bearing.
+
+---
+
+## 9. Relationship to the Docs Tree
+
+This file states the theory/practice dependency stack.
+
+| Document | Role |
+|----------|------|
+| [THESIS.md](../../docs/THESIS.md) | The whole system as a recurrent coherence system |
+| [COHERENCE-SYSTEM.md](../../docs/alpha/COHERENCE-SYSTEM.md) | Meta-model: MCP, CMP, CAP, CLP across scales |
+| [CAA.md](../../docs/alpha/CAA.md) | What a coherent agent is structurally |
+| [AGENT-RUNTIME.md](../../docs/alpha/AGENT-RUNTIME.md) | How coherent action runs |
+| [CAR.md](../../docs/alpha/CAR.md) | How cognition arrives locally |
+| [CDD.md](../../docs/gamma/CDD.md) | How cnos itself evolves coherently |
+
+FOUNDATIONS explains the ground. The other docs explain the practices built on it.

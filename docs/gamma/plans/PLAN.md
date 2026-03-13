@@ -1,15 +1,16 @@
 # Development Plan: CN Shell v3.3 (Capability Runtime)
 
-**Status:** Draft
+**Status:** Complete
 **Date:** 2026-03-05
 **Spec:** AGENT-RUNTIME.md v3.3.6
+**Shipped:** v3.3.0 (2026-03-06) — all 7 features implemented and released.
 **Base:** All Steps 0–14 from PLAN.md are **complete** — native runtime is shipped and running.
 
 ---
 
 ## Scope
 
-This plan covers the v3.3 spec additions that are **not yet implemented**:
+This plan covered the v3.3 spec additions (all now **implemented** — shipped in v3.3.0):
 
 1. CN Shell typed ops (observe + effect)
 2. Two-pass execution (Pass A → evidence → Pass B)
@@ -42,13 +43,13 @@ Everything below builds on the existing working runtime (`cn_runtime.ml`, `cn_co
 | Safe process exec (no shell, stdin piping) | **Done** | `cn_ffi.ml:exec_args` |
 | Frontmatter parsing + body extraction | **Done** | `cn_lib.ml:parse_frontmatter/extract_body` |
 | FSM enforcement (4 typed FSMs) | **Done** | `cn_protocol.ml` |
-| **CN Shell typed ops** | **Not started** | — |
-| **Two-pass execution** | **Not started** | — |
-| **Receipts / artifacts** | **Not started** | — |
-| **Path Sandbox** | **Not started** | — |
-| **Capability discovery** | **Not started** | — |
-| **Dotenv secrets fallback** | **Not started** | — |
-| **Projection idempotency** | **Not started** | — |
+| **CN Shell typed ops** | **Done** | `cn_shell.ml` |
+| **Two-pass execution** | **Done** | `cn_orchestrator.ml` |
+| **Receipts / artifacts** | **Done** | `cn_shell.ml`, `cn_executor.ml` |
+| **Path Sandbox** | **Done** | `cn_sandbox.ml` |
+| **Capability discovery** | **Done** | `cn_capabilities.ml` |
+| **Dotenv secrets fallback** | **Done** | `cn_dotenv.ml` |
+| **Projection idempotency** | **Done** | `cn_projection.ml` |
 
 ---
 

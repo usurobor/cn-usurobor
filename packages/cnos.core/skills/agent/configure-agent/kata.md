@@ -88,4 +88,4 @@ git push
 
 ## Next
 
-- Run kata 1.3 (daily-routine) to set up daily state tracking.
+- Run kata 1.3 (reflect) to set up daily state tracking.
