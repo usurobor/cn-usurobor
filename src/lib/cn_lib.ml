@@ -645,7 +645,7 @@ Commands:
   # cn operations (orchestrator)
   agent               Run one cycle: dequeue → LLM → execute (alias: in, inbound)
   agent --process     Single-shot: process one queued item
-  agent --daemon      Telegram long-poll loop (requires TELEGRAM_TOKEN)
+  agent --daemon      Daemon scheduler: continuous loop + optional Telegram
   agent --stdio       Interactive mode (stdin → LLM → stdout)
   sync                Fetch inbound + send outbound
   queue [list|clear]  View or clear the task queue
@@ -701,7 +701,8 @@ Runtime:
   1. Queues inbox items to state/queue/
   2. Pops from queue → packs context → calls LLM → executes ops
   All state mutation under atomic lock. Recovery handles crash at any point.
-  Daemon mode (--daemon) replaces cron with Telegram long-poll.
+  Daemon scheduler (--daemon) runs continuous loop with periodic maintenance.
+  Telegram poll is enabled when TELEGRAM_TOKEN is set.
 |}
 
 let version = "3.6.0"
