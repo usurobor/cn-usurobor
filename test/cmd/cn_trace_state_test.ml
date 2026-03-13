@@ -361,3 +361,119 @@ let%expect_test "update_ready_body works when no prior ready.json exists" =
         | None -> print_endline "missing body")
    | Error e -> print_endline ("parse error: " ^ e));
   [%expect {| ok: update_ready_body works without prior ready.json |}]
+
+(* === update_ready_scheduler regression tests === *)
+
+let%expect_test "update_ready_scheduler preserves mind, body, and sensors" =
+  let hub = make_tmp_hub () in
+  let boot_id = "test-sched-001" in
+  (* Write full ready.json with all sections *)
+  Cn_trace_state.write_ready hub {
+    status = Ready; boot_id;
+    updated_at = "2026-03-15T14:00:00.000Z";
+    blocked_reason = None;
+    mind = Some {
+      profile = "engineer";
+      packages = ["cnos.core@1.0.0"];
+      doctrine_required = 6; doctrine_loaded = 6;
+      doctrine_hash = "sha256:abc";
+      mindsets_required = 9; mindsets_loaded = 9;
+      mindsets_hash = "sha256:def";
+      skills_indexed = 12;
+      skills_selected_last = [];
+      capabilities_hash = "sha256:ghi";
+      two_pass = "auto"; apply_mode = "branch";
+      exec_enabled = false;
+    };
+    body = Some {
+      fsm_state = "idle"; lock_held = false;
+      current_cycle = None; queue_depth = 3;
+    };
+    sensors_telegram = Some {
+      enabled = true; offset = 99;
+      last_poll_status = "ok";
+      last_poll_at = "2026-03-15T13:59:00.000Z";
+    };
+    scheduler = Some {
+      mode = "oneshot";
+      last_sync_at = None; last_sync_status = None;
+      last_maintenance_at = None; last_maintenance_status = None;
+    };
+  };
+  (* Now update scheduler-only via update_ready_scheduler *)
+  Cn_trace_state.update_ready_scheduler hub
+    ~boot_id ~updated_at:"2026-03-15T14:01:00.000Z"
+    ~status:Degraded
+    {
+      mode = "oneshot";
+      last_sync_at = Some "2026-03-15T14:01:00.000Z";
+      last_sync_status = Some "degraded";
+      last_maintenance_at = Some "2026-03-15T14:01:00.000Z";
+      last_maintenance_status = Some "degraded";
+    };
+  (* Verify mind, body, sensors survived *)
+  let path = Filename.concat hub "state/ready.json" in
+  let content = Cn_ffi.Fs.read path in
+  (match Cn_json.parse content with
+   | Ok obj ->
+       (* Status should be updated *)
+       assert (Cn_json.get_string "status" obj = Some "degraded");
+       (* Mind should be preserved *)
+       (match Cn_json.get "mind" obj with
+        | Some mind ->
+            assert (Cn_json.get_string "profile" mind = Some "engineer")
+        | None ->
+            print_endline "FAIL: mind lost after scheduler update"; assert false);
+       (* Body should be preserved *)
+       (match Cn_json.get "body" obj with
+        | Some body ->
+            assert (Cn_json.get_int "queue_depth" body = Some 3)
+        | None ->
+            print_endline "FAIL: body lost after scheduler update"; assert false);
+       (* Sensors should be preserved *)
+       (match Cn_json.get "sensors" obj with
+        | Some sensors ->
+            (match Cn_json.get "telegram" sensors with
+             | Some tg ->
+                 assert (Cn_json.get_int "offset" tg = Some 99)
+             | None ->
+                 print_endline "FAIL: telegram sensor lost"; assert false)
+        | None ->
+            print_endline "FAIL: sensors lost after scheduler update"; assert false);
+       (* Scheduler should be updated *)
+       (match Cn_json.get "scheduler" obj with
+        | Some sched ->
+            assert (Cn_json.get_string "last_sync_status" sched = Some "degraded");
+            assert (Cn_json.get_string "last_maintenance_status" sched = Some "degraded");
+            print_endline "ok: update_ready_scheduler preserves mind/body/sensors"
+        | None ->
+            print_endline "FAIL: scheduler missing"; assert false)
+   | Error e -> print_endline ("parse error: " ^ e));
+  [%expect {| ok: update_ready_scheduler preserves mind/body/sensors |}]
+
+let%expect_test "update_ready_scheduler works without prior ready.json" =
+  let hub = make_tmp_hub () in
+  Cn_trace_state.update_ready_scheduler hub
+    ~boot_id:"test-sched-fresh"
+    ~updated_at:"2026-03-15T14:00:00.000Z"
+    ~status:Ready
+    {
+      mode = "oneshot";
+      last_sync_at = Some "2026-03-15T14:00:00.000Z";
+      last_sync_status = Some "ok";
+      last_maintenance_at = Some "2026-03-15T14:00:00.000Z";
+      last_maintenance_status = Some "ok";
+    };
+  let path = Filename.concat hub "state/ready.json" in
+  assert (Sys.file_exists path);
+  let content = Cn_ffi.Fs.read path in
+  (match Cn_json.parse content with
+   | Ok obj ->
+       assert (Cn_json.get_string "status" obj = Some "ready");
+       (match Cn_json.get "scheduler" obj with
+        | Some sched ->
+            assert (Cn_json.get_string "mode" sched = Some "oneshot");
+            print_endline "ok: update_ready_scheduler works without prior ready.json"
+        | None -> print_endline "FAIL: no scheduler")
+   | Error e -> print_endline ("parse error: " ^ e));
+  [%expect {| ok: update_ready_scheduler works without prior ready.json |}]
