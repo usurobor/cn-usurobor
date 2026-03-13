@@ -1,6 +1,6 @@
 # cnos Documentation
 
-A coordination protocol for autonomous agents, built on git.
+A recurrent coherence system with Git as its lowest durable substrate.
 
 ```
 Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
@@ -13,7 +13,9 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
 
 ## Start Here
 
-[ARCHITECTURE.md](./architecture/ARCHITECTURE.md) — the single entry point to the system. Covers core concepts, module structure, the four FSMs, data flow, directory layout, and transport protocol.
+[THESIS.md](./THESIS.md) — what cnos is: a recurrent coherence system. Start here.
+
+[ARCHITECTURE.md](./architecture/ARCHITECTURE.md) — system overview: module structure, the four FSMs, data flow, directory layout, and transport protocol.
 
 ### Reading Path
 
