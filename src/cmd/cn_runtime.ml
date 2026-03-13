@@ -934,6 +934,7 @@ let run_cron ~(config : Cn_config.config) ~hub_path ~name =
 
   (* 1. Maintenance tick — full protocol duties *)
   let maint_result = Cn_maintenance.maintain_once ~config ~hub_path ~name in
+  let maint_ts = Cn_fmt.now_iso () in  (* event-time: captured immediately after maintenance *)
   let maint_degraded = Cn_maintenance.is_degraded maint_result in
   let sync_status_str = Cn_maintenance.status_string maint_result.sync_status in
   let maint_status_str = if maint_degraded then "degraded" else "ok" in
@@ -950,7 +951,7 @@ let run_cron ~(config : Cn_config.config) ~hub_path ~name =
   let overall_degraded = maint_degraded || drain_degraded in
   let overall_status = if overall_degraded then Degraded else Ready in
 
-  (* 4. Update scheduler projection — read-modify-write to preserve mind/body/sensors *)
+  (* 4. Update scheduler projection — event-time stamps match daemon invariant *)
   let now = Cn_fmt.now_iso () in
   (match Cn_trace.get_global () with
    | Some session ->
@@ -959,9 +960,9 @@ let run_cron ~(config : Cn_config.config) ~hub_path ~name =
          ~status:overall_status
          {
            mode = "oneshot";
-           last_sync_at = Some now;
+           last_sync_at = Some maint_ts;
            last_sync_status = Some sync_status_str;
-           last_maintenance_at = Some now;
+           last_maintenance_at = Some maint_ts;
            last_maintenance_status = Some maint_status_str;
          }
    | None -> ());

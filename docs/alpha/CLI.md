@@ -58,9 +58,9 @@ cn out delete --reason <reason>
 ### Agent Runtime
 
 ```
-cn agent                     Run one cycle: dequeue → LLM → execute (cron mode)
+cn agent                     Oneshot scheduler: one cycle then exit (cron mode)
 cn agent --process           Single-shot: process one queued item and exit
-cn agent --daemon            Telegram long-poll loop (requires TELEGRAM_TOKEN)
+cn agent --daemon            Daemon scheduler: continuous loop + optional Telegram
 cn agent --stdio             Interactive REPL (stdin → LLM → stdout)
 ```
 
