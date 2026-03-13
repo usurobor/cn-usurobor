@@ -21,7 +21,6 @@ Each directory in docs/ has a defined role. Documents live where their role says
 | `evidence/` | What happened | RCAs, audits, operational proof surfaces |
 | `guides/` | How to do things | Task-oriented procedures for operators and contributors |
 | `reference/` | Lookup | Stable terminology, naming conventions, schemas |
-| `_archive/` | Lineage | Superseded designs, kept for historical traceability |
 
 ### Root-level documents
 
@@ -71,9 +70,7 @@ Examples: GLOSSARY.md, NAMING.md.
 ### Supersession
 
 When a canonical document is fully replaced:
-1. Move the old version to `_archive/`
 2. The new document carries its own version starting at 1.0.0
-3. The archive copy retains its final version header unchanged
 
 Do not maintain parallel "v1" and "v2" files in active directories.
 
@@ -90,7 +87,6 @@ When adding a new document, ask:
 5. **Does it record what happened in operation?** → `evidence/`
 6. **Is it a step-by-step procedure?** → `guides/`
 7. **Is it stable lookup material?** → `reference/`
-8. **Is it superseded?** → `_archive/`
 
 If it doesn't fit, the taxonomy may need to evolve — but add the category explicitly here before creating a new directory.
 

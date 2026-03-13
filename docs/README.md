@@ -51,7 +51,6 @@ In the runtime, this becomes: `input.md → agent → output.md → cn executes 
 
 | FSM | Flow |
 |-----|------|
-| Thread Lifecycle | Received → Queued → Active → Doing → Archived |
 | Actor Loop | Idle → InputReady → Processing → OutputReady → Idle |
 | Transport Sender | Pending → BranchCreated → Pushing → Pushed → Delivered |
 | Transport Receiver | Fetched → Materializing → Materialized → Cleaned |
@@ -134,6 +133,4 @@ Implementation plans for specific releases. Ephemeral by nature.
 | [GLOSSARY.md](./reference/GLOSSARY.md) | Terms and definitions |
 | [NAMING.md](./reference/NAMING.md) | Naming conventions (CN, cnos, cn) |
 
-### Archive — Lineage
 
-[_archive/](./_archive/) — superseded designs, preserved for historical traceability.
