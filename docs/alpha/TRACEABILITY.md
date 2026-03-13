@@ -736,7 +736,6 @@ This replaces ad hoc lifecycle logging with a system that can answer, from files
 
 ## Related
 
-- [`LOGGING.md`](LOGGING.md) — predecessor; IO-pair archive model (superseded by this document)
 - [`AGENT-RUNTIME.md`](AGENT-RUNTIME.md) — runtime lifecycle this document observes
 - [`CAA.md`](CAA.md) — capability architecture whose execution events are traced
 - [`CAR.md`](CAR.md) — package resolver whose load events are traced

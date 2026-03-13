@@ -67,7 +67,7 @@ Additionally, `cn out` commands create per-run archives:
 logs/runs/{timestamp}-{id}/input.md
 ```
 
-See [LOGGING.md](LOGGING.md) for full logging architecture.
+See [TRACEABILITY.md](TRACEABILITY.md) for full observability architecture.
 
 ## Sandbox Boundaries
 
@@ -155,4 +155,4 @@ Security is enforced across the module stack:
 | `cn_commands.ml` | Peer add/remove, commit/push scoped to hub |
 | `cn_hub.ml` | Hub discovery, path constants |
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for module structure and dependency layers.
+See [ARCHITECTURE.md](../beta/ARCHITECTURE.md) for module structure and dependency layers.

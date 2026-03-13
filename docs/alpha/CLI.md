@@ -201,7 +201,7 @@ cn-<name>/
  +-- spec/
 ```
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for full directory layout details.
+See [ARCHITECTURE.md](../beta/ARCHITECTURE.md) for full directory layout details.
 
 ## Implementation
 

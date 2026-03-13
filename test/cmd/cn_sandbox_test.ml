@@ -56,8 +56,8 @@ let%expect_test "normalize: just dot" =
   [%expect {| ok: . |}]
 
 let%expect_test "normalize: trailing slash stripped" =
-  show_normalize "docs/α/";
-  [%expect {| ok: docs/α |}]
+  show_normalize "docs/alpha/";
+  [%expect {| ok: docs/alpha |}]
 
 let%expect_test "normalize: .. that stays within hub" =
   show_normalize "src/lib/../cmd/cn_shell.ml";

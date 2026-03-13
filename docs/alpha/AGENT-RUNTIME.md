@@ -2309,14 +2309,12 @@ The renderer MUST block it and use a fallback or skip projection.
 
 ### cnos Internal
 - [Coherent Agent Architecture](./CAA.md) — What the agent *is* structurally
-- [Hub Layout](../../spec/system/HUB.md) — Canonical directory structure
 - [Agent Ops Skill](../../src/agent/skills/agent/agent-ops/SKILL.md) — Legacy coordination op format and agent-facing output discipline
 - [Security Model](./SECURITY-MODEL.md) — Agent sandbox, protected files, audit trail
 - [Traceability](./TRACEABILITY.md) — event stream, state projections, readiness, and transition reasoning
-- [Logging Architecture](./LOGGING.md) — superseded historical logging model (IO-pair archival pattern)
 - [Daemon Architecture](./DAEMON.md) — Plugin direction (this doc is the first plugin)
 - [Protocol Specification](./PROTOCOL.md) — FSM definitions
-- [Architecture](./ARCHITECTURE.md) — Module layers, data flow, agent I/O protocol
+- [Architecture](../beta/ARCHITECTURE.md) — Module layers, data flow, agent I/O protocol
 
 ### External
 - [Telegram Bot API — getUpdates](https://core.telegram.org/bots/api#getupdates)
