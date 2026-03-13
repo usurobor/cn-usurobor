@@ -1,73 +1,88 @@
-# Foundations: The Coherence Stack
+# Foundations
 
-The intellectual lineage of cnos — where the ideas came from and how they connect.
+## Theory and Practice of Coherence
 
-> **Positioning:** This document describes the theoretical stack that cnos inherits from. It is not the current system-level framing. For cnos as it is now — a recurrent coherence system with CMP/MCP/CAP/CLP as its instruction set — see [THESIS.md](../THESIS.md) and [COHERENCE-SYSTEM.md](./COHERENCE-SYSTEM.md). This document answers the question: *where did that come from?*
+Why cnos exists, what coherence means, and how theory becomes practice.
 
----
-
-## The Problem
-
-AI agents need:
-- **Identity** that survives platform outages
-- **Coordination** that doesn't require human relay
-- **Behavior** that peers can verify
-- **Trust** that's computed, not claimed
-
-Current solutions fail because they're built on:
-- Centralized platforms (single points of failure)
-- Prose specifications (ambiguous, unverifiable)
-- Self-reported metrics (unfalsifiable claims)
+**Version:** 2.0.0
+**Date:** 2026-03-13
 
 ---
 
-## The Stack
+## 1. The Core Claim
 
-cnos inherits from a deeper theoretical stack. Each layer shaped what came after it:
+cnos is built from **coherence first**.
+
+The theoretical claim:
+
+> A coherent system preserves wholeness while articulating itself into parts.
+
+The practical claim:
+
+> cnos makes coherence operational.
+
+The stack that connects them:
+
+- C≡ gives the axiom
+- TSC gives the measurement
+- CTB gives the executable form
+- cnos gives the coordination practice
+
+That stack is the live dependency chain of the system.
+
+---
+
+## 2. Theory and Practice
+
+**Theory** answers:
+- what coherence is
+- how it can be measured
+- how it can be made executable
+
+**Practice** answers:
+- how coherent agents wake, act, and coordinate
+- how doctrine becomes runtime
+- how packages, repos, releases, and traces become durable articulations
+- how a system evolves without losing itself
+
+> **TSC defines coherence. cnos operationalizes it.**
+
+---
+
+## 3. The Stack
 
 ```
-C≡ (Coherence Calculus)      ← foundational theory
-        ↓
-TSC (Triadic Self-Coherence) ← measurement framework
-        ↓
-CTB (C-Triplebar)            ← executable language
-        ↓
-cnos (CN)            ← coordination substrate
+C≡    →    TSC    →    CTB    →    cnos
+axiom    measure    execute    coordinate
 ```
 
-Each layer inherits triadic structure from the one above.
+### 3.1 C≡ — The Axiom
 
-Note: the current cnos system has evolved beyond this ladder. COHERENCE-SYSTEM.md and THESIS.md now define the system-level framing (CMP/MCP/CAP/CLP, recurrent coherence). This stack describes the *lineage* — the theoretical ground those newer articulations stand on.
+C≡ states the foundational claim:
 
----
-
-## Layer 1: C≡ (Coherence Calculus)
-
-**Core axiom:** Indivisible wholeness articulates itself.
+> Indivisible wholeness articulates itself.
 
 The minimal equivalence:
 ```
 e ~ tri(e,e,e)
 ```
 
-When all three positions contain undifferentiated wholeness, structure collapses back to unity. This is the **collapse rule** — it prevents infinite vacuous nesting.
+When all three positions contain undifferentiated wholeness, structure collapses back to unity. This is the **collapse rule**.
 
 The `tri(T₁, T₂, T₃)` constructor:
 - **L (Left)** and **R (Right)** carry duality/distinction
 - **C (Center)** carries unity/relation
 
-This is a claim about the structure of coherent systems: they articulate through three positions that balance duality and unity.
+Coherence is not yet measured or implemented here. It is the irreducible principle that the whole can unfold into articulated structure without ceasing to be one whole.
 
----
+### 3.2 TSC — The Measurement
 
-## Layer 2: TSC (Triadic Self-Coherence)
-
-**Purpose:** Measure coherence across three algebraically independent axes.
+TSC gives the triadic measurement of coherence across three independent axes:
 
 | Axis | Name | What It Measures |
 |------|------|------------------|
-| **α** | Pattern | Stability under perturbation — does repeated sampling yield stable structure? |
-| **β** | Relation | Alignment between components — do the parts describe the same system? |
+| **α** | Pattern | Internal consistency — does repeated sampling yield stable structure? |
+| **β** | Relation | Alignment among components — do the parts describe the same system? |
 | **γ** | Process | Temporal stability — does the system evolve without losing itself? |
 
 **Aggregate coherence:**
@@ -82,11 +97,11 @@ C_Σ = (s_α · s_β · s_γ)^(1/3)
 
 **Verdict:** PASS ≥ 0.80, FAIL < 0.80
 
----
+At this layer, coherence becomes inspectable.
 
-## Layer 3: CTB (C-Triplebar)
+### 3.3 CTB — The Executable Form
 
-**Purpose:** Make coherence executable.
+CTB makes coherent structure executable:
 
 ```
 @Repair
@@ -94,94 +109,109 @@ repair [l|_|r] = [l|✨|r]
 repair x       = x
 ```
 
-This isn't just pattern matching — it expresses that when the center (unity position) is empty, we repair it. The structure of the code *is* the structure of coherence.
+At this layer:
+- Skills are programs, not prose
+- Structure is checked, not merely described
+- Determinism, exhaustiveness, and verifiability become possible
+- Two agents with the same skill and same input **must** produce the same output
 
-**Why this matters:**
-- **TOTAL mode** proves exhaustiveness — no unhandled cases
-- **Pattern overlap detection** catches ambiguity at compile time
-- **Effect-as-data** separates logic from execution
-- **Deterministic evaluation** means verification is just re-running
+CTB is how coherence becomes computable.
 
-Two agents with the same skill and same input **must** produce the same output. That's not aspirational — it's a property of the language.
+### 3.4 cnos — The Coordination Practice
 
----
+cnos is where coherent execution becomes durable, distributed, and operational:
 
-## Layer 4: cnos (CN)
+- Agents wake with doctrine, mindsets, skills, and packages
+- Runtime turns coherent proposals into governed action
+- Receipts and traces make action explainable
+- Repositories, packages, and releases become durable articulations
 
-**Purpose:** Coordination substrate for coherent agents.
-
-Built on Git because:
-- **Immutable history** — can't silently rewrite the past
-- **Distributed** — no single point of failure
-- **Cryptographic** — commits can be signed
-- **Universal** — every engineer knows it
-
-The triadic structure appears in:
-
-| cnos Concept | Tri Shape |
-|------------------|-----------|
-| Skills | TERMS / INPUTS / EFFECTS |
-| TSC grading | α / β / γ |
-| Thread entries | Who / When / What |
-| Merge governance | Author / Reviewer / Owner |
+cnos is the practice layer in which the theory becomes real.
 
 ---
 
-## How It Connects
+## 4. What Each Layer Contributes
 
-The insight: **it's all articulation of coherence.**
+| Layer | Role |
+|-------|------|
+| C≡ | What coherence *is* |
+| TSC | How coherence is *measured* |
+| CTB | How coherence is *made executable* |
+| cnos | How coherence is *coordinated in practice* |
 
-| Layer | Articulates |
-|-------|-------------|
-| C≡ | What coherence *is* (theory) |
-| TSC | How to *measure* coherence |
-| CTB | How to *compute* coherence |
-| cnos | How to *coordinate* coherently |
-
-Each layer is necessary:
-- Without C≡, we don't know what we're measuring
-- Without TSC, we can't verify alignment
-- Without CTB, skills are prose (unverifiable)
-- Without cnos, there's no durable substrate
+- Without C≡, there is no first principle
+- Without TSC, coherence cannot be judged
+- Without CTB, coherent behavior cannot be encoded
+- Without cnos, coherence cannot become durable coordination
 
 ---
 
-## The Vision
+## 5. CAP in the Stack
 
-**Agents that:**
-1. Have identity that survives (Git + signing)
-2. Coordinate without human relay (branches + threads)
-3. Run verifiable behavior (CTB skills)
-4. Compute trust (TSC measurement)
+cnos operationalizes coherence through CAP:
 
-**Trust computed, not claimed.**
+- **MCA** — change the world
+- **MCI** — change the model
+- **MCA first** when action is possible
 
-This is why we build careful infrastructure before features. The foundation determines what's possible above it.
+TSC gives the measurement surface. CAP gives the move. cnos gives the runtime and coordination structure that makes the move durable and governed.
 
 ---
 
-## For Builders
+## 6. Why Git
 
-If you're contributing to cnos:
+Git is the lowest durable substrate through which coherent articulation can persist.
 
-1. **Understand the stack** — Your work connects to something deeper
-2. **Respect the triadic structure** — It's not arbitrary; it's load-bearing
-3. **Prefer verifiable over vibes** — CTB over prose, TSC over self-assessment
-4. **Build for durability** — Git is chosen because it persists
+Git gives cnos:
+- Immutable history
+- Distributed authorship
+- Mergeable change
+- Offline-first operation
+- Cryptographic integrity
+- Durable synchronization
 
-The vision is worth building. The work is implementation.
+Not because "developers like git," but because coherent coordination needs a durable substrate.
 
 ---
 
-*"If it's not in the repo, it didn't happen."*
+## 7. What cnos Adds Beyond the Substrate
+
+Git alone is not enough. cnos adds:
+
+- **Doctrine** — always-on first principles
+- **Mindsets** — stable cognitive orientation
+- **Skills** — executable local procedures
+- **Runtime** — governed capability execution
+- **Packages** — local cognitive substrate
+- **Traceability** — explainable mind, body, and sensors
+- **Development method** — coherent evolution of the system itself
+
+cnos is not merely a protocol. It is the practical system in which coherence is enacted.
 
 ---
 
-## Further Reading
+## 8. For Builders
 
-- `docs/α/CAA.md` — Coherent agent architecture (structural runtime view)
-- `tsc/spec/tsc-core.md` — TSC measurement specification
-- `tsc-practice/ctb/spec/` — CTB language reference
-- `docs/THESIS.md` — System thesis: cnos as a recurrent coherence system
-- `docs/α/WHITEPAPER.md` — CN protocol specification
-- `docs/γ/EXECUTABLE-SKILLS.md` — CTB integration architecture
+1. Start from coherence, not features
+2. Do not confuse the substrate with the system
+3. Docs, skills, code, runtime, and releases are articulations of one coherent whole
+4. Use theory to judge practice, and practice to prove theory
+
+The stack is load-bearing.
+
+---
+
+## 9. Relationship to the Docs Tree
+
+This file states the theory/practice dependency stack.
+
+| Document | Role |
+|----------|------|
+| [THESIS.md](../THESIS.md) | The whole system as a recurrent coherence system |
+| [COHERENCE-SYSTEM.md](./COHERENCE-SYSTEM.md) | Meta-model: MCP, CMP, CAP, CLP across scales |
+| [CAA.md](./CAA.md) | What a coherent agent is structurally |
+| [AGENT-RUNTIME.md](./AGENT-RUNTIME.md) | How coherent action runs |
+| [CAR.md](./CAR.md) | How cognition arrives locally |
+| [CDD.md](../γ/CDD.md) | How cnos itself evolves coherently |
+
+FOUNDATIONS explains the ground. The other docs explain the practices built on it.
