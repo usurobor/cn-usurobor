@@ -280,7 +280,7 @@ cn deps vendor         Commit vendor tree for airgapped use
 
 - [CAA.md](./CAA.md) — Coherent agent architecture (what the agent *is* structurally; CAR describes how cognition *arrives*)
 - [AGENT-RUNTIME.md](./AGENT-RUNTIME.md) — Agent runtime (execution layer)
-- [FOUNDATIONS.md](../identity/FOUNDATIONS.md) — Doctrine and coherence stack
+- [FOUNDATIONS.md](../foundations/FOUNDATIONS.md) — Doctrine and coherence stack
 
 ---
 

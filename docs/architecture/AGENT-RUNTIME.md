@@ -2316,7 +2316,7 @@ The renderer MUST block it and use a fallback or skip projection.
 - [Logging Architecture](./LOGGING.md) — superseded historical logging model (IO-pair archival pattern)
 - [Daemon Architecture](./DAEMON.md) — Plugin direction (this doc is the first plugin)
 - [Protocol Specification](./PROTOCOL.md) — FSM definitions
-- [Architecture](../ARCHITECTURE.md) — Module layers, data flow, agent I/O protocol
+- [Architecture](./ARCHITECTURE.md) — Module layers, data flow, agent I/O protocol
 
 ### External
 - [Telegram Bot API — getUpdates](https://core.telegram.org/bots/api#getupdates)

@@ -13,19 +13,19 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
 
 ## Start Here
 
-[ARCHITECTURE.md](./ARCHITECTURE.md) — the single entry point to the system. Covers core concepts, module structure, the four FSMs, data flow, directory layout, and transport protocol.
+[ARCHITECTURE.md](./architecture/ARCHITECTURE.md) — the single entry point to the system. Covers core concepts, module structure, the four FSMs, data flow, directory layout, and transport protocol.
 
 ### Reading Path
 
 | I want to... | Read |
 |--------------|------|
-| Understand what cnos is and how it works | [ARCHITECTURE.md](./ARCHITECTURE.md) |
-| Understand *why* cnos exists | [MANIFESTO.md](./identity/MANIFESTO.md) |
-| Understand coherence as the top-level system | [COHERENCE-SYSTEM.md](./identity/COHERENCE-SYSTEM.md) |
+| Understand what cnos is and how it works | [ARCHITECTURE.md](./architecture/ARCHITECTURE.md) |
+| Understand *why* cnos exists | [MANIFESTO.md](./foundations/MANIFESTO.md) |
+| Understand coherence as the top-level system | [COHERENCE-SYSTEM.md](./foundations/COHERENCE-SYSTEM.md) |
 | Understand the agent architecture | [CAA.md](./architecture/CAA.md) |
 | Understand operational observability | [TRACEABILITY.md](./architecture/TRACEABILITY.md) |
-| Understand what cnos is at the system level | [THESIS.md](./identity/THESIS.md) |
-| Read the CN protocol spec | [WHITEPAPER.md](./identity/WHITEPAPER.md) |
+| Understand what cnos is at the system level | [THESIS.md](../THESIS.md) |
+| Read the CN protocol spec | [WHITEPAPER.md](./architecture/WHITEPAPER.md) |
 | Understand the FSM state machines in depth | [PROTOCOL.md](./architecture/PROTOCOL.md) |
 | Learn the `cn` CLI commands | [CLI.md](./architecture/CLI.md) |
 | Set up peering between two agents | [HANDSHAKE.md](./guides/HANDSHAKE.md) |
@@ -61,7 +61,7 @@ peer pushes branch → cn materializes to inbox → queued → input.md
 → agent decides → output.md → cn executes ops → outbox → push to peer
 ```
 
-Full details: [ARCHITECTURE.md](./ARCHITECTURE.md)
+Full details: [ARCHITECTURE.md](./architecture/ARCHITECTURE.md)
 
 ---
 
@@ -75,10 +75,10 @@ The foundational documents. Read in this order for full understanding.
 
 | Document | What it is |
 |----------|-----------|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | System overview — modules, FSMs, data flow, directory layout |
-| [MANIFESTO.md](./identity/MANIFESTO.md) | Principles — why cnos exists, what it stands for |
-| [THESIS.md](./identity/THESIS.md) | System thesis — cnos as a recurrent coherence system (v1.0.0) |
-| [WHITEPAPER.md](./identity/WHITEPAPER.md) | CN protocol specification (v3.0.0) |
+| [ARCHITECTURE.md](./architecture/ARCHITECTURE.md) | System overview — modules, FSMs, data flow, directory layout |
+| [MANIFESTO.md](./foundations/MANIFESTO.md) | Principles — why cnos exists, what it stands for |
+| [THESIS.md](../THESIS.md) | System thesis — cnos as a recurrent coherence system (v1.0.0) |
+| [WHITEPAPER.md](./architecture/WHITEPAPER.md) | CN protocol specification (v3.0.0) |
 | [PROTOCOL.md](./architecture/PROTOCOL.md) | FSM design — state diagrams, transition tables (implemented) |
 
 ### Domain
@@ -87,7 +87,7 @@ Specifications for specific subsystems.
 
 | Document | What it is |
 |----------|-----------|
-| [COHERENCE-SYSTEM.md](./identity/COHERENCE-SYSTEM.md) | Meta-model: coherence as primary; MCP/CMP/CAP/CLP across scales |
+| [COHERENCE-SYSTEM.md](./foundations/COHERENCE-SYSTEM.md) | Meta-model: coherence as primary; MCP/CMP/CAP/CLP across scales |
 | [CAA.md](./architecture/CAA.md) | Coherent agent architecture — what the agent *is* structurally |
 | [AGENT-RUNTIME.md](./architecture/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.7): CN Shell, typed ops, two-pass, receipts |
 | [CLI.md](./architecture/CLI.md) | CLI command reference — every `cn` command |
@@ -135,9 +135,9 @@ Forward-looking designs. Not yet implemented.
 
 | Document | What it explains |
 |----------|-----------------|
-| [THESIS.md](./identity/THESIS.md) | System thesis — cnos as a recurrent coherence system |
-| [WHITEPAPER.md](./identity/WHITEPAPER.md) | CN protocol — Git as native communication surface |
-| [FOUNDATIONS.md](./identity/FOUNDATIONS.md) | The coherence stack — why cnos exists |
+| [THESIS.md](../THESIS.md) | System thesis — cnos as a recurrent coherence system |
+| [WHITEPAPER.md](./architecture/WHITEPAPER.md) | CN protocol — Git as native communication surface |
+| [FOUNDATIONS.md](./foundations/FOUNDATIONS.md) | The coherence stack — why cnos exists |
 
 ---
 

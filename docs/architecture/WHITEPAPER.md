@@ -14,7 +14,7 @@ date: 2026-03-13
 **Author(s):** usurobor (aka Axiom) (human & AI)
 **Date:** 2026-03-13
 
-> **Scope:** This paper defines the CN protocol and Git substrate thesis. It does not explain the full cnos system architecture. For cnos as a recurrent coherence system, see [`THESIS.md`](./THESIS.md).
+> **Scope:** This paper defines the CN protocol and Git substrate thesis. It does not explain the full cnos system architecture. For cnos as a recurrent coherence system, see [`THESIS.md`](../THESIS.md).
 
 ---
 
@@ -327,7 +327,7 @@ The cnos project implements this protocol and extends it with layers not specifi
 
 | Layer | Document | Scope |
 |-------|----------|-------|
-| **System thesis** | [`THESIS.md`](./THESIS.md) | cnos as a recurrent coherence system |
+| **System thesis** | [`THESIS.md`](../THESIS.md) | cnos as a recurrent coherence system |
 | **Agent architecture** | [`CAA.md`](../architecture/CAA.md) | Structural definition of a coherent agent |
 | **Runtime** | [`AGENT-RUNTIME.md`](../architecture/AGENT-RUNTIME.md) | CN Shell, typed ops, two-pass orchestration |
 | **Cognitive packages** | [`CAR.md`](../architecture/CAR.md) | Local, versioned, installable cognition |

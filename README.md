@@ -23,9 +23,9 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
 
 **If you're a human:** Your agent's work is auditable. Every decision is a commit. Every collaboration is a merge. No black boxes.
 
-**If you're skeptical:** CN is a protocol owned by the community. No ads. Not for sale. [Read the manifesto](./docs/identity/MANIFESTO.md).
+**If you're skeptical:** CN is a protocol owned by the community. No ads. Not for sale. [Read the manifesto](./docs/foundations/MANIFESTO.md).
 
-> [Manifesto](./docs/identity/MANIFESTO.md) · [Thesis](./docs/identity/THESIS.md) · [Whitepaper](./docs/identity/WHITEPAPER.md) · [Architecture](./docs/ARCHITECTURE.md)
+> [Manifesto](./docs/foundations/MANIFESTO.md) · [Thesis](./docs/THESIS.md) · [Whitepaper](./docs/architecture/WHITEPAPER.md) · [Architecture](./docs/architecture/ARCHITECTURE.md)
 
 ---
 
@@ -56,7 +56,7 @@ receipts every operation.
 
 The agent is the brain. `cn` is the body. Git is the nervous system.
 
-> Full architecture: [ARCHITECTURE.md](./docs/ARCHITECTURE.md) · Runtime spec: [AGENT-RUNTIME.md](./docs/architecture/AGENT-RUNTIME.md)
+> Full architecture: [ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) · Runtime spec: [AGENT-RUNTIME.md](./docs/architecture/AGENT-RUNTIME.md)
 
 ---
 
@@ -285,17 +285,17 @@ cn-<name>/
 
 | Start here | |
 |-----------|---|
-| [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System overview — modules, FSMs, data flow, directory layout |
+| [ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) | System overview — modules, FSMs, data flow, directory layout |
 | [docs/README.md](./docs/README.md) | Full documentation index with reading paths |
 
 | Design | |
 |--------|---|
-| [COHERENCE-SYSTEM.md](./docs/identity/COHERENCE-SYSTEM.md) | Meta-model — coherence as primary; MCP/CMP/CAP/CLP across scales |
+| [COHERENCE-SYSTEM.md](./docs/foundations/COHERENCE-SYSTEM.md) | Meta-model — coherence as primary; MCP/CMP/CAP/CLP across scales |
 | [CAA.md](./docs/architecture/CAA.md) | Coherent agent architecture — what the agent *is* structurally |
 | [AGENT-RUNTIME.md](./docs/architecture/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.6) — CN Shell, typed ops, two-pass, receipts |
-| [MANIFESTO.md](./docs/identity/MANIFESTO.md) | Why cnos exists. Principles and values. |
-| [THESIS.md](./docs/identity/THESIS.md) | System thesis — cnos as a recurrent coherence system |
-| [WHITEPAPER.md](./docs/identity/WHITEPAPER.md) | CN protocol specification (v2.0.4) |
+| [MANIFESTO.md](./docs/foundations/MANIFESTO.md) | Why cnos exists. Principles and values. |
+| [THESIS.md](./docs/THESIS.md) | System thesis — cnos as a recurrent coherence system |
+| [WHITEPAPER.md](./docs/architecture/WHITEPAPER.md) | CN protocol specification (v2.0.4) |
 | [PROTOCOL.md](./docs/architecture/PROTOCOL.md) | The four FSMs — state diagrams, transition tables |
 | [CLI.md](./docs/architecture/CLI.md) | CLI command reference |
 | [SECURITY-MODEL.md](./docs/architecture/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |

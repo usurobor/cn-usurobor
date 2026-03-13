@@ -14,7 +14,7 @@ The degree to which a system's model matches reality. Incoherence is the gap bet
 
 Measured across three axes: α (Pattern), β (Relation), γ (Exit). See **TSC**.
 
-Defined in: `packages/cnos.core/doctrine/COHERENCE.md`, `docs/identity/COHERENCE-SYSTEM.md`.
+Defined in: `packages/cnos.core/doctrine/COHERENCE.md`, `docs/foundations/COHERENCE-SYSTEM.md`.
 
 ### Coherence delta
 
@@ -67,7 +67,7 @@ An MCP includes:
 
 MCP is what Sense → Compare (FOUNDATIONS §3) produces implicitly at the agent scale, named explicitly at the system scale.
 
-Defined in: `docs/identity/COHERENCE-SYSTEM.md` §3.1; used in `docs/architecture/CAA.md` §5.2, `docs/method/CDD.md` §2.1.
+Defined in: `docs/foundations/COHERENCE-SYSTEM.md` §3.1; used in `docs/architecture/CAA.md` §5.2, `docs/method/CDD.md` §2.1.
 
 ### CMP (Coherence Mapping Pass)
 
@@ -77,7 +77,7 @@ At the agent scale, CMP is the sensing / comparison phase that precedes the MCA-
 
 CMP asks: what are the relevant articulations right now? How do they relate? Where are the strongest incoherences? What is the weakest axis?
 
-Defined in: `docs/identity/COHERENCE-SYSTEM.md` §3.2; used in `docs/architecture/CAA.md` §5.1, `docs/method/CDD.md` §4.2.
+Defined in: `docs/foundations/COHERENCE-SYSTEM.md` §3.2; used in `docs/architecture/CAA.md` §5.1, `docs/method/CDD.md` §4.2.
 
 ### CLP (Coherence Ladder Process)
 
@@ -151,7 +151,7 @@ If α < β, invest in PATTERN. If β < α, invest in RELATION. Balance two, let 
 
 Any durable expression of coherence at a particular scale. Doctrine, code, skills, packages, traces, release notes, and agents are all articulations. cnos is a network of recurrent coherent articulations that generate, constrain, package, execute, observe, and repair one another.
 
-Defined in: `docs/identity/COHERENCE-SYSTEM.md` §5.
+Defined in: `docs/foundations/COHERENCE-SYSTEM.md` §5.
 
 ---
 
@@ -215,7 +215,7 @@ An articulation of coherence that can sense, compare, choose, act or learn, and 
 - review the result via CLP
 - continue the loop
 
-Defined in: `docs/architecture/CAA.md`, `docs/identity/COHERENCE-SYSTEM.md` §7.
+Defined in: `docs/architecture/CAA.md`, `docs/foundations/COHERENCE-SYSTEM.md` §7.
 
 ### CAA (Coherent Agent Architecture)
 
