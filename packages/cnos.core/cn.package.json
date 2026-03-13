@@ -3,9 +3,13 @@
   "name": "cnos.core",
   "version": "1.0.0",
   "kind": "package",
-  "engines": { "cnos": ">=3.4.0 <4.0.0" },
+  "engines": {
+    "cnos": ">=3.4.0 <4.0.0"
+  },
   "sources": {
-    "doctrine": ["*"],
+    "doctrine": [
+      "*"
+    ],
     "mindsets": [
       "ENGINEERING.md",
       "PM.md",
@@ -31,6 +35,7 @@
       "agent/reflect",
       "agent/self-cohere",
       "ops/adhoc-thread",
+      "ops/cdd",
       "ops/inbox",
       "ops/peer",
       "ops/star-sync",

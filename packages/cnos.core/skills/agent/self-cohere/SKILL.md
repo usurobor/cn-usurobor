@@ -1,12 +1,12 @@
 # Self Cohere
 
-Wire agent to its hub and verify cognitive readiness.
+Wire agent to an existing hub repo.
 
 ## TERMS
 
-1. Hub exists as a git repo (created by `cn init`)
-2. Cognitive packages installed locally via `cn setup` (in `.cn/vendor/packages/`)
-3. Identity files present: `spec/SOUL.md`, `spec/USER.md`
+1. Hub URL provided: `https://github.com/<owner>/cn-<agentname>`
+2. Template at `/home/cn/cnos`
+3. Symlinks exist in workspace root (created by CLI)
 4. Git installed and identity configured
 
 ## Pre-flight
@@ -15,47 +15,35 @@ Wire agent to its hub and verify cognitive readiness.
 which git
 git config user.name
 git config user.email
-ls spec/SOUL.md spec/USER.md
-ls .cn/vendor/packages/
+ls -la /home/cn/SOUL.md
 ```
 
 ## Structure
 
 ```
-hub/
-├── spec/
-│   ├── SOUL.md          (agent identity)
-│   └── USER.md          (operator identity)
-├── .cn/
-│   ├── config.json     (hub configuration — runtime settings, role, users)
-│   ├── secrets.env     (secrets — API keys, tokens; gitignored)
-│   └── vendor/
-│       └── packages/   (installed cognitive packages)
-│           └── cnos.core@1.0.0/
-│               ├── doctrine/
-│               ├── mindsets/
-│               └── skills/
-├── threads/             (reflections, conversations)
-└── state/               (runtime state, receipts)
+workspace/
+├── SOUL.md      → cn-<name>/spec/SOUL.md (hub)
+├── USER.md      → cn-<name>/spec/USER.md (hub)
+├── AGENTS.md    → cnos/spec/AGENTS.md (template)
+├── cn-<name>/   (hub: identity + state)
+└── cnos/    (template: skills + mindsets)
 ```
 
-Cognition is local. Everything the agent needs is installed in the hub — no external checkout required.
+Hub = personal. Template = generic. Don't mix.
 
 ## Steps
 
-1. Verify hub structure (spec/, .cn/, threads/, state/)
-2. Learn identity from `spec/SOUL.md`
-3. Verify installed packages in `.cn/vendor/packages/`
-4. Record metadata in `state/hub.md`
-5. Run `configure-agent` skill
-6. Run `hello-world` kata
-7. Emit summary
+1. Clone hub (or pull if exists)
+2. Learn identity from symlinked SOUL.md
+3. Record metadata in `state/hub.md`
+4. Run `configure-agent` skill
+5. Run `hello-world` kata
+6. Emit summary
 
 ## Output
 
 ```
 ✓ SELF-COHERE COMPLETE
-HUB: <hub-path>
-IDENTITY: <agent-name>
-PACKAGES: <installed-package-list>
+HUB: https://github.com/<owner>/cn-<agentname>
+TEMPLATE: /home/cn/cnos
 ```
