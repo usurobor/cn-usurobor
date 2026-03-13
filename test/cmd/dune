@@ -93,3 +93,19 @@
  (libraries cn_cmd cn_lib)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_contract tests (ppx_expect) — protocol contract consistency (I2)
+(library
+ (name cn_contract_test)
+ (modules cn_contract_test)
+ (libraries cn_cmd cn_ffi cn_lib cn_protocol)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
+; cn_traceability tests (ppx_expect) — readiness projection smoke (I3)
+(library
+ (name cn_traceability_test)
+ (modules cn_traceability_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))

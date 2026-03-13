@@ -1,0 +1,56 @@
+name: Coherence
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  coherence-build-check:
+    name: Package/source drift (I1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.14.x
+
+      - name: Install dependencies
+        run: |
+          opam install dune ppx_expect ppxlib mdx --yes
+
+      - name: Build cn binary
+        run: |
+          eval $(opam env)
+          dune build src/cli/cn.exe
+
+      - name: Check package/source sync
+        run: |
+          eval $(opam env)
+          ./_build/default/src/cli/cn.exe build --check
+
+  protocol-contract-check:
+    name: Protocol contract + traceability (I2/I3)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.14.x
+
+      - name: Install dependencies
+        run: |
+          opam install dune ppx_expect ppxlib mdx --yes
+
+      - name: Run invariant tests
+        run: |
+          eval $(opam env)
+          mkdir -p "$TMPDIR"
+          dune runtest test/cmd -j 1
+        env:
+          TMPDIR: ${{ runner.temp }}/dune-tests
