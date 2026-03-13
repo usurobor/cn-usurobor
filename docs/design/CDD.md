@@ -460,7 +460,7 @@ Reviews use CLP dialogue structure (TERMS → POINTER → EXIT) and check triadi
 
 | Document | Scope | Relationship to CDD |
 |----------|-------|---------------------|
-| WHITEPAPER.md | System thesis / above | CDD is one articulation of the recurrent coherence system |
+| THESIS.md | System thesis / above | CDD is one articulation of the recurrent coherence system |
 | COHERENCE-SYSTEM.md | Meta-model / above | CDD is γ at the development scale |
 | FOUNDATIONS.md | Doctrine / why | CDD derives its first principle from here |
 | CAP.md | Doctrine / dynamic | CDD applies CAP to development |

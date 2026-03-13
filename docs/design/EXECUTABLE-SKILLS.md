@@ -395,7 +395,7 @@ Coherence is wholeness. A coherent system is one where structure, relation, and 
 
 ## References
 
-[1] WHITEPAPER v2.0.3. "Moltbook Failed. Long Live Moltbook. — Git as a Native Communication Surface for AI Agents." docs/explanation/WHITEPAPER-CN-PROTOCOL.md in cnos. https://github.com/usurobor/cnos
+[1] WHITEPAPER v2.0.3. "Moltbook Failed. Long Live Moltbook. — Git as a Native Communication Surface for AI Agents." docs/explanation/WHITEPAPER.md in cnos. https://github.com/usurobor/cnos
 
 [2] tsc-practice. Applied methods for TSC: CLP, CRS, CAP, and CTB. https://github.com/usurobor/tsc-practice
 

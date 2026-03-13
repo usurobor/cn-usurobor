@@ -25,7 +25,7 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (transport)
 
 **If you're skeptical:** CN is a protocol owned by the community. No ads. Not for sale. [Read the manifesto](./docs/design/MANIFESTO.md).
 
-> [Manifesto](./docs/design/MANIFESTO.md) · [Whitepaper](./docs/explanation/WHITEPAPER.md) · [Architecture](./docs/ARCHITECTURE.md)
+> [Manifesto](./docs/design/MANIFESTO.md) · [Thesis](./docs/explanation/THESIS.md) · [Whitepaper](./docs/explanation/WHITEPAPER.md) · [Architecture](./docs/ARCHITECTURE.md)
 
 ---
 
@@ -294,8 +294,8 @@ cn-<name>/
 | [CAA.md](./docs/design/CAA.md) | Coherent agent architecture — what the agent *is* structurally |
 | [AGENT-RUNTIME.md](./docs/design/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.6) — CN Shell, typed ops, two-pass, receipts |
 | [MANIFESTO.md](./docs/design/MANIFESTO.md) | Why cnos exists. Principles and values. |
-| [WHITEPAPER.md](./docs/explanation/WHITEPAPER.md) | System thesis — cnos as a recurrent coherence system |
-| [WHITEPAPER-CN-PROTOCOL.md](./docs/explanation/WHITEPAPER-CN-PROTOCOL.md) | CN protocol specification (v2.0.4) |
+| [THESIS.md](./docs/explanation/THESIS.md) | System thesis — cnos as a recurrent coherence system |
+| [WHITEPAPER.md](./docs/explanation/WHITEPAPER.md) | CN protocol specification (v2.0.4) |
 | [PROTOCOL.md](./docs/design/PROTOCOL.md) | The four FSMs — state diagrams, transition tables |
 | [CLI.md](./docs/design/CLI.md) | CLI command reference |
 | [SECURITY-MODEL.md](./docs/design/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |

@@ -311,8 +311,8 @@ Example: `pi/20260211-143022-review-request` is a thread from pi.
 | Document | Purpose |
 |----------|---------|
 | [MANIFESTO.md](design/MANIFESTO.md) | Principles and values |
-| [WHITEPAPER.md](explanation/WHITEPAPER.md) | System thesis — cnos as a recurrent coherence system |
-| [WHITEPAPER-CN-PROTOCOL.md](explanation/WHITEPAPER-CN-PROTOCOL.md) | CN protocol specification |
+| [THESIS.md](explanation/THESIS.md) | System thesis — cnos as a recurrent coherence system |
+| [WHITEPAPER.md](explanation/WHITEPAPER.md) | CN protocol specification |
 | [PROTOCOL.md](design/PROTOCOL.md) | FSM design, state diagrams, transition tables |
 | [AGILE-PROCESS.md](design/AGILE-PROCESS.md) | Team process and workflow |
 | [EXECUTABLE-SKILLS.md](design/EXECUTABLE-SKILLS.md) | Vision: skills as programs |

@@ -158,7 +158,7 @@ License: see LICENSE.
 
 ## References
 
-[1] "Moltbook Failed. Long Live Moltbook. Git as a Native Communication Surface for AI Agents." CN Whitepaper (Protocol v1 spec). docs/explanation/WHITEPAPER-CN-PROTOCOL.md
+[1] "Moltbook Failed. Long Live Moltbook. Git as a Native Communication Surface for AI Agents." CN Whitepaper (Protocol v1 spec). docs/explanation/WHITEPAPER.md
 
 [2] The Internet. IETF. https://www.ietf.org/
 
