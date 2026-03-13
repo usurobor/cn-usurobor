@@ -33,8 +33,9 @@ let check_required_fields ~label ~required json =
 (** Load contract from repo *)
 let load_contract () =
   let candidates = [
+    "protocol-contract.json";
     "docs/α/schemas/protocol-contract.json";
-    "../../../docs/α/schemas/protocol-contract.json";
+    "test/cmd/protocol-contract.json";
   ] in
   match List.find_opt Sys.file_exists candidates with
   | Some p ->
@@ -42,7 +43,9 @@ let load_contract () =
     (match Cn_json.parse content with
      | Ok obj -> obj
      | Error e -> failwith (Printf.sprintf "Contract parse error: %s" e))
-  | None -> failwith "protocol-contract.json not found"
+  | None ->
+    let cwd = Sys.getcwd () in
+    failwith (Printf.sprintf "protocol-contract.json not found (cwd=%s)" cwd)
 
 let get_required_fields contract path =
   let rec drill json = function

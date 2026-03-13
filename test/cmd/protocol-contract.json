@@ -1,0 +1,63 @@
+{
+  "schema": "cn.protocol-contract.v1",
+  "version": "3.6.0",
+  "description": "Machine-readable protocol contract for cnos invariant checking. Code constants must match this file.",
+
+  "coordination_ops": {
+    "description": "Legacy frontmatter coordination op keys (cn_lib.ml parse_agent_op)",
+    "ops": ["ack", "done", "fail", "reply", "send", "delegate", "defer", "delete", "surface", "mca"]
+  },
+
+  "typed_ops": {
+    "description": "CN Shell typed op kinds (cn_shell.ml op_kind_of_string)",
+    "observe": ["fs_read", "fs_list", "fs_glob", "git_status", "git_diff", "git_log", "git_grep"],
+    "effect": ["fs_write", "fs_patch", "git_branch", "git_commit", "exec"]
+  },
+
+  "receipt_statuses": {
+    "description": "CN Shell receipt status values (cn_shell.ml receipt_status)",
+    "values": ["ok", "denied", "error", "skipped"]
+  },
+
+  "pass_labels": {
+    "description": "Two-pass execution pass identifiers",
+    "values": ["A", "B"]
+  },
+
+  "render_reasons": {
+    "description": "Output plane render block reasons (cn_output.ml render_reason)",
+    "values": ["control_plane_leak", "raw_frontmatter", "xml_tool_syntax", "no_presentation_payload"]
+  },
+
+  "event_schema": {
+    "description": "Traceability event fields (cn_trace.ml)",
+    "layers": ["sensor", "body", "mind", "governance", "world"],
+    "severities": ["debug", "info", "warn", "error"],
+    "statuses": ["ok", "degraded", "blocked", "error", "skipped"]
+  },
+
+  "fsm": {
+    "description": "Protocol FSM state vocabularies (cn_protocol.ml)",
+    "thread_states": ["received", "queued", "active", "doing", "deferred", "delegated", "archived", "deleted"],
+    "thread_events": ["enqueue", "feed", "claim", "complete", "defer", "delegate", "discard", "resurface"],
+    "actor_states": ["idle", "updating", "input_ready", "processing", "output_ready", "timed_out"],
+    "actor_events": ["update_available", "update_complete", "update_fail", "update_skip", "queue_pop", "queue_empty", "wake", "output_received", "timeout", "archive_complete", "archive_fail"],
+    "sender_states": ["pending", "branch_created", "pushing", "pushed", "failed", "delivered"],
+    "receiver_states": ["fetched", "materializing", "materialized", "skipped", "rejected", "cleaned"]
+  },
+
+  "readiness": {
+    "description": "Readiness projection contract (cn_trace_state.ml)",
+    "statuses": ["ready", "degraded", "blocked", "starting"],
+    "coherence_checks": ["ok", "missing", "error"],
+    "ready_json_required_fields": {
+      "top_level": ["schema", "status", "boot_id", "updated_at"],
+      "mind": ["profile", "packages", "doctrine", "mindsets", "skills", "capabilities"],
+      "mind_doctrine": ["required", "loaded", "hash"],
+      "mind_mindsets": ["required", "loaded", "hash"],
+      "mind_skills": ["indexed", "selected_last"],
+      "mind_capabilities": ["hash", "two_pass", "apply_mode", "exec_enabled"],
+      "body": ["fsm_state", "lock_held", "current_cycle", "queue_depth"]
+    }
+  }
+}

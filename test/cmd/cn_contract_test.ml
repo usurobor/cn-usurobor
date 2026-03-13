@@ -12,14 +12,18 @@
     Falls back to common locations. *)
 let find_contract_path () =
   let candidates = [
-    (* dune runs tests from the repo root *)
+    (* dune deps makes this available in the sandbox *)
+    "protocol-contract.json";
+    (* direct run from repo root *)
     "docs/α/schemas/protocol-contract.json";
-    (* fallback: absolute from build context *)
-    "../../../docs/α/schemas/protocol-contract.json";
+    (* symlink in test dir *)
+    "test/cmd/protocol-contract.json";
   ] in
   match List.find_opt Sys.file_exists candidates with
   | Some p -> p
-  | None -> failwith "protocol-contract.json not found"
+  | None ->
+    let cwd = Sys.getcwd () in
+    failwith (Printf.sprintf "protocol-contract.json not found (cwd=%s)" cwd)
 
 let load_contract () =
   let path = find_contract_path () in
