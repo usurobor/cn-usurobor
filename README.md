@@ -299,7 +299,7 @@ cn-<name>/
 |--------|---|
 | [COHERENCE-SYSTEM.md](./docs/alpha/COHERENCE-SYSTEM.md) | Meta-model — coherence as primary; MCP/CMP/CAP/CLP across scales |
 | [CAA.md](./docs/alpha/CAA.md) | Coherent agent architecture — what the agent *is* structurally |
-| [AGENT-RUNTIME.md](./docs/alpha/AGENT-RUNTIME.md) | Agent runtime spec (v3.6.0) — CN Shell, typed ops, two-pass, receipts |
+| [AGENT-RUNTIME.md](./docs/alpha/AGENT-RUNTIME.md) | Agent runtime spec (v3.7.0) — CN Shell, typed ops, two-pass, receipts, scheduler unification |
 | [MANIFESTO.md](./docs/alpha/MANIFESTO.md) | Why cnos exists. Principles and values. |
 | [THESIS.md](./docs/THESIS.md) | System thesis — cnos as a recurrent coherence system |
 | [WHITEPAPER.md](./docs/alpha/WHITEPAPER.md) | CN protocol specification (v3.0.0) |
