@@ -1,10 +1,10 @@
 {
   "cn_manifest": "v1",
   "protocol": "git-cn-v1",
-  "kind": "template",
+  "kind": "system",
   "name": "cnos",
-  "version": "2.1.0",
-  "description": "Coherent Network agent template — skills, mindsets, tools",
+  "version": "3.6.0",
+  "description": "A recurrent coherence system — runtime, doctrine, packages, and tools for coherent agents",
   "repo_urls": [
     "https://github.com/usurobor/cnos"
   ],
