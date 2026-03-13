@@ -369,7 +369,7 @@ By designing offline-first operation, deterministic parsing, idempotent fetch/me
 
 Keywords "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" are to be interpreted as described in RFC 2119 [6].
 
-The **document version** (2.0.4) tracks this whitepaper. The **protocol version** (v1) tracks the wire format. Future whitepaper revisions may clarify v1 requirements without changing the protocol version. A protocol-breaking change would increment to v2.
+The **document version** (3.0.0) tracks this whitepaper. The **protocol version** (v1) tracks the wire format. Future whitepaper revisions may clarify v1 requirements without changing the protocol version. A protocol-breaking change would increment to v2.
 
 ### A.1 Repository Structure
 

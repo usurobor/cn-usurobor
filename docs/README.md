@@ -78,7 +78,7 @@ The foundational documents. Read in this order for full understanding.
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System overview — modules, FSMs, data flow, directory layout |
 | [MANIFESTO.md](./identity/MANIFESTO.md) | Principles — why cnos exists, what it stands for |
 | [THESIS.md](./identity/THESIS.md) | System thesis — cnos as a recurrent coherence system (v1.0.0) |
-| [WHITEPAPER.md](./identity/WHITEPAPER.md) | CN protocol specification (v2.0.4) |
+| [WHITEPAPER.md](./identity/WHITEPAPER.md) | CN protocol specification (v3.0.0) |
 | [PROTOCOL.md](./architecture/PROTOCOL.md) | FSM design — state diagrams, transition tables (implemented) |
 
 ### Domain
