@@ -15,7 +15,7 @@
 - Introduce `cn_maintenance.ml` — shared maintenance engine: `sync_once`, `materialize_inbox_once`, `flush_outbox_once`, `update_check_once`, `review_tick_once`, `cleanup_once`, and the composite `maintain_once`
 - Add `drain_queue` to `cn_runtime.ml` — bounded queue processing with configurable limits and stop reasons
 - **Oneshot scheduler** (`cn agent`): boot → `maintain_once` → `drain_queue` → exit (full protocol, not just processing)
-- **Daemon scheduler** (`cn agent --daemon`): fast clock (Telegram poll + immediate drain) + slow clock (periodic `maintain_once` at configurable interval)
+- **Daemon scheduler** (`cn agent --daemon`): exteroception (Telegram poll + immediate drain) + interoception (periodic `maintain_once` at configurable interval)
 - Daemon no longer requires `TELEGRAM_TOKEN` — can run as peer-only daemon with maintenance ticks
 - `cn sync` now delegates to shared maintenance primitives (no duplicated protocol logic)
 - Add `scheduler` config block: `sync_interval_sec`, `review_interval_sec`, `oneshot_drain_limit`, `daemon_drain_limit`
