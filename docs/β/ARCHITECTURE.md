@@ -1,324 +1,261 @@
 # cnos Architecture
 
-**Status:** Current
-**Date:** 2026-03-06
-**Author:** Sigma
+How the articulated layers reveal one coherent system.
+
+**Status:** v2.0.0
+**Date:** 2026-03-13
 
 ---
 
-## What is cnos?
+## 1. The Relation Question
 
-cnos is a coordination protocol for autonomous agents, built on git.
+β asks: *do the parts reveal one system?*
 
-Each agent has a **hub** (a git repo). Agents publish by pushing branches to their own hub; peers fetch and merge. All state is files. All transport is git. No database, no server, no API keys.
+cnos has many articulations — doctrine, specs, runtime modules, packages, traces, releases, agents, operator surfaces. This document maps how they relate. It does not redefine them (α does that). It shows that they are one system, not many fragments.
 
-## Core Concepts
+---
 
-**Hub** — A git repository that serves as an agent's home. Contains threads, state, and configuration. Discovered by walking up from `cwd` looking for `.cn/config.json`.
-
-**Peer** — Another agent's hub. Listed in `state/peers.md` with name, remote URL, and local clone path. You maintain a local clone of each peer's hub to fetch their outbound branches.
-
-**Thread** — The unit of work or conversation. A markdown file with YAML frontmatter. Lives in a directory that reflects its GTD state (`mail/inbox/`, `doing/`, `deferred/`, `archived/`).
-
-**Agent** — A pure function: input → output. The agent never touches git, the filesystem, or peers directly. `cn` handles all I/O and side effects.
-
-## Module Structure
+## 2. System Graph
 
 ```
-cn.ml                    CLI dispatch (~100 lines, routes to modules)
+                    THESIS.md
+                   (the whole)
+                       |
+          ┌────────────┼────────────┐
+          α            β            γ
+       pattern      relation     evolution
+          |            |            |
+    ┌─────┴─────┐     this    ┌────┴────┐
+    |           |     doc     |         |
+ doctrine   specs           method    plans
+    |           |              |
+ FOUNDATIONS  CAA.md         CDD.md
+ COHERENCE-   AGENT-RUNTIME  AGILE-PROCESS
+  SYSTEM      PROTOCOL       checklists
+ MANIFESTO    TRACEABILITY
+              CAR
+              SECURITY-MODEL
+              CLI
+              WHITEPAPER
+```
+
+THESIS.md sits above the triad as the whole. Every other doc is an articulation along one dominant axis. This document (β) maps the edges between them.
+
+---
+
+## 3. Layer Relations
+
+### Doctrine → Architecture
+
+Doctrine (FOUNDATIONS, COHERENCE-SYSTEM, MANIFESTO) defines *why*. Architecture (CAA, AGENT-RUNTIME, PROTOCOL) defines *what*. The relation:
+
+- FOUNDATIONS §3 defines the coherence loop → CAA §5 implements it as the agent cycle
+- COHERENCE-SYSTEM §3.3 names CMP/MCP/CAP/CLP → AGENT-RUNTIME realizes them as `input.md → LLM → output.md → ops`
+- MANIFESTO's four guarantees → SECURITY-MODEL enforces them, WHITEPAPER specifies the protocol surface
+
+If doctrine says something the architecture doesn't realize, that's a β gap.
+
+### Architecture → Runtime
+
+Architecture (α docs) specifies. Runtime (OCaml modules) implements. The relation:
+
+| α spec | Runtime module | What it enforces |
+|--------|---------------|-----------------|
+| CAA §5 (agent cycle) | `cn_runtime.ml` | dequeue → pack → call → finalize → project |
+| PROTOCOL (FSMs) | `cn_protocol.ml` | Thread, Actor, Sender, Receiver state machines |
+| AGENT-RUNTIME (CN Shell) | `cn_shell.ml`, `cn_executor.ml` | Typed ops, two-pass orchestration |
+| TRACEABILITY | `cn_trace.ml` | Event stream, reason codes, receipts |
+| SECURITY-MODEL | `cn_sandbox.ml` | Path sandbox, denylist enforcement |
+| CAR (packages) | `cn_build.ml` | Package assembly from doctrine/mindsets/skills |
+| CLI | `cn.ml` | Command dispatch |
+
+If a spec exists without a module, the spec is aspirational. If a module exists without a spec, the module is undocumented.
+
+### Runtime → Packages
+
+The runtime loads cognition from installed packages (`.cn/vendor/packages/`). The relation:
+
+- CAR specifies the package model → `cn_build.ml` assembles packages from `src/agent/`
+- Packages contain doctrine, mindsets, and skills → the context packer (`cn_context.ml`) loads them at invocation
+- Package manifests (`cn.package.json`) declare contents → the runtime verifies them at setup
+
+### Runtime → Observability
+
+The runtime produces evidence. TRACEABILITY specifies what evidence. The relation:
+
+- Every state transition emits a trace event with reason code
+- `ready.json` reconstructs mind/body/sensor state from files alone
+- Receipts (`state/receipts/`) record per-trigger execution evidence
+- `projection.render.*` events carry render status (ok, blocked, fallback)
+
+If the runtime does something TRACEABILITY doesn't cover, that's a β gap.
+
+### Method → All Layers
+
+CDD (γ) governs how every layer evolves. The relation:
+
+- CDD §2 names the gap → the gap may be in any α doc or runtime module
+- CDD §4 creates artifacts in order → design doc (α), tests, code, docs, release notes
+- CDD §7 uses CLP for review → scores α/β/γ across the affected layers
+- CDD §11 measures the coherence delta → CHANGELOG TSC table records the result
+
+### Guides → Operator
+
+Guides (β/guides/) connect operators to the system. The relation:
+
+- HANDSHAKE → WHITEPAPER §7 (transport levels), `cn_mail.ml`
+- AUTOMATION → DAEMON, `cn_agent.ml`, `cn_telegram.ml`
+- MIGRATION → version history in AGENT-RUNTIME, CHANGELOG
+- WRITE-A-SKILL → skill structure in packages, `cn_context.ml` skill loading
+
+### Evidence → Model
+
+Evidence (β/evidence/) tests whether model matches reality. The relation:
+
+- RCAs reveal where runtime behavior diverged from spec
+- AUDIT tracks doc health — which articulations are stale, which are current
+- When evidence contradicts a spec, CDD triggers MCI (update the model) or MCA (fix the code)
+
+---
+
+## 4. Module Structure
+
+```
+cn.ml                    CLI dispatch
  |
- |-- cn_runtime.ml       Agent runtime orchestrator (dequeue → LLM → finalize)
- |-- cn_context.ml       Context packer (skills, conversation, capabilities, artifacts)
- |-- cn_llm.ml           Claude API client (curl-backed, no --fail)
- |-- cn_telegram.ml      Telegram Bot API client (send, typing, reactions)
- |-- cn_config.ml        Config loader (env vars + .cn/config.json)
- |-- cn_dotenv.ml        .env file loader (.cn/secrets.env)
- |-- cn_agent.ml         Queue, input/output, op execution
- |-- cn_shell.ml         CN Shell: capability runtime (typed ops, two-pass)
- |-- cn_executor.ml      Op executor (dispatch per kind)
- |-- cn_sandbox.ml       Path sandbox (reject escapes, denylist)
- |-- cn_capabilities.ml  Capability discovery (budget, allowlists)
- |-- cn_projection.ml    Reply projection (Telegram routing, dedup markers)
- |-- cn_orchestrator.ml  Two-pass orchestration (observe → effect)
- |-- cn_protocol.ml      FSMs: Thread, Actor, Sender, Receiver (pure)
- |-- cn_gtd.ml           GTD lifecycle: do/defer/delegate/done/delete
- |-- cn_mail.ml          Inbox/outbox: send, receive, materialize
- |-- cn_mca.ml           Managed Concern Aggregation
- |-- cn_commands.ml      Peer management + git commands (commit/push)
- |-- cn_system.ml        Init, setup, update, status, doctor, sync
- |-- cn_hub.ml           Hub discovery, path constants, logging
- |-- cn_fmt.ml           Output formatting, timestamps, dry-run
- |-- cn_ffi.ml           Native system bindings (Fs, Path, Process, Http)
- |-- cn_io.ml            Protocol I/O over git (sync, flush, archive)
- |-- cn_lib.ml           Types, parsing, help text (pure)
- |-- cn_json.ml          JSON parser/emitter (pure, zero-dep)
- |-- git.ml              Raw git operations (pure git, no CN knowledge)
+ |── cn_runtime.ml       Agent runtime orchestrator
+ |── cn_context.ml       Context packer
+ |── cn_llm.ml           Claude API client
+ |── cn_telegram.ml      Telegram Bot API
+ |── cn_config.ml        Config loader
+ |── cn_dotenv.ml        .env loader
+ |── cn_agent.ml         Queue, input/output, op execution
+ |── cn_shell.ml         CN Shell: capability runtime
+ |── cn_executor.ml      Op executor
+ |── cn_sandbox.ml       Path sandbox
+ |── cn_capabilities.ml  Capability discovery
+ |── cn_projection.ml    Reply projection
+ |── cn_output.ml        Output plane separation
+ |── cn_orchestrator.ml  Two-pass orchestration
+ |── cn_protocol.ml      FSMs (pure)
+ |── cn_gtd.ml           GTD lifecycle
+ |── cn_mail.ml          Inbox/outbox
+ |── cn_mca.ml           Managed Concern Aggregation
+ |── cn_commands.ml      Peer management + git
+ |── cn_system.ml        Init, setup, update, status, doctor, sync
+ |── cn_build.ml         Package assembly
+ |── cn_trace.ml         Traceability event stream
+ |── cn_deps.ml          Dependency management
+ |── cn_hub.ml           Hub discovery, path constants
+ |── cn_fmt.ml           Output formatting
+ |── cn_ffi.ml           Native system bindings
+ |── cn_io.ml            Protocol I/O over git
+ |── cn_lib.ml           Types, parsing (pure)
+ |── cn_json.ml          JSON parser/emitter (pure)
+ └── git.ml              Raw git operations
 ```
 
 ### Dependency Layers
 
 ```
 Layer 5  cn.ml (dispatch)
-         |
-Layer 4  cn_runtime (orchestrator: pack → call → finalize → project)
-         |
-Layer 3  cn_context  cn_llm  cn_telegram  cn_config  cn_agent  cn_shell
-         cn_executor  cn_sandbox  cn_capabilities  cn_projection  cn_orchestrator
-         cn_gtd  cn_mail  cn_mca  cn_commands  cn_system  cn_dotenv
-         |
-Layer 2  cn_protocol  cn_hub  cn_io  cn_fmt
-         |
-Layer 1  cn_lib  cn_json  cn_ffi  git.ml
+Layer 4  cn_runtime (orchestrator)
+Layer 3  cn_context, cn_llm, cn_telegram, cn_config, cn_agent, cn_shell,
+         cn_executor, cn_sandbox, cn_capabilities, cn_projection, cn_output,
+         cn_orchestrator, cn_gtd, cn_mail, cn_mca, cn_commands, cn_system,
+         cn_build, cn_trace, cn_deps, cn_dotenv
+Layer 2  cn_protocol, cn_hub, cn_io, cn_fmt
+Layer 1  cn_lib, cn_json, cn_ffi, git.ml
 ```
 
 Rules:
-- Layer N may depend on Layer N-1 and below, never on same layer or above
+- Layer N depends only on N-1 and below
 - `cn_protocol.ml` has zero dependencies (pure types and transitions)
-- `cn_lib.ml` and `cn_json.ml` are pure (no I/O) — fully testable with ppx_expect
-- `cn_ffi.ml` is the only module that touches Unix/stdlib directly
-- `cn_runtime.ml` is the only module that calls the LLM
-- `cn_shell.ml` / `cn_executor.ml` handle all post-call effects (typed ops)
+- `cn_lib.ml`, `cn_json.ml` are pure — testable with ppx_expect
+- `cn_ffi.ml` is the only module touching Unix/stdlib directly
+- `cn_runtime.ml` is the only module calling the LLM
 
-## The Four FSMs
+---
 
-All protocol state machines live in `cn_protocol.ml`. States are algebraic types. Transitions are total functions returning `Ok state | Error string`. Invalid transitions are errors, not exceptions. Terminal states are idempotent.
+## 5. The Four FSMs
 
-For full state diagrams and transition tables, see [PROTOCOL.md](../α/PROTOCOL.md).
+All state machines live in `cn_protocol.ml`. States are algebraic types. Transitions are total functions returning `Ok state | Error string`.
 
-### FSM 1: Thread Lifecycle
+| FSM | States | Governs |
+|-----|--------|---------|
+| Thread Lifecycle | Received → Queued → Active → Doing → Archived (+ Deferred, Delegated, Deleted) | Work item progression |
+| Actor Loop | Idle → InputReady → Processing → OutputReady → Idle | Agent invocation scheduling |
+| Transport Sender | Pending → BranchCreated → Pushing → Pushed → Delivered | Outbox delivery |
+| Transport Receiver | Fetched → Materializing → Materialized → Cleaned | Inbox materialization |
 
-The GTD state machine for every thread.
+Full state diagrams and transition tables: [PROTOCOL.md](../α/PROTOCOL.md).
 
-```
-Received --> Queued --> Active --> Doing --> Archived
-                         |                    ^
-                         +-- Deferred --+     |
-                         |              +-----+
-                         +-- Delegated (enters Sender FSM)
-                         |
-                         +-- Deleted
-```
-
-States: `Received | Queued | Active | Doing | Deferred | Delegated | Archived | Deleted`
-
-Key property: `gtd_do` on a `Doing` thread returns `Error`, not silent overwrite. Every GTD command in `cn_gtd.ml` validates the transition before acting.
-
-### FSM 2: Actor Loop
-
-The scheduler that drives agent invocations.
+### How they compose
 
 ```
-Idle --> InputReady --> Processing --> OutputReady --> Idle
-  ^                                       |
-  +---------------------------------------+
+Peer pushes branch → [Receiver] → inbox → [Thread] → queued →
+[Actor] → input.md → agent → output.md → ops → [Thread] →
+archived (or delegated → outbox → [Sender] → delivered)
 ```
 
-States: `Idle | InputReady | Processing | OutputReady`
+---
 
-Derived from filesystem: `actor_derive_state ~input_exists ~output_exists`. No persistent state file needed.
-
-### FSM 3: Transport Sender
-
-Outbox message delivery to a peer.
-
-```
-Pending --> BranchCreated --> Pushing --> Pushed --> Delivered
-                                |
-                                +--> Failed --> Pending (retry)
-                                         |
-                                         +--> Delivered (give up)
-```
-
-States: `S_Pending | S_BranchCreated | S_Pushing | S_Pushed | S_Failed | S_Delivered`
-
-### FSM 4: Transport Receiver
-
-Inbound branch materialization to inbox.
-
-```
-Fetched --> Materializing --> Materialized --> Cleaned
-   |
-   +--> Skipped (duplicate) --> Cleaned
-   |
-   +--> Rejected (orphan) --> Cleaned
-```
-
-States: `R_Fetched | R_Materializing | R_Materialized | R_Skipped | R_Rejected | R_Cleaned`
-
-### How the FSMs Compose
-
-```
-Peer pushes branch
-        |
-        v
-  [Receiver FSM]  Fetched -> Materialized -> Cleaned
-        |
-        v
-  Thread lands in threads/mail/inbox/ (state: Received)
-        |
-        v
-  [Thread FSM]    Received -> Queued -> Active
-        |
-        v
-  [Actor FSM]     Idle -> InputReady -> Processing -> OutputReady -> Idle
-        |
-        v
-  Agent decision: Complete | Defer | Delegate | ...
-        |
-        v (if Delegate)
-  [Thread FSM]    Active -> Delegated
-        |
-        v
-  Thread moves to threads/mail/outbox/
-        |
-        v
-  [Sender FSM]    Pending -> BranchCreated -> Pushing -> Pushed -> Delivered
-```
-
-## Data Flow
-
-The runtime pipeline, executed by `cn agent` (cron) or `cn agent --daemon` (Telegram):
+## 6. Data Flow
 
 ```
 1. cn sync            Fetch peer branches, send outbound
-2. cn agent           Runtime cycle (under atomic lock):
-   a. GC              Sweep stale ops_done markers (idle only)
-   b. Queue inbox     Move inbox items to state/queue/
-   c. Dequeue         Pop oldest item from queue
-   d. Pack context    Build prompt (identity, skills, capabilities, conversation, message)
-   e. Write input.md  Frontmatter metadata + packed context body
-   f. Call LLM        Claude API (body-only prompt, Option B)
-   g. Write output.md LLM response (typed ops in frontmatter, body below)
-   h. Archive         Copy input.md + output.md to logs/ (before effects)
-   i. Execute ops     CN Shell two-pass: observe (Pass A) → effect (Pass B)
-   j. Receipts        Write per-trigger receipt JSON (state/receipts/)
-   k. Project         Route reply to Telegram (idempotent via marker)
-   l. Conversation    Append to state/conversation.json (dedup by trigger_id)
-   m. Cleanup         Delete state/input.md + state/output.md
-   n. Clear marker    Remove ops_done marker (state/finalized/)
-3. cn save            Commit + push hub state to git
+2. cn agent           Runtime cycle (atomic lock):
+   a. GC              Sweep stale markers
+   b. Queue inbox     inbox → state/queue/
+   c. Dequeue         Pop oldest
+   d. Pack context    identity + skills + conversation + message
+   e. input.md        Frontmatter + packed context
+   f. Call LLM        Claude API
+   g. output.md       Typed ops in frontmatter, body below
+   h. Archive         Copy to logs/ (before effects)
+   i. Execute ops     CN Shell two-pass: observe → effect
+   j. Receipts        Per-trigger JSON
+   k. Project         Route reply to Telegram
+   l. Conversation    Append to conversation.json
+   m. Cleanup         Delete transient files
+3. cn save            Commit + push to git
 ```
 
-Recovery: if `cn agent` crashes at any point, the next invocation detects
-the state (output exists? input only? neither?) and resumes from the correct
-step — all under the same atomic lock. Conversation dedup and projection
-markers prevent double-appending and double-sending on replay.
+---
 
-### Prompt Contract (Option B)
-
-- `state/input.md` contains frontmatter metadata (`id`, `from`, `chat_id`, `date`) + packed context body
-- The LLM is invoked with the body below frontmatter only (packed context)
-- Frontmatter is runtime metadata, not part of the prompt
-- `logs/input/` archives the full file for audit
-
-### Agent I/O Protocol
-
-The agent (LLM) sees packed context text and produces structured output:
-
-- **Input:** Packed context (identity, skills, conversation history, inbound message)
-- **Output:** `state/output.md` with ops in YAML frontmatter and markdown body below
-
-Operations the agent can express in output.md:
-
-```
-ack       Acknowledge receipt (no action)
-done      Mark thread complete -> Archived
-fail      Report failure
-reply     Write reply content
-send      Create outbound message to peer
-delegate  Forward to peer
-defer     Postpone with reason
-delete    Remove thread
-surface   Create MCA (Managed Concern Aggregation)
-```
-
-## Directory Layout
+## 7. Directory Layout
 
 ```
 hub/
- +-- .cn/
- |    +-- config.json          Hub configuration (env vars override)
- |    +-- secrets.env          API keys (loaded by runtime, never committed)
- |
- +-- threads/
- |    +-- in/                  Direct inbound (non-mail)
- |    +-- mail/
- |    |    +-- inbox/          Materialized peer messages
- |    |    +-- outbox/         Pending outbound messages
- |    |    +-- sent/           Delivered messages
- |    +-- doing/               Active work items
- |    +-- deferred/            Postponed items
- |    +-- archived/            Completed items
- |    +-- adhoc/               Agent-created threads
- |    +-- reflections/
- |         +-- daily/          Daily reflections
- |         +-- weekly/         Weekly reflections
- |
- +-- state/
- |    +-- input.md             Current agent input (transient, crash-recovery)
- |    +-- output.md            LLM response (transient, crash-recovery)
- |    +-- queue/               FIFO queue of pending items
- |    +-- agent.lock           Atomic lock (O_CREAT|O_EXCL, prevents cron overlap)
- |    +-- conversation.json    Recent conversation history (last 50 entries)
- |    +-- telegram.offset      Telegram update_id offset (daemon mode)
- |    +-- finalized/           ops_done markers (idempotency guards)
- |    +-- projected/           Projection markers (reply dedup per trigger)
- |    +-- receipts/            CN Shell execution receipts (per trigger JSON)
- |    +-- peers.md             Peer registry
- |    +-- runtime.md           Runtime metadata
- |    +-- mca/                 Managed Concern files
- |
- +-- logs/
- |    +-- input/               Archived input.md files (one per cycle)
- |    +-- output/              Archived output.md files (one per cycle)
- |
- +-- spec/                     Agent specifications (SOUL.md, USER.md)
- +-- skills/                   Agent skills (matched by keyword overlap)
+├── .cn/
+│   ├── config.json          Hub configuration
+│   ├── secrets.env          API keys (gitignored)
+│   └── vendor/packages/     Installed cognitive packages
+├── spec/                    Agent identity (SOUL.md, USER.md)
+├── threads/                 Work items and conversations
+│   ├── mail/inbox/          Materialized peer messages
+│   ├── mail/outbox/         Pending outbound
+│   ├── doing/               Active work
+│   ├── reflections/         Daily, weekly reflections
+│   └── ...
+├── state/                   Runtime state
+│   ├── queue/               FIFO queue
+│   ├── receipts/            Execution receipts
+│   ├── conversation.json    Recent history
+│   └── ...
+└── logs/                    Archived input/output pairs
 ```
 
-## Transport Protocol
+---
 
-Communication between agents uses **push-to-self**: each agent pushes branches to its own hub's remote, and peers fetch those branches.
+## 8. Related Documents
 
-### Send (outbox flush)
-
-1. File in `threads/mail/outbox/` with `to:` in frontmatter
-2. Checkout new branch named `{peer}/{thread-name}`
-3. Copy thread to `threads/in/` on that branch
-4. Push branch to hub remote
-5. Move original to `threads/mail/sent/`
-
-### Receive (inbox check)
-
-1. Fetch peer's remote
-2. List branches matching `{peer-name}/*`
-3. For each branch:
-   - Classify: new, duplicate, or orphan
-   - If new: extract thread content, write to `threads/mail/inbox/` with metadata
-   - Delete remote branch after materialization
-4. Orphan branches get rejection notices pushed back
-
-### Branch Naming
-
-```
-{sender-name}/{thread-slug}
-```
-
-Example: `pi/20260211-143022-review-request` is a thread from pi.
-
-## Related Design Documents
-
-| Document | Purpose |
-|----------|---------|
-| [MANIFESTO.md](../α/MANIFESTO.md) | Principles and values |
-| [THESIS.md](../THESIS.md) | System thesis — cnos as a recurrent coherence system |
-| [WHITEPAPER.md](./WHITEPAPER.md) | CN protocol specification |
-| [PROTOCOL.md](../α/PROTOCOL.md) | FSM design, state diagrams, transition tables |
-| [AGILE-PROCESS.md](../γ/AGILE-PROCESS.md) | Team process and workflow |
-| [EXECUTABLE-SKILLS.md](../γ/EXECUTABLE-SKILLS.md) | Vision: skills as programs |
-| [SECURITY-MODEL.md](../α/SECURITY-MODEL.md) | Security architecture |
-| [CLI.md](../α/CLI.md) | CLI command reference |
-| [AGENT-RUNTIME.md](../α/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.6): CN Shell, typed ops, two-pass, receipts |
-| [LOGGING.md](./evidence/LOGGING.md) | Logging architecture |
-
-For the full docs audit and archive decisions, see [AUDIT.md](./evidence/AUDIT.md).
+| Document | Relation |
+|----------|----------|
+| [THESIS.md](../THESIS.md) | The whole — this doc maps its internal relations |
+| [COHERENCE-SYSTEM.md](../α/COHERENCE-SYSTEM.md) | Meta-model that this doc makes relational |
+| [CAA.md](../α/CAA.md) | Agent structure — this doc maps it to runtime modules |
+| [AGENT-RUNTIME.md](../α/AGENT-RUNTIME.md) | Runtime spec — this doc shows how it relates to FSMs and observability |
+| [PROTOCOL.md](../α/PROTOCOL.md) | FSM design — this doc shows how FSMs compose |
+| [CDD.md](../γ/CDD.md) | Development method — governs how all these relations evolve |
+| [AUDIT.md](./evidence/AUDIT.md) | Evidence — tracks which relations are current vs stale |
