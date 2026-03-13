@@ -56,8 +56,8 @@ let%expect_test "normalize: just dot" =
   [%expect {| ok: . |}]
 
 let%expect_test "normalize: trailing slash stripped" =
-  show_normalize "docs/design/";
-  [%expect {| ok: docs/design |}]
+  show_normalize "docs/α/";
+  [%expect {| ok: docs/α |}]
 
 let%expect_test "normalize: .. that stays within hub" =
   show_normalize "src/lib/../cmd/cn_shell.ml";
@@ -93,9 +93,9 @@ let%expect_test "denylist: src/lib/cn_json.ml allowed" =
   show_denylist "src/lib/cn_json.ml";
   [%expect {| allowed: src/lib/cn_json.ml |}]
 
-let%expect_test "denylist: docs/design/README.md allowed" =
-  show_denylist "docs/design/README.md";
-  [%expect {| allowed: docs/design/README.md |}]
+let%expect_test "denylist: docs/README.md allowed" =
+  show_denylist "docs/README.md";
+  [%expect {| allowed: docs/README.md |}]
 
 let%expect_test "denylist: spec/SOUL.md allowed by denylist (not a prefix match)" =
   show_denylist "spec/SOUL.md";
@@ -142,9 +142,9 @@ let%expect_test "access: read spec/SOUL.md allowed (read, not write)" =
   show_access ~access:Read_access "spec/SOUL.md";
   [%expect {| ok: spec/SOUL.md |}]
 
-let%expect_test "access: write docs/design/README.md allowed" =
-  show_access ~access:Write_access "docs/design/README.md";
-  [%expect {| ok: docs/design/README.md |}]
+let%expect_test "access: write docs/README.md allowed" =
+  show_access ~access:Write_access "docs/README.md";
+  [%expect {| ok: docs/README.md |}]
 
 (* === Filesystem: validate_path with symlinks === *)
 

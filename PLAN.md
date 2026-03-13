@@ -400,7 +400,7 @@ Add `state/conversation.json` management:
 | `src/cmd/cn_system.ml` | Edit — remove OpenClaw version check | ~10 changed |
 | `src/cmd/dune` | Edit — add new modules | +2 |
 | `src/cli/cn.ml` | Edit — add `--daemon`/`--stdio` routing | ~20 |
-| `docs/ARCHITECTURE.md` | Edit — add new modules to diagram | ~15 |
+| `docs/β/ARCHITECTURE.md` | Edit — add new modules to diagram | ~15 |
 | `test/lib/cn_test.ml` | Edit — add tests | +40 |
 | `test/lib/cn_json_test.ml` | **New** — JSON parser tests with fixtures | ~100 |
 | **Total new code** | | **~1100 lines** |

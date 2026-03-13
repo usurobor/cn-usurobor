@@ -1763,7 +1763,7 @@ Agent wants to read a file, then patch it based on what it sees.
 ```markdown
 ---
 id: 20260305-091500-def
-ops: [{"kind":"fs_read","path":"docs/design/README.md"},{"kind":"fs_patch","op_id":"patch-readme","path":"docs/design/README.md","unified_diff":"@@ -10,3 +10,4 @@\n context\n-old line\n+new line\n+added line"}]
+ops: [{"kind":"fs_read","path":"docs/README.md"},{"kind":"fs_patch","op_id":"patch-readme","path":"docs/README.md","unified_diff":"@@ -10,3 +10,4 @@\n context\n-old line\n+new line\n+added line"}]
 ---
 
 I'll read the design README, then patch it.
@@ -1773,7 +1773,7 @@ I'll read the design README, then patch it.
 1. Parse manifest → 1 observe (`fs_read`), 1 effect (`fs_patch`)
 2. Mixed observe+effect → two-pass mode triggered
 3. Execute observe ops only:
-   - `fs_read docs/design/README.md` → artifact `obs-01.txt`, status `ok`
+   - `fs_read docs/README.md` → artifact `obs-01.txt`, status `ok`
 4. Skip effect ops with receipt:
    - `fs_patch` → status `skipped`, reason `observe_pass_requires_followup`
 5. Write Pass A receipts
@@ -1787,7 +1787,7 @@ I'll read the design README, then patch it.
 ---
 id: 20260305-091500-def
 reply: trigger-99|Done, I've updated the design README.
-ops: [{"kind":"fs_patch","op_id":"patch-readme","path":"docs/design/README.md","unified_diff":"@@ -10,3 +10,4 @@\n context\n-old line\n+new line\n+added line"}]
+ops: [{"kind":"fs_patch","op_id":"patch-readme","path":"docs/README.md","unified_diff":"@@ -10,3 +10,4 @@\n context\n-old line\n+new line\n+added line"}]
 ---
 ```
 
@@ -1795,7 +1795,7 @@ ops: [{"kind":"fs_patch","op_id":"patch-readme","path":"docs/design/README.md","
 1. Parse manifest → 0 observe, 1 effect (`fs_patch`)
 2. No observe ops in Pass B → execute effects directly (no Pass C — `max_passes = 2`)
 3. `apply_mode: branch` → ensure branch `cn/20260305-091500-def` exists (create or checkout)
-4. Sandbox check `docs/design/README.md` → passes (not in denylist, not a protected file)
+4. Sandbox check `docs/README.md` → passes (not in denylist, not a protected file)
 5. Apply unified diff → success
 6. Execute coordination ops: `Reply "trigger-99"` (gated on effect success — all effects `ok`)
 7. Write Pass B receipts (appended to existing receipt file)

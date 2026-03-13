@@ -235,10 +235,11 @@ cnos/
     cnos.eng/          Engineering skills
     cnos.pm/           PM skills
   profiles/            Setup-time presets (engineer, pm)
-  docs/                Documentation (Diataxis: tutorials, how-to, reference, explanation)
-    design/            Design documents (CAA, CAR, AGENT-RUNTIME, ...)
-    how-to/            Guides: HANDSHAKE, AUTOMATION, MIGRATION
-    ARCHITECTURE.md    System overview — start here for internals
+  docs/                Documentation (triadic: α pattern, β relation, γ evolution)
+    THESIS.md          System thesis — cnos as a recurrent coherence system
+    α/                 Pattern: specs, doctrine, definitions
+    β/                 Relation: architecture, glossary, guides, evidence
+    γ/                 Evolution: method, plans, checklists
   test/                Unit and integration tests
 ```
 
@@ -295,7 +296,7 @@ cn-<name>/
 | [AGENT-RUNTIME.md](./docs/α/AGENT-RUNTIME.md) | Agent runtime spec (v3.3.6) — CN Shell, typed ops, two-pass, receipts |
 | [MANIFESTO.md](./docs/α/MANIFESTO.md) | Why cnos exists. Principles and values. |
 | [THESIS.md](./docs/THESIS.md) | System thesis — cnos as a recurrent coherence system |
-| [WHITEPAPER.md](./docs/α/WHITEPAPER.md) | CN protocol specification (v2.0.4) |
+| [WHITEPAPER.md](./docs/α/WHITEPAPER.md) | CN protocol specification (v3.0.0) |
 | [PROTOCOL.md](./docs/α/PROTOCOL.md) | The four FSMs — state diagrams, transition tables |
 | [CLI.md](./docs/α/CLI.md) | CLI command reference |
 | [SECURITY-MODEL.md](./docs/α/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |
