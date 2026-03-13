@@ -18,8 +18,6 @@
     - review_tick_once: time-gated MCA review (wall-clock via review_interval_sec)
     - cleanup_once: GC stale finalized markers *)
 
-open Cn_lib
-
 (* === Maintenance result tracking === *)
 
 type substep_status = Ok | Degraded of string | Skipped of string

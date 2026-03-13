@@ -949,7 +949,8 @@ let run_cron ~(config : Cn_config.config) ~hub_path ~name =
 
   (* 3. Derive overall scheduler status from maintenance ∪ drain *)
   let overall_degraded = maint_degraded || drain_degraded in
-  let overall_status = if overall_degraded then Degraded else Ready in
+  let overall_status : Cn_trace_state.ready_status =
+    if overall_degraded then Degraded else Ready in
 
   (* 4. Update scheduler projection — event-time stamps match daemon invariant *)
   let now = Cn_fmt.now_iso () in

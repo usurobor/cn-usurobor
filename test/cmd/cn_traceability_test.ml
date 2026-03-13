@@ -94,6 +94,7 @@ let make_full_ready () : Cn_trace_state.ready_projection =
       last_poll_status = "ok";
       last_poll_at = "2026-03-15T14:01:59.000Z";
     };
+    scheduler = None;
   }
 
 let%expect_test "I3: ready.json top-level fields match contract" =
