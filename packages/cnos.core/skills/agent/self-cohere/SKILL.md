@@ -27,10 +27,11 @@ hub/
 │   ├── SOUL.md          (agent identity)
 │   └── USER.md          (operator identity)
 ├── .cn/
-│   ├── config.env       (hub configuration)
+│   ├── config.json     (hub configuration — runtime settings, role, users)
+│   ├── secrets.env     (secrets — API keys, tokens; gitignored)
 │   └── vendor/
-│       └── packages/    (installed cognitive packages)
-│           └── cnos.core/
+│       └── packages/   (installed cognitive packages)
+│           └── cnos.core@1.0.0/
 │               ├── doctrine/
 │               ├── mindsets/
 │               └── skills/
