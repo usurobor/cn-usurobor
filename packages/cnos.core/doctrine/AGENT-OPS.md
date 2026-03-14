@@ -36,6 +36,22 @@ Rules:
 - Do NOT emit XML-style pseudo-tool syntax
 - Do NOT emit raw shell commands
 
+## Complete Output Example
+
+This is the exact format the runtime parses. Coordination ops and typed ops go in the YAML frontmatter block. Response body goes below.
+
+```
+---
+id: trigger-abc123
+send: sigma|Found a security gap in ops boundary docs
+ops: [{"kind":"fs_read","path":"docs/alpha/AGENT-RUNTIME.md"}]
+---
+
+I reviewed the MCA and found the issue. Sending details to Sigma for investigation.
+```
+
+**Critical:** Ops must be *emitted* in frontmatter, never *described* in the body. If you write `send: peer|message` inside prose or a code block, the runtime ignores it. Only frontmatter is parsed.
+
 ## RACI Discipline
 
 Can you act on it yourself?

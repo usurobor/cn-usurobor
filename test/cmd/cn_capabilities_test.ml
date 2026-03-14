@@ -31,7 +31,11 @@ let%expect_test "default config: exec disabled, apply_mode branch" =
     max_passes: 2
     syntax: frontmatter key `ops:` with a single-line JSON array
     example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
-    example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}] |}]
+    example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}]
+    coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
+    example_send: send: sigma|Found issue in sync module
+    example_surface: surface: Boot drain missing from daemon path
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
 
 (* ============================================================ *)
 (* === EXEC ENABLED WITH ALLOWLIST                            === *)
@@ -53,7 +57,11 @@ let%expect_test "exec enabled: exec in effects + allowlist shown" =
     max_passes: 2
     syntax: frontmatter key `ops:` with a single-line JSON array
     example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
-    example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}] |}]
+    example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}]
+    coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
+    example_send: send: sigma|Found issue in sync module
+    example_surface: surface: Boot drain missing from daemon path
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
 
 let%expect_test "exec enabled with empty allowlist" =
   let config = { default_config with exec_enabled = true; exec_allowlist = [] } in
@@ -70,7 +78,11 @@ let%expect_test "exec enabled with empty allowlist" =
     max_passes: 2
     syntax: frontmatter key `ops:` with a single-line JSON array
     example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
-    example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}] |}]
+    example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}]
+    coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
+    example_send: send: sigma|Found issue in sync module
+    example_surface: surface: Boot drain missing from daemon path
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
 
 (* ============================================================ *)
 (* === APPLY_MODE OFF: OBSERVE-ONLY                           === *)
@@ -88,7 +100,11 @@ let%expect_test "apply_mode off: no effect kinds listed" =
     budgets: max_artifact_bytes=65536, max_artifact_bytes_per_op=16384, max_observe_ops=10
     max_passes: 2
     syntax: frontmatter key `ops:` with a single-line JSON array
-    example_observe: ops: [{"kind":"fs_read","path":"README.md"}] |}]
+    example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
+    coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
+    example_send: send: sigma|Found issue in sync module
+    example_surface: surface: Boot drain missing from daemon path
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
 
 (* ============================================================ *)
 (* === APPLY_MODE WORKING_TREE                                === *)
@@ -108,7 +124,11 @@ let%expect_test "apply_mode working_tree: effects included" =
     max_passes: 2
     syntax: frontmatter key `ops:` with a single-line JSON array
     example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
-    example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}] |}]
+    example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}]
+    coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
+    example_send: send: sigma|Found issue in sync module
+    example_surface: surface: Boot drain missing from daemon path
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
 
 (* ============================================================ *)
 (* === CUSTOM BUDGETS                                         === *)
@@ -131,7 +151,11 @@ let%expect_test "custom budgets reflected in block" =
     max_passes: 2
     syntax: frontmatter key `ops:` with a single-line JSON array
     example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
-    example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}] |}]
+    example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}]
+    coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
+    example_send: send: sigma|Found issue in sync module
+    example_surface: surface: Boot drain missing from daemon path
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
 
 (* ============================================================ *)
 (* === DETERMINISTIC ORDERING                                 === *)
@@ -197,7 +221,11 @@ let%expect_test "apply_mode off + exec enabled: no effects at all" =
     budgets: max_artifact_bytes=65536, max_artifact_bytes_per_op=16384, max_observe_ops=10
     max_passes: 2
     syntax: frontmatter key `ops:` with a single-line JSON array
-    example_observe: ops: [{"kind":"fs_read","path":"README.md"}] |}]
+    example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
+    coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
+    example_send: send: sigma|Found issue in sync module
+    example_surface: surface: Boot drain missing from daemon path
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
 
 (* ============================================================ *)
 (* === CANONICAL OPS EXAMPLES IN BLOCK                        === *)

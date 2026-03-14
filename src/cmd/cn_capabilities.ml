@@ -85,6 +85,12 @@ let render ?(assets : Cn_assets.asset_summary option) (config : Cn_shell.shell_c
     Buffer.add_string buf
       "example_effect: ops: [{\"kind\":\"fs_patch\",\"op_id\":\"patch-001\",\"path\":\"README.md\",\"unified_diff\":\"...\"}]\n";
 
+  (* Coordination op examples — send, surface, done go in frontmatter *)
+  Buffer.add_string buf "coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface\n";
+  Buffer.add_string buf "example_send: send: sigma|Found issue in sync module\n";
+  Buffer.add_string buf "example_surface: surface: Boot drain missing from daemon path\n";
+  Buffer.add_string buf "CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks.\n";
+
   (* v3.5: Cognitive asset summary — unified package model *)
   (match assets with
    | None -> ()
