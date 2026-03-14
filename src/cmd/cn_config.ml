@@ -142,10 +142,10 @@ let load ~hub_path =
       | Some s -> (match Cn_json.get_int key s with Some i -> i | None -> default)
       | None -> default
     in
-    max raw 1
+    max raw 0
   in
   let scheduler = {
-    sync_interval_sec = sched_int "sync_interval_sec" default_scheduler_config.sync_interval_sec;
+    sync_interval_sec = max (sched_int "sync_interval_sec" default_scheduler_config.sync_interval_sec) 1;
     review_interval_sec = sched_int "review_interval_sec" default_scheduler_config.review_interval_sec;
     oneshot_drain_limit = sched_int "oneshot_drain_limit" default_scheduler_config.oneshot_drain_limit;
     daemon_drain_limit = sched_int "daemon_drain_limit" default_scheduler_config.daemon_drain_limit;
