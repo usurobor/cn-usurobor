@@ -284,25 +284,43 @@ let split_glob_pattern pat =
   String.split_on_char '/' pat
   |> List.filter (fun s -> s <> "")
 
-(** Recursively walk a directory tree, returning relative paths *)
-let rec walk_dir base_path rel_prefix =
-  let full = Cn_ffi.Path.join base_path rel_prefix in
-  if not (Cn_ffi.Fs.exists full) then []
-  else
-    let entries = try Cn_ffi.Fs.readdir full with _ -> [] in
-    List.concat_map (fun entry ->
-      let rel = if rel_prefix = "." || rel_prefix = "" then entry
-                else rel_prefix ^ "/" ^ entry in
-      let full_entry = Cn_ffi.Path.join base_path rel in
-      if Sys.is_directory full_entry then
-        rel :: walk_dir base_path rel
-      else
-        [rel]
-    ) entries
-
-(** Check if a relative path is denied by the sandbox denylist *)
-let is_glob_denied path =
-  Cn_sandbox.check_denylist path <> None
+(** Recursively walk a directory tree, returning relative paths.
+    Validates each entry via Cn_sandbox.validate_path before descending
+    or returning it. Tracks visited realpaths to prevent symlink cycles. *)
+let walk_dir ~hub_path ~base_rel base_path =
+  let visited = Hashtbl.create 64 in
+  let rec go rel_prefix =
+    let full = Cn_ffi.Path.join base_path rel_prefix in
+    if not (Cn_ffi.Fs.exists full) then []
+    else
+      let entries = try Cn_ffi.Fs.readdir full with _ -> [] in
+      List.concat_map (fun entry ->
+        let rel = if rel_prefix = "." || rel_prefix = "" then entry
+                  else rel_prefix ^ "/" ^ entry in
+        let sandbox_rel = if base_rel = "." then rel
+                          else base_rel ^ "/" ^ rel in
+        let full_entry = Cn_ffi.Path.join base_path rel in
+        (* Validate via sandbox before descending or returning *)
+        match Cn_sandbox.validate_path ~hub_path ~access:Read_access sandbox_rel with
+        | Error _ -> []
+        | Ok _resolved ->
+          if Sys.is_directory full_entry then
+            (* Cycle detection via realpath *)
+            let real = try Some (Unix.realpath full_entry)
+                       with Unix.Unix_error _ -> None in
+            (match real with
+             | None -> []
+             | Some rp ->
+               if Hashtbl.mem visited rp then []
+               else begin
+                 Hashtbl.replace visited rp true;
+                 rel :: go rel
+               end)
+          else
+            [rel]
+      ) entries
+  in
+  go ""
 
 let execute_fs_glob ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   let start = now_iso () in
@@ -322,20 +340,14 @@ let execute_fs_glob ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
         start_time = start; end_time = now_iso (); artifacts = [] }
     | Ok resolved_base ->
       let base_full = Cn_ffi.Path.join hub_path resolved_base in
-      let all_paths = walk_dir base_full "" in
+      let all_paths = walk_dir ~hub_path ~base_rel:resolved_base base_full in
       let glob_segs = split_glob_pattern pattern in
-      let matched = List.filter (fun p ->
+      (* walk_dir already validates and excludes denied paths and dirs *)
+      let filtered = List.filter (fun p ->
         let path_segs = String.split_on_char '/' p
           |> List.filter (fun s -> s <> "") in
         glob_match glob_segs path_segs
       ) all_paths in
-      (* Filter out denylisted paths *)
-      let filtered = List.filter (fun p ->
-        let rel = if resolved_base = "." then p
-                  else resolved_base ^ "/" ^ p in
-        not (is_glob_denied rel)
-        && not (Sys.is_directory (Cn_ffi.Path.join base_full p))
-      ) matched in
       let sorted = List.sort String.compare filtered in
       let content = String.concat "\n" sorted in
       let op_id_str = match op.op_id with Some id -> id | None -> "unknown" in
