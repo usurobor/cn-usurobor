@@ -242,7 +242,22 @@ let review_tick_once ~hub_path ~name ~review_interval_sec =
       | None -> infinity  (* never reviewed → due *)
     in
     let interval = float_of_int review_interval_sec in
-    if elapsed >= interval && Cn_mca.mca_count hub_path > 0 then begin
+    (* Only review if MCA directory has been touched since last review *)
+    let mca_changed = match last with
+      | None -> true  (* never reviewed → always due *)
+      | Some last_t ->
+          let dir = Cn_hub.mca_dir hub_path in
+          if Cn_ffi.Fs.exists dir then
+            try
+              Cn_ffi.Fs.readdir dir
+              |> List.exists (fun f ->
+                let path = Cn_ffi.Path.join dir f in
+                try (Unix.stat path).st_mtime > last_t
+                with Unix.Unix_error _ -> false)
+            with _ -> false
+          else false
+    in
+    if elapsed >= interval && Cn_mca.mca_count hub_path > 0 && mca_changed then begin
       Cn_trace.gemit ~component:"maintenance" ~layer:Body
         ~event:"review.tick.start" ~severity:Info ~status:Ok_
         ~details:[
@@ -262,6 +277,7 @@ let review_tick_once ~hub_path ~name ~review_interval_sec =
       Ok
     end else begin
       let reason = if Cn_mca.mca_count hub_path = 0 then "no_mcas"
+                   else if not mca_changed then "no_new_mcas"
                    else "not_due" in
       Cn_trace.gemit ~component:"maintenance" ~layer:Body
         ~event:"review.tick.complete" ~severity:Info ~status:Skipped
