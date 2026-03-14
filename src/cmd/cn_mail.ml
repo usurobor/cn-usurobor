@@ -280,22 +280,30 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
 
   match to_peer with
   | None ->
-      Cn_hub.log_action hub_path "outbox.skip" (Printf.sprintf "thread:%s reason:no recipient" file);
+      Cn_trace.gemit ~component:"mail" ~layer:Body
+        ~event:"outbox.skip" ~severity:Warn ~status:Degraded
+        ~reason_code:"no_recipient"
+        ~details:[
+          "thread", Cn_json.String file;
+        ] ();
       print_endline (Cn_fmt.warn (Printf.sprintf "Skipping %s: no 'to:' in frontmatter" file));
       None
   | Some to_name ->
       let peer = peers |> List.find_opt (fun p -> p.name = to_name) in
       match peer with
       | None ->
-          Cn_hub.log_action hub_path "outbox.skip" (Printf.sprintf "thread:%s to:%s reason:unknown peer" file to_name);
+          Cn_trace.gemit ~component:"mail" ~layer:Body
+            ~event:"outbox.skip" ~severity:Warn ~status:Degraded
+            ~reason_code:"unknown_peer"
+            ~details:[
+              "thread", Cn_json.String file;
+              "peer", Cn_json.String to_name;
+            ] ();
           print_endline (Cn_fmt.fail (Printf.sprintf "Unknown peer: %s" to_name));
           None
-      | Some { clone = None; _ } ->
-          Cn_hub.log_action hub_path "outbox.skip" (Printf.sprintf "thread:%s to:%s reason:no clone path" file to_name);
-          print_endline (Cn_fmt.fail (Printf.sprintf "No clone path for peer: %s" to_name));
-          None
-      | Some { clone = Some _clone_path; _ } ->
-          (* Sender FSM: state flows via let*, errors short-circuit *)
+      | Some _peer_info ->
+          (* Send operates on the sender's own hub — clone path is not needed.
+             Clone is only used by inbox_check (receiver-side fetch). *)
           let ( let* ) = Result.bind in
 
           let thread_name = Cn_ffi.Path.basename_ext file ".md" in
