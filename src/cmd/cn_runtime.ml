@@ -1163,7 +1163,7 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
   (* Emit boot idle status — symmetric with periodic tick *)
   let boot_maint_deg = Cn_maintenance.is_degraded maint_result in
   let boot_degraded = boot_maint_deg || !last_drain_degraded in
-  let boot_idle_status = if boot_degraded then Degraded else Ok_ in
+  let boot_idle_status : Cn_trace.status = if boot_degraded then Degraded else Ok_ in
   Cn_trace.gemit ~component:"scheduler" ~layer:Body
     ~event:"scheduler.idle" ~severity:(if boot_degraded then Warn else Info)
     ~status:boot_idle_status
