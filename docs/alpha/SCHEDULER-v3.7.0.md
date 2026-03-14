@@ -275,6 +275,7 @@ Scheduler unification must integrate with `TRACEABILITY.md`.
 
 #### Boot / readiness
 - `boot.start`
+- `config.loaded` (details: `model`, `max_tokens`, `poll_interval`, `poll_timeout`, `sync_interval_sec`, `review_interval_sec`, `oneshot_drain_limit`, `daemon_drain_limit`, `telegram_configured`, `allowed_users`)
 - `boot.ready`
 - `boot.blocked`
 
@@ -282,22 +283,29 @@ Scheduler unification must integrate with `TRACEABILITY.md`.
 - `maintenance.start`
 - `inbox.checked`
 - `sync.start`
-- `sync.ok`
-- `sync.error`
+- `sync.ok` (details: `duration_ms`)
+- `sync.error` (details: `step`, `exit_code`, `duration_ms`)
 - `inbox.materialized`
 - `outbox.flushed`
 - `review.tick.start`
 - `review.tick.complete`
+- `cleanup.complete` (status: Ok_/Skipped/Degraded; details: `removed` or reason_code: `nothing_to_clean`)
 - `maintenance.complete`
 
+#### Cognitive path
+- `llm.call.start` (details: `model`)
+- `llm.call.ok` (details: `model`, `input_tokens`, `output_tokens`, `stop_reason`, `latency_ms`)
+- `llm.call.error` (details: `model`, `latency_ms`)
+
 #### Queue draining
-- `drain.start`
-- `drain.complete`
-- `drain.stopped`
+- `drain.start` (details: `limit`)
+- `drain.complete` (details: `processed`, `limit`, `duration_ms`, `trigger_ids`)
+- `drain.stopped` (details: `processed`, `limit`, `duration_ms`, `trigger_ids`)
 
 #### Scheduler
 - `scheduler.tick`
 - `scheduler.idle` (status=Ok_ when clean, status=Degraded + severity=Warn when degraded)
+- `daemon.heartbeat` (severity: Debug; details: `polls_since_last`, `uptime_sec`)
 
 ### Required reason codes
 Examples:

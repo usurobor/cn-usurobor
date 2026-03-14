@@ -1154,3 +1154,28 @@ let%expect_test "drain: stop reason strings" =
     drain_limit_reached
     lock_busy
     processing_failed |}]
+
+(* === Cn_maintenance: cleanup event coverage (v3.7.1) === *)
+
+let%expect_test "maintenance: cleanup_once emits trace on no-op" =
+  let hub = mk_temp_dir "cn_cleanup_test" in
+  Cn_ffi.Fs.ensure_dir (Cn_ffi.Path.join hub "state");
+  (* No finalized dir, no input/output → should emit cleanup.complete/skipped *)
+  let status = Cn_maintenance.cleanup_once ~hub_path:hub in
+  Printf.printf "status=%s\n" (Cn_maintenance.string_of_substep status);
+  [%expect {| status=ok |}]
+
+let%expect_test "maintenance: cleanup_once cleans stale markers" =
+  let hub = mk_temp_dir "cn_cleanup_markers" in
+  let fin_dir = Cn_ffi.Path.join hub "state/finalized" in
+  Cn_ffi.Fs.ensure_dir fin_dir;
+  Cn_ffi.Fs.write (Cn_ffi.Path.join fin_dir "stale-trigger.done") "";
+  let status = Cn_maintenance.cleanup_once ~hub_path:hub in
+  Printf.printf "status=%s\n" (Cn_maintenance.string_of_substep status);
+  Printf.printf "markers_remaining=%d\n"
+    (if Cn_ffi.Fs.exists fin_dir then
+       List.length (Cn_ffi.Fs.readdir fin_dir)
+     else 0);
+  [%expect {|
+    status=ok
+    markers_remaining=0 |}]

@@ -75,13 +75,18 @@ let write_last_review_at hub_path =
     error propagation — a failed git op produces Degraded, not silent Ok.
     The heartbeat commit advances HEAD even when idle, signaling liveness. *)
 let sync_once ~hub_path =
+  let sync_t0 = Unix.gettimeofday () in
   Cn_trace.gemit ~component:"maintenance" ~layer:Body
     ~event:"sync.start" ~severity:Info ~status:Ok_ ();
   let degrade step code out =
     let msg = Printf.sprintf "%s failed (exit %d): %s" step code (String.trim out) in
     Cn_trace.gemit ~component:"maintenance" ~layer:Body
       ~event:"sync.error" ~severity:Warn ~status:Degraded
-      ~reason_code:"sync_failed" ~reason:msg ();
+      ~reason_code:"sync_failed" ~reason:msg
+      ~details:[
+        "step", Cn_json.String step;
+        "exit_code", Cn_json.Int code;
+      ] ();
     Degraded msg
   in
   try
@@ -106,14 +111,18 @@ let sync_once ~hub_path =
     match fetch_warn with
      | Some status -> status
      | None ->
+         let duration_ms = int_of_float ((Unix.gettimeofday () -. sync_t0) *. 1000.0) in
          Cn_trace.gemit ~component:"maintenance" ~layer:Body
-           ~event:"sync.ok" ~severity:Info ~status:Ok_ ();
+           ~event:"sync.ok" ~severity:Info ~status:Ok_
+           ~details:["duration_ms", Cn_json.Int duration_ms] ();
          Ok)
   with exn ->
     let msg = Printexc.to_string exn in
+    let duration_ms = int_of_float ((Unix.gettimeofday () -. sync_t0) *. 1000.0) in
     Cn_trace.gemit ~component:"maintenance" ~layer:Body
       ~event:"sync.error" ~severity:Warn ~status:Degraded
-      ~reason_code:"sync_failed" ~reason:msg ();
+      ~reason_code:"sync_failed" ~reason:msg
+      ~details:["duration_ms", Cn_json.Int duration_ms] ();
     Degraded msg
 
 (* === Inbox check primitive === *)
@@ -276,16 +285,27 @@ let cleanup_once ~hub_path =
     let outp = Cn_agent.output_path hub_path in
     (* Only GC stale markers when no state files exist *)
     if not (Cn_ffi.Fs.exists inp) && not (Cn_ffi.Fs.exists outp)
-       && Cn_ffi.Fs.exists finalized_dir then
-      Cn_ffi.Fs.readdir finalized_dir
-      |> List.iter (fun f ->
+       && Cn_ffi.Fs.exists finalized_dir then begin
+      let markers = Cn_ffi.Fs.readdir finalized_dir in
+      let removed = ref 0 in
+      markers |> List.iter (fun f ->
            let path = Cn_ffi.Path.join finalized_dir f in
-           (try Sys.remove path with Sys_error _ -> ());
+           (try Sys.remove path; incr removed with Sys_error _ -> ());
            Cn_hub.log_action hub_path "maintenance.gc_ops_done"
              (Printf.sprintf "removed stale marker: %s" f));
+      Cn_trace.gemit ~component:"maintenance" ~layer:Body
+        ~event:"cleanup.complete" ~severity:Info ~status:Ok_
+        ~details:["removed", Cn_json.Int !removed] ()
+    end else
+      Cn_trace.gemit ~component:"maintenance" ~layer:Body
+        ~event:"cleanup.complete" ~severity:Info ~status:Skipped
+        ~reason_code:"nothing_to_clean" ();
     Ok
   with exn ->
     let msg = Printexc.to_string exn in
+    Cn_trace.gemit ~component:"maintenance" ~layer:Body
+      ~event:"cleanup.complete" ~severity:Warn ~status:Degraded
+      ~reason_code:"cleanup_failed" ~reason:msg ();
     Degraded msg
 
 (* === Unified maintain_once === *)

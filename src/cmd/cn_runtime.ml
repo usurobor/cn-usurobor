@@ -254,13 +254,20 @@ let boot_sequence ~(config : Cn_config.config) ~hub_path ~mode =
     ~event:"boot.start" ~severity:Info ~status:Ok_
     ~details:["mode", Cn_json.String mode] ();
 
-  (* 2. config.loaded *)
+  (* 2. config.loaded — full config snapshot for trace reconstruction *)
   Cn_trace.emit_simple session ~component:"runtime" ~layer:Mind
     ~event:"config.loaded" ~severity:Info ~status:Ok_
     ~details:[
       "model", Cn_json.String config.model;
+      "max_tokens", Cn_json.Int config.max_tokens;
       "poll_interval", Cn_json.Int config.poll_interval;
       "poll_timeout", Cn_json.Int config.poll_timeout;
+      "sync_interval_sec", Cn_json.Int config.scheduler.sync_interval_sec;
+      "review_interval_sec", Cn_json.Int config.scheduler.review_interval_sec;
+      "oneshot_drain_limit", Cn_json.Int config.scheduler.oneshot_drain_limit;
+      "daemon_drain_limit", Cn_json.Int config.scheduler.daemon_drain_limit;
+      "telegram_configured", Cn_json.Bool (config.telegram_token <> None);
+      "allowed_users", Cn_json.Int (List.length config.allowed_users);
     ] ();
 
   (* 3. deps.lock.loaded *)
@@ -718,23 +725,32 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
           ~trigger_id
           ~details:["model", Cn_json.String config.model] ();
 
+        let llm_t0 = Unix.gettimeofday () in
         match Cn_llm.call ~api_key:config.anthropic_key
                 ~model:config.model ~max_tokens:config.max_tokens
                 ~system:packed.system ~messages:packed.messages with
         | Error msg ->
+            let latency_ms = int_of_float ((Unix.gettimeofday () -. llm_t0) *. 1000.0) in
             Cn_trace.gemit ~component:"runtime" ~layer:Mind
               ~event:"llm.call.error" ~severity:Error_ ~status:Error_status
-              ~trigger_id ~reason_code:"llm_error" ();
+              ~trigger_id ~reason_code:"llm_error"
+              ~details:[
+                "model", Cn_json.String config.model;
+                "latency_ms", Cn_json.Int latency_ms;
+              ] ();
             Error (Printf.sprintf "LLM call failed: %s" msg)
         | Ok response ->
+            let latency_ms = int_of_float ((Unix.gettimeofday () -. llm_t0) *. 1000.0) in
             Cn_ffi.Fs.write outp response.content;
             Cn_trace.gemit ~component:"runtime" ~layer:Mind
               ~event:"llm.call.ok" ~severity:Info ~status:Ok_
               ~trigger_id
               ~details:[
+                "model", Cn_json.String config.model;
                 "input_tokens", Cn_json.Int response.input_tokens;
                 "output_tokens", Cn_json.Int response.output_tokens;
                 "stop_reason", Cn_json.String response.stop_reason;
+                "latency_ms", Cn_json.Int latency_ms;
               ] ();
             finalize ~config ~hub_path ~name
               ~trigger_id ~from ~inbound_message
@@ -818,23 +834,32 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
               ~trigger_id
               ~details:["model", Cn_json.String config.model] ();
 
+            let llm_t0 = Unix.gettimeofday () in
             match Cn_llm.call ~api_key:config.anthropic_key
                     ~model:config.model ~max_tokens:config.max_tokens
                     ~system:packed.system ~messages:packed.messages with
             | Error msg ->
+                let latency_ms = int_of_float ((Unix.gettimeofday () -. llm_t0) *. 1000.0) in
                 Cn_trace.gemit ~component:"runtime" ~layer:Mind
                   ~event:"llm.call.error" ~severity:Error_ ~status:Error_status
-                  ~trigger_id ~reason_code:"llm_error" ();
+                  ~trigger_id ~reason_code:"llm_error"
+                  ~details:[
+                    "model", Cn_json.String config.model;
+                    "latency_ms", Cn_json.Int latency_ms;
+                  ] ();
                 Error (Printf.sprintf "LLM call failed: %s" msg)
             | Ok response ->
+                let latency_ms = int_of_float ((Unix.gettimeofday () -. llm_t0) *. 1000.0) in
                 Cn_ffi.Fs.write outp response.content;
                 Cn_trace.gemit ~component:"runtime" ~layer:Mind
                   ~event:"llm.call.ok" ~severity:Info ~status:Ok_
                   ~trigger_id
                   ~details:[
+                    "model", Cn_json.String config.model;
                     "input_tokens", Cn_json.Int response.input_tokens;
                     "output_tokens", Cn_json.Int response.output_tokens;
                     "stop_reason", Cn_json.String response.stop_reason;
+                    "latency_ms", Cn_json.Int latency_ms;
                   ] ();
                 finalize ~config ~hub_path ~name
                   ~trigger_id ~from ~inbound_message
@@ -861,10 +886,12 @@ let string_of_drain_stop = function
 (** Drain the queue up to [limit] items by calling process_one repeatedly.
     Returns (items_processed, stop_reason). *)
 let drain_queue ~(config : Cn_config.config) ~hub_path ~name ~limit =
+  let drain_t0 = Unix.gettimeofday () in
   Cn_trace.gemit ~component:"runtime" ~layer:Body
     ~event:"drain.start" ~severity:Info ~status:Ok_
     ~details:["limit", Cn_json.Int limit] ();
   let processed = ref 0 in
+  let trigger_ids = ref [] in
   let stop_reason = ref Queue_empty in
   let continue = ref true in
   while !continue && !processed < limit do
@@ -877,9 +904,16 @@ let drain_queue ~(config : Cn_config.config) ~hub_path ~name ~limit =
     if not has_work then begin
       stop_reason := Queue_empty;
       continue := false
-    end else
+    end else begin
+      (* Peek at next queue item for trigger_id tracking *)
+      let next_trigger = match Cn_agent.queue_list hub_path with
+        | f :: _ -> Some (Filename.chop_extension f)
+        | [] -> None in
       match process_one ~config ~hub_path ~name with
       | Ok () ->
+          (match next_trigger with
+           | Some tid -> trigger_ids := tid :: !trigger_ids
+           | None -> ());
           incr processed;
           (* Check if queue is now empty *)
           if Cn_agent.queue_depth hub_path = 0
@@ -897,6 +931,7 @@ let drain_queue ~(config : Cn_config.config) ~hub_path ~name ~limit =
             stop_reason := Processing_failed msg;
             continue := false
           end
+    end
   done;
   if !processed >= limit && !continue then
     stop_reason := Drain_limit_reached;
@@ -906,12 +941,16 @@ let drain_queue ~(config : Cn_config.config) ~hub_path ~name ~limit =
     | Lock_busy -> "drain.stopped", Warn, Blocked
     | Processing_failed _ -> "drain.stopped", Warn, Degraded
   in
+  let duration_ms = int_of_float ((Unix.gettimeofday () -. drain_t0) *. 1000.0) in
   Cn_trace.gemit ~component:"runtime" ~layer:Body
     ~event:drain_event ~severity:drain_severity ~status:drain_status
     ~reason_code:(string_of_drain_stop !stop_reason)
     ~details:[
       "processed", Cn_json.Int !processed;
       "limit", Cn_json.Int limit;
+      "duration_ms", Cn_json.Int duration_ms;
+      "trigger_ids", Cn_json.Array (List.rev_map (fun s ->
+        Cn_json.String s) !trigger_ids);
     ] ();
   (!processed, !stop_reason)
 
@@ -1060,6 +1099,7 @@ let enqueue_telegram hub_path (msg : Cn_telegram.message) =
     - Interoception (self-driven): periodic maintenance (sync, inbox, outbox, review)
     Telegram is optional — daemon can run peer-only (interoception only). *)
 let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
+  let boot_start_time = Unix.gettimeofday () in
   let has_telegram = config.telegram_token <> None in
 
   (* Shared boot sequence — writes ready.json, coherence.json, runtime.json *)
@@ -1077,6 +1117,8 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
   let last_maintenance_status = ref "none" in
   let last_sync_status = ref "none" in
   let last_drain_degraded = ref false in
+  let poll_count = ref 0 in
+  let last_heartbeat_at = ref (Unix.gettimeofday ()) in
 
   (* Telegram-specific state (only if token present) *)
   let offset = ref (
@@ -1317,6 +1359,20 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                   end
             in
             drain_tg sorted));
+    (* Poll heartbeat: emit every 60 seconds of silence so monitoring
+       can distinguish idle-and-alive from dead daemon *)
+    incr poll_count;
+    let now_hb = Unix.gettimeofday () in
+    if now_hb -. !last_heartbeat_at >= 60.0 then begin
+      Cn_trace.gemit ~component:"scheduler" ~layer:Body
+        ~event:"daemon.heartbeat" ~severity:Debug ~status:Ok_
+        ~details:[
+          "polls_since_last", Cn_json.Int !poll_count;
+          "uptime_sec", Cn_json.Int (int_of_float (now_hb -. boot_start_time));
+        ] ();
+      poll_count := 0;
+      last_heartbeat_at := now_hb
+    end;
     (* Always sleep poll_interval between cycles *)
     Unix.sleepf (float_of_int config.poll_interval)
   done
