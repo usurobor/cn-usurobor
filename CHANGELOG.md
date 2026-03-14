@@ -11,6 +11,9 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.7.1  | A+  | A+          | A+           | A+               | Trace gap closure: LLM latency/tokens, drain trigger_ids, poll heartbeat, config snapshot, cleanup events. Full behavioral reconstruction without assumptions. |
+| v3.7.0  | A+  | A+          | A+           | A+               | Scheduler unification: one loop, two schedulers (oneshot/daemon), 7-primitive maintenance engine, symmetric boot/tick. |
+| v3.6.0  | A+  | A+          | A+           | A+               | Output Plane Separation: sink-safe rendering, typed op output, two-pass execution, CDD skill. |
 | v3.5.1  | A+  | A+          | A+           | A+               | TRACEABILITY: structured event stream, state projections (ready/runtime/coherence), boot sequence telemetry, CDD design doc. |
 | v3.5.0  | A+  | A+          | A+           | A+               | Unified package model + CAA + FOUNDATIONS. Everything cognitive is a package. Doctrinal capstone. Architecture spec. |
 | v3.4.0  | A+  | A+          | A+           | A+               | CAR: three-layer cognitive asset resolver + package system. Fresh hubs wake with full substrate. Git-native deps, lockfile, hub-local overrides. |
@@ -36,6 +39,23 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v3.7.1 (unreleased)
+
+**Trace Gap Closure: Full Behavioral Reconstruction**
+
+The trace system now captures everything needed to reconstruct agent behavior without external assumptions.
+
+### Fixed
+
+- **LLM call latency + model** — `llm.call.ok` and `llm.call.error` now include `model`, `latency_ms`. Success events already had `input_tokens`/`output_tokens`/`stop_reason`; error events now get `model` and timing too.
+- **Drain trigger_ids** — `drain.complete`/`drain.stopped` include `trigger_ids` array showing exactly which items were processed, plus `duration_ms`.
+- **Sync duration** — `sync.ok` and `sync.error` include `duration_ms`. Error events include structured `step` and `exit_code` fields.
+- **Config snapshot at boot** — `config.loaded` expanded with `max_tokens`, `sync_interval_sec`, `review_interval_sec`, `oneshot_drain_limit`, `daemon_drain_limit`, `telegram_configured`, `allowed_users` count.
+- **Poll heartbeat** — `daemon.heartbeat` (Debug) emits every 60s with `polls_since_last` and `uptime_sec`. Hours of silence now distinguishable from dead daemon.
+- **Cleanup trace** — `cleanup_once` emits `cleanup.complete` with status=Ok_ (removed count), Skipped (nothing_to_clean), or Degraded (cleanup_failed). No more silent success.
 
 ---
 
