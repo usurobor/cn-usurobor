@@ -11,8 +11,8 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
-| v3.7.1  | A+  | A+          | A+           | A+               | Trace gap closure: LLM latency/tokens, drain trigger_ids, poll heartbeat, config snapshot, cleanup events. Full behavioral reconstruction without assumptions. |
-| v3.7.0  | A+  | A+          | A+           | A+               | Scheduler unification: one loop, two schedulers (oneshot/daemon), 7-primitive maintenance engine, symmetric boot/tick. |
+| v3.7.2  | A   | A+          | A+           | A-               | Trace gap closure + boot drain fix + skill hardening. 5/7 trace gaps closed; peer-only heartbeat and outbox structure remain. |
+| v3.7.0  | A   | A+          | A+           | A-               | Scheduler unification: one loop, two schedulers (oneshot/daemon), 7-primitive maintenance engine. Boot drain gap found post-merge. |
 | v3.6.0  | A+  | A+          | A+           | A+               | Output Plane Separation: sink-safe rendering, typed op output, two-pass execution, CDD skill. |
 | v3.5.1  | A+  | A+          | A+           | A+               | TRACEABILITY: structured event stream, state projections (ready/runtime/coherence), boot sequence telemetry, CDD design doc. |
 | v3.5.0  | A+  | A+          | A+           | A+               | Unified package model + CAA + FOUNDATIONS. Everything cognitive is a package. Doctrinal capstone. Architecture spec. |
