@@ -35,12 +35,12 @@ Outbox check shows pending:
   ⚠ 1 pending send(s):
     → recipient: hello.md
 
-Dry-run shows would send (but fails - no clone path):
+Dry-run shows would send (no clone path needed for sending):
 
-  $ $CN sync --dry-run 2>&1 | grep -E "(Would:|No clone)"
-  ✗ No clone path for peer: recipient
+  $ $CN sync --dry-run 2>&1 | grep "Would:"
+  Would: send hello.md to recipient (branch: recipient/hello)
 
-Message still in outbox:
+Message still in outbox (dry-run doesn't move it):
 
   $ ls threads/mail/outbox/
   hello.md
