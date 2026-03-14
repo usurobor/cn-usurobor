@@ -1153,7 +1153,29 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
   last_maintenance_status := (if Cn_maintenance.is_degraded maint_result
     then "degraded" else "ok");
   last_sync_status := Cn_maintenance.status_string maint_result.sync_status;
+  (* Drain any work queued during boot maintenance (MCA reviews, inbox items) *)
+  let limit = config.scheduler.daemon_drain_limit in
+  let (_processed, drain_stop) = drain_queue ~config ~hub_path ~name ~limit in
+  last_drain_degraded := (match drain_stop with
+    | Lock_busy | Processing_failed _ -> true
+    | Queue_empty | Drain_limit_reached -> false);
   write_daemon_ready ();
+  (* Emit boot idle status — symmetric with periodic tick *)
+  let boot_maint_deg = Cn_maintenance.is_degraded maint_result in
+  let boot_degraded = boot_maint_deg || !last_drain_degraded in
+  let boot_idle_status = if boot_degraded then Degraded else Ok_ in
+  Cn_trace.gemit ~component:"scheduler" ~layer:Body
+    ~event:"scheduler.idle" ~severity:(if boot_degraded then Warn else Info)
+    ~status:boot_idle_status
+    ~reason_code:(if !last_drain_degraded then
+                    string_of_drain_stop drain_stop
+                  else if boot_maint_deg then "maintenance_degraded"
+                  else "clean")
+    ~details:[
+      "mode", Cn_json.String "daemon";
+      "phase", Cn_json.String "boot";
+      "maintenance_status", Cn_json.String !last_maintenance_status;
+    ] ();
 
   (* Daemon poll start *)
   Cn_trace.emit_simple boot.session ~component:"telegram" ~layer:Sensor
