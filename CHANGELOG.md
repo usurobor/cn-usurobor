@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.7.3  | A   | A+          | A+           | A                | Agent output discipline: ops-in-body detection, peer awareness, coordination op examples, conditional MCA review. |
 | v3.7.2  | A   | A+          | A+           | A-               | Trace gap closure + boot drain fix + skill hardening. 5/7 trace gaps closed; peer-only heartbeat and outbox structure remain. |
 | v3.7.0  | A   | A+          | A+           | A-               | Scheduler unification: one loop, two schedulers (oneshot/daemon), 7-primitive maintenance engine. Boot drain gap found post-merge. |
 | v3.6.0  | A+  | A+          | A+           | A+               | Output Plane Separation: sink-safe rendering, typed op output, two-pass execution, CDD skill. |
