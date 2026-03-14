@@ -31,7 +31,7 @@ let effect_kinds_base =
 (** Render the capabilities block as a markdown string.
     Pure function: config in, string out.
     v3.4: optional asset summary appended for cognitive substrate awareness. *)
-let render ?(assets : Cn_assets.asset_summary option) (config : Cn_shell.shell_config) =
+let render ?(assets : Cn_assets.asset_summary option) ?(peers : string list = []) (config : Cn_shell.shell_config) =
   let buf = Buffer.create 512 in
   Buffer.add_string buf "## CN Shell Capabilities\n\n";
 
@@ -90,6 +90,12 @@ let render ?(assets : Cn_assets.asset_summary option) (config : Cn_shell.shell_c
   Buffer.add_string buf "example_send: send: sigma|Found issue in sync module\n";
   Buffer.add_string buf "example_surface: surface: Boot drain missing from daemon path\n";
   Buffer.add_string buf "CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks.\n";
+
+  (* Known peers — valid targets for send: and delegate: *)
+  if peers <> [] then begin
+    Buffer.add_string buf (Printf.sprintf "known_peers: %s\n"
+      (String.concat ", " peers))
+  end;
 
   (* v3.5: Cognitive asset summary — unified package model *)
   (match assets with

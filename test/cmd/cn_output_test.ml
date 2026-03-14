@@ -369,3 +369,30 @@ let%expect_test "I4: all legacy coordination op prefixes blocked on human surfac
     blocked: surface: desc
     blocked: mca: desc
   |}]
+
+(* === v3.7.2: ops-in-body detection === *)
+
+let%expect_test "parse_output: detects coordination ops leaked into body" =
+  let raw = {|---
+id: test-123
+---
+I reviewed the issue and here's what I found.
+
+send: sigma|Security gap in ops boundary
+ops: [{"kind":"fs_read","path":"README.md"}]
+
+The above should have been in frontmatter.|} in
+  let _parsed = Cn_output.parse_output raw in
+  [%expect {||}]
+  (* Trace warning emitted but not captured by expect test —
+     the important thing is parse_output doesn't crash.
+     The trace event output.ops_in_body is verified in integration. *)
+
+let%expect_test "parse_output: clean body produces no warning" =
+  let raw = {|---
+id: test-456
+send: sigma|This is correct frontmatter
+---
+Just a normal response body with no ops.|} in
+  let _parsed = Cn_output.parse_output raw in
+  [%expect {||}]

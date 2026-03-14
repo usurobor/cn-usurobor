@@ -207,7 +207,20 @@ let pack ~hub_path ~trigger_id ~message ~from ?shell_config () =
   (match shell_config with
    | Some sc ->
        let assets = Cn_assets.summarize ~hub_path in
-       Buffer.add_string dynamic_buf (Cn_capabilities.render ~assets sc)
+       let peers =
+         let peers_path = Cn_ffi.Path.join hub_path "state/peers.md" in
+         if Cn_ffi.Fs.exists peers_path then
+           let content = Cn_ffi.Fs.read peers_path in
+           let lines = String.split_on_char '\n' content in
+           lines |> List.filter_map (fun line ->
+             let trimmed = String.trim line in
+             if String.length trimmed > 8
+                && String.sub trimmed 0 7 = "- name:"
+             then Some (String.trim (String.sub trimmed 7 (String.length trimmed - 7)))
+             else None)
+         else []
+       in
+       Buffer.add_string dynamic_buf (Cn_capabilities.render ~assets ~peers sc)
    | None -> ());
 
   let system =

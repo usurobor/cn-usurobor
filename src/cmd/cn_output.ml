@@ -112,6 +112,33 @@ let parse_output raw_output =
     | None -> ([], [])
     | Some raw_value -> Cn_shell.parse_ops_manifest raw_value
   in
+  (* Detect coordination ops or typed ops leaked into body text *)
+  (match body with
+   | Some b ->
+       let op_prefixes = [
+         "send: "; "reply: "; "done: "; "ack: "; "fail: ";
+         "delegate: "; "defer: "; "delete: "; "surface: "; "ops: ["
+       ] in
+       let is_op_line line =
+         let trimmed = String.trim line in
+         List.exists (fun prefix ->
+           String.length trimmed >= String.length prefix
+           && String.sub trimmed 0 (String.length prefix) = prefix
+         ) op_prefixes
+       in
+       let lines = String.split_on_char '\n' b in
+       let leaked = List.filter is_op_line lines in
+       if leaked <> [] then
+         Cn_trace.gemit ~component:"output" ~layer:Mind
+           ~event:"output.ops_in_body" ~severity:Warn ~status:Degraded
+           ~reason_code:"ops_described_not_emitted"
+           ~reason:(Printf.sprintf "Found %d op-like line(s) in body text instead of frontmatter"
+             (List.length leaked))
+           ~details:[
+             "count", Cn_json.Int (List.length leaked);
+             "first_line", Cn_json.String (List.hd leaked |> String.trim);
+           ] ()
+   | None -> ());
   { id; body; coordination_ops; raw_coordination_ops;
     typed_ops; ops_receipts; ops_version; raw_output }
 
