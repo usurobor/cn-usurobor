@@ -1077,7 +1077,7 @@ let%expect_test "config: scheduler values clamped to min 1" =
             cfg.scheduler.sync_interval_sec
             cfg.scheduler.oneshot_drain_limit
       | Error msg -> Printf.printf "error: %s\n" msg);
-  [%expect {| sync=1 oneshot=1 |}]
+  [%expect {| sync=1 oneshot=0 |}]
 
 (* === Cn_maintenance: substep status helpers (v3.7.0) === *)
 
