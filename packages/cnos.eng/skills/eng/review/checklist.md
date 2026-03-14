@@ -21,6 +21,7 @@ Pre-submit and review checklist. Both author and reviewer must verify.
 - [ ] **P2.5 Edge cases.** Handled?
 - [ ] **P2.6 Tests.** Tested?
 - [ ] **P2.7 History.** Clean commits?
+- [ ] **P2.8 Builds clean.** `dune build` succeeds with no warnings-as-errors. Check: variant constructors in bare let-bindings need type annotations (labeled args infer, tuples/lets don't).
 
 ---
 

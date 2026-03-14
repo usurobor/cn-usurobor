@@ -107,6 +107,14 @@ let code, output =
   exec_args ~prog:"curl" ~args:["--config"; "-"]
     ~stdin_data:config ()
 
+(* Qualify constructors in bare bindings — OCaml can't infer
+   variant types outside labeled-argument context *)
+❌ let status = if bad then Degraded else Ok_
+✅ let status : Cn_trace.status = if bad then Degraded else Ok_
+
+(* Inside labeled args, inference works — no annotation needed *)
+Cn_trace.gemit ~status:(if bad then Degraded else Ok_)  (* ok *)
+
 (* avoid *)
 let x = ref 0
 for i = 0 to n do ... done
