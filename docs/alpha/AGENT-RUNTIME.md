@@ -1333,9 +1333,9 @@ cn agent (oneshot)                   cn agent --daemon
 
 boot_sequence                        boot_sequence
 maintain_once (7 primitives)         maintain_once (boot tick)
-drain_queue (up to limit)            while true:
-  for each item:                       if sync_due: maintain_once + drain_queue
-    process_one in-process               for each item:
+drain_queue (up to limit)            drain_queue (boot drain)
+  for each item:                     while true:
+    process_one in-process               if sync_due: maintain_once + drain_queue
       ─── Queue_pop ──→ InputReady         process_one in-process (same as oneshot)
       dequeue + pack context               ─── same FSM transitions ──→
       ─── Wake ──→ Processing            if telegram: poll + enqueue + process_one
@@ -1369,7 +1369,7 @@ resolution is an ephemeral execution detail.
 │                   cn agent --daemon                         │
 │                                                             │
 │   boot_sequence → ready.json (Starting)                     │
-│   maintain_once (boot tick)                                 │
+│   maintain_once (boot tick) → drain_queue → ready.json      │
 │   loop:                                                     │
 │     ── Interoception (periodic, sync_interval_sec) ──       │
 │     if sync_due:                                            │
