@@ -359,6 +359,69 @@ let%expect_test "fs_glob: missing pattern field" =
     show_receipt r);
   [%expect {| kind=fs_glob status=error reason=missing required field 'pattern' artifacts=0 |}]
 
+(* === fs_glob: symlink regressions === *)
+
+let%expect_test "fs_glob: symlink into .cn/ is denied" =
+  with_test_hub (fun hub ->
+    (* src/linkdir -> .cn *)
+    Unix.symlink (Filename.concat hub ".cn")
+      (Filename.concat hub "src/linkdir");
+    let op = { Cn_shell.kind = Observe Fs_glob;
+               op_id = Some "obs-01";
+               fields = [("pattern", Cn_json.String "**/*");
+                          ("base", Cn_json.String "src")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r;
+    let content = read_artifact hub r in
+    Printf.printf "sees_linkdir: %b\n"
+      (try ignore (Str.search_forward (Str.regexp_string "linkdir") content 0); true
+       with Not_found -> false);
+    (* Clean up symlink before with_test_hub's rm *)
+    Sys.remove (Filename.concat hub "src/linkdir"));
+  [%expect {|
+    kind=fs_glob status=ok reason=(none) artifacts=1
+    sees_linkdir: false |}]
+
+let%expect_test "fs_glob: symlink escaping hub is denied" =
+  with_test_hub (fun hub ->
+    (* src/escape -> /tmp (outside hub) *)
+    Unix.symlink "/tmp" (Filename.concat hub "src/escape");
+    let op = { Cn_shell.kind = Observe Fs_glob;
+               op_id = Some "obs-01";
+               fields = [("pattern", Cn_json.String "**/*");
+                          ("base", Cn_json.String "src")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r;
+    let content = read_artifact hub r in
+    Printf.printf "sees_escape: %b\n"
+      (try ignore (Str.search_forward (Str.regexp_string "escape") content 0); true
+       with Not_found -> false);
+    Sys.remove (Filename.concat hub "src/escape"));
+  [%expect {|
+    kind=fs_glob status=ok reason=(none) artifacts=1
+    sees_escape: false |}]
+
+let%expect_test "fs_glob: symlink cycle does not recurse forever" =
+  with_test_hub (fun hub ->
+    (* src/loop -> src (cycle) *)
+    Unix.symlink (Filename.concat hub "src")
+      (Filename.concat hub "src/loop");
+    let op = { Cn_shell.kind = Observe Fs_glob;
+               op_id = Some "obs-01";
+               fields = [("pattern", Cn_json.String "**/*");
+                          ("base", Cn_json.String "src")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r;
+    (* Should complete (not hang) and not contain loop/ entries *)
+    let content = read_artifact hub r in
+    Printf.printf "contains_loop: %b\n"
+      (try ignore (Str.search_forward (Str.regexp_string "loop/") content 0); true
+       with Not_found -> false);
+    Sys.remove (Filename.concat hub "src/loop"));
+  [%expect {|
+    kind=fs_glob status=ok reason=(none) artifacts=1
+    contains_loop: false |}]
+
 (* === Artifact: write_artifact with SHA-256 === *)
 
 let%expect_test "write_artifact: writes file and returns record" =
