@@ -1014,9 +1014,12 @@ let%expect_test "post-ack guard: neither queued nor in-flight → advance" =
 
 let%expect_test "get_platform_binary: returns Some on Linux/macOS" =
   (match Cn_agent.get_platform_binary () with
-   | Some bin -> Printf.printf "binary=%s\n" bin
-   | None -> Printf.printf "binary=None\n");
-  [%expect {| binary=cn-linux-x64 |}]
+   | Some bin ->
+       (* Platform-dependent: cn-linux-x64, cn-macos-x64, cn-macos-arm64 *)
+       let valid = String.length bin > 3 && String.sub bin 0 3 = "cn-" in
+       Printf.printf "valid=%b\n" valid
+   | None -> Printf.printf "valid=false\n");
+  [%expect {| valid=true |}]
 
 let%expect_test "do_update: Update_skip returns protocol skip" =
   let result = Cn_agent.do_update Cn_agent.Update_skip in
