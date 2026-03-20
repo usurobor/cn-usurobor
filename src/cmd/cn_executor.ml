@@ -341,6 +341,10 @@ let split_glob_pattern pat =
     or returning it. Tracks visited realpaths to prevent symlink cycles. *)
 let walk_dir ~hub_path ~base_rel base_path =
   let visited = Hashtbl.create 64 in
+  (* Seed visited with the base directory's realpath to catch symlink
+     cycles that point back to the walk root *)
+  (try Hashtbl.replace visited (Unix.realpath base_path) true
+   with Unix.Unix_error _ -> ());
   let rec go rel_prefix =
     let full = Cn_ffi.Path.join base_path rel_prefix in
     if not (Cn_ffi.Fs.exists full) then []
