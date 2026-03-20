@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.8.0  | A+  | A+          | A+           | A+               | Syscall surface coherence: fs_glob, git_stage, fs_read chunking, observe exclusion symmetry, CLI injection hardening. Review-driven. |
 | v3.7.3  | A   | A+          | A+           | A                | Agent output discipline: ops-in-body detection, peer awareness, coordination op examples, conditional MCA review. |
 | v3.7.2  | A   | A+          | A+           | A-               | Trace gap closure + boot drain fix + skill hardening. 5/7 trace gaps closed; peer-only heartbeat and outbox structure remain. |
 | v3.7.0  | A   | A+          | A+           | A-               | Scheduler unification: one loop, two schedulers (oneshot/daemon), 7-primitive maintenance engine. Boot drain gap found post-merge. |
@@ -40,6 +41,52 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v3.8.0 (2026-03-20)
+
+**Syscall Surface Coherence Amendment**
+
+The CN Shell ABI is now honest, orthogonal, and hardened. Four incoherences closed: advertised-but-stub ops, implicit compound behavior, lossy observation, and hidden external dependencies. Multi-round review-driven development (PR #32).
+
+### Added
+
+- **fs_glob** — real implementation replacing stub. Pure OCaml glob matching (*, **, ?), sandbox-validated, symlink cycle detection via realpath, bounded output.
+- **git_stage** — explicit staging op. Two modes: named files (sandbox-validated per file, directory rejection, `--literal-pathspecs`) or stage-all (NUL-delimited porcelain parser, per-candidate `validate_path`). Separates staging from commit.
+- **fs_read chunking** — `offset` and `limit` fields for bounded reads of large files. Budget-capped.
+- **cn doctor** — now checks for `patch(1)` (required by fs_patch).
+- **Observe exclusion symmetry** — all four git observe ops (status, diff, log, grep) now use shared `git_observe_exclusions` (`-- . :!.cn :!state :!logs`). Runtime-owned paths hidden from agent.
+- **SYSCALL-SURFACE-v3.8.0.md** — design doc specifying all four fixes.
+- **PLAN-v3.8.0-syscall-surface.md** — implementation plan.
+
+### Changed
+
+- **git_commit** — no longer does implicit `git add -A`. Commits current index only. Returns `Skipped/nothing_staged` when index is empty. Use `git_stage` before `git_commit`.
+- **git_grep** — uses `:(literal)` per-path instead of global `GIT_LITERAL_PATHSPECS`, appends observe exclusion pathspecs. Uses `-e` to force query as pattern.
+- **git_diff / git_log** — `validate_rev` rejects leading-dash revisions (prevents CLI injection).
+- **Observe vs write exclusions split** — protected files (SOUL.md, USER.md, etc.) are readable by git observe ops but not stageable by git_stage.
+
+### Security
+
+- `--literal-pathspecs` on git_stage prevents glob/pathspec magic interpretation
+- `validate_rev` blocks `--output=<file>` style injection via leading-dash revisions
+- `fs_glob` validates paths before descending, prevents symlink attacks
+- `git_stage` stage-all rejects directories and symlinks to protected files
+
+### Tests
+
+- 32 → 69+ ppx_expect tests in cn_executor_test.ml
+- Regression pairs for each hardening: positive case (feature works) + negative case (incoherence blocked)
+- Capstone: git_status shows src/ changes while hiding .cn/, state/, logs/; prior observe op artifacts don't pollute subsequent git_status
+
+### Coherence Delta
+
+- **Gap:** Four ABI incoherences — stub op, compound behavior, lossy reads, hidden dependency
+- **Mode:** MCA — change the runtime surface
+- **α:** Syscall ABI now honest and orthogonal — no advertised-but-unimplemented ops
+- **β:** All git observe ops use same exclusion boundary; capabilities block matches executor behavior
+- **γ:** git_stage/git_commit separation enables future fine-grained staging without special cases
 
 ---
 
