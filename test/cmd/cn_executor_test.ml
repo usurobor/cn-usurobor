@@ -627,9 +627,12 @@ let init_git_repo hub =
     ~args:["-C"; hub; "config"; "user.email"; "test@test.com"] () in
   let _ = Cn_ffi.Process.exec_args ~prog:"git"
     ~args:["-C"; hub; "config"; "user.name"; "Test"] () in
-  (* Initial commit so HEAD exists *)
+  (* Commit all pre-existing files from with_test_hub so the working
+     tree is clean before each test adds its own files *)
   let _ = Cn_ffi.Process.exec_args ~prog:"git"
-    ~args:["-C"; hub; "commit"; "--allow-empty"; "-m"; "init"] () in
+    ~args:["-C"; hub; "add"; "-A"] () in
+  let _ = Cn_ffi.Process.exec_args ~prog:"git"
+    ~args:["-C"; hub; "commit"; "-m"; "init"] () in
   ()
 
 let%expect_test "git_commit: nothing_staged when no changes in index" =
