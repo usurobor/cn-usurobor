@@ -541,7 +541,12 @@ let do_update info =
   match info with
   | Update_skip -> Cn_protocol.Update_skip
   | Update_available tag ->
-      match get_platform_binary () with
+      (* Skip update if binary path is not writable (e.g. non-root daemon) *)
+      let bin_dir = Filename.dirname bin_path in
+      let writable = try Unix.access bin_dir [Unix.W_OK]; true
+                     with Unix.Unix_error _ -> false in
+      if not writable then Cn_protocol.Update_skip
+      else match get_platform_binary () with
       | None -> Cn_protocol.Update_fail
       | Some binary ->
           let new_path = bin_path ^ ".new" in

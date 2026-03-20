@@ -219,6 +219,14 @@ let update_check_once ~hub_path =
               print_endline (Cn_fmt.warn
                 "Update failed, continuing with current version");
               Degraded "update_failed"
+          | Cn_protocol.Update_skip ->
+              (* Binary path not writable (non-root daemon) — skip gracefully *)
+              Cn_trace.gemit ~component:"maintenance" ~layer:Body
+                ~event:"update.check.ok" ~severity:Info ~status:Ok_
+                ~reason_code:"not_writable" ();
+              print_endline (Cn_fmt.dim
+                "Update skipped (binary not writable)");
+              Ok
           | _ -> Ok))
   with exn ->
     let msg = Printexc.to_string exn in
