@@ -144,6 +144,51 @@ let parse_output raw_output =
 
 (* === Rendering === *)
 
+(** Strip embedded frontmatter blocks (--- ... ---) from a body string.
+    These appear when the LLM places control-plane syntax mid-body rather
+    than at the document top.  Surrounding prose is preserved.
+
+    Only blocks containing at least one control-plane key (id:, ops:, etc.)
+    are stripped.  A bare --- used as a markdown horizontal rule is kept. *)
+let strip_embedded_frontmatter s =
+  let lines = String.split_on_char '\n' s in
+  (* Collect runs of (--- ... ---) with their line ranges, then decide
+     whether each block contains control-plane content. *)
+  let control_prefixes = [
+    "id:"; "ops:"; "ops_version:"; "ack:"; "done:"; "fail:";
+    "reply:"; "send:"; "delegate:"; "defer:"; "delete:";
+    "surface:"; "mca:";
+  ] in
+  let is_control_line line =
+    let t = String.trim line in
+    List.exists (fun pfx -> starts_with ~prefix:pfx t) control_prefixes
+  in
+  let rec walk acc inside block_acc = function
+    | [] ->
+      (* Unclosed block: flush buffered lines back as prose *)
+      let acc = if inside then
+        List.rev_append ("---" :: block_acc) acc
+      else acc in
+      List.rev acc
+    | "---" :: rest when not inside ->
+      walk acc true [] rest
+    | "---" :: rest when inside ->
+      (* Block closed — strip only if it has control-plane content *)
+      if List.exists is_control_line block_acc then
+        walk acc false [] rest
+      else
+        (* Not a control block — restore the --- delimiters and content
+           in original order onto acc (which is reversed). *)
+        let acc = "---" :: List.rev_append block_acc ("---" :: acc) in
+        walk acc false [] rest
+    | line :: rest when inside ->
+      walk acc true (line :: block_acc) rest
+    | line :: rest ->
+      walk (line :: acc) false block_acc rest
+  in
+  let cleaned = walk [] false [] lines |> String.concat "\n" |> String.trim in
+  if cleaned = "" then None else Some cleaned
+
 (** Find the first Reply payload from coordination ops. *)
 let first_reply_payload ops =
   ops |> List.find_map (fun (op : agent_op) ->
@@ -163,8 +208,16 @@ let render_human_facing parsed =
      still a valid presentation candidate. Dedup to avoid double-checking. *)
   let resolved_reply = first_reply_payload parsed.coordination_ops in
   let raw_reply = first_reply_payload parsed.raw_coordination_ops in
+  (* Strip any embedded frontmatter blocks from the body before
+     considering it as a human-facing candidate. This catches the
+     mid-body ops pattern that is_control_plane_like misses because
+     the body starts with normal prose. *)
+  let sanitized_body = match parsed.body with
+    | Some b -> strip_embedded_frontmatter b
+    | None -> None
+  in
   let real_candidates =
-    (match parsed.body with Some b -> [b] | None -> [])
+    (match sanitized_body with Some b -> [b] | None -> [])
     @ (match resolved_reply with Some msg -> [msg] | None -> [])
     @ (match raw_reply with
        | Some msg when raw_reply <> resolved_reply -> [msg]

@@ -396,3 +396,127 @@ send: sigma|This is correct frontmatter
 Just a normal response body with no ops.|} in
   let _parsed = Cn_output.parse_output raw in
   [%expect {||}]
+
+(* === Issue #40: mid-body frontmatter stripped from human surface === *)
+
+let%expect_test "#40: mid-body frontmatter ops stripped, prose preserved" =
+  let raw = {|I'll test file creation and reading for you.
+
+---
+id: file-test-request
+ops: [{"kind":"fs_write","path":"test-file.txt","content":"hello"}]
+---
+
+Let me create a test file first to verify write capability.|} in
+  let p = Cn_output.parse_output raw in
+  (* No top-level frontmatter → entire string is body *)
+  Printf.printf "has_frontmatter_id: %b\n"
+    (match p.id with Some _ -> true | None -> false);
+  Printf.printf "has_body: %b\n"
+    (match p.body with Some _ -> true | None -> false);
+  (* Human surface must only show prose, not the ops block *)
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  [%expect {|
+    has_frontmatter_id: false
+    has_body: true
+    Renderable: I'll test file creation and reading for you.
+
+
+    Let me create a test file first to verify write capability. |}]
+
+let%expect_test "#40: mid-body frontmatter with top-level frontmatter" =
+  (* Top-level frontmatter is valid, but body also contains an embedded block *)
+  let raw = {|---
+id: tg-040
+reply: tg-040|notification
+---
+Here is my analysis.
+
+---
+id: leaked-inner
+ops: [{"kind":"fs_read","path":"secret.ml"}]
+---
+
+The file looks correct.|} in
+  let p = Cn_output.parse_output raw in
+  Printf.printf "id=%s\n"
+    (match p.id with Some s -> s | None -> "none");
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  [%expect {|
+    id=tg-040
+    Renderable: Here is my analysis.
+
+
+    The file looks correct. |}]
+
+let%expect_test "#40: body is entirely a frontmatter block, fallback to reply" =
+  let raw = {|---
+id: tg-041
+reply: tg-041|I checked the file for you.
+---
+---
+id: inner-ops
+ops: [{"kind":"git_status"}]
+---|} in
+  let p = Cn_output.parse_output raw in
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  [%expect {| Renderable: I checked the file for you. |}]
+
+let%expect_test "#40: audit file preserves raw mid-body frontmatter" =
+  let raw = {|Prose before.
+
+---
+ops: [{"kind":"fs_write","path":"x.txt","content":"y"}]
+---
+
+Prose after.|} in
+  let p = Cn_output.parse_output raw in
+  (* AuditFile must preserve everything *)
+  show_render Cn_output.AuditFile p;
+  [%expect {|
+    Renderable: Prose before.
+
+    ---
+    ops: [{"kind":"fs_write","path":"x.txt","content":"y"}]
+    ---
+
+    Prose after. |}]
+
+let%expect_test "strip_embedded_frontmatter: exposed for unit testing" =
+  (* Direct test of the stripping function *)
+  let input = "Hello world.\n\n---\nops: [stuff]\n---\n\nGoodbye." in
+  let result = Cn_output.strip_embedded_frontmatter input in
+  Printf.printf "%s\n"
+    (match result with Some s -> s | None -> "(empty)");
+  [%expect {|
+    Hello world.
+
+
+    Goodbye. |}]
+
+let%expect_test "strip_embedded_frontmatter: markdown hr preserved" =
+  (* A --- block with no control-plane keys is a horizontal rule, not frontmatter *)
+  let input = "Section one.\n\n---\n\n---\n\nSection two." in
+  let result = Cn_output.strip_embedded_frontmatter input in
+  Printf.printf "%s\n"
+    (match result with Some s -> s | None -> "(empty)");
+  [%expect {|
+    Section one.
+
+    ---
+
+    ---
+
+    Section two. |}]
+
+let%expect_test "strip_embedded_frontmatter: unclosed block kept as prose" =
+  (* Unclosed --- at end of body should not eat content *)
+  let input = "Hello.\n\n---\nSome notes" in
+  let result = Cn_output.strip_embedded_frontmatter input in
+  Printf.printf "%s\n"
+    (match result with Some s -> s | None -> "(empty)");
+  [%expect {|
+    Hello.
+
+    ---
+    Some notes |}]
