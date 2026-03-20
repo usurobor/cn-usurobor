@@ -50,6 +50,16 @@ let string_of_render_reason = function
 
 (* === Control-plane leak detection === *)
 
+(** Frontmatter key prefixes that indicate control-plane content.
+    Shared between is_control_plane_like (whole-body check) and
+    strip_embedded_frontmatter (mid-body block check) so a new key
+    added here protects both paths. *)
+let control_key_prefixes = [
+  "id:"; "ops:"; "ops_version:";
+  "ack:"; "done:"; "fail:"; "reply:"; "send:";
+  "delegate:"; "defer:"; "delete:"; "surface:"; "mca:";
+]
+
 (** Detect whether a candidate presentation string contains control-plane
     syntax that must not reach a human-facing sink.
 
@@ -61,23 +71,13 @@ let is_control_plane_like s =
   let trimmed = String.trim s in
   (* Empty / blank *)
   if trimmed = "" then None
-  (* Raw ops: manifest line *)
-  else if starts_with ~prefix:"ops:" trimmed
-       || starts_with ~prefix:"ops_version:" trimmed then
-    Some Control_plane_leak
   (* Raw frontmatter fences at the start *)
   else if starts_with ~prefix:"---\n" trimmed
        || trimmed = "---" then
     Some Raw_frontmatter
-  (* Legacy frontmatter key-value control lines that must not leak
-     to human-facing sinks. Anchored at start of trimmed string. *)
-  else
-    let control_prefixes = [
-      "id:"; "ack:"; "done:"; "fail:"; "reply:"; "send:";
-      "delegate:"; "defer:"; "delete:"; "surface:"; "mca:";
-    ] in
-    if List.exists (fun prefix -> starts_with ~prefix trimmed) control_prefixes then
-      Some Control_plane_leak
+  (* Control-plane key prefixes (ops:, id:, ack:, etc.) *)
+  else if List.exists (fun prefix -> starts_with ~prefix trimmed) control_key_prefixes then
+    Some Control_plane_leak
   (* XML pseudo-tool wrappers the LLM sometimes hallucinates *)
   else
     let xml_prefixes = [
@@ -152,16 +152,9 @@ let parse_output raw_output =
     are stripped.  A bare --- used as a markdown horizontal rule is kept. *)
 let strip_embedded_frontmatter s =
   let lines = String.split_on_char '\n' s in
-  (* Collect runs of (--- ... ---) with their line ranges, then decide
-     whether each block contains control-plane content. *)
-  let control_prefixes = [
-    "id:"; "ops:"; "ops_version:"; "ack:"; "done:"; "fail:";
-    "reply:"; "send:"; "delegate:"; "defer:"; "delete:";
-    "surface:"; "mca:";
-  ] in
   let is_control_line line =
     let t = String.trim line in
-    List.exists (fun pfx -> starts_with ~prefix:pfx t) control_prefixes
+    List.exists (fun pfx -> starts_with ~prefix:pfx t) control_key_prefixes
   in
   let rec walk acc inside block_acc = function
     | [] ->
