@@ -235,10 +235,18 @@ A mindset file MUST contain:
 
 - `# <NAME>`
 - `## Core Principle` — the orienting stance in one sentence
-- `## Defaults` — the persistent interpretive, stylistic, or craft defaults the mindset installs
-- `## Rules` — stable rules or examples showing how the mindset changes behavior
+- one or more sections that express the persistent interpretive, stylistic, or craft defaults the mindset installs
+- one or more sections that show how the mindset changes behavior through rules, examples, anti-patterns, contrast pairs, red flags, lenses, or levels
 
-A mindset file MUST be always-on and cross-domain.
+These sections MAY be named `## Defaults` and `## Rules`, but equivalent structures are valid.
+
+A mindset MAY be organized as levels, lenses, principles, biases, anti-patterns, exemplars, or thematic sections, provided the file remains:
+
+- always-on
+- cross-domain
+- non-triggered
+- non-competitive with task skills
+
 A mindset file MUST NOT define task gating or top-N selection.
 A mindset file MUST NOT encode constitutive prohibitions that belong in doctrine.
 
