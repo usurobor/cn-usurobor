@@ -26,6 +26,7 @@ type effect_kind =
   | Fs_write
   | Fs_patch
   | Git_branch
+  | Git_stage
   | Git_commit
   | Exec
 
@@ -102,6 +103,7 @@ let effect_kind_of_string = function
   | "fs_write"   -> Some Fs_write
   | "fs_patch"   -> Some Fs_patch
   | "git_branch" -> Some Git_branch
+  | "git_stage"  -> Some Git_stage
   | "git_commit" -> Some Git_commit
   | "exec"       -> Some Exec
   | _ -> None
@@ -127,6 +129,7 @@ let string_of_effect_kind = function
   | Fs_write   -> "fs_write"
   | Fs_patch   -> "fs_patch"
   | Git_branch -> "git_branch"
+  | Git_stage  -> "git_stage"
   | Git_commit -> "git_commit"
   | Exec       -> "exec"
 
