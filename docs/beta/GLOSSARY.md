@@ -193,6 +193,20 @@ Always-on, orienting, deterministic cognitive frame. Mindsets shape craft and st
 
 Examples: ENGINEERING, PM, WISDOM, OPERATIONS.
 
+### DUR (Define / Unfold / Rules)
+
+The canonical skill contract. The three-section structure every skill MUST follow:
+
+1. **Define** — identify the parts, articulate how they fit, name the failure mode
+2. **Unfold** — expand each part into domain-specific structure with ❌/✅ pairs
+3. **Rules** — numbered, stable-ID rules with ❌/✅ pairs showing incoherent/coherent behavior
+
+DUR is to skills what TSC is to coherence scoring — the structural invariant that makes the class recognizable and reviewable.
+
+"Cohere X to DUR contract" = restructure skill X into Define/Unfold/Rules form.
+
+Defined in: `docs/alpha/COGNITIVE-SUBSTRATE.md` §7.3.
+
 ### Skill
 
 Bounded, selected, instrumental cognitive module. Skills are situational amplifiers, not identity. They live under `skills/{name}/` with a `SKILL.md` file defining TERMS, INPUTS, and EFFECTS. Skills are scored and compete for bounded slots at wake-up.
