@@ -313,3 +313,30 @@ let receipts_to_json ~trigger_id receipts =
     ("trigger_id", Cn_json.String trigger_id);
     ("receipts", Cn_json.Array (List.map receipt_to_json receipts));
   ]
+
+(* === Execute: canonical entry point for typed op execution === *)
+
+(** Execute a parsed ops manifest through the CN Shell pipeline.
+
+    Handles denial receipts and delegates typed op execution to [orchestrate].
+    Keeps Cn_shell pure (no I/O) by accepting callbacks:
+
+    - [orchestrate typed_ops] runs the two-pass execution (observe → LLM → effect).
+      Returns [Ok result] on success, [Error msg] on failure.
+    - [write_denials denials] persists parser denial receipts to disk.
+
+    Returns [Ok (Some result)] when typed ops were executed,
+    [Ok None] when the manifest contained no typed ops,
+    or [Error msg] when orchestration failed.
+
+    This is the single entry point that cn_runtime should call for
+    typed op execution — replacing direct Cn_orchestrator.run_two_pass calls. *)
+let execute ~orchestrate ~write_denials ~typed_ops ~denial_receipts =
+  if denial_receipts <> [] then
+    write_denials denial_receipts;
+  if typed_ops = [] then
+    Ok None
+  else
+    match orchestrate typed_ops with
+    | Ok result -> Ok (Some result)
+    | Error msg -> Error msg
