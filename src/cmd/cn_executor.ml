@@ -78,6 +78,13 @@ let scrub_env ~extra_keys =
 let git_observe_exclusions =
   ["--"; "."; ":!.cn"; ":!state"; ":!logs"]
 
+(** Just the :! exclude pathspecs, without -- and ".".
+    Used by git_grep when an explicit path is provided: the user path
+    goes through :(literal) to disable magic, then these exclusions
+    are appended so internal dirs stay excluded. *)
+let git_observe_exclusions_pathspecs =
+  [":!.cn"; ":!state"; ":!logs"]
+
 (* === Op field extraction helpers === *)
 
 let get_field_string key op =
@@ -270,7 +277,11 @@ let execute_git_grep ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
         (match Cn_sandbox.validate_path ~hub_path ~access:Read_access raw_path with
          | Error reason ->
            Error (Cn_sandbox.string_of_denial_reason reason)
-         | Ok resolved -> Ok ["--"; resolved])
+         | Ok resolved ->
+           (* Use :(literal) to disable pathspec magic on the user path,
+              then append observe exclusions so .cn/state/logs stay excluded
+              even when the resolved path is root-scoped (e.g. ".") *)
+           Ok (["--"; ":(literal)" ^ resolved] @ git_observe_exclusions_pathspecs))
       | None -> Ok git_observe_exclusions
     in
     match path_args with
@@ -279,10 +290,8 @@ let execute_git_grep ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
         status = Cn_shell.Denied; reason;
         start_time = start; end_time = now_iso (); artifacts = [] }
     | Ok extra_args ->
-      (* Use -e to force query as pattern (not option), and
-         GIT_LITERAL_PATHSPECS to disable pathspec magic (*, ?, :) *)
+      (* Use -e to force query as pattern, not a git option *)
       execute_git_op ~hub_path ~trigger_id ~config ~kind_str:"git_grep"
-        ~env_extra:[("GIT_LITERAL_PATHSPECS", "1")]
         ~args:(["grep"; "-n"; "-e"; query] @ extra_args) op
 
 (* === Glob matching (pure OCaml, no external dependency) === *)
