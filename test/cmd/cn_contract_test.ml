@@ -91,9 +91,9 @@ let%expect_test "I2: typed effect ops match contract" =
     | Some obj -> json_string_list obj "effect"
     | None -> failwith "Missing typed_ops.effect" in
   (* From cn_shell.ml effect_kind_of_string *)
-  let actual = ["fs_write"; "fs_patch"; "git_branch"; "git_commit"; "exec"] in
+  let actual = ["fs_write"; "fs_patch"; "git_branch"; "git_stage"; "git_commit"; "exec"] in
   check_match ~label:"typed_ops.effect" ~expected ~actual;
-  [%expect {| typed_ops.effect: ok (5 items) |}]
+  [%expect {| typed_ops.effect: ok (6 items) |}]
 
 let%expect_test "I2: receipt statuses match contract" =
   let contract = load_contract () in
