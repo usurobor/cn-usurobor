@@ -70,6 +70,16 @@ let show_receipt (r : Cn_shell.receipt) =
     (if r.reason = "" then "(none)" else r.reason)
     (List.length r.artifacts)
 
+let read_artifact hub (r : Cn_shell.receipt) =
+  match r.artifacts with
+  | [] -> "(no artifacts)"
+  | a :: _ ->
+    let path = Filename.concat hub a.Cn_shell.path in
+    let ic = open_in path in
+    let n = in_channel_length ic in
+    let s = really_input_string ic n in
+    close_in ic; s
+
 (* === Pure: scrub_env === *)
 
 let%expect_test "scrub_env: drops _KEY, _TOKEN, _SECRET vars" =
@@ -888,17 +898,6 @@ let%expect_test "git_stage all: non-repo hub returns error" =
     let sr = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config stage_op in
     show_receipt sr);
   [%expect {| kind=git_stage status=error reason=git_status_exit_128: fatal: not a git repository (or any of the parent directories): .git artifacts=0 |}]
-
-(* Helper to read artifact content back from disk *)
-let read_artifact hub (r : Cn_shell.receipt) =
-  match r.artifacts with
-  | [] -> "(no artifacts)"
-  | a :: _ ->
-    let path = Filename.concat hub a.Cn_shell.path in
-    let ic = open_in path in
-    let n = in_channel_length ic in
-    let s = really_input_string ic n in
-    close_in ic; s
 
 let%expect_test "git_diff observes spec/SOUL.md changes" =
   with_test_hub (fun hub ->
