@@ -112,7 +112,7 @@ let%expect_test "two-pass: observe+effect → Pass B invoked, both passes receip
                    pass_a_ops in
     match result with
     | Error msg -> Printf.printf "ERROR: %s\n" msg
-    | Ok { pass_a_receipts; pass_b_receipts; pass_b_coordination_ops = _; used_two_pass } ->
+    | Ok { pass_a_receipts; pass_b_receipts; pass_b_coordination_ops = _; pass_b_output = _; used_two_pass } ->
       Printf.printf "used_two_pass: %b\n" used_two_pass;
       Printf.printf "--- Pass A ---\n";
       List.iter show_receipt pass_a_receipts;

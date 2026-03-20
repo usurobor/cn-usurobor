@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.9.0  | A+  | A+          | A+           | A+               | Two-pass wiring (#41), COGNITIVE-SUBSTRATE spec, DUR skill contract, reflect + adhoc-thread + review skills cohered. |
 | v3.8.0  | A+  | A+          | A+           | A+               | Syscall surface coherence: fs_glob, git_stage, fs_read chunking, observe exclusion symmetry, CLI injection hardening. Review-driven. |
 | v3.7.3  | A   | A+          | A+           | A                | Agent output discipline: ops-in-body detection, peer awareness, coordination op examples, conditional MCA review. |
 | v3.7.2  | A   | A+          | A+           | A-               | Trace gap closure + boot drain fix + skill hardening. 5/7 trace gaps closed; peer-only heartbeat and outbox structure remain. |
@@ -41,6 +42,33 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v3.9.0 (2026-03-20)
+
+**Two-Pass Wiring + Cognitive Substrate + DUR Skill Contract**
+
+Runtime two-pass execution wired end-to-end. COGNITIVE-SUBSTRATE spec published. Three skills cohered to DUR contract. Glossary updated.
+
+### Added
+
+- **Two-pass execution wired** (#41) — `Cn_orchestrator.run_two_pass` coordinates Pass A → repack → LLM call → parse → Pass B → coordination gating. `finalize` accepts `?packed` for Pass B LLM re-call. 7 integration tests with mock LLM.
+- **COGNITIVE-SUBSTRATE.md** v1.0.0 — canonical classes (Identity, Doctrine, Mindset, Skill, Reflection), distinction rule, placement algorithm, file contracts, promotion/splitting rules, validation checks.
+- **DUR glossary entry** — Define/Unfold/Rules documented as canonical skill contract in GLOSSARY.md.
+- **`cn_runtime_integration_test.ml`** — new integration test file for two-pass orchestration.
+- **`issue-41-pass-b-wiring.md`** — design doc for two-pass wiring.
+
+### Changed
+
+- **Reflect skill** — cohered to DUR contract. Evidence/Interpretation/Conclusion remapped to Define/Unfold/Rules. Axes (α/β/γ) moved under Unfold. Cadence table under Rules.
+- **Adhoc-thread skill** — cohered to DUR contract. Added trigger recognition, type-matching judgment, bias-toward-capture rule.
+- **Review skill** — cohered to DUR contract with MCI from PR #32 review process.
+- **§7.2 mindset contract** — relaxed to structurally flexible, semantically constrained.
+
+### Fixed
+
+- Integration test pattern match updated for `pass_b_output` field.
 
 ---
 

@@ -19,7 +19,7 @@ Help:
 Version:
 
   $ $CN --version
-  cn 3.8.3
+  cn 3.9.0
 
 Init - create a new hub:
 
@@ -62,7 +62,7 @@ Outbox (with message):
 Doctor - health check:
 
   $ $CN doctor 2>&1 | head -2
-  cn v3.8.3
+  cn v3.9.0
   Checking health...
 
 Aliases:
