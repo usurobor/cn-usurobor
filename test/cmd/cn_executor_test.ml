@@ -1042,3 +1042,67 @@ let%expect_test "git_grep: pathspec magic chars treated literally" =
   [%expect {|
     kind=git_grep status=ok reason=(none) artifacts=1
     found: true |}]
+
+(* === git_grep observe-exclusion regressions === *)
+
+let%expect_test "git_grep no-path: .cn/secrets.env excluded from repo-wide grep" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    (* Put a shared marker in both .cn and src so grep always matches
+       something — we test that the .cn hit is excluded, not that
+       grep returns zero results. *)
+    let oc = open_out (Filename.concat hub ".cn/secrets.env") in
+    output_string oc "SHARED_MARKER_99"; close_out oc;
+    let oc2 = open_out (Filename.concat hub "src/main.ml") in
+    output_string oc2 "SHARED_MARKER_99"; close_out oc2;
+    let _ = Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:["-C"; hub; "add"; "--force"; ".cn/secrets.env"; "src/main.ml"] () in
+    let _ = Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:["-C"; hub; "commit"; "-m"; "add shared marker"] () in
+    (* Repo-wide grep with no path should find src but not .cn *)
+    let grep_op = { Cn_shell.kind = Observe Git_grep;
+                    op_id = Some "obs-01";
+                    fields = [("query", Cn_json.String "SHARED_MARKER_99")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config grep_op in
+    show_receipt r;
+    let content = read_artifact hub r in
+    Printf.printf "finds_src: %b\n"
+      (try ignore (Str.search_forward (Str.regexp_string "src/main.ml") content 0); true
+       with Not_found -> false);
+    Printf.printf "finds_cn: %b\n"
+      (try ignore (Str.search_forward (Str.regexp_string ".cn/") content 0); true
+       with Not_found -> false));
+  [%expect {|
+    kind=git_grep status=ok reason=(none) artifacts=1
+    finds_src: true
+    finds_cn: false |}]
+
+let%expect_test "git_grep path=.: .cn/secrets.env excluded from root-scoped grep" =
+  with_test_hub (fun hub ->
+    init_git_repo hub;
+    let oc = open_out (Filename.concat hub ".cn/secrets.env") in
+    output_string oc "ROOT_MARKER_77"; close_out oc;
+    let oc2 = open_out (Filename.concat hub "src/main.ml") in
+    output_string oc2 "ROOT_MARKER_77"; close_out oc2;
+    let _ = Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:["-C"; hub; "add"; "--force"; ".cn/secrets.env"; "src/main.ml"] () in
+    let _ = Cn_ffi.Process.exec_args ~prog:"git"
+      ~args:["-C"; hub; "commit"; "-m"; "add root marker"] () in
+    (* Explicit path="." — root-scoped grep must still exclude .cn *)
+    let grep_op = { Cn_shell.kind = Observe Git_grep;
+                    op_id = Some "obs-01";
+                    fields = [("query", Cn_json.String "ROOT_MARKER_77");
+                              ("path", Cn_json.String ".")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config grep_op in
+    show_receipt r;
+    let content = read_artifact hub r in
+    Printf.printf "finds_src: %b\n"
+      (try ignore (Str.search_forward (Str.regexp_string "src/main.ml") content 0); true
+       with Not_found -> false);
+    Printf.printf "finds_cn: %b\n"
+      (try ignore (Str.search_forward (Str.regexp_string ".cn/") content 0); true
+       with Not_found -> false));
+  [%expect {|
+    kind=git_grep status=ok reason=(none) artifacts=1
+    finds_src: true
+    finds_cn: false |}]
