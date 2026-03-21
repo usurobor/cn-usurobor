@@ -26,7 +26,7 @@ The substance of the system — doctrine, specs, definitions.
 | [FOUNDATIONS.md](./alpha/FOUNDATIONS.md) | The coherence stack — doctrinal layers |
 | [MANIFESTO.md](./alpha/MANIFESTO.md) | Principles and values |
 | [CAA.md](./alpha/CAA.md) | Coherent agent architecture |
-| [AGENT-RUNTIME.md](./alpha/AGENT-RUNTIME.md) | Runtime spec: CN Shell, typed ops, two-pass, receipts |
+| [AGENT-RUNTIME.md](./alpha/AGENT-RUNTIME.md) | Runtime spec: CN Shell, typed ops, N-pass orchestration, receipts |
 | [CAR.md](./alpha/CAR.md) | Cognitive asset resolver — local, versioned cognition |
 | [WHITEPAPER.md](./alpha/WHITEPAPER.md) | CN protocol specification (v3.0.0) |
 | [PROTOCOL.md](./alpha/PROTOCOL.md) | FSM design — state diagrams, transition tables |

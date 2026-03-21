@@ -231,8 +231,8 @@ WantedBy=multi-user.target
 │  5. Call Claude API (body-only prompt)         │
 │  6. Write state/output.md                     │
 │  7. Archive to logs/ (before effects)         │
-│  8. CN Shell: two-pass execute (observe →     │
-│     effect) + write receipts                  │
+│  8. CN Shell: N-pass execute (observe →        │
+│     effect, bounded bind loop) + receipts     │
 │  9. Project to Telegram (idempotent)          │
 │  10. Update conversation (dedup by trigger)   │
 │  11. Cleanup state files + clear marker       │
