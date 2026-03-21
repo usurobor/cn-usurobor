@@ -495,3 +495,86 @@ let%expect_test "parse: git_stage + git_commit compose" =
       git_stage s1
       git_commit c1
   |}]
+
+(* === Cn_shell.execute === *)
+
+let%expect_test "execute: no typed ops, no denials → Ok None" =
+  let orchestrate _ops = failwith "should not be called" in
+  let write_denials _d = failwith "should not be called" in
+  (match Cn_shell.execute ~orchestrate ~write_denials
+           ~typed_ops:[] ~denial_receipts:[] with
+   | Ok None -> print_endline "Ok None"
+   | _ -> print_endline "wrong");
+  [%expect {| Ok None |}]
+
+let%expect_test "execute: denials only, no typed ops → writes denials, Ok None" =
+  let denial = Cn_shell.make_receipt ~pass:"A" ~op_id:None
+      ~kind:"unknown" ~status:Cn_shell.Denied ~reason:"test" in
+  let wrote = ref false in
+  let orchestrate _ops = failwith "should not be called" in
+  let write_denials denials =
+    Printf.printf "write_denials: %d\n" (List.length denials);
+    wrote := true
+  in
+  (match Cn_shell.execute ~orchestrate ~write_denials
+           ~typed_ops:[] ~denial_receipts:[denial] with
+   | Ok None -> Printf.printf "Ok None, wrote=%b\n" !wrote
+   | _ -> print_endline "wrong");
+  [%expect {|
+    write_denials: 1
+    Ok None, wrote=true
+  |}]
+
+let%expect_test "execute: typed ops → calls orchestrate, returns Some" =
+  let ops, _ = Cn_shell.parse_ops_manifest
+      {|[{"kind":"fs_read","path":"a.ml"}]|} in
+  let orchestrated = ref false in
+  let orchestrate typed_ops =
+    Printf.printf "orchestrate: %d ops\n" (List.length typed_ops);
+    orchestrated := true;
+    Ok "result"
+  in
+  let write_denials _d = () in
+  (match Cn_shell.execute ~orchestrate ~write_denials
+           ~typed_ops:ops ~denial_receipts:[] with
+   | Ok (Some "result") -> Printf.printf "Ok Some, orchestrated=%b\n" !orchestrated
+   | _ -> print_endline "wrong");
+  [%expect {|
+    orchestrate: 1 ops
+    Ok Some, orchestrated=true
+  |}]
+
+let%expect_test "execute: orchestrate error → Error propagated" =
+  let ops, _ = Cn_shell.parse_ops_manifest
+      {|[{"kind":"fs_read","path":"a.ml"}]|} in
+  let orchestrate _ops = Error "llm failed" in
+  let write_denials _d = () in
+  (match Cn_shell.execute ~orchestrate ~write_denials
+           ~typed_ops:ops ~denial_receipts:[] with
+   | Error msg -> Printf.printf "Error: %s\n" msg
+   | _ -> print_endline "wrong");
+  [%expect {| Error: llm failed |}]
+
+let%expect_test "execute: denials + typed ops → both paths run" =
+  let ops, _ = Cn_shell.parse_ops_manifest
+      {|[{"kind":"fs_write","op_id":"w1","path":"a","content":"x"}]|} in
+  let denial = Cn_shell.make_receipt ~pass:"A" ~op_id:(Some "bad")
+      ~kind:"frobnicate" ~status:Cn_shell.Denied ~reason:"unknown_op_kind" in
+  let denial_written = ref false in
+  let orchestrate typed_ops =
+    Printf.printf "orchestrate: %d ops\n" (List.length typed_ops);
+    Ok "done"
+  in
+  let write_denials denials =
+    Printf.printf "write_denials: %d\n" (List.length denials);
+    denial_written := true
+  in
+  (match Cn_shell.execute ~orchestrate ~write_denials
+           ~typed_ops:ops ~denial_receipts:[denial] with
+   | Ok (Some "done") -> Printf.printf "Ok Some, denials_written=%b\n" !denial_written
+   | _ -> print_endline "wrong");
+  [%expect {|
+    write_denials: 1
+    orchestrate: 1 ops
+    Ok Some, denials_written=true
+  |}]
