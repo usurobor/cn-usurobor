@@ -47,15 +47,19 @@ MCA is preferred over MCI when coherent action is possible.
 
 Defined in: `packages/cnos.core/doctrine/CAP.md` §2.1.
 
+### MIC (Make It Coherent)
+
+Verb. Cohere an artifact to its canonical contract for the first time. The artifact has content but was never structured to the current spec. "MIC the release skill" = it has good content, DUR contract now exists, give it the right shape.
+
+MIC is authoring coherence where none existed (relative to the current contract). The artifact may have been internally consistent before, but it wasn't aligned to the spec that now governs its class.
+
 ### MICA (Make It Coherent Again)
 
-Verb. Restore coherence that was lost through drift. An artifact was coherent when written — then context evolved (new contracts, new specs, new standards) and the artifact didn't move with it. MICA is the act of bringing it back.
+Verb. Restore coherence that was lost through drift. An artifact was coherent to its contract — then context evolved (new contracts, new specs, new standards) and the artifact didn't move with it. MICA is the act of bringing it back.
 
-"MICA the release skill" = it was coherent once, DUR contract arrived, now it's structurally misaligned — restore it.
+The "again" does real work: MICA asserts a prior coherent state. You can't MICA something that was never coherent to the current contract (that's MIC). You can't MICA something already aligned (that's a no-op). MICA only applies in the gap between "was coherent" and "context moved."
 
-The "again" does real work: MICA asserts a prior coherent state. You can't MICA something that was never coherent (that's authoring). You can't MICA something already aligned (that's a no-op). MICA only applies in the gap between "was coherent" and "context moved."
-
-Related: DUR (the contract being cohered to), CLP (the process used to verify convergence).
+Related: MIC (first-time coherence), DUR (the contract being cohered to), CLP (the process used to verify convergence).
 
 ### MCI (Most Coherent Insight)
 
