@@ -253,12 +253,12 @@ src/
       +-- cn_config.ml       Config loader (env vars + .cn/config.json)
       +-- cn_dotenv.ml       .env file loader (.cn/secrets.env)
       +-- cn_agent.ml        Queue, input/output, op execution
-      +-- cn_shell.ml        CN Shell: capability runtime (typed ops, two-pass)
+      +-- cn_shell.ml        CN Shell: capability runtime (typed ops, N-pass)
       +-- cn_executor.ml     Op executor (dispatch per kind)
       +-- cn_sandbox.ml      Path sandbox (reject escapes, denylist)
       +-- cn_capabilities.ml Capability discovery (budget, allowlists)
       +-- cn_projection.ml   Reply projection (Telegram routing, dedup)
-      +-- cn_orchestrator.ml Two-pass orchestration (observe → effect)
+      +-- cn_orchestrator.ml N-pass orchestration (bounded bind loop)
       +-- cn_mail.ml         Inbox/outbox transport
       +-- cn_gtd.ml          GTD commands + thread creation
       +-- cn_mca.ml          MCA commands
@@ -292,6 +292,6 @@ Installed to `/usr/local/bin/cn`.
 
 ## Related
 
-- [AGENT-RUNTIME.md](AGENT-RUNTIME.md) — Full runtime spec (CN Shell, typed ops, two-pass, receipts)
+- [AGENT-RUNTIME.md](AGENT-RUNTIME.md) — Full runtime spec (CN Shell, typed ops, N-pass orchestration, receipts)
 - [SECURITY-MODEL.md](SECURITY-MODEL.md) — Security architecture
 - [SETUP-INSTALLER.md](SETUP-INSTALLER.md) — Install script specification

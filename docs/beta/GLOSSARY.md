@@ -263,18 +263,25 @@ Document: `docs/gamma/CDD.md`.
 
 ### CN Shell
 
-The capability runtime that mediates between the agent and the world. The agent proposes typed ops; CN Shell validates against policy, executes within budget, records receipts, and feeds evidence back. Enforces the two-pass structure:
+The capability runtime that mediates between the agent and the world. The agent proposes typed ops; CN Shell validates against policy, executes within budget, records receipts, and feeds evidence back. Enforces the N-pass bind loop:
 
-- **Pass A (Observe)**: agent requests observe ops → runtime gathers evidence
-- **Pass B (Effect)**: agent proposes effect ops → runtime executes governed effects
+- **Observe pass**: agent requests observe ops → runtime gathers evidence, defers effects
+- **Effect pass**: agent proposes effect ops → runtime executes governed effects
+- **Terminal pass**: no ops → final projection
 
-This is CAP made runtime-real: sensing is first-class, action is governed.
+The loop is bounded by `max_passes` (default 5), `max_total_ops`, and `max_total_artifact_bytes`. Each pass is one packed context → one LLM call → one execution step. This is CAP made runtime-real: sensing is first-class, action is governed.
 
 Defined in: `docs/alpha/AGENT-RUNTIME.md`.
 
-### Two-pass structure
+### N-pass bind loop
 
-The runtime's enforcement of "observe before effect." Pass A gathers evidence (file reads, state checks, searches). Pass B executes governed effects (writes, patches, commits). This is the runtime expression of CAP's Sense → Compare → Act loop.
+The runtime's enforcement of "observe before effect" via bounded iteration. Each pass classifies its typed ops as observe-class or effect-class:
+
+- **Observe-class pass**: gathers evidence (file reads, state checks, searches), defers effects with receipts
+- **Effect-class pass**: executes governed effects (writes, patches, commits)
+- **Terminal pass**: no ops remaining → final projection to user
+
+This generalizes the original two-pass structure (`max_passes=2` reproduces it exactly). The loop is the runtime expression of CAP's Sense → Compare → Act cycle, extended to support deeper reasoning chains (observe → effect → verify → adapt).
 
 ### Receipts
 

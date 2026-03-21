@@ -499,11 +499,12 @@ The capability runtime that mediates between the agent and the world:
 - crash recovery via idempotent op replay
 
 ### 11.3 Observe before effect
-The runtime enforces "sense before act" via the two-pass structure:
-- **Pass A (Observe)**: agent requests observe ops → runtime gathers evidence
-- **Pass B (Effect)**: agent proposes effect ops → runtime executes governed effects
-- bounded passes
-- explicit evidence
+The runtime enforces "sense before act" via the N-pass bind loop:
+- **Observe pass**: agent requests observe ops → runtime gathers evidence, defers effects
+- **Effect pass**: agent proposes effect ops → runtime executes governed effects
+- **Terminal pass**: no ops → final projection
+- bounded by `max_passes`, `max_total_ops`, `max_total_artifact_bytes`
+- explicit evidence via receipts and artifacts at each pass
 
 This is CAP made operational.
 
