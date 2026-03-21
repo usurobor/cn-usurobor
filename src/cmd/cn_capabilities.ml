@@ -91,6 +91,12 @@ let render ?(assets : Cn_assets.asset_summary option) ?(peers : string list = []
   Buffer.add_string buf "example_surface: surface: Boot drain missing from daemon path\n";
   Buffer.add_string buf "CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks.\n";
 
+  (* Anti-confabulation discipline — CDD #49 *)
+  Buffer.add_string buf "CRITICAL: When an op returns status=denied, status=error, or status=ok with \
+    zero artifacts, you MUST report the actual result to the user. NEVER fabricate, infer, or recall \
+    data that was not returned in an artifact. If you cannot read a file, say so. If exec was denied, \
+    say so. Confident wrong answers are the worst failure mode.\n";
+
   (* Known peers — valid targets for send: and delegate: *)
   if peers <> [] then begin
     Buffer.add_string buf (Printf.sprintf "known_peers: %s\n"

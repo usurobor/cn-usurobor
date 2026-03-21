@@ -197,17 +197,41 @@ let write_denial_receipts ~hub_path ~trigger_id ~pass denials =
 
 (* === Pass B context repacking === *)
 
+(** Classify a receipt as empty-result (op ran but produced no data)
+    vs not-executed (op was denied/skipped/errored before producing data).
+    Used by receipts_summary to provide explicit signals to the agent. *)
+let receipt_result_signal (r : Cn_shell.receipt) =
+  match r.status with
+  | Ok_status ->
+    if r.artifacts = [] then " [EMPTY_RESULT: op succeeded but returned no data]"
+    else ""
+  | Denied -> " [NOT_EXECUTED: op was denied before execution]"
+  | Skipped -> " [NOT_EXECUTED: op was skipped]"
+  | Error_status -> " [FAILED: op execution failed]"
+
 (** Build bounded receipts summary for Pass B injection.
-    Deterministic: iterates receipts in list order. *)
+    Deterministic: iterates receipts in list order.
+    Includes explicit signals distinguishing empty results from
+    non-execution, per CDD #49. *)
 let receipts_summary (receipts : Cn_shell.receipt list) =
   let buf = Buffer.create 512 in
   Buffer.add_string buf "## Pass A Receipts\n\n";
+  let has_failures = List.exists (fun (r : Cn_shell.receipt) ->
+    match r.status with
+    | Denied | Error_status -> true
+    | Ok_status | Skipped -> false
+  ) receipts in
+  if has_failures then
+    Buffer.add_string buf
+      "**WARNING: One or more ops failed or were denied. Do NOT fabricate \
+       results. Report the failure to the user.**\n\n";
   List.iter (fun (r : Cn_shell.receipt) ->
     let op_id_str = match r.op_id with Some id -> id | None -> "(none)" in
     Buffer.add_string buf (Printf.sprintf "- **%s** [%s]: %s"
       op_id_str r.kind (Cn_shell.string_of_receipt_status r.status));
     (if r.reason <> "" then
-       Buffer.add_string buf (Printf.sprintf " (%s)" r.reason));
+       Buffer.add_string buf (Printf.sprintf " (reason: %s)" r.reason));
+    Buffer.add_string buf (receipt_result_signal r);
     (if r.artifacts <> [] then
        Buffer.add_string buf (Printf.sprintf " — %d artifact(s)"
          (List.length r.artifacts)));

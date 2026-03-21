@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.9.1  | A+  | A+          | A+           | A+               | Anti-confabulation (#49): explicit op result signals, denial reason surfacing in repack, agent instructions prevent fabrication. |
 | v3.9.0  | A+  | A+          | A+           | A+               | Two-pass wiring (#41), COGNITIVE-SUBSTRATE spec, DUR skill contract, reflect + adhoc-thread + review skills cohered. |
 | v3.8.0  | A+  | A+          | A+           | A+               | Syscall surface coherence: fs_glob, git_stage, fs_read chunking, observe exclusion symmetry, CLI injection hardening. Review-driven. |
 | v3.7.3  | A   | A+          | A+           | A                | Agent output discipline: ops-in-body detection, peer awareness, coordination op examples, conditional MCA review. |
@@ -42,6 +43,27 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v3.9.1 (2026-03-21)
+
+**Anti-Confabulation: Op Result Integrity (#49)**
+
+Agent no longer confabulates when ops fail or are denied. Explicit result signals in Pass B repack, anti-fabrication instructions in capabilities block and doctrine.
+
+### Added
+
+- **Receipt result signals** — `receipts_summary` now tags each receipt with `[EMPTY_RESULT]`, `[NOT_EXECUTED]`, or `[FAILED]` to distinguish "op succeeded with empty data" from "op was not executed." Pass B context carries these signals so the agent knows what actually happened.
+- **Failure WARNING banner** — When any Pass A receipt has status denied or error, the repack includes a `WARNING` block instructing the agent not to fabricate results.
+- **Anti-confabulation CRITICAL** in capabilities block — New runtime-generated instruction: "When an op returns status=denied, status=error, or status=ok with zero artifacts, you MUST report the actual result to the user."
+- **Op Result Integrity doctrine** — New section in AGENT-OPS.md (both `packages/cnos.core/doctrine/` and `src/agent/doctrine/`) with non-negotiable anti-confabulation rules.
+- **6 new orchestrator tests** — `receipts_summary` signal tags for ok/empty/denied/error/skipped/mixed scenarios.
+
+### Changed
+
+- **`receipts_summary` format** — Denial reasons now prefixed with `reason:` for clarity. Each receipt line includes an explicit result signal tag.
+- **Capabilities block** — All configs now emit the anti-confabulation CRITICAL line after the ops-in-frontmatter CRITICAL line.
 
 ---
 

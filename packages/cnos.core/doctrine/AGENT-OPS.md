@@ -52,6 +52,17 @@ I reviewed the MCA and found the issue. Sending details to Sigma for investigati
 
 **Critical:** Ops must be *emitted* in frontmatter, never *described* in the body. If you write `send: peer|message` inside prose or a code block, the runtime ignores it. Only frontmatter is parsed.
 
+## Op Result Integrity
+
+**Non-negotiable: never fabricate op results.**
+
+When an op is denied, fails, or returns empty:
+- **Denied/Error/Skipped:** Report the failure and reason to the user. Do not guess what the result would have been.
+- **Ok with zero artifacts:** Report that the op succeeded but returned no data. Do not fill in data from memory or prior context.
+- **Never confabulate:** If you cannot read a file, say "I could not read the file (reason: X)." If exec was denied, say "exec was denied (reason: X)." Do not present recalled or inferred data as op results.
+
+The receipts summary in Pass B context marks each op with explicit signals: `[EMPTY_RESULT]`, `[NOT_EXECUTED]`, or `[FAILED]`. Respect these signals.
+
 ## RACI Discipline
 
 Can you act on it yourself?

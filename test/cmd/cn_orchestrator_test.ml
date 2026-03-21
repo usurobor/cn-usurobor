@@ -484,6 +484,97 @@ let%expect_test "empty ops list → single pass, no receipts" =
 (* === DENIAL RECEIPTS FROM PARSER PASS THROUGH                === *)
 (* ============================================================ *)
 
+(* ============================================================ *)
+(* === ANTI-CONFABULATION SIGNALS (#49)                      === *)
+(* ============================================================ *)
+
+let%expect_test "receipts_summary: ok with artifacts has no signal tag" =
+  let receipts = [
+    { Cn_shell.pass = "A"; op_id = Some "obs-01"; kind = "fs_read";
+      status = Ok_status; reason = "";
+      start_time = ""; end_time = "";
+      artifacts = [{ path = "state/artifacts/t/obs-01.txt";
+                     hash = "sha256:abc"; size = 42 }] }
+  ] in
+  let summary = Cn_orchestrator.receipts_summary receipts in
+  let has_empty = Cn_orchestrator.contains_sub summary "EMPTY_RESULT" in
+  let has_not_exec = Cn_orchestrator.contains_sub summary "NOT_EXECUTED" in
+  let has_failed = Cn_orchestrator.contains_sub summary "FAILED" in
+  let has_warning = Cn_orchestrator.contains_sub summary "WARNING" in
+  Printf.printf "empty=%b not_exec=%b failed=%b warning=%b\n"
+    has_empty has_not_exec has_failed has_warning;
+  [%expect {| empty=false not_exec=false failed=false warning=false |}]
+
+let%expect_test "receipts_summary: ok with zero artifacts → EMPTY_RESULT" =
+  let receipts = [
+    { Cn_shell.pass = "A"; op_id = Some "obs-01"; kind = "fs_read";
+      status = Ok_status; reason = "";
+      start_time = ""; end_time = ""; artifacts = [] }
+  ] in
+  let summary = Cn_orchestrator.receipts_summary receipts in
+  let has_empty = Cn_orchestrator.contains_sub summary "EMPTY_RESULT" in
+  Printf.printf "has_empty_result: %b\n" has_empty;
+  [%expect {| has_empty_result: true |}]
+
+let%expect_test "receipts_summary: denied → NOT_EXECUTED + WARNING" =
+  let receipts = [
+    { Cn_shell.pass = "A"; op_id = Some "exec-01"; kind = "exec";
+      status = Denied; reason = "not_in_allowlist";
+      start_time = ""; end_time = ""; artifacts = [] }
+  ] in
+  let summary = Cn_orchestrator.receipts_summary receipts in
+  let has_not_exec = Cn_orchestrator.contains_sub summary "NOT_EXECUTED" in
+  let has_warning = Cn_orchestrator.contains_sub summary "WARNING" in
+  let has_reason = Cn_orchestrator.contains_sub summary "reason: not_in_allowlist" in
+  Printf.printf "not_exec=%b warning=%b reason=%b\n"
+    has_not_exec has_warning has_reason;
+  [%expect {| not_exec=true warning=true reason=true |}]
+
+let%expect_test "receipts_summary: error → FAILED + WARNING" =
+  let receipts = [
+    { Cn_shell.pass = "A"; op_id = Some "obs-01"; kind = "fs_read";
+      status = Error_status; reason = "file_not_found";
+      start_time = ""; end_time = ""; artifacts = [] }
+  ] in
+  let summary = Cn_orchestrator.receipts_summary receipts in
+  let has_failed = Cn_orchestrator.contains_sub summary "FAILED" in
+  let has_warning = Cn_orchestrator.contains_sub summary "WARNING" in
+  Printf.printf "failed=%b warning=%b\n" has_failed has_warning;
+  [%expect {| failed=true warning=true |}]
+
+let%expect_test "receipts_summary: skipped → NOT_EXECUTED, no warning" =
+  let receipts = [
+    { Cn_shell.pass = "A"; op_id = Some "write-01"; kind = "fs_write";
+      status = Skipped; reason = "observe_pass_requires_followup";
+      start_time = ""; end_time = ""; artifacts = [] }
+  ] in
+  let summary = Cn_orchestrator.receipts_summary receipts in
+  let has_not_exec = Cn_orchestrator.contains_sub summary "NOT_EXECUTED" in
+  let has_warning = Cn_orchestrator.contains_sub summary "WARNING" in
+  Printf.printf "not_exec=%b warning=%b\n" has_not_exec has_warning;
+  [%expect {| not_exec=true warning=false |}]
+
+let%expect_test "receipts_summary: mixed ok+denied → WARNING present" =
+  let receipts = [
+    { Cn_shell.pass = "A"; op_id = Some "obs-01"; kind = "fs_read";
+      status = Ok_status; reason = "";
+      start_time = ""; end_time = "";
+      artifacts = [{ path = "state/artifacts/t/obs-01.txt";
+                     hash = "sha256:abc"; size = 42 }] };
+    { Cn_shell.pass = "A"; op_id = Some "exec-01"; kind = "exec";
+      status = Denied; reason = "exec_disabled";
+      start_time = ""; end_time = ""; artifacts = [] }
+  ] in
+  let summary = Cn_orchestrator.receipts_summary receipts in
+  let has_warning = Cn_orchestrator.contains_sub summary "WARNING" in
+  let has_fabricate = Cn_orchestrator.contains_sub summary "fabricate" in
+  Printf.printf "warning=%b fabricate=%b\n" has_warning has_fabricate;
+  [%expect {| warning=true fabricate=true |}]
+
+(* ============================================================ *)
+(* === DENIAL RECEIPTS FROM PARSER PASS THROUGH                === *)
+(* ============================================================ *)
+
 let%expect_test "parser denial receipts get pass-tagged and written" =
   with_test_hub (fun hub ->
     let denial = Cn_shell.make_receipt ~pass:"" ~op_id:None ~kind:"frobnicate"

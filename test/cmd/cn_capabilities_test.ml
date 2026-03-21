@@ -35,7 +35,8 @@ let%expect_test "default config: exec disabled, apply_mode branch" =
     coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
     example_send: send: sigma|Found issue in sync module
     example_surface: surface: Boot drain missing from daemon path
-    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks.
+    CRITICAL: When an op returns status=denied, status=error, or status=ok with zero artifacts, you MUST report the actual result to the user. NEVER fabricate, infer, or recall data that was not returned in an artifact. If you cannot read a file, say so. If exec was denied, say so. Confident wrong answers are the worst failure mode. |}]
 
 (* ============================================================ *)
 (* === EXEC ENABLED WITH ALLOWLIST                            === *)
@@ -61,7 +62,8 @@ let%expect_test "exec enabled: exec in effects + allowlist shown" =
     coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
     example_send: send: sigma|Found issue in sync module
     example_surface: surface: Boot drain missing from daemon path
-    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks.
+    CRITICAL: When an op returns status=denied, status=error, or status=ok with zero artifacts, you MUST report the actual result to the user. NEVER fabricate, infer, or recall data that was not returned in an artifact. If you cannot read a file, say so. If exec was denied, say so. Confident wrong answers are the worst failure mode. |}]
 
 let%expect_test "exec enabled with empty allowlist" =
   let config = { default_config with exec_enabled = true; exec_allowlist = [] } in
@@ -82,7 +84,8 @@ let%expect_test "exec enabled with empty allowlist" =
     coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
     example_send: send: sigma|Found issue in sync module
     example_surface: surface: Boot drain missing from daemon path
-    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks.
+    CRITICAL: When an op returns status=denied, status=error, or status=ok with zero artifacts, you MUST report the actual result to the user. NEVER fabricate, infer, or recall data that was not returned in an artifact. If you cannot read a file, say so. If exec was denied, say so. Confident wrong answers are the worst failure mode. |}]
 
 (* ============================================================ *)
 (* === APPLY_MODE OFF: OBSERVE-ONLY                           === *)
@@ -104,7 +107,8 @@ let%expect_test "apply_mode off: no effect kinds listed" =
     coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
     example_send: send: sigma|Found issue in sync module
     example_surface: surface: Boot drain missing from daemon path
-    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks.
+    CRITICAL: When an op returns status=denied, status=error, or status=ok with zero artifacts, you MUST report the actual result to the user. NEVER fabricate, infer, or recall data that was not returned in an artifact. If you cannot read a file, say so. If exec was denied, say so. Confident wrong answers are the worst failure mode. |}]
 
 (* ============================================================ *)
 (* === APPLY_MODE WORKING_TREE                                === *)
@@ -128,7 +132,8 @@ let%expect_test "apply_mode working_tree: effects included" =
     coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
     example_send: send: sigma|Found issue in sync module
     example_surface: surface: Boot drain missing from daemon path
-    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks.
+    CRITICAL: When an op returns status=denied, status=error, or status=ok with zero artifacts, you MUST report the actual result to the user. NEVER fabricate, infer, or recall data that was not returned in an artifact. If you cannot read a file, say so. If exec was denied, say so. Confident wrong answers are the worst failure mode. |}]
 
 (* ============================================================ *)
 (* === CUSTOM BUDGETS                                         === *)
@@ -155,7 +160,8 @@ let%expect_test "custom budgets reflected in block" =
     coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
     example_send: send: sigma|Found issue in sync module
     example_surface: surface: Boot drain missing from daemon path
-    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks.
+    CRITICAL: When an op returns status=denied, status=error, or status=ok with zero artifacts, you MUST report the actual result to the user. NEVER fabricate, infer, or recall data that was not returned in an artifact. If you cannot read a file, say so. If exec was denied, say so. Confident wrong answers are the worst failure mode. |}]
 
 (* ============================================================ *)
 (* === DETERMINISTIC ORDERING                                 === *)
@@ -225,7 +231,8 @@ let%expect_test "apply_mode off + exec enabled: no effects at all" =
     coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
     example_send: send: sigma|Found issue in sync module
     example_surface: surface: Boot drain missing from daemon path
-    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks. |}]
+    CRITICAL: ops and coordination ops MUST be in YAML frontmatter. Never describe them in body text or code blocks.
+    CRITICAL: When an op returns status=denied, status=error, or status=ok with zero artifacts, you MUST report the actual result to the user. NEVER fabricate, infer, or recall data that was not returned in an artifact. If you cannot read a file, say so. If exec was denied, say so. Confident wrong answers are the worst failure mode. |}]
 
 (* ============================================================ *)
 (* === CANONICAL OPS EXAMPLES IN BLOCK                        === *)
