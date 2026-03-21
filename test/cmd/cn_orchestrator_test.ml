@@ -57,7 +57,7 @@ let with_test_hub f =
   ) (fun () -> f hub)
 
 let auto_config = {
-  Cn_shell.two_pass = "auto";
+  Cn_shell.n_pass = "auto";
   apply_mode = "working_tree";
   exec_enabled = false;
   exec_allowlist = [];
@@ -69,7 +69,7 @@ let auto_config = {
   max_total_ops = 32;
 }
 
-let off_config = { auto_config with two_pass = "off" }
+let off_config = { auto_config with n_pass = "off" }
 let trigger_id = "orch-test-001"
 
 let show_receipt (r : Cn_shell.receipt) =
@@ -756,7 +756,81 @@ let%expect_test "n_pass: pass labels are numeric (1, 2, ...)" =
       Printf.printf "pass_labels: %s\n" (String.concat ", " passes));
   [%expect {| pass_labels: 1, 2 |}]
 
-let%expect_test "n_pass: backward compat — max_passes=2 matches 2-pass" =
+(* ============================================================ *)
+(* === 3+ PASS CHAIN (observe → observe → effect → terminal) === *)
+(* ============================================================ *)
+
+let%expect_test "n_pass: 3-pass chain (observe → observe → effect → done)" =
+  with_test_hub (fun hub ->
+    (* Pass 1: observe-only (fs_read) → continuation *)
+    let pass_1_ops = [
+      make_observe_with ~op_id:"obs-01"
+        ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read"
+    ] in
+    (* Pass 2 LLM returns another observe (e.g. read a second file) *)
+    let pass_2_observe =
+      "---\nid: orch-test-001\nops: [{\"kind\":\"fs_read\",\"op_id\":\"obs-02\",\"path\":\"docs/README.md\"}]\n---\n\nLet me also check README." in
+    (* Pass 3 LLM returns an effect (write based on both reads) *)
+    let pass_3_effect =
+      "---\nid: orch-test-001\nops: [{\"kind\":\"fs_write\",\"op_id\":\"write-01\",\"path\":\"src/out.ml\",\"content\":\"let combined = 1\"}]\n---\n\nWrote combined output." in
+    let call_count = ref 0 in
+    let llm_call _repack =
+      incr call_count;
+      match !call_count with
+      | 1 -> Ok pass_2_observe
+      | 2 -> Ok pass_3_effect
+      | _ -> Error "unexpected call"
+    in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config ~llm_call pass_1_ops with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      Printf.printf "passes_used: %d\n" result.passes_used;
+      Printf.printf "stop_reason: %s\n"
+        (Cn_orchestrator.string_of_stop_reason result.stop_reason);
+      Printf.printf "llm_calls: %d\n" !call_count;
+      Printf.printf "total_receipts: %d\n" (List.length result.all_receipts);
+      let passes = List.sort_uniq String.compare
+        (List.map (fun (r : Cn_shell.receipt) -> r.pass) result.all_receipts) in
+      Printf.printf "pass_labels: %s\n" (String.concat ", " passes));
+  [%expect {|
+    passes_used: 3
+    stop_reason: no_ops
+    llm_calls: 2
+    total_receipts: 3
+    pass_labels: 1, 2, 3 |}]
+
+let%expect_test "n_pass: 3-pass chain hits max_passes=3 with more observe" =
+  with_test_hub (fun hub ->
+    let pass_1_ops = [
+      make_observe_with ~op_id:"obs-01"
+        ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read"
+    ] in
+    let pass_2_observe =
+      "---\nid: orch-test-001\nops: [{\"kind\":\"fs_read\",\"op_id\":\"obs-02\",\"path\":\"docs/README.md\"}]\n---\n\nChecking more." in
+    let pass_3_observe =
+      "---\nid: orch-test-001\nops: [{\"kind\":\"fs_read\",\"op_id\":\"obs-03\",\"path\":\"spec/SOUL.md\"}]\n---\n\nStill looking." in
+    let call_count = ref 0 in
+    let llm_call _repack =
+      incr call_count;
+      match !call_count with
+      | 1 -> Ok pass_2_observe
+      | 2 -> Ok pass_3_observe
+      | _ -> Error "unexpected call"
+    in
+    let config_3 = { n_pass_config with max_passes = 3 } in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:config_3 ~llm_call pass_1_ops with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      Printf.printf "passes_used: %d\n" result.passes_used;
+      Printf.printf "stop_reason: %s\n"
+        (Cn_orchestrator.string_of_stop_reason result.stop_reason));
+  [%expect {|
+    passes_used: 3
+    stop_reason: max_passes_reached |}]
+
+let%expect_test "n_pass: backward compat — max_passes=2 matches N-pass" =
   with_test_hub (fun hub ->
     let ops = [
       make_observe_with ~op_id:"obs-01"

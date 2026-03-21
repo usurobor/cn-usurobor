@@ -117,7 +117,7 @@ At minimum, `ready.json` must contain:
 - `mind.packages` — loaded package list
 - `mind.doctrine.required` / `mind.doctrine.loaded` — doctrine counts
 - `mind.mindsets.required` / `mind.mindsets.loaded` — mindset counts
-- `mind.capabilities.two_pass` / `mind.capabilities.apply_mode` / `mind.capabilities.exec_enabled` — capabilities posture
+- `mind.capabilities.n_pass` / `mind.capabilities.apply_mode` / `mind.capabilities.exec_enabled` — capabilities posture
 - `body.fsm_state` — current actor FSM state
 - `body.queue_depth` — items waiting
 

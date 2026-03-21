@@ -53,7 +53,7 @@ let with_test_hub f =
   ) (fun () -> f hub)
 
 let test_config = {
-  Cn_shell.two_pass = "auto";
+  Cn_shell.n_pass = "auto";
   apply_mode = "working_tree";
   exec_enabled = false;
   exec_allowlist = [];

@@ -126,14 +126,14 @@ let load ~hub_path =
     | None -> []
   in
   let d = Cn_shell.default_shell_config in
-  (* Normalize two_pass and apply_mode: invalid → default *)
+  (* Normalize n_pass and apply_mode: invalid → default *)
   let normalize_enum valid default raw =
     if List.mem raw valid then raw else default
   in
   let shell = {
-    Cn_shell.two_pass =
-      normalize_enum ["auto"; "off"] d.two_pass
-        (get_string_cfg "two_pass" d.two_pass);
+    Cn_shell.n_pass =
+      normalize_enum ["auto"; "off"] d.n_pass
+        (get_string_cfg "n_pass" d.n_pass);
     apply_mode =
       normalize_enum ["off"; "branch"; "working_tree"] d.apply_mode
         (get_string_cfg "apply_mode" d.apply_mode);

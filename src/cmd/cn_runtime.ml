@@ -337,7 +337,7 @@ let boot_sequence ~(config : Cn_config.config) ~hub_path ~mode =
       ~details:[
         "profile", Cn_json.String
           (Option.value ~default:"engineer" summary.profile);
-        "two_pass", Cn_json.String config.shell.two_pass;
+        "n_pass", Cn_json.String config.shell.n_pass;
         "apply_mode", Cn_json.String config.shell.apply_mode;
         "exec_enabled", Cn_json.Bool config.shell.exec_enabled;
       ] ();
@@ -378,7 +378,7 @@ let boot_sequence ~(config : Cn_config.config) ~hub_path ~mode =
         skills_indexed = total_skills;
         skills_selected_last = [];
         capabilities_hash = "";
-        two_pass = config.shell.two_pass;
+        n_pass = config.shell.n_pass;
         apply_mode = config.shell.apply_mode;
         exec_enabled = config.shell.exec_enabled;
       };
@@ -1317,7 +1317,7 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
         skills_indexed = boot.total_skills;
         skills_selected_last = [];
         capabilities_hash = "";
-        two_pass = config.shell.two_pass;
+        n_pass = config.shell.n_pass;
         apply_mode = config.shell.apply_mode;
         exec_enabled = config.shell.exec_enabled;
       };

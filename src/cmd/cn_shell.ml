@@ -68,7 +68,7 @@ type receipt = {
 }
 
 type shell_config = {
-  two_pass : string;            (* "off" | "auto" *)
+  n_pass : string;              (* "off" | "auto" *)
   apply_mode : string;          (* "off" | "branch" | "working_tree" *)
   exec_enabled : bool;
   exec_allowlist : string list;
@@ -81,7 +81,7 @@ type shell_config = {
 }
 
 let default_shell_config = {
-  two_pass = "auto";
+  n_pass = "auto";
   apply_mode = "branch";
   exec_enabled = false;
   exec_allowlist = [];
@@ -280,8 +280,8 @@ let classify ops =
 
 (** Determine if the current pass has observe ops requiring a followup.
     Under auto: any observe op triggers continuation to the next pass. *)
-let needs_continuation ~two_pass_mode ops =
-  match two_pass_mode with
+let needs_continuation ~n_pass_mode ops =
+  match n_pass_mode with
   | "off" -> false
   | _ (* "auto" *) ->
     let observe, _ = classify ops in
@@ -327,7 +327,7 @@ let receipts_to_json ~trigger_id receipts =
     Handles denial receipts and delegates typed op execution to [orchestrate].
     Keeps Cn_shell pure (no I/O) by accepting callbacks:
 
-    - [orchestrate typed_ops] runs the two-pass execution (observe → LLM → effect).
+    - [orchestrate typed_ops] runs the N-pass execution (observe → LLM → effect).
       Returns [Ok result] on success, [Error msg] on failure.
     - [write_denials denials] persists parser denial receipts to disk.
 

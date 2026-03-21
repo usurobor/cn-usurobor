@@ -20,7 +20,7 @@ let%expect_test "ready projection JSON shape" =
       skills_indexed = 24;
       skills_selected_last = ["eng/review"; "agent-ops"];
       capabilities_hash = "sha256:ghi";
-      two_pass = "auto";
+      n_pass = "auto";
       apply_mode = "branch";
       exec_enabled = false;
     };
@@ -283,7 +283,7 @@ let%expect_test "update_ready_body preserves mind and sensors fields" =
       skills_indexed = 12;
       skills_selected_last = ["eng/review"];
       capabilities_hash = "sha256:ghi";
-      two_pass = "auto"; apply_mode = "branch";
+      n_pass = "auto"; apply_mode = "branch";
       exec_enabled = false;
     };
     body = Some {
@@ -384,7 +384,7 @@ let%expect_test "update_ready_scheduler preserves mind, body, and sensors" =
       skills_indexed = 12;
       skills_selected_last = [];
       capabilities_hash = "sha256:ghi";
-      two_pass = "auto"; apply_mode = "branch";
+      n_pass = "auto"; apply_mode = "branch";
       exec_enabled = false;
     };
     body = Some {

@@ -13,8 +13,8 @@
     Key invariants:
     - pass field is per-receipt (numeric label: "1", "2", ...)
     - max_passes is configurable via shell_config (default 5)
-    - two_pass=off → all ops execute in single pass, no continuation
-    - two_pass=auto → any observe op triggers continuation
+    - n_pass=off → all ops execute in single pass, no continuation
+    - n_pass=auto → any observe op triggers continuation
     - Receipts from all passes written to same file via append
     - Only final pass projected to user; intermediates archived *)
 
@@ -97,11 +97,11 @@ let pass_label_of_index i = string_of_int (i + 1)
 
 (** Run an observe-class pass.
     Observe ops execute, effect ops deferred with observe_pass_requires_followup.
-    If two_pass=off or no observe ops, all ops execute (single-pass behavior).
+    If n_pass=off or no observe ops, all ops execute (single-pass behavior).
     Returns (receipts, has_continuation). *)
 let run_observe_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
   let has_continuation = Cn_shell.needs_continuation
-      ~two_pass_mode:config.Cn_shell.two_pass typed_ops in
+      ~n_pass_mode:config.Cn_shell.n_pass typed_ops in
 
   let observe_count = List.length (List.filter (fun (op : Cn_shell.typed_op) ->
     not (Cn_shell.is_effect op.kind)) typed_ops) in
@@ -341,7 +341,7 @@ let run_n_pass ~hub_path ~trigger_id ~config
 
     (* Classify: observe-class or effect-class pass *)
     let has_continuation = Cn_shell.needs_continuation
-        ~two_pass_mode:config.two_pass current_ops in
+        ~n_pass_mode:config.n_pass current_ops in
 
     if has_continuation then begin
       (* === Observe-class pass === *)

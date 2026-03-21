@@ -78,7 +78,7 @@ let make_full_ready () : Cn_trace_state.ready_projection =
       skills_indexed = 24;
       skills_selected_last = ["eng/review"; "agent-ops"];
       capabilities_hash = "sha256:ghi789";
-      two_pass = "auto";
+      n_pass = "auto";
       apply_mode = "branch";
       exec_enabled = false;
     };

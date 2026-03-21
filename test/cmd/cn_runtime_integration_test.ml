@@ -54,7 +54,7 @@ let with_test_hub f =
   ) (fun () -> f hub)
 
 let auto_config = {
-  Cn_shell.two_pass = "auto";
+  Cn_shell.n_pass = "auto";
   apply_mode = "working_tree";
   exec_enabled = false;
   exec_allowlist = [];
@@ -258,9 +258,9 @@ let%expect_test "n-pass: coordination gating — Pass 2 effect denied → termin
     --- Final coordination ---
     done:thread-1: skip (effects_failed) |}]
 
-let%expect_test "two_pass=off: even with observe ops, no Pass 2" =
+let%expect_test "n_pass=off: even with observe ops, no Pass 2" =
   with_test_hub (fun hub ->
-    let off_config = { auto_config with two_pass = "off" } in
+    let off_config = { auto_config with n_pass = "off" } in
     let ops = [
       make_observe_with ~op_id:"obs-01"
         ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read";

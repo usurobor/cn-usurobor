@@ -20,7 +20,7 @@ type mind_projection = {
   skills_indexed : int;
   skills_selected_last : string list;
   capabilities_hash : string;
-  two_pass : string;
+  n_pass : string;
   apply_mode : string;
   exec_enabled : bool;
 }
@@ -139,7 +139,7 @@ let write_ready hub_path (r : ready_projection) =
           ];
           "capabilities", Cn_json.Object [
             "hash", Cn_json.String m.capabilities_hash;
-            "two_pass", Cn_json.String m.two_pass;
+            "n_pass", Cn_json.String m.n_pass;
             "apply_mode", Cn_json.String m.apply_mode;
             "exec_enabled", Cn_json.Bool m.exec_enabled;
           ];
