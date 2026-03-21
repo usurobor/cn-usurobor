@@ -63,7 +63,7 @@ Architecture (α docs) specifies. Runtime (OCaml modules) implements. The relati
 |--------|---------------|-----------------|
 | CAA §5 (agent cycle) | `cn_runtime.ml` | dequeue → pack → call → finalize → project |
 | PROTOCOL (FSMs) | `cn_protocol.ml` | Thread, Actor, Sender, Receiver state machines |
-| AGENT-RUNTIME (CN Shell) | `cn_shell.ml`, `cn_executor.ml` | Typed ops, two-pass orchestration |
+| AGENT-RUNTIME (CN Shell) | `cn_shell.ml`, `cn_executor.ml` | Typed ops, N-pass orchestration |
 | TRACEABILITY | `cn_trace.ml` | Event stream, reason codes, receipts |
 | SECURITY-MODEL | `cn_sandbox.ml` | Path sandbox, denylist enforcement |
 | CAR (packages) | `cn_build.ml` | Package assembly from doctrine/mindsets/skills |
@@ -136,7 +136,7 @@ cn.ml                    CLI dispatch
  |── cn_capabilities.ml  Capability discovery
  |── cn_projection.ml    Reply projection
  |── cn_output.ml        Output plane separation
- |── cn_orchestrator.ml  Two-pass orchestration
+ |── cn_orchestrator.ml  N-pass orchestration (bounded bind loop)
  |── cn_protocol.ml      FSMs (pure)
  |── cn_gtd.ml           GTD lifecycle
  |── cn_mail.ml          Inbox/outbox
@@ -213,7 +213,7 @@ archived (or delegated → outbox → [Sender] → delivered)
    f. Call LLM        Claude API
    g. output.md       Typed ops in frontmatter, body below
    h. Archive         Copy to logs/ (before effects)
-   i. Execute ops     CN Shell two-pass: observe → effect
+   i. Execute ops     CN Shell N-pass: observe → effect (bounded bind loop)
    j. Receipts        Per-trigger JSON
    k. Project         Route reply to Telegram
    l. Conversation    Append to conversation.json
