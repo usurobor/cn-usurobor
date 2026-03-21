@@ -49,9 +49,11 @@ Defined in: `packages/cnos.core/doctrine/CAP.md` §2.1.
 
 ### MICA (Make It Coherent Again)
 
-Verb. The act of cohering an existing artifact — typically a skill — to its canonical contract. "MICA the release skill" = restructure it into Define/Unfold/Rules form per §7.3.
+Verb. Restore coherence that was lost through drift. An artifact was coherent when written — then context evolved (new contracts, new specs, new standards) and the artifact didn't move with it. MICA is the act of bringing it back.
 
-MICA implies the content already exists but the structure doesn't match the spec. It's a structural migration, not a rewrite. Content is preserved; packaging is fixed.
+"MICA the release skill" = it was coherent once, DUR contract arrived, now it's structurally misaligned — restore it.
+
+The "again" does real work: MICA asserts a prior coherent state. You can't MICA something that was never coherent (that's authoring). You can't MICA something already aligned (that's a no-op). MICA only applies in the gap between "was coherent" and "context moved."
 
 Related: DUR (the contract being cohered to), CLP (the process used to verify convergence).
 
