@@ -61,6 +61,9 @@ let auto_config = {
   max_observe_ops = 10;
   max_artifact_bytes = 65536;
   max_artifact_bytes_per_op = 16384;
+  max_passes = 5;
+  max_total_artifact_bytes = 131072;
+  max_total_ops = 32;
 }
 
 let trigger_id = "rt-int-test-001"

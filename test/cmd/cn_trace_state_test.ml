@@ -135,6 +135,7 @@ let%expect_test "write_runtime creates state/runtime.json on disk" =
     boot_id = "test-boot-002";
     current_cycle_id = Some "tg-42";
     current_pass = Some "A";
+    max_passes = Some 5;
     active_trigger = Some "tg-42";
     queue_depth = 3;
     lock_held = true;
@@ -191,7 +192,7 @@ let%expect_test "projection update lifecycle: idle -> processing -> idle" =
   (* Phase 1: boot — idle state *)
   Cn_trace_state.write_runtime hub {
     boot_id; current_cycle_id = None; current_pass = None;
-    active_trigger = None; queue_depth = 0;
+    max_passes = None; active_trigger = None; queue_depth = 0;
     lock_held = false; lock_boot_id = None;
     pending_projection = None;
     updated_at = "2026-03-15T14:00:00.000Z";
@@ -208,7 +209,8 @@ let%expect_test "projection update lifecycle: idle -> processing -> idle" =
   (* Phase 2: lock acquired, cycle start *)
   Cn_trace_state.write_runtime hub {
     boot_id; current_cycle_id = Some "tg-99";
-    current_pass = Some "A"; active_trigger = Some "tg-99";
+    current_pass = Some "A"; max_passes = Some 5;
+    active_trigger = Some "tg-99";
     queue_depth = 0; lock_held = true;
     lock_boot_id = Some boot_id;
     pending_projection = None;
@@ -226,7 +228,7 @@ let%expect_test "projection update lifecycle: idle -> processing -> idle" =
   (* Phase 3: finalize complete, back to idle *)
   Cn_trace_state.write_runtime hub {
     boot_id; current_cycle_id = None; current_pass = None;
-    active_trigger = None; queue_depth = 0;
+    max_passes = None; active_trigger = None; queue_depth = 0;
     lock_held = false; lock_boot_id = None;
     pending_projection = None;
     updated_at = "2026-03-15T14:00:02.000Z";

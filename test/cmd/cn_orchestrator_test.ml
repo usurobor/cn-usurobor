@@ -64,6 +64,9 @@ let auto_config = {
   max_observe_ops = 10;
   max_artifact_bytes = 65536;
   max_artifact_bytes_per_op = 16384;
+  max_passes = 5;
+  max_total_artifact_bytes = 131072;
+  max_total_ops = 32;
 }
 
 let off_config = { auto_config with two_pass = "off" }
@@ -592,3 +595,183 @@ let%expect_test "parser denial receipts get pass-tagged and written" =
        | _ -> print_endline "wrong count")
     | Error msg -> Printf.printf "parse error: %s\n" msg);
   [%expect {| pass=A status=denied |}]
+
+(* ============================================================ *)
+(* === N-PASS BIND LOOP (run_n_pass)                          === *)
+(* ============================================================ *)
+
+let n_pass_config = { auto_config with max_passes = 5 }
+let n_pass_config_2 = { auto_config with max_passes = 2 }
+let n_pass_config_1 = { auto_config with max_passes = 1 }
+
+let show_n_pass_result result =
+  Printf.printf "passes_used: %d\n" result.Cn_orchestrator.passes_used;
+  Printf.printf "stop_reason: %s\n"
+    (Cn_orchestrator.string_of_stop_reason result.stop_reason);
+  Printf.printf "total_receipts: %d\n" (List.length result.all_receipts);
+  List.iter show_receipt result.all_receipts
+
+let%expect_test "n_pass: effect-only → single pass, no continuation" =
+  with_test_hub (fun hub ->
+    let ops = [
+      make_effect ~op_id:"write-01"
+        ~fields:[("path", Cn_json.String "src/new.ml");
+                 ("content", Cn_json.String "let x = 1")] "fs_write"
+    ] in
+    let llm_call _ = failwith "should not be called" in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config ~llm_call ops with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result -> show_n_pass_result result);
+  [%expect {|
+    passes_used: 1
+    stop_reason: no_ops
+    total_receipts: 1
+    pass=1 kind=fs_write status=ok reason=(none) |}]
+
+let%expect_test "n_pass: observe → LLM → effect (two passes)" =
+  with_test_hub (fun hub ->
+    let ops = [
+      make_observe_with ~op_id:"obs-01"
+        ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read"
+    ] in
+    (* Pass 2 LLM returns an effect op *)
+    let pass_2_output =
+      "---\nid: orch-test-001\nops: [{\"kind\":\"fs_write\",\"op_id\":\"write-01\",\"path\":\"src/out.ml\",\"content\":\"let y = 2\"}]\n---\n\nDone." in
+    let call_count = ref 0 in
+    let llm_call _repack =
+      incr call_count;
+      Ok pass_2_output
+    in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config ~llm_call ops with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      Printf.printf "passes_used: %d\n" result.passes_used;
+      Printf.printf "stop_reason: %s\n"
+        (Cn_orchestrator.string_of_stop_reason result.stop_reason);
+      Printf.printf "llm_calls: %d\n" !call_count;
+      Printf.printf "total_receipts: %d\n" (List.length result.all_receipts));
+  [%expect {|
+    passes_used: 2
+    stop_reason: no_ops
+    llm_calls: 1
+    total_receipts: 2 |}]
+
+let%expect_test "n_pass: max_passes=1 → all ops in single pass" =
+  with_test_hub (fun hub ->
+    let ops = [
+      make_observe_with ~op_id:"obs-01"
+        ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read";
+      make_effect ~op_id:"write-01"
+        ~fields:[("path", Cn_json.String "src/new.ml");
+                 ("content", Cn_json.String "let x = 1")] "fs_write";
+    ] in
+    let llm_call _ = failwith "should not be called" in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config_1 ~llm_call ops with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      Printf.printf "passes_used: %d\n" result.passes_used;
+      Printf.printf "stop_reason: %s\n"
+        (Cn_orchestrator.string_of_stop_reason result.stop_reason));
+  [%expect {|
+    passes_used: 1
+    stop_reason: max_passes_reached |}]
+
+let%expect_test "n_pass: no-ops from LLM → terminal after 2 passes" =
+  with_test_hub (fun hub ->
+    let ops = [
+      make_observe_with ~op_id:"obs-01"
+        ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read"
+    ] in
+    (* Pass 2 LLM returns no typed ops *)
+    let no_ops_output = "---\nid: orch-test-001\n---\n\nAll done, no more ops." in
+    let llm_call _repack = Ok no_ops_output in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config ~llm_call ops with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      Printf.printf "passes_used: %d\n" result.passes_used;
+      Printf.printf "stop_reason: %s\n"
+        (Cn_orchestrator.string_of_stop_reason result.stop_reason);
+      Printf.printf "has_final_output: %b\n" (result.final_output <> None));
+  [%expect {|
+    passes_used: 2
+    stop_reason: no_ops
+    has_final_output: true |}]
+
+let%expect_test "n_pass: budget exhaustion stops loop" =
+  with_test_hub (fun hub ->
+    let ops = List.init 33 (fun i ->
+      make_observe_with ~op_id:(Printf.sprintf "obs-%02d" (i + 1))
+        ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read"
+    ) in
+    let budget_config = { auto_config with max_passes = 10; max_total_ops = 32 } in
+    let llm_call _ = failwith "should not be called (budget exceeded)" in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:budget_config ~llm_call ops with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      Printf.printf "passes_used: %d\n" result.passes_used;
+      Printf.printf "stop_reason: %s\n"
+        (Cn_orchestrator.string_of_stop_reason result.stop_reason));
+  [%expect {|
+    passes_used: 1
+    stop_reason: budget_exhausted |}]
+
+let%expect_test "n_pass: LLM error propagates" =
+  with_test_hub (fun hub ->
+    let ops = [
+      make_observe_with ~op_id:"obs-01"
+        ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read"
+    ] in
+    let llm_call _ = Error "API rate limit" in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config ~llm_call ops with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok _ -> print_endline "unexpected ok");
+  [%expect {| error: Pass 1 LLM call failed: API rate limit |}]
+
+let%expect_test "n_pass: pass labels are numeric (1, 2, ...)" =
+  with_test_hub (fun hub ->
+    let ops = [
+      make_observe_with ~op_id:"obs-01"
+        ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read";
+      make_effect ~op_id:"write-01"
+        ~fields:[("path", Cn_json.String "src/new.ml");
+                 ("content", Cn_json.String "let x = 1")] "fs_write";
+    ] in
+    (* Pass 2 LLM returns effect-only *)
+    let pass_2_output =
+      "---\nid: orch-test-001\nops: [{\"kind\":\"fs_write\",\"op_id\":\"write-02\",\"path\":\"src/out.ml\",\"content\":\"let y = 2\"}]\n---\n\nDone." in
+    let llm_call _ = Ok pass_2_output in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config ~llm_call ops with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      let passes = List.sort_uniq String.compare
+        (List.map (fun (r : Cn_shell.receipt) -> r.pass) result.all_receipts) in
+      Printf.printf "pass_labels: %s\n" (String.concat ", " passes));
+  [%expect {| pass_labels: 1, 2 |}]
+
+let%expect_test "n_pass: backward compat — max_passes=2 matches two-pass" =
+  with_test_hub (fun hub ->
+    let ops = [
+      make_observe_with ~op_id:"obs-01"
+        ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read"
+    ] in
+    let pass_2_output = "---\nid: orch-test-001\n---\n\nFinal response." in
+    let llm_call _ = Ok pass_2_output in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config_2 ~llm_call ops with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      Printf.printf "passes_used: %d\n" result.passes_used;
+      Printf.printf "stop_reason: %s\n"
+        (Cn_orchestrator.string_of_stop_reason result.stop_reason);
+      Printf.printf "has_final_output: %b\n" (result.final_output <> None));
+  [%expect {|
+    passes_used: 2
+    stop_reason: no_ops
+    has_final_output: true |}]

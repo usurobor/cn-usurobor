@@ -417,6 +417,7 @@ let boot_sequence ~(config : Cn_config.config) ~hub_path ~mode =
       boot_id = session.boot_id;
       current_cycle_id = None;
       current_pass = None;
+      max_passes = Some config.shell.max_passes;
       active_trigger = None;
       queue_depth = Cn_agent.queue_depth hub_path;
       lock_held = false;
@@ -437,6 +438,7 @@ let update_runtime_projection hub_path ~cycle_id ~pass ~trigger ~lock_held
         boot_id = session.boot_id;
         current_cycle_id = cycle_id;
         current_pass = pass;
+        max_passes = None;
         active_trigger = trigger;
         queue_depth = Cn_agent.queue_depth hub_path;
         lock_held;
@@ -462,12 +464,13 @@ let update_ready_body hub_path ~fsm_state ~lock_held ~current_cycle =
 
 (** Run the post-LLM pipeline on an existing input.md + output.md pair.
     inbound_message is the original user message (not the full packed context).
-    [packed] provides the structured context for Pass B LLM re-call when
-    two-pass execution is needed. If not provided, Pass B falls back to
-    repacking from scratch. *)
+    [packed] provides the structured context for subsequent LLM re-calls
+    in the N-pass bind loop. If not provided, falls back to repacking
+    from scratch.
+    [chat_id_opt] is used to build a processing indicator for Telegram. *)
 let finalize ~(config : Cn_config.config) ~hub_path ~name
       ~trigger_id ~from ~inbound_message ~output_content
-      ?packed () =
+      ?packed ?chat_id_opt () =
   Cn_trace.gemit ~component:"runtime" ~layer:Body
     ~event:"finalize.start" ~severity:Info ~status:Ok_
     ~trigger_id
@@ -502,59 +505,80 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
                  "typed_op_count", Cn_json.Int (List.length parsed.typed_ops);
                  "denial_count", Cn_json.Int (List.length parsed.ops_receipts)] ();
 
-    let two_pass_result =
+    (* Build processing indicator for Telegram-origin messages *)
+    let indicator_sink = match from, chat_id_opt with
+      | "telegram", Some chat_id ->
+        (match config.telegram_token with
+         | Some token when config.telegram.typing_indicator ->
+           Cn_indicator.Telegram { token; chat_id }
+         | _ -> Cn_indicator.No_sink)
+      | _ -> Cn_indicator.No_sink
+    in
+    let indicator = Cn_indicator.start ~sink:indicator_sink ~trigger_id in
+
+    let n_pass_result =
       let orchestrate typed_ops =
-        (* Build the LLM call function for Pass B *)
+        (* Build the LLM call function for subsequent passes.
+           Accumulates conversation turns: each pass adds an
+           assistant+user turn pair for the repack content. *)
+        let conv_turns = ref [
+          { Cn_llm.role = "assistant"; content = output_content };
+        ] in
         let llm_call repack_content =
-          let pass_b_system, pass_b_base_messages = match packed with
+          let system, base_messages = match packed with
             | Some p -> (p.Cn_context.system, p.Cn_context.messages)
             | None ->
               let p = Cn_context.pack ~hub_path ~trigger_id
                   ~message:inbound_message ~from ~shell_config:config.shell () in
               (p.system, p.messages)
           in
-          let pass_b_messages = pass_b_base_messages @ [
-            { Cn_llm.role = "assistant"; content = output_content };
+          conv_turns := !conv_turns @ [
             { Cn_llm.role = "user"; content = repack_content };
-          ] in
+          ];
+          let messages = base_messages @ !conv_turns in
+          let pass_label = string_of_int (List.length !conv_turns / 2 + 1) in
           update_runtime_projection hub_path
-            ~cycle_id:(Some trigger_id) ~pass:(Some "B")
+            ~cycle_id:(Some trigger_id) ~pass:(Some pass_label)
             ~trigger:(Some trigger_id) ~lock_held:true
             ~pending_projection:None;
 
           Cn_trace.gemit ~component:"runtime" ~layer:Mind
             ~event:"llm.call.start" ~severity:Info ~status:Ok_
-            ~trigger_id ~pass:"B"
+            ~trigger_id ~pass:pass_label
             ~details:["model", Cn_json.String config.model] ();
 
           match Cn_llm.call ~api_key:config.anthropic_key
                   ~model:config.model ~max_tokens:config.max_tokens
-                  ~system:pass_b_system ~messages:pass_b_messages with
+                  ~system ~messages with
           | Error msg ->
             Cn_trace.gemit ~component:"runtime" ~layer:Mind
               ~event:"llm.call.error" ~severity:Error_ ~status:Error_status
-              ~trigger_id ~pass:"B" ~reason_code:"llm_error" ();
+              ~trigger_id ~pass:pass_label ~reason_code:"llm_error" ();
             Error msg
           | Ok response ->
             let outp = Cn_agent.output_path hub_path in
             Cn_ffi.Fs.write outp response.content;
             Cn_trace.gemit ~component:"runtime" ~layer:Mind
               ~event:"llm.call.ok" ~severity:Info ~status:Ok_
-              ~trigger_id ~pass:"B"
+              ~trigger_id ~pass:pass_label
               ~details:[
                 "input_tokens", Cn_json.Int response.input_tokens;
                 "output_tokens", Cn_json.Int response.output_tokens;
                 "stop_reason", Cn_json.String response.stop_reason;
               ] ();
             archive_raw hub_path ~trigger_id;
+            (* Accumulate the assistant response for next pass *)
+            conv_turns := !conv_turns @ [
+              { Cn_llm.role = "assistant"; content = response.content };
+            ];
             Ok response.content
         in
-        Cn_orchestrator.run_two_pass ~hub_path ~trigger_id
-          ~config:config.shell ~llm_call typed_ops
+        Cn_orchestrator.run_n_pass ~hub_path ~trigger_id
+          ~config:config.shell ~llm_call ?indicator typed_ops
       in
       let write_denials denials =
         Cn_orchestrator.write_denial_receipts ~hub_path ~trigger_id
-          ~pass:"A" denials
+          ~pass:"1" denials
       in
       match Cn_shell.execute
               ~orchestrate ~write_denials
@@ -567,38 +591,48 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
           ~trigger_id
           ~details:[
             "typed_op_count", Cn_json.Int (List.length parsed.typed_ops);
-            "used_two_pass", Cn_json.Bool result.used_two_pass;
-            "pass_b_receipt_count", Cn_json.Int (List.length result.pass_b_receipts);
+            "passes_used", Cn_json.Int result.passes_used;
+            "stop_reason", Cn_json.String
+              (Cn_orchestrator.string_of_stop_reason result.stop_reason);
+            "total_receipts", Cn_json.Int (List.length result.all_receipts);
           ] ();
         Some result
       | Error msg ->
         Cn_trace.gemit ~component:"runtime" ~layer:Body
           ~event:"effects.typed_ops.error" ~severity:Error_ ~status:Error_status
-          ~trigger_id ~reason_code:"pass_b_failed"
+          ~trigger_id ~reason_code:"n_pass_failed"
           ~reason:msg ();
-        (* CDP #47: Record Pass B failure — prevents projecting Pass A
+        (* CDP #47: Record N-pass failure — prevents projecting intermediate
            output to the user as if effects succeeded. *)
         pass_b_failed := Some msg;
         None
     in
 
+    (* Stop processing indicator *)
+    (match indicator with
+     | Some h ->
+       if !pass_b_failed <> None then Cn_indicator.fail h
+       else Cn_indicator.stop h
+     | None -> ());
+
     (* 3c. Execute coordination ops.
-       When two-pass was used, execute Pass-A-safe ops from Pass A output,
-       then execute gated ops from Pass B. When single-pass, execute all. *)
-    (match two_pass_result with
-     | Some { used_two_pass = true; pass_b_coordination_ops; pass_b_output; _ } ->
-       (* Update final_parsed to Pass B output for projection/conversation *)
-       (match pass_b_output with
+       When multi-pass was used, execute pass-safe ops from Pass 1 output,
+       then execute gated ops from the final pass. When single-pass, execute all. *)
+    (match n_pass_result with
+     | Some { passes_used; final_coordination_ops; final_output; _ }
+       when passes_used > 1 ->
+       (* Update final_parsed to final pass output for projection/conversation *)
+       (match final_output with
         | Some p -> final_parsed := p
         | None -> ());
-       (* Pass A: only pass-A-safe coordination ops *)
+       (* Pass 1: only pass-safe coordination ops *)
        List.iter (fun op ->
          match Cn_orchestrator.classify_coordination_pass_a op with
          | Cn_orchestrator.Execute ->
            Cn_agent.execute_op hub_path name trigger_id op
          | Cn_orchestrator.Skip _ -> ()
        ) ops;
-       (* Pass B: gated coordination ops *)
+       (* Final pass: gated coordination ops *)
        List.iter (fun (op, decision) ->
          match decision with
          | Cn_orchestrator.Execute ->
@@ -606,12 +640,12 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
          | Cn_orchestrator.Skip reason ->
            Cn_trace.gemit ~component:"runtime" ~layer:Governance
              ~event:"coordination.gated" ~severity:Info ~status:Skipped
-             ~trigger_id ~pass:"B" ~reason_code:reason
+             ~trigger_id ~reason_code:reason
              ~details:["op", Cn_json.String (Cn_lib.string_of_agent_op op)] ()
-       ) pass_b_coordination_ops
+       ) final_coordination_ops
      | _ ->
        (* Single pass or no typed ops: execute all coordination ops normally.
-          CDP #47: Skip when Pass B failed — effects were deferred and never
+          CDP #47: Skip when N-pass failed — effects were deferred and never
           completed, so coordination ops referencing those effects are invalid. *)
        if !pass_b_failed = None then
          List.iter (fun op ->
@@ -809,12 +843,15 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
           ~cycle_id:(Some trigger_id) ~pass:None
           ~trigger:(Some trigger_id) ~lock_held:true
           ~pending_projection:None;
+        let chat_id_opt = meta |> List.find_map (fun (k, v) ->
+          if k = "chat_id" then int_of_string_opt v else None) in
         Cn_trace.gemit ~component:"runtime" ~layer:Body
           ~event:"cycle.recover" ~severity:Info ~status:Ok_
           ~trigger_id ~reason_code:"recovery_output_present"
           ~reason:"output.md exists, resuming finalize" ();
         finalize ~config ~hub_path ~name
-          ~trigger_id ~from ~inbound_message ~output_content ()
+          ~trigger_id ~from ~inbound_message ~output_content
+          ?chat_id_opt ()
 
       (* === State 2: input.md exists, no output → resume LLM call === *)
       end else if Cn_ffi.Fs.exists inp then begin
@@ -824,6 +861,8 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
           if key = k then Some v else None) |> Option.value ~default:"unknown" in
         let trigger_id = get "id" in
         let from = get "from" in
+        let chat_id_opt = meta |> List.find_map (fun (k, v) ->
+          if k = "chat_id" then int_of_string_opt v else None) in
         let packed_body = match extract_body input_content with
           | Some b -> b | None -> "" in
         let inbound_message = extract_inbound_message packed_body in
@@ -878,7 +917,7 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
               ] ();
             finalize ~config ~hub_path ~name
               ~trigger_id ~from ~inbound_message
-              ~output_content:response.content ~packed ()
+              ~output_content:response.content ~packed ?chat_id_opt ()
 
       (* === State 3: neither exists → queue inbox + dequeue + pipeline === *)
       end else begin
@@ -930,11 +969,20 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
 
             (* Update projections: cycle in progress *)
             update_runtime_projection hub_path
-              ~cycle_id:(Some trigger_id) ~pass:(Some "A")
+              ~cycle_id:(Some trigger_id) ~pass:(Some "1")
               ~trigger:(Some trigger_id) ~lock_held:true
               ~pending_projection:None;
             update_ready_body hub_path ~fsm_state:"processing"
               ~lock_held:true ~current_cycle:(Some trigger_id);
+
+            (* Send initial typing indicator for Telegram-origin messages *)
+            (match from, chat_id_opt with
+             | "telegram", Some chat_id ->
+               (match config.telegram_token with
+                | Some token when config.telegram.typing_indicator ->
+                  (try Cn_telegram.send_typing ~token ~chat_id with _ -> ())
+                | _ -> ())
+             | _ -> ());
 
             (* Pack context into structured system blocks + message turns *)
             Cn_trace.gemit ~component:"runtime" ~layer:Mind
@@ -987,7 +1035,8 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
                   ] ();
                 finalize ~config ~hub_path ~name
                   ~trigger_id ~from ~inbound_message
-                  ~output_content:response.content ~packed ()
+                  ~output_content:response.content ~packed
+                  ~chat_id_opt ()
       end
     with
     | result -> finally (); result

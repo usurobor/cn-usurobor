@@ -212,7 +212,7 @@ let%expect_test "I3: runtime.json schema value is cn.runtime.v1" =
   Cn_trace_state.write_runtime hub {
     boot_id = "test-boot";
     current_cycle_id = None; current_pass = None;
-    active_trigger = None; queue_depth = 0;
+    max_passes = None; active_trigger = None; queue_depth = 0;
     lock_held = false; lock_boot_id = None;
     pending_projection = None;
     updated_at = "2026-03-15T14:00:00.000Z";

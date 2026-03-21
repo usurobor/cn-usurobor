@@ -10,6 +10,19 @@
 
 ## Patch Notes
 
+**v3.8.0** — N-Pass Bind Loop and Processing Indicators:
+- Replace hardcoded two-pass orchestration with bounded N-pass bind loop (`run_n_pass`)
+- `max_passes` configurable in `runtime.shell` (default 5), replaces hardcoded `max_passes=2`
+- Add `max_total_ops` budget (default 32) and `max_total_artifact_bytes` (default 131072) — loop stops when cumulative limits exceeded
+- Each pass emits `pass.N.start` / `pass.N.complete` telemetry with `pass_index` and `reason_code`
+- Add processing indicator abstraction (`cn_indicator.ml`) for human-facing sinks
+- Telegram typing indicator: sent on dequeue, refreshed before each subsequent LLM call, absent on non-Telegram
+- Only final pass output projected to user; intermediate outputs archived, receipted, and repacked
+- Receipt pass field uses numeric labels (`"1"`, `"2"`, ...) under N-pass; `cn.receipts.v1` schema unchanged
+- `state/runtime.json` now includes `max_passes` for operator visibility
+- Backward compatible: `max_passes=2` reproduces existing two-pass behavior
+- See: [`N-PASS-BIND-v3.8.0.md`](N-PASS-BIND-v3.8.0.md) and [`PLAN-v3.8.0-n-pass-bind.md`](../gamma/plans/PLAN-v3.8.0-n-pass-bind.md) for full design and plan
+
 **v3.8.0** — Syscall Surface Coherence Amendment:
 - Implement `fs_glob` observe op (was advertised but returned `not_yet_implemented`)
 - Add `git_stage` effect op for explicit staging; split from `git_commit`

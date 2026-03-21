@@ -20,6 +20,16 @@ let default_scheduler_config = {
   daemon_drain_limit = 8;
 }
 
+type telegram_config = {
+  typing_indicator : bool;
+  typing_refresh_sec : int;
+}
+
+let default_telegram_config = {
+  typing_indicator = true;
+  typing_refresh_sec = 4;
+}
+
 type config = {
   telegram_token : string option;
   anthropic_key : string;
@@ -31,6 +41,7 @@ type config = {
   hub_path : string;
   shell : Cn_shell.shell_config;
   scheduler : scheduler_config;
+  telegram : telegram_config;
 }
 
 let default_model = "claude-sonnet-4-latest"
@@ -131,6 +142,9 @@ let load ~hub_path =
     max_observe_ops = get_int "max_observe_ops" d.max_observe_ops 1;
     max_artifact_bytes = get_int "max_artifact_bytes" d.max_artifact_bytes 1024;
     max_artifact_bytes_per_op = get_int "max_artifact_bytes_per_op" d.max_artifact_bytes_per_op 1024;
+    max_passes = get_int "max_passes" d.max_passes 1;
+    max_total_artifact_bytes = get_int "max_total_artifact_bytes" d.max_total_artifact_bytes 1024;
+    max_total_ops = get_int "max_total_ops" d.max_total_ops 1;
   } in
   (* Scheduler config from runtime.scheduler sub-object *)
   let scheduler_obj = match runtime with
@@ -150,6 +164,30 @@ let load ~hub_path =
     oneshot_drain_limit = sched_int "oneshot_drain_limit" default_scheduler_config.oneshot_drain_limit;
     daemon_drain_limit = sched_int "daemon_drain_limit" default_scheduler_config.daemon_drain_limit;
   } in
+  (* Telegram config from runtime.telegram sub-object *)
+  let telegram_obj = match runtime with
+    | Some r -> Cn_json.get "telegram" r
+    | None -> None
+  in
+  let tg_bool key default =
+    match telegram_obj with
+    | Some t ->
+      (match Cn_json.get key t with
+       | Some (Cn_json.Bool b) -> b
+       | _ -> default)
+    | None -> default
+  in
+  let tg_int key default min_val =
+    let raw = match telegram_obj with
+      | Some t -> (match Cn_json.get_int key t with Some i -> i | None -> default)
+      | None -> default
+    in
+    max raw min_val
+  in
+  let telegram = {
+    typing_indicator = tg_bool "typing_indicator" default_telegram_config.typing_indicator;
+    typing_refresh_sec = tg_int "typing_refresh_sec" default_telegram_config.typing_refresh_sec 1;
+  } in
   match anthropic_key with
   | None -> Error "ANTHROPIC_KEY not set (required for agent runtime)"
   | Some key ->
@@ -164,4 +202,5 @@ let load ~hub_path =
         hub_path;
         shell;
         scheduler;
+        telegram;
       }

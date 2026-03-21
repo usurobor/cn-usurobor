@@ -62,6 +62,7 @@ type runtime_projection = {
   boot_id : string;
   current_cycle_id : string option;
   current_pass : string option;
+  max_passes : int option;
   active_trigger : string option;
   queue_depth : int;
   lock_held : bool;
@@ -263,6 +264,7 @@ let write_runtime hub_path (r : runtime_projection) =
     "boot_id", Cn_json.String r.boot_id;
     "current_cycle_id", opt_str r.current_cycle_id;
     "current_pass", opt_str r.current_pass;
+    "max_passes", (match r.max_passes with Some i -> Cn_json.Int i | None -> Cn_json.Null);
     "active_trigger", opt_str r.active_trigger;
     "queue_depth", Cn_json.Int r.queue_depth;
     "lock_held", Cn_json.Bool r.lock_held;

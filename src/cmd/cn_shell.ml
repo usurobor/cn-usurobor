@@ -75,6 +75,9 @@ type shell_config = {
   max_observe_ops : int;
   max_artifact_bytes : int;
   max_artifact_bytes_per_op : int;
+  max_passes : int;             (* N-pass bind loop bound, default 5 *)
+  max_total_artifact_bytes : int; (* cumulative artifact budget across passes *)
+  max_total_ops : int;          (* cumulative typed op budget across passes *)
 }
 
 let default_shell_config = {
@@ -85,6 +88,9 @@ let default_shell_config = {
   max_observe_ops = 10;
   max_artifact_bytes = 65536;
   max_artifact_bytes_per_op = 16384;
+  max_passes = 5;
+  max_total_artifact_bytes = 131072;
+  max_total_ops = 32;
 }
 
 (* === Kind parsing === *)
@@ -272,14 +278,21 @@ let classify ops =
   let effect = List.filter (fun (op : typed_op) -> is_effect op.kind) ops in
   (observe, effect)
 
-(** Determine if two-pass mode is needed.
-    Under auto: any observe op triggers two-pass. *)
-let needs_two_pass ~two_pass_mode ops =
+(** Determine if the current pass has observe ops requiring a followup.
+    Under auto: any observe op triggers continuation to the next pass.
+    Generalization of the original two-pass trigger logic. *)
+let needs_continuation ~two_pass_mode ops =
   match two_pass_mode with
   | "off" -> false
   | _ (* "auto" *) ->
     let observe, _ = classify ops in
     List.length observe > 0
+
+(** Determine if two-pass mode is needed.
+    Under auto: any observe op triggers two-pass.
+    Thin alias for needs_continuation — kept for backward compatibility. *)
+let needs_two_pass ~two_pass_mode ops =
+  needs_continuation ~two_pass_mode ops
 
 (* === Receipt serialization === *)
 
