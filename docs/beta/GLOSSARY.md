@@ -217,7 +217,7 @@ The canonical skill contract. The three-section structure every skill MUST follo
 
 DUR is to skills what TSC is to coherence scoring — the structural invariant that makes the class recognizable and reviewable.
 
-"Cohere X to DUR contract" = restructure skill X into Define/Unfold/Rules form.
+"MIC X to DUR" = cohere skill X to Define/Unfold/Rules for the first time. "MICA X" = restore DUR coherence lost through drift.
 
 Defined in: `docs/alpha/COGNITIVE-SUBSTRATE.md` §7.3.
 
