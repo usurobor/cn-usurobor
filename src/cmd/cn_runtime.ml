@@ -491,7 +491,9 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
       ~event:"effects.execute.skip" ~severity:Info ~status:Skipped
       ~trigger_id ~reason_code:"ops_already_done" ()
   end else begin
-    (* 3a. Write parser denial receipts (unknown_op_kind, missing_kind, etc.) *)
+    (* 3a+3b. Execute typed ops via Cn_shell.execute — the canonical entry point.
+       Cn_shell.execute handles denial receipts and delegates to the orchestrator.
+       This replaces the previous manual wiring that bypassed Cn_shell. *)
     Cn_trace.gemit ~component:"runtime" ~layer:Body
       ~event:"effects.execute.start" ~severity:Info ~status:Ok_
       ~trigger_id
@@ -499,26 +501,13 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
                  "typed_op_count", Cn_json.Int (List.length parsed.typed_ops);
                  "denial_count", Cn_json.Int (List.length parsed.ops_receipts)] ();
 
-    if parsed.ops_receipts <> [] then
-      Cn_orchestrator.write_denial_receipts ~hub_path ~trigger_id
-        ~pass:"A" parsed.ops_receipts;
-
-    (* 3b. Two-pass orchestration for typed ops.
-       When observe ops are present and two_pass=auto, this:
-       1. Executes Pass A (observe ops run, effects deferred)
-       2. Repacks context with artifacts/receipts
-       3. Calls LLM again (Pass B)
-       4. Executes Pass B ops (effects run, observe denied)
-       5. Gates coordination ops on effect success *)
     let two_pass_result =
-      if parsed.typed_ops <> [] then begin
+      let orchestrate typed_ops =
         (* Build the LLM call function for Pass B *)
         let llm_call repack_content =
-          (* Build Pass B messages: original messages + assistant (Pass A) + user (repack) *)
           let pass_b_system, pass_b_base_messages = match packed with
             | Some p -> (p.Cn_context.system, p.Cn_context.messages)
             | None ->
-              (* Recovery path: repack from scratch *)
               let p = Cn_context.pack ~hub_path ~trigger_id
                   ~message:inbound_message ~from ~shell_config:config.shell () in
               (p.system, p.messages)
@@ -527,7 +516,6 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
             { Cn_llm.role = "assistant"; content = output_content };
             { Cn_llm.role = "user"; content = repack_content };
           ] in
-          (* Update projection: Pass B in progress *)
           update_runtime_projection hub_path
             ~cycle_id:(Some trigger_id) ~pass:(Some "B")
             ~trigger:(Some trigger_id) ~lock_held:true
@@ -547,7 +535,6 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
               ~trigger_id ~pass:"B" ~reason_code:"llm_error" ();
             Error msg
           | Ok response ->
-            (* Archive Pass B output *)
             let outp = Cn_agent.output_path hub_path in
             Cn_ffi.Fs.write outp response.content;
             Cn_trace.gemit ~component:"runtime" ~layer:Mind
@@ -561,25 +548,33 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
             archive_raw hub_path ~trigger_id;
             Ok response.content
         in
-        match Cn_orchestrator.run_two_pass ~hub_path ~trigger_id
-                ~config:config.shell ~llm_call parsed.typed_ops with
-        | Error msg ->
-          Cn_trace.gemit ~component:"runtime" ~layer:Body
-            ~event:"effects.typed_ops.error" ~severity:Error_ ~status:Error_status
-            ~trigger_id ~reason_code:"pass_b_failed"
-            ~reason:msg ();
-          None
-        | Ok result ->
-          Cn_trace.gemit ~component:"runtime" ~layer:Body
-            ~event:"effects.typed_ops.complete" ~severity:Info ~status:Ok_
-            ~trigger_id
-            ~details:[
-              "typed_op_count", Cn_json.Int (List.length parsed.typed_ops);
-              "used_two_pass", Cn_json.Bool result.used_two_pass;
-              "pass_b_receipt_count", Cn_json.Int (List.length result.pass_b_receipts);
-            ] ();
-          Some result
-      end else
+        Cn_orchestrator.run_two_pass ~hub_path ~trigger_id
+          ~config:config.shell ~llm_call typed_ops
+      in
+      let write_denials denials =
+        Cn_orchestrator.write_denial_receipts ~hub_path ~trigger_id
+          ~pass:"A" denials
+      in
+      match Cn_shell.execute
+              ~orchestrate ~write_denials
+              ~typed_ops:parsed.typed_ops
+              ~denial_receipts:parsed.ops_receipts with
+      | Ok None -> None
+      | Ok (Some result) ->
+        Cn_trace.gemit ~component:"runtime" ~layer:Body
+          ~event:"effects.typed_ops.complete" ~severity:Info ~status:Ok_
+          ~trigger_id
+          ~details:[
+            "typed_op_count", Cn_json.Int (List.length parsed.typed_ops);
+            "used_two_pass", Cn_json.Bool result.used_two_pass;
+            "pass_b_receipt_count", Cn_json.Int (List.length result.pass_b_receipts);
+          ] ();
+        Some result
+      | Error msg ->
+        Cn_trace.gemit ~component:"runtime" ~layer:Body
+          ~event:"effects.typed_ops.error" ~severity:Error_ ~status:Error_status
+          ~trigger_id ~reason_code:"pass_b_failed"
+          ~reason:msg ();
         None
     in
 

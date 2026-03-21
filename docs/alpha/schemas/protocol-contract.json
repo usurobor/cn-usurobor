@@ -1,6 +1,6 @@
 {
   "schema": "cn.protocol-contract.v1",
-  "version": "3.7.0",
+  "version": "3.8.0",
   "description": "Machine-readable protocol contract for cnos invariant checking. Code constants must match this file.",
 
   "coordination_ops": {
@@ -11,7 +11,7 @@
   "typed_ops": {
     "description": "CN Shell typed op kinds (cn_shell.ml op_kind_of_string)",
     "observe": ["fs_read", "fs_list", "fs_glob", "git_status", "git_diff", "git_log", "git_grep"],
-    "effect": ["fs_write", "fs_patch", "git_branch", "git_commit", "exec"]
+    "effect": ["fs_write", "fs_patch", "git_branch", "git_stage", "git_commit", "exec"]
   },
 
   "receipt_statuses": {
