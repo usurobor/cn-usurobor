@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.9.1  | A+  | A+          | A+           | A+               | Fix Cn_shell.execute never called (#46), sync DUR skills to packages, add git_stage to protocol contract. |
 | v3.9.0  | A+  | A+          | A+           | A+               | Two-pass wiring (#41), COGNITIVE-SUBSTRATE spec, DUR skill contract, reflect + adhoc-thread + review skills cohered. |
 | v3.8.0  | A+  | A+          | A+           | A+               | Syscall surface coherence: fs_glob, git_stage, fs_read chunking, observe exclusion symmetry, CLI injection hardening. Review-driven. |
 | v3.7.3  | A   | A+          | A+           | A                | Agent output discipline: ops-in-body detection, peer awareness, coordination op examples, conditional MCA review. |
