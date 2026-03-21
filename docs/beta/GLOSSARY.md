@@ -47,6 +47,14 @@ MCA is preferred over MCI when coherent action is possible.
 
 Defined in: `packages/cnos.core/doctrine/CAP.md` §2.1.
 
+### MICA (Make It Coherent Again)
+
+Verb. The act of cohering an existing artifact — typically a skill — to its canonical contract. "MICA the release skill" = restructure it into Define/Unfold/Rules form per §7.3.
+
+MICA implies the content already exists but the structure doesn't match the spec. It's a structural migration, not a rewrite. Content is preserved; packaging is fixed.
+
+Related: DUR (the contract being cohered to), CLP (the process used to verify convergence).
+
 ### MCI (Most Coherent Insight)
 
 The second mechanism for closing the gap between model and reality. MCI changes the model to match reality. Examples: update documentation, revise an assumption, change the design.
