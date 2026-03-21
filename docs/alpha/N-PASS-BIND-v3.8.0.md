@@ -355,8 +355,11 @@ Extend the `runtime` config block for the bind loop:
 ```json
 {
   "runtime": {
-    "max_passes": 5,
-    "max_total_ops": 32,
+    "shell": {
+      "max_passes": 5,
+      "max_total_artifact_bytes": 131072,
+      "max_total_ops": 32
+    },
     "telegram": {
       "typing_indicator": true,
       "typing_refresh_sec": 4
@@ -368,6 +371,7 @@ Extend the `runtime` config block for the bind loop:
 ### 10.1 Defaults
 
 - `max_passes` = 5
+- `max_total_artifact_bytes` = 131072
 - `max_total_ops` = 32
 - `typing_indicator` = true
 - `typing_refresh_sec` = 4
@@ -377,7 +381,9 @@ Extend the `runtime` config block for the bind loop:
 - 5 is high enough for observe → effect → verify → adapt patterns
 - still bounded enough to avoid runaway loops
 - `max_passes` replaces the hardcoded `2` in `cn_orchestrator.ml`
-- existing `max_artifact_bytes` and `max_artifact_bytes_per_op` budgets remain unchanged
+- `max_total_artifact_bytes` caps cumulative artifact size across all passes
+- existing per-op `max_artifact_bytes` and `max_artifact_bytes_per_op` budgets remain unchanged
+- new fields live under `runtime.shell`, consistent with `two_pass`, `apply_mode`, `max_observe_ops`
 
 ---
 
@@ -394,7 +400,7 @@ Telegram-specific acceptance remains satisfied through the generalized mechanism
 
 ### 11.3 Receipt pass field
 
-Currently receipts use `pass = "A"` or `pass = "B"`. Under N-pass, receipts will use `pass = "1"`, `pass = "2"`, ... `pass = "N"`. The `cn.receipts.v1` schema already accepts any string for the pass field.
+Currently receipts use `pass = "A"` or `pass = "B"`. Under N-pass, the pass label generalizes to an N-indexed scheme. The `cn.receipts.v1` schema already accepts any string for the pass field, so no schema migration is required.
 
 ---
 
@@ -441,16 +447,14 @@ This amendment does not:
 |--------|--------|
 | `cn_orchestrator.ml` | Replace `run_two_pass` with `run_n_pass`; generalize pass A/B into pass N; add stop condition logic |
 | `cn_runtime.ml` | Wire `run_n_pass`; add indicator lifecycle around LLM calls; pass `max_passes` from config |
-| `cn_shell.ml` | Add `max_passes` and `max_total_ops` to `shell_config`; generalize `needs_two_pass` |
-| `cn_config.ml` | Parse `max_passes`, `max_total_ops`, `telegram.typing_indicator`, `telegram.typing_refresh_sec` |
+| `cn_shell.ml` | Add `max_passes`, `max_total_artifact_bytes`, `max_total_ops` to `shell_config`; generalize `needs_two_pass` |
+| `cn_config.ml` | Parse `max_passes`, `max_total_artifact_bytes`, `max_total_ops`, `telegram.typing_indicator`, `telegram.typing_refresh_sec` |
 | `cn_telegram.ml` | Already has `send_typing`, `request_once` — no changes needed |
 | `cn_trace.ml` | No changes needed — `pass` field already accepts any string |
 
-### 14.2 New modules
+### 14.2 New code
 
-| Module | Purpose |
-|--------|---------|
-| `cn_indicator.ml` | Processing indicator abstraction: `start`, `refresh`, `stop` with sink dispatch |
+No new top-level module is strictly required. The processing indicator abstraction can live inside `cn_orchestrator.ml` or `cn_runtime.ml`, or optionally in a tiny `cn_indicator.ml` helper if the surface area warrants it.
 
 ### 14.3 Test impact
 

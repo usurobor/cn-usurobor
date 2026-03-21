@@ -1,354 +1,228 @@
-# Implementation Plan: N-Pass Bind Loop (Issue #50)
+# PLAN-v3.8.0
+## Generalized Bind Loop and Processing Indicators
 
 **Status:** Draft
 **Date:** 2026-03-21
-**Design:** [`N-PASS-BIND-v3.8.0.md`](../../alpha/N-PASS-BIND-v3.8.0.md)
-**Issues:** #50 (N-pass bind loop), #48 (Telegram typing indicators)
-**Branch:** `claude/n-pass-bind-loop-VWKUT`
+**Implements:** [`N-PASS-BIND-v3.8.0.md`](../../alpha/N-PASS-BIND-v3.8.0.md)
+**Scope:** Replace the hardcoded two-pass orchestration with a bounded N-pass bind loop and add sink-aware processing indicators (Telegram typing first).
+**Issues:** #50, #48
 
 ---
 
-## Overview
+## 0. Coherence Contract
 
-Replace `Cn_orchestrator.run_two_pass` with a generalized `run_n_pass` bind loop.
-Add a processing indicator abstraction with Telegram typing as the first sink.
+### Gap
 
-### Guiding constraint
+The runtime currently hardcodes a two-pass orchestration:
+- observe
+- then effect
 
-The existing two-pass behavior at `max_passes=2` MUST remain bit-identical in
-receipts, events, coordination gating, and projection. The generalization adds
-capability without breaking the established contract.
+This is coherent for a single observe → effect cycle, but it becomes incoherent when a task naturally requires:
+- observe → effect → verify
+- observe → effect → observe again
+- multiple observe/effect rounds before a final response
 
----
+It also gives poor operator/user feedback on long-running cycles.
 
-## Step 1: Extend `cn_shell.ml` — config fields
+### Mode
 
-**File:** `src/cmd/cn_shell.ml`
+**MCA** — change the runtime/orchestrator.
 
-Add to `shell_config`:
+### α / β / γ target
 
-```ocaml
-type shell_config = {
-  (* ... existing fields ... *)
-  max_passes : int;           (* default 5 *)
-  max_total_ops : int;        (* default 32 *)
-}
-```
+- **α PATTERN:** replace the special-case two-pass logic with one bounded general bind loop
+- **β RELATION:** keep the new loop aligned with CAP, output-plane separation, traceability, and current FSM semantics
+- **γ EXIT:** preserve `N=2` compatibility while enabling deeper bounded cycles
 
-Update `default_shell_config`:
-```ocaml
-let default_shell_config = {
-  (* ... existing ... *)
-  max_passes = 5;
-  max_total_ops = 32;
-}
-```
+### Smallest coherent intervention
 
-Generalize `needs_two_pass` → `needs_continuation`:
+Do **not** change:
+- the FSM
+- the direct I/O boundary
+- typed op authority
+- output-plane separation
+- receipts/artifacts model
 
-```ocaml
-(** Determine if the current pass has observe ops requiring a followup.
-    Under auto: any observe op triggers continuation. *)
-let needs_continuation ~two_pass_mode ops =
-  match two_pass_mode with
-  | "off" -> false
-  | _ (* "auto" *) ->
-    let observe, _ = classify ops in
-    List.length observe > 0
-```
-
-Keep `needs_two_pass` as a thin alias for backward compatibility in tests.
-
-**Tests:** Update `cn_shell_test.ml` — verify new defaults parse correctly.
+Change only:
+- pass orchestration
+- processing-indicator behavior
+- trace events / projections needed to explain it
 
 ---
 
-## Step 2: Extend `cn_config.ml` — parse new fields
+## 1. Deliverables
 
-**File:** `src/cmd/cn_config.ml`
+### New / expanded runtime behavior
 
-Parse from the `runtime` config block:
+1. bounded `run_n_pass`
+2. pass-level events (`pass.N.start`, `pass.N.complete`, `pass.N.stopped`)
+3. final-pass-only user projection
+4. sink-aware processing indicators
+5. config for `max_passes` and typing refresh
 
-```ocaml
-max_passes = get_int "max_passes" d.max_passes 1;
-max_total_ops = get_int "max_total_ops" d.max_total_ops 1;
-```
+### New / modified files
 
-Parse Telegram indicator config from `runtime.telegram` sub-object:
-- `typing_indicator` (bool, default true)
-- `typing_refresh_sec` (int, default 4, min 2)
+- `src/cmd/cn_orchestrator.ml`
+- `src/cmd/cn_runtime.ml`
+- `src/cmd/cn_telegram.ml`
+- `src/cmd/cn_trace_state.ml`
+- `src/cmd/cn_config.ml`
+- `docs/alpha/AGENT-RUNTIME.md` (already amended)
+- tests under `test/cmd/`
 
-Add to `config` type:
-
-```ocaml
-type telegram_config = {
-  typing_indicator : bool;
-  typing_refresh_sec : int;
-}
-```
-
-**Tests:** Verify config loading with and without new fields.
+No new top-level module is strictly required; this can be done inside `cn_orchestrator` + runtime integration.
 
 ---
 
-## Step 3: Create `cn_indicator.ml` — processing indicator abstraction
+## 2. Architectural decisions carried into implementation
 
-**New file:** `src/cmd/cn_indicator.ml`
+### 2.1 The bind loop is below the FSM
+
+Do not add FSM states for Pass A / Pass B / Pass N.
+The FSM remains about outer runtime lifecycle.
+The bind loop is an inner orchestration mechanism within one processing cycle.
+
+### 2.2 One LLM call per pass
+
+Keep the existing discipline:
+- pack once per pass
+- one LLM call
+- parse once
+- execute once
+- repack
+- next pass
+
+This is **not** an in-call tool loop.
+
+### 2.3 Only the final pass may be projected to the user
+
+Intermediate passes are:
+- archived
+- receipted
+- traced
+- repacked
+
+They are not projected to human surfaces.
+
+### 2.4 Telegram typing is a processing indicator, not protocol semantics
+
+Typing/reactions are best-effort UX signals.
+They never change correctness or authority.
+
+---
+
+## 3. Step order
+
+### Step 1 — Generalize the pass runner in `cn_orchestrator.ml`
+
+**Goal:** Replace hardcoded two-pass logic with a generic bounded loop.
+
+#### Add / refactor
+
+Introduce a pass result type:
 
 ```ocaml
-(** cn_indicator.ml — Processing indicator abstraction
-    Best-effort UX signals for human-facing sinks.
-    Never blocks processing pipeline. Never changes correctness. *)
-
-type sink =
-  | Telegram of { token : string; chat_id : int }
-  | No_sink
-
-type handle = {
-  sink : sink;
-  trigger_id : string;
-}
-
-(** Start a processing indicator for the given sink.
-    Returns None for No_sink. Emits indicator.start event. *)
-val start : sink:sink -> trigger_id:string -> handle option
-
-(** Refresh the indicator (e.g., re-send typing action).
-    Emits indicator.refresh event. *)
-val refresh : handle -> unit
-
-(** Stop the indicator. Emits indicator.stop event. *)
-val stop : handle -> unit
+type pass_stop_reason =
+  | No_ops
+  | Max_passes_reached
+  | Budget_exhausted
+  | Processing_failed
+  | Projection_failed
 ```
 
-Implementation:
-- `start` — calls `Cn_telegram.send_typing` for Telegram sink, emits trace event
-- `refresh` — calls `Cn_telegram.send_typing` again, emits trace event
-- `stop` — no-op for Telegram (typing expires naturally), emits trace event
-- All calls are wrapped in `try ... with _ -> ()` — never fatal
-
-Add to `dune` build.
-
-**Tests:** `cn_indicator_test.ml` — verify Telegram dispatch is called, No_sink is no-op.
-
----
-
-## Step 4: Rewrite `cn_orchestrator.ml` — `run_n_pass`
-
-**File:** `src/cmd/cn_orchestrator.ml`
-
-### 4.1 New types
+Introduce a driver:
 
 ```ocaml
-type pass_result = {
-  pass_index : int;
-  receipts : Cn_shell.receipt list;
-  has_continuation : bool;
-}
-
-type n_pass_result = {
-  all_receipts : Cn_shell.receipt list;     (* all passes combined *)
-  final_coordination_ops : (Cn_lib.agent_op * coord_decision) list;
-  final_output : Cn_output.parsed_output option;
-  passes_used : int;
-  stop_reason : string;                     (* no_ops | max_passes_reached | budget_exhausted | ... *)
-}
+val run_n_pass :
+  config:Cn_shell.shell_config ->
+  hub_path:string ->
+  trigger_id:string ->
+  llm_call:(string -> (string, string) result) ->
+  indicator:indicator_handle option ->
+  Cn_shell.typed_op list ->
+  (n_pass_result, string) result
 ```
 
-### 4.2 Core loop: `run_n_pass`
+#### Responsibilities
 
-```ocaml
-let run_n_pass ~hub_path ~trigger_id ~config ~llm_call ~indicator typed_ops =
-  let max_passes = config.Cn_shell.max_passes in
-  let max_total_ops = config.max_total_ops in
-  let total_ops = ref 0 in
-  let all_receipts = ref [] in
+Per pass:
+1. emit `pass.N.start`
+2. pack
+3. call LLM
+4. parse
+5. classify typed ops
+6. execute observe/effect according to current rules
+7. collect receipts
+8. emit `pass.N.complete`
+9. decide: continue or stop
 
-  let rec loop ~pass_index ~current_ops ~last_output =
-    let pass_label = string_of_int (pass_index + 1) in
+#### Stop conditions
 
-    (* Emit pass.N.start *)
-    emit_pass_start ~trigger_id ~pass_label;
+- no ops
+- max passes reached
+- budget exhausted
+- fatal runtime failure
 
-    (* Refresh indicator before LLM call (skip first pass — already started) *)
-    if pass_index > 0 then
-      Option.iter Cn_indicator.refresh indicator;
+#### Acceptance
 
-    (* Classify: observe-class or effect-class pass *)
-    let has_observe = needs_continuation ~two_pass_mode:config.two_pass current_ops in
-
-    if has_observe then begin
-      (* Observe-class: execute observe, defer effects *)
-      let receipts = run_pass_observe ~hub_path ~trigger_id ~config
-        ~pass_label current_ops in
-      all_receipts := !all_receipts @ receipts;
-      total_ops := !total_ops + List.length current_ops;
-
-      if pass_index + 1 >= max_passes then begin
-        emit_pass_complete ~trigger_id ~pass_label ~reason:"max_passes_reached";
-        stop ~pass_index ~reason:"max_passes_reached" ~last_output
-      end else if !total_ops >= max_total_ops then begin
-        emit_pass_complete ~trigger_id ~pass_label ~reason:"budget_exhausted";
-        stop ~pass_index ~reason:"budget_exhausted" ~last_output
-      end else begin
-        emit_pass_complete ~trigger_id ~pass_label ~reason:"observe_detected";
-        (* Repack and call LLM *)
-        let repack = repack_for_next_pass ~hub_path ~trigger_id ~config
-          ~receipts in
-        match llm_call repack with
-        | Error msg -> Error (Printf.sprintf "Pass %s LLM call failed: %s" pass_label msg)
-        | Ok raw_output ->
-          let parsed = Cn_output.parse_output raw_output in
-          if parsed.typed_ops = [] then
-            (* No more ops — terminal *)
-            Ok (make_result ~all_receipts:!all_receipts ~passes:(pass_index + 2)
-                  ~final_output:(Some parsed) ~reason:"no_ops")
-          else
-            loop ~pass_index:(pass_index + 1)
-                 ~current_ops:parsed.typed_ops ~last_output:(Some parsed)
-      end
-    end else begin
-      (* Effect-class: execute all, then done *)
-      let receipts = run_pass_effects ~hub_path ~trigger_id ~config
-        ~pass_label current_ops in
-      all_receipts := !all_receipts @ receipts;
-      total_ops := !total_ops + List.length current_ops;
-
-      emit_pass_complete ~trigger_id ~pass_label ~reason:"effect_only";
-
-      (* At boundary: if we've used all passes, deny any further observe *)
-      Ok (make_result ~all_receipts:!all_receipts ~passes:(pass_index + 1)
-            ~final_output:last_output ~reason:"no_ops")
-    end
-  in
-
-  loop ~pass_index:0 ~current_ops:typed_ops ~last_output:None
-```
-
-### 4.3 Preserve existing helpers
-
-Keep `classify_coordination_pass_a`, `gate_coordination`, `is_terminal_op`,
-`effects_all_ok`, `repack_for_pass_b`, `receipts_summary`, `artifact_excerpts`,
-`receipt_result_signal` — they are all pass-agnostic already.
-
-Rename `repack_for_pass_b` → `repack_for_next_pass` (keep old name as alias).
-
-### 4.4 Pass-label mapping
-
-Pass labels shift from "A"/"B" to "1"/"2"/..."N":
-- `pass_label = string_of_int (pass_index + 1)`
-- Receipt `pass` field uses this label
-
-### 4.5 Backward compatibility at N=2
-
-When `max_passes = 2`:
-- Pass 1 = observe ops execute, effects deferred (was Pass A)
-- Pass 2 = effects execute, observe denied (was Pass B)
-- Coordination gating identical
-- Same stop conditions
-
-**Tests:** All existing `cn_orchestrator_test.ml` tests must pass with `max_passes=2`.
+- `max_passes = 2` reproduces current two-pass semantics
+- no user projection from intermediate passes
 
 ---
 
-## Step 5: Wire `run_n_pass` in `cn_runtime.ml`
+### Step 2 — Add pass-indexed trace events
 
-**File:** `src/cmd/cn_runtime.ml`
+**Goal:** Traceability must explain each pass as its own bounded unit.
 
-### 5.1 In `finalize`
+#### Required events
 
-Replace the `orchestrate` closure that calls `Cn_orchestrator.run_two_pass` with
-one that calls `Cn_orchestrator.run_n_pass`:
+- `pass.N.start`
+- `pass.N.complete`
+- `pass.N.stopped`
 
-```ocaml
-let orchestrate typed_ops =
-  let indicator = build_indicator ~config ~from ~chat_id_opt in
-  Cn_orchestrator.run_n_pass ~hub_path ~trigger_id
-    ~config:config.shell ~llm_call ~indicator typed_ops
-in
-```
+#### Required fields
 
-### 5.2 Indicator lifecycle in `process_one`
+- `pass_index`
+- `trigger_id`
+- `reason_code`
+- `typed_op_count`
+- `receipt_count`
+- refs to relevant output/receipt artifacts if available
 
-For fresh dequeue (State 3):
-1. After `queue.dequeue` event, build indicator sink from `from` and `chat_id_opt`
-2. Call `Cn_indicator.start` immediately
-3. Pass handle into `finalize` for refresh calls
-4. `stop` is implicit (Telegram typing expires, or called on finalize completion)
+#### Suggested reason codes
 
-### 5.3 Coordination ops
+- `observe_detected`
+- `effect_only`
+- `no_ops`
+- `max_passes_reached`
+- `budget_exhausted`
+- `processing_failed`
+- `projection_failed`
 
-Generalize the two-pass coordination dispatch:
-- Pass 1 through N-1: only pass-A-safe ops (ack, surface, idempotent reply)
-- Final pass: all coordination ops, gated on effect success
-- Use `n_pass_result.final_coordination_ops` from the orchestrator
+#### Acceptance
 
-### 5.4 Final projection
-
-Use `n_pass_result.final_output` for:
-- Telegram projection
-- Conversation history append
-- (replaces the current `final_parsed` ref pattern)
-
-**Tests:** `cn_runtime_integration_test.ml` — update mocked orchestrate calls.
+Operator can reconstruct:
+- how many passes ran
+- why each pass continued or stopped
 
 ---
 
-## Step 6: Update `cn_orchestrator_test.ml`
+### Step 3 — Add N-pass config plumbing
 
-**File:** `test/cmd/cn_orchestrator_test.ml`
+**Goal:** Expose bounded loop settings in config.
 
-### 6.1 Existing tests → backward compat
+#### In `cn_config.ml`
 
-Update existing tests to use `max_passes = 2` config explicitly.
-All existing expect outputs MUST remain identical (pass labels may change A→1, B→2).
-
-### 6.2 New tests
-
-| Test | Verifies |
-|------|----------|
-| `N=3 observe→observe→effect` | Three-pass chain completes |
-| `N=5 all observe → max_passes stops` | Loop terminates at boundary |
-| `N=3 budget exhaustion` | `max_total_ops` stops loop |
-| `N=1 single pass` | Degraded mode: all ops in one pass |
-| `no_ops on pass 2 → terminal` | Early termination on empty ops |
-| `pass labels are 1,2,3...` | Receipt pass field uses numeric labels |
-| `indicator refresh called per pass` | Processing indicator lifecycle |
-
----
-
-## Step 7: Update `AGENT-RUNTIME.md` patch notes
-
-**File:** `docs/alpha/AGENT-RUNTIME.md`
-
-Add patch note for v3.8.0:
-
-```markdown
-**v3.8.0** — N-Pass Bind Loop and Processing Indicators:
-- Replace hardcoded two-pass orchestration with bounded N-pass bind loop
-- `max_passes` configurable (default 5), replaces hardcoded `max_passes=2`
-- Add `max_total_ops` budget (default 32) — loop stops when cumulative ops exceed
-- Each pass emits `pass.N.start` / `pass.N.complete` telemetry with pass_index
-- Add processing indicator abstraction (`cn_indicator.ml`) for human-facing sinks
-- Telegram typing indicator: sent on dequeue, refreshed before each subsequent LLM call
-- Only final pass output projected to user; intermediate outputs archived and receipted
-- Receipt pass field changes from "A"/"B" to "1"/"2"/..."N" (schema unchanged)
-- See: [`N-PASS-BIND-v3.8.0.md`](N-PASS-BIND-v3.8.0.md) for full design
-```
-
----
-
-## Step 8: Update `.cn/config.json` defaults
-
-**File:** `.cn/config.json`
-
-Add new fields to the runtime block:
+Extend shell/runtime config with:
 
 ```json
 {
   "runtime": {
-    "max_passes": 5,
-    "max_total_ops": 32,
+    "shell": {
+      "max_passes": 5,
+      "max_total_artifact_bytes": 131072,
+      "max_total_ops": 32
+    },
     "telegram": {
       "typing_indicator": true,
       "typing_refresh_sec": 4
@@ -357,51 +231,267 @@ Add new fields to the runtime block:
 }
 ```
 
+#### Defaults
+
+- `max_passes` = 5
+- `max_total_artifact_bytes` = 131072
+- `max_total_ops` = 32
+- `typing_indicator` = true
+- `typing_refresh_sec` = 4
+
+#### Validation
+
+Clamp:
+- `max_passes` >= 1
+- `typing_refresh_sec` >= 1
+- budgets >= 1
+
+#### Acceptance
+
+Config loads cleanly and backward-compatible defaults preserve old behavior.
+
 ---
 
-## Implementation Order
+### Step 4 — Implement processing indicator abstraction
 
-The steps above are ordered by dependency:
+**Goal:** Abstract "processing is ongoing" into a sink-aware mechanism.
 
+#### In `cn_runtime.ml` or a tiny helper module
+
+Introduce conceptual helpers:
+
+```ocaml
+type indicator_handle = ...
+type indicator_sink =
+  | Telegram of { chat_id : int; token : string }
+  | No_indicator
+
+val start_indicator : indicator_sink -> indicator_handle option
+val refresh_indicator : indicator_handle -> unit
+val stop_indicator : indicator_handle -> unit
+val fail_indicator : indicator_handle -> unit
 ```
-Step 1 (cn_shell.ml)
-  ↓
-Step 2 (cn_config.ml)
-  ↓
-Step 3 (cn_indicator.ml)     ← independent, can parallel with Step 4
-  ↓
-Step 4 (cn_orchestrator.ml)  ← core change
-  ↓
-Step 5 (cn_runtime.ml)       ← wiring
-  ↓
-Step 6 (tests)
-  ↓
-Step 7 (docs)
-  ↓
-Step 8 (config)
-```
 
-Steps 3 and 4 are independent and can be developed in parallel.
+#### Initial implementation
+
+Only Telegram has a real implementation.
+Other sinks return `None`.
+
+#### Acceptance
+
+No change to correctness if indicators fail.
 
 ---
 
-## Risk Assessment
+### Step 5 — Telegram typing integration in `cn_telegram.ml`
 
-| Risk | Mitigation |
-|------|------------|
-| Runaway loops | Bounded by `max_passes` and `max_total_ops`; hard default 5 |
-| Regression in two-pass behavior | Explicit N=2 backward-compat test suite |
-| Indicator blocking pipeline | `request_once` with 3s timeout; wrapped in try/catch |
-| Receipt schema break | `cn.receipts.v1` already accepts any string for `pass` |
-| Config migration | New fields have defaults; missing = backward-compatible |
+**Goal:** Implement the sink-specific behavior required by issue #48.
+
+#### Behavior
+
+- when a Telegram-origin trigger is accepted/dequeued:
+  - send typing
+- before each LLM call after the first:
+  - refresh typing
+- optionally refresh after long execution gaps if needed
+- stop naturally by final projection or by not refreshing on terminal failure
+
+#### Important
+
+Use the current best-effort / bounded synchronous helper (`request_once`) and keep:
+- non-fatal behavior
+- bounded timeouts
+- no retries that meaningfully stall the cycle
+
+#### Acceptance
+
+Typing appears for long multi-pass Telegram cycles and does not appear for non-Telegram sinks.
 
 ---
 
-## Acceptance Criteria (from design doc)
+### Step 6 — Integrate `run_n_pass` into `cn_runtime.process_one`
 
-1. `run_n_pass` replaces the hardcoded two-pass path
-2. Loop terminates on: no ops, max passes, budget exhaustion, fatal failure
-3. Each pass emits `pass.N.start` / `pass.N.complete` with receipts and telemetry
-4. Telegram typing: sent on dequeue, refreshed between passes, absent on non-Telegram
-5. Only final pass output projected; intermediate outputs archived
-6. Existing two-pass behavior preserved when `max_passes=2`
+**Goal:** Runtime uses the new orchestrator instead of hardcoded two-pass flow.
+
+#### Changes
+
+- replace current two-pass call path with `run_n_pass`
+- preserve:
+  - archiving
+  - receipts
+  - final projection semantics
+  - conversation append semantics
+  - recovery and cleanup rules
+
+#### Important
+
+Only the final pass output should be sent through:
+- `HumanSurface`
+- `ConversationStore`
+
+Intermediate pass outputs remain internal evidence.
+
+#### Acceptance
+
+Current two-pass cases still work.
+A 3-pass case now works without additional user-visible turns.
+
+---
+
+### Step 7 — Projection and conversation rules
+
+**Goal:** Ensure output-plane separation remains intact under N-pass orchestration.
+
+#### Rule
+
+For pass 1..N-1:
+- no user projection
+- no conversation append
+
+For pass N (terminal pass):
+- render for sink
+- project to Telegram if applicable
+- append final assistant text to conversation store
+
+#### Acceptance
+
+Intermediate control/prose never leaks to human surfaces.
+
+---
+
+### Step 8 — Projection indicator events
+
+**Goal:** Make processing indicators visible in the trace.
+
+#### Events
+
+- `indicator.start`
+- `indicator.refresh`
+- `indicator.stop`
+- `indicator.fail`
+
+#### Fields
+
+- `sink`
+- `trigger_id`
+- `pass_index` (when relevant)
+- `reason_code` if failed/skipped
+
+#### Acceptance
+
+Operator can explain:
+- why a user saw typing
+- whether typing was refreshed between passes
+- whether indicator attempts failed harmlessly
+
+---
+
+### Step 9 — Ready/runtime projection updates
+
+**Goal:** Surface N-pass state to operators.
+
+#### `state/runtime.json`
+
+Add or update:
+- `current_pass`
+- `max_passes`
+- `pass_reason`
+- `pending_projection`
+- `indicator_active` (optional)
+
+#### `state/ready.json`
+
+For daemon mode, if desired:
+- include typing-indicator enabled/disabled in sensor posture
+
+#### Acceptance
+
+Operator can see whether the system is mid-cycle and which pass it is on.
+
+---
+
+### Step 10 — Tests
+
+#### 10.1 Pure / orchestration tests
+
+- `max_passes = 2` behaves like old two-pass
+- no-op first pass terminates immediately
+- observe pass defers effects
+- pass beyond max denies observe with `max_passes_exceeded`
+- budget exhaustion stops loop
+
+#### 10.2 Runtime integration tests
+
+- final pass only is projected
+- final pass only is appended to conversation
+- intermediate passes still archive outputs and receipts
+- `pass.N.*` events appear in order
+
+#### 10.3 Telegram indicator tests
+
+- Telegram-origin cycle starts typing
+- second pass refreshes typing
+- non-Telegram cycle does not try typing
+- indicator failure does not fail the cycle
+
+#### 10.4 Output-plane regression tests
+
+- N-pass does not reintroduce control-plane leaks to human sinks
+
+---
+
+## 4. Compile-safe sequence
+
+1. Add config fields
+2. Generalize orchestrator loop
+3. Add pass events
+4. Add indicator abstraction
+5. Implement Telegram typing refresh
+6. Integrate into runtime
+7. Update projections
+8. Add tests
+
+Each step should compile independently.
+
+---
+
+## 5. Estimated change surface
+
+### Modified modules
+
+| Module | Impact |
+|--------|--------|
+| `cn_orchestrator.ml` | substantial |
+| `cn_runtime.ml` | moderate |
+| `cn_telegram.ml` | small to moderate |
+| `cn_trace_state.ml` | small |
+| `cn_config.ml` | small |
+| `cn_shell.ml` | small |
+
+### New code
+
+Mostly orchestration and helper types, roughly +300 to +600 LOC depending on how much of the current two-pass logic is replaced vs generalized in place.
+
+---
+
+## 6. Explicit non-goals
+
+- no FSM rewrite
+- no new typed op kinds
+- no sink/plugin framework
+- no changes to capability authority
+- no reintroduction of interactive tool loops
+- no requirement for reactions as correctness condition
+
+---
+
+## 7. Success criteria
+
+The implementation is done when:
+
+1. A Telegram-origin session may perform more than two bounded passes within one runtime cycle.
+2. Intermediate passes are not projected to the user.
+3. The user sees typing during long multi-pass processing.
+4. `max_passes = 2` reproduces existing behavior.
+5. Operators can reconstruct each pass and why the loop stopped from traces alone.
+6. Output-plane safety still holds.
