@@ -253,6 +253,8 @@ Document: `docs/alpha/CAA.md`.
 
 ### CDD (Coherence-Driven Development)
 
+Also a verb. "CDD 47" = take issue #47 through the full pipeline: gap → design → plan → tests → code → docs → review → release → observe. Each step produces a measured coherence delta.
+
 The development method in which every meaningful change is treated as an intervention on incoherence. CDD applies CAP to the development process itself. CDD is γ at the development scale — the expression of evolution applied to cnos.
 
 Each substantial release is a **measured coherence delta**. Features are the operator-facing articulation of that movement.
