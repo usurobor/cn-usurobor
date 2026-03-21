@@ -486,6 +486,7 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
   let final_parsed = ref parsed in
 
   (* 3. Execute operations (skipped on recovery if already done) *)
+  let pass_b_failed = ref None in
   if ops_already_done hub_path trigger_id then begin
     Cn_trace.gemit ~component:"runtime" ~layer:Body
       ~event:"effects.execute.skip" ~severity:Info ~status:Skipped
@@ -568,6 +569,9 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
             ~event:"effects.typed_ops.error" ~severity:Error_ ~status:Error_status
             ~trigger_id ~reason_code:"pass_b_failed"
             ~reason:msg ();
+          (* CDP #47: Record Pass B failure — prevents projecting Pass A
+             output to the user as if effects succeeded. *)
+          pass_b_failed := Some msg;
           None
         | Ok result ->
           Cn_trace.gemit ~component:"runtime" ~layer:Body
@@ -611,16 +615,36 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
              ~details:["op", Cn_json.String (Cn_lib.string_of_agent_op op)] ()
        ) pass_b_coordination_ops
      | _ ->
-       (* Single pass or no typed ops: execute all coordination ops normally *)
-       List.iter (fun op ->
-         Cn_agent.execute_op hub_path name trigger_id op
-       ) ops);
+       (* Single pass or no typed ops: execute all coordination ops normally.
+          CDP #47: Skip when Pass B failed — effects were deferred and never
+          completed, so coordination ops referencing those effects are invalid. *)
+       if !pass_b_failed = None then
+         List.iter (fun op ->
+           Cn_agent.execute_op hub_path name trigger_id op
+         ) ops);
 
-    mark_ops_done hub_path trigger_id;
-    Cn_trace.gemit ~component:"runtime" ~layer:Body
-      ~event:"effects.execute.complete" ~severity:Info ~status:Ok_
-      ~trigger_id ()
+    (* CDP #47: Do not mark ops done when Pass B failed — on retry the
+       runtime must re-execute from scratch, not skip via ops_already_done. *)
+    if !pass_b_failed = None then begin
+      mark_ops_done hub_path trigger_id;
+      Cn_trace.gemit ~component:"runtime" ~layer:Body
+        ~event:"effects.execute.complete" ~severity:Info ~status:Ok_
+        ~trigger_id ()
+    end
   end;
+
+  (* CDP #47: If Pass B failed, do NOT project Pass A output to the user.
+     The user would see a reply implying success while deferred effects
+     never executed. Return Error to block offset advancement so the
+     daemon retries on the next cycle. *)
+  (match !pass_b_failed with
+   | Some msg ->
+     Cn_trace.gemit ~component:"runtime" ~layer:Body
+       ~event:"finalize.pass_b_failed" ~severity:Error_ ~status:Error_status
+       ~trigger_id ~reason_code:"pass_b_failed"
+       ~reason:"Blocking projection — Pass A output would misrepresent state" ();
+     Error (Printf.sprintf "Two-pass Pass B failed: %s" msg)
+   | None ->
 
   (* 4. Project to Telegram if from Telegram.
         Uses Cn_projection.project_reply for crash-recovery idempotency:
@@ -743,6 +767,7 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
   print_endline (Cn_fmt.ok
     (Printf.sprintf "Processed: %s (%d ops)" trigger_id (List.length ops)));
   Ok ()
+  ) (* end CDP #47 pass_b_failed gate *)
 
 (* === Pipeline === *)
 
