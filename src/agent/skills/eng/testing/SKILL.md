@@ -113,10 +113,34 @@ For all valid input X:
   property(transform(X)) = true
 ```
 
-## 6. Anti-Patterns
+## 6. Mock Patterns
+
+### 6.1 Factory Mocks Over Shared Mocks
+
+```
+❌ let mock_llm_pass_2 _ = Ok "..."   (* shared across tests, couples them *)
+✅ let make_mock () =                  (* fresh state per test *)
+     let n = ref 0 in
+     fun _ -> incr n; match !n with
+       | 1 -> Ok "pass 2 output"
+       | _ -> Ok "terminal"
+```
+
+- Shared mocks couple tests to a specific call count and return sequence
+- Factory mocks create fresh state per test — each test owns its mock lifecycle
+- Reference: `cn_orchestrator_test.ml` `make_mock_effect_then_terminal`
+
+### 6.2 Dead Code Tests Are Theater
+
+- ❌ Testing a function "retained for testability" that production never calls
+- ✅ Test the actual production code path
+- If the function isn't in the call graph, its tests prove nothing about runtime behavior
+
+## 7. Anti-Patterns
 
 - ❌ Tests that test mocks, not implementation
 - ❌ Tests coupled to internal structure
 - ❌ Tests that pass when the feature is broken
 - ❌ Flaky tests left in suite (fix or delete)
 - ❌ "Test later" — test now or accept the risk explicitly
+- ❌ Shared stateful mocks across tests (couples test execution order)

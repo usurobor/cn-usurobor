@@ -156,6 +156,25 @@ Constrain what external interactions can occur.
   - ✅ `to_string` guarantees single-line; `curl_quote` escapes `\` and `"`
   - Reference: `cn_json.ml` to_string, `cn_ffi.ml` Http.curl_quote
 
+### 5. Error Recovery
+
+5.1. **Make recovery a regular iteration, not a side-channel**
+  - ❌ Separate pre-loop correction path with its own budget, stop conditions, and receipt logic
+  - ✅ Correction runs as pass 0 inside the main loop, consuming normal budget, using the same stop conditions
+  - Rule: one set of stop conditions, one budget, one receipt trail. Side-channel recovery diverges silently.
+  - Reference: `cn_orchestrator.ml` misplaced ops correction (Issue #51)
+
+5.2. **Document intentionally non-obvious behavior inline**
+  - ❌ Code does something surprising; reviewer "fixes" it into the obvious-but-wrong behavior
+  - ✅ DESIGN NOTE in comment explains *why* the non-obvious choice is correct
+  - Rule: when behavior is intentional but looks like a bug, document the reasoning at the decision point, not in a separate doc
+  - Reference: `cn_orchestrator.ml` pass-0 effect-only termination note
+
+5.3. **Delete dead code; don't retain it "for testability"**
+  - ❌ `run_effect_pass` retained as "testable helper" but never called from production loop — tests prove nothing about runtime
+  - ✅ Test the actual code path. If the function isn't called, its tests are theater.
+  - Rule: if the main loop doesn't call it, delete it. Test coverage of dead code is false confidence.
+
 ## Reference
 
 Case study: `references/auto-update-case.md`

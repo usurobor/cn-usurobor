@@ -117,6 +117,15 @@ git tag v2.5.0
 git push && git push --tags
 ```
 
+## Commit Discipline
+
+**Isolate renames from behavior changes.**
+
+- ❌ Rename `two_pass → n_pass` in the same commit that changes the loop logic
+- ✅ Dedicated rename commit (`c11478e`), then behavior change in a separate commit
+
+Why: renames touch many files but change no behavior. Mixed with logic changes, they're unauditable. Separate commits let reviewers verify "pure rename, no behavior change" in one pass, then review the real diff cleanly.
+
 ## Pre-Ship Checklist
 
 - [ ] Tests pass
@@ -124,6 +133,7 @@ git push && git push --tags
 - [ ] PR approved (if required)
 - [ ] No unresolved comments
 - [ ] **Features verified working** — don't assume, test it yourself
+- [ ] Renames isolated from behavior changes
 
 ## Deprecation Checklist
 
