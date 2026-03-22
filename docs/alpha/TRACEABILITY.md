@@ -228,8 +228,8 @@ Every event MUST be a single JSON object.
   "status": "ok",
   "prev_state": "idle",
   "next_state": "pass_a",
-  "reason_code": "observe_detected",
-  "reason": "ops manifest contains observe-class kinds and two_pass=auto",
+  "reason_code": "deferred_effects",
+  "reason": "ops manifest contains observe-class kinds; effects deferred under n_pass=auto",
   "refs": {
     "input": "logs/input/tg-123.md",
     "output": "logs/output/tg-123.md",
@@ -372,7 +372,7 @@ Each processing cycle MUST emit:
 5. `llm.call.start`
 6. `llm.call.ok` or `llm.call.error`
 
-If two-pass:
+If N-pass (continuation detected):
 
 7. `pass.selected` (pass_a)
 8. `pass_a.complete`
@@ -420,7 +420,7 @@ Current operational readiness.
     "skills": { "indexed": 24, "selected_last": ["eng/review", "agent-ops"] },
     "capabilities": {
       "hash": "sha256:...",
-      "two_pass": "auto",
+      "n_pass": "auto",
       "apply_mode": "branch",
       "exec_enabled": false
     }
@@ -601,7 +601,7 @@ Reason codes:
 Whenever the runtime chooses one branch over another, it MUST log why.
 
 ### 13.1 Examples
-- `pass.selected` -> `reason_code: observe_detected`
+- `pass.selected` -> `reason_code: deferred_effects`
 - `ops.classified` -> `reason_code: pass_a_unsafe_multi_party`
 - `coordination.skipped` -> `reason_code: effects_failed`
 - `policy.denied` -> `reason_code: path_denied`

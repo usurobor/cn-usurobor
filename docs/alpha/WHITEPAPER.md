@@ -329,7 +329,7 @@ The cnos project implements this protocol and extends it with layers not specifi
 |-------|----------|-------|
 | **System thesis** | [`THESIS.md`](../THESIS.md) | cnos as a recurrent coherence system |
 | **Agent architecture** | [`CAA.md`](./CAA.md) | Structural definition of a coherent agent |
-| **Runtime** | [`AGENT-RUNTIME.md`](./AGENT-RUNTIME.md) | CN Shell, typed ops, two-pass orchestration |
+| **Runtime** | [`AGENT-RUNTIME.md`](./AGENT-RUNTIME.md) | CN Shell, typed ops, N-pass orchestration |
 | **Cognitive packages** | [`CAR.md`](./CAR.md) | Local, versioned, installable cognition |
 | **Observability** | [`TRACEABILITY.md`](./TRACEABILITY.md) | Reconstructable mind/body/sensor state |
 | **Development method** | [`CDD.md`](../gamma/CDD.md) | Coherence-driven development |

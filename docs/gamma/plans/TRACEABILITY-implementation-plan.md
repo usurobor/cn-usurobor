@@ -191,7 +191,7 @@ Instrument `cn_orchestrator.ml`.
 
 Required events: `pass.selected`, `ops.classified`, `coordination.skipped`, `policy.denied`, `budget.denied`, `effects.execute.start`, `effects.execute.complete`.
 
-Required reason codes: `observe_detected`, `two_pass_off`, `max_passes_exceeded`, `pass_a_unsafe`, `effects_failed`, `budget_exceeded`, `unknown_op_kind`, `phase_mismatch`, `path_denied`.
+Required reason codes: `deferred_effects`, `all_execute`, `continuation`, `n_pass_off`, `effect_only`, `max_passes_reached`, `budget_exhausted`, `no_ops`, `pass_a_unsafe`, `effects_failed`, `unknown_op_kind`, `phase_mismatch`, `path_denied`.
 
 Receipts remain the primary audit for typed ops. These events are operator summaries.
 
@@ -230,7 +230,7 @@ Instrument cognition loading with enough detail for operators to know what mind 
 
 Events: `doctrine.loaded`, `mindsets.loaded`, `skills.indexed`, `skills.selected`, `capabilities.rendered`.
 
-Required details: doctrine file count/names, mindset file count/names, package list + versions, selected skills list, whether hub-local overrides present, capability block hash + posture (two_pass, apply_mode, exec_enabled).
+Required details: doctrine file count/names, mindset file count/names, package list + versions, selected skills list, whether hub-local overrides present, capability block hash + posture (n_pass, apply_mode, exec_enabled).
 
 Data source: `Cn_assets.asset_summary` and `Cn_capabilities.render` metadata.
 

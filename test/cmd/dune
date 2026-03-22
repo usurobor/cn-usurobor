@@ -38,7 +38,7 @@
  (inline_tests)
  (preprocess (pps ppx_expect)))
 
-; cn_orchestrator tests (ppx_expect) — two-pass orchestration
+; cn_orchestrator tests (ppx_expect) — N-pass orchestration
 (library
  (name cn_orchestrator_test)
  (modules cn_orchestrator_test)
@@ -112,7 +112,7 @@
   (deps protocol-contract.json))
  (preprocess (pps ppx_expect)))
 
-; cn_runtime integration tests (ppx_expect) — two-pass wiring (Issue #41)
+; cn_runtime integration tests (ppx_expect) — N-pass wiring (Issue #41)
 (library
  (name cn_runtime_integration_test)
  (modules cn_runtime_integration_test)

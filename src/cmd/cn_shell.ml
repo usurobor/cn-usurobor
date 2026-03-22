@@ -68,23 +68,29 @@ type receipt = {
 }
 
 type shell_config = {
-  two_pass : string;            (* "off" | "auto" *)
+  n_pass : string;              (* "off" | "auto" *)
   apply_mode : string;          (* "off" | "branch" | "working_tree" *)
   exec_enabled : bool;
   exec_allowlist : string list;
   max_observe_ops : int;
   max_artifact_bytes : int;
   max_artifact_bytes_per_op : int;
+  max_passes : int;             (* N-pass bind loop bound, default 5 *)
+  max_total_artifact_bytes : int; (* cumulative artifact budget across passes *)
+  max_total_ops : int;          (* cumulative typed op budget across passes *)
 }
 
 let default_shell_config = {
-  two_pass = "auto";
+  n_pass = "auto";
   apply_mode = "branch";
   exec_enabled = false;
   exec_allowlist = [];
   max_observe_ops = 10;
   max_artifact_bytes = 65536;
   max_artifact_bytes_per_op = 16384;
+  max_passes = 5;
+  max_total_artifact_bytes = 131072;
+  max_total_ops = 32;
 }
 
 (* === Kind parsing === *)
@@ -272,10 +278,12 @@ let classify ops =
   let effect = List.filter (fun (op : typed_op) -> is_effect op.kind) ops in
   (observe, effect)
 
-(** Determine if two-pass mode is needed.
-    Under auto: any observe op triggers two-pass. *)
-let needs_two_pass ~two_pass_mode ops =
-  match two_pass_mode with
+(** Determine if the current pass should defer effects.
+    Under auto: any observe op means effects are deferred (observe-class pass).
+    Under off: no deferral (all ops execute in single pass).
+    Note: this controls within-pass behavior, not loop continuation. *)
+let needs_continuation ~n_pass_mode ops =
+  match n_pass_mode with
   | "off" -> false
   | _ (* "auto" *) ->
     let observe, _ = classify ops in
@@ -321,7 +329,7 @@ let receipts_to_json ~trigger_id receipts =
     Handles denial receipts and delegates typed op execution to [orchestrate].
     Keeps Cn_shell pure (no I/O) by accepting callbacks:
 
-    - [orchestrate typed_ops] runs the two-pass execution (observe → LLM → effect).
+    - [orchestrate typed_ops] runs the N-pass execution (observe → LLM → effect).
       Returns [Ok result] on success, [Error msg] on failure.
     - [write_denials denials] persists parser denial receipts to disk.
 
@@ -330,7 +338,7 @@ let receipts_to_json ~trigger_id receipts =
     or [Error msg] when orchestration failed.
 
     This is the single entry point that cn_runtime should call for
-    typed op execution — replacing direct Cn_orchestrator.run_two_pass calls. *)
+    typed op execution — delegating to the N-pass orchestrator via callback. *)
 let execute ~orchestrate ~write_denials ~typed_ops ~denial_receipts =
   if denial_receipts <> [] then
     write_denials denial_receipts;

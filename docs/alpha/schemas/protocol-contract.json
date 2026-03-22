@@ -56,7 +56,7 @@
       "mind_doctrine": ["required", "loaded", "hash"],
       "mind_mindsets": ["required", "loaded", "hash"],
       "mind_skills": ["indexed", "selected_last"],
-      "mind_capabilities": ["hash", "two_pass", "apply_mode", "exec_enabled"],
+      "mind_capabilities": ["hash", "n_pass", "apply_mode", "exec_enabled"],
       "body": ["fsm_state", "lock_held", "current_cycle", "queue_depth"]
     }
   }

@@ -8,7 +8,7 @@
     - All produce receipts in a single place (execute_op)
     - Artifacts written to state/artifacts/<trigger_id>/<op_id>.*
     - Receipts written to state/receipts/<trigger_id>.json
-    - No two-pass logic here — that belongs in Step 5 (orchestrator) *)
+    - No N-pass logic here — that belongs in the orchestrator *)
 
 (* === Timestamps === *)
 

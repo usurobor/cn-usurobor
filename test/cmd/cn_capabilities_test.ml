@@ -9,13 +9,16 @@
 (* ============================================================ *)
 
 let default_config = {
-  Cn_shell.two_pass = "auto";
+  Cn_shell.n_pass = "auto";
   apply_mode = "branch";
   exec_enabled = false;
   exec_allowlist = [];
   max_observe_ops = 10;
   max_artifact_bytes = 65536;
   max_artifact_bytes_per_op = 16384;
+  max_passes = 5;
+  max_total_artifact_bytes = 131072;
+  max_total_ops = 32;
 }
 
 let%expect_test "default config: exec disabled, apply_mode branch" =
