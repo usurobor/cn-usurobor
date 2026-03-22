@@ -38,6 +38,7 @@ type parsed_output = {
   ops_receipts : Cn_shell.receipt list;
   ops_version : string option;
   raw_output : string;
+  has_misplaced_ops : bool;               (** body contains ops-like syntax that should be in frontmatter *)
 }
 
 (* === Reason codes === *)
@@ -113,8 +114,8 @@ let parse_output raw_output =
     | Some raw_value -> Cn_shell.parse_ops_manifest raw_value
   in
   (* Detect coordination ops or typed ops leaked into body text *)
-  (match body with
-   | Some b ->
+  let has_misplaced_ops = match body with
+    | Some b ->
        let op_prefixes = [
          "send: "; "reply: "; "done: "; "ack: "; "fail: ";
          "delegate: "; "defer: "; "delete: "; "surface: "; "ops: ["
@@ -128,19 +129,23 @@ let parse_output raw_output =
        in
        let lines = String.split_on_char '\n' b in
        let leaked = List.filter is_op_line lines in
-       if leaked <> [] then
+       if leaked <> [] then begin
          Cn_trace.gemit ~component:"output" ~layer:Mind
            ~event:"output.ops_in_body" ~severity:Warn ~status:Degraded
-           ~reason_code:"ops_described_not_emitted"
+           ~reason_code:"misplaced_ops"
            ~reason:(Printf.sprintf "Found %d op-like line(s) in body text instead of frontmatter"
              (List.length leaked))
            ~details:[
              "count", Cn_json.Int (List.length leaked);
              "first_line", Cn_json.String (List.hd leaked |> String.trim);
-           ] ()
-   | None -> ());
+           ] ();
+         true
+       end else
+         false
+    | None -> false
+  in
   { id; body; coordination_ops; raw_coordination_ops;
-    typed_ops; ops_receipts; ops_version; raw_output }
+    typed_ops; ops_receipts; ops_version; raw_output; has_misplaced_ops }
 
 (* === Rendering === *)
 

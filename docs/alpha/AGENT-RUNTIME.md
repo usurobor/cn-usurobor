@@ -2214,6 +2214,27 @@ If the presentation candidate is effectively control-plane syntax, the runtime M
 
 If no safe fallback exists, the runtime MUST skip projection and log the reason.
 
+### Misplaced ops detection and correction (Issue #51)
+
+If `typed_ops = []` but the body contains ops-like syntax (`ops: [`, `send: `, `done: `, etc.):
+
+1. The runtime MUST classify this as `misplaced_ops`
+2. The runtime MUST NOT project the raw body to human-facing sinks
+3. The runtime SHOULD run a bounded correction pass:
+   - call the LLM with explicit formatting instructions
+   - if correction produces valid frontmatter ops: execute normally
+   - if correction fails: terminate safely, project via fallback
+4. The correction pass counts against normal `max_passes` / budget limits
+5. Body scanning is for **anomaly detection and correction**, never for execution authority
+
+The `parsed_output` includes a `has_misplaced_ops` flag set during parsing.
+
+#### Required trace events
+
+- `pass.N.misplaced_ops` — detection (severity: Warn, status: Degraded)
+- `pass.N.misplaced_ops.corrected` — correction succeeded
+- `pass.N.misplaced_ops.failed` — correction did not produce valid ops
+
 ### Telegram-origin sessions
 
 A Telegram-origin trigger (`from: telegram`, `chat_id: ...`) MAY still execute:
