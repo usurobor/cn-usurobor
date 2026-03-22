@@ -626,7 +626,7 @@ let%expect_test "n_pass: effect-only → single pass, no continuation" =
     | Ok result -> show_n_pass_result result);
   [%expect {|
     passes_used: 1
-    stop_reason: no_ops
+    stop_reason: effect_only
     total_receipts: 1
     pass=1 kind=fs_write status=ok reason=(none) |}]
 

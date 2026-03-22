@@ -113,12 +113,12 @@ let run_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
   Cn_trace.gemit ~component:"orchestrator" ~layer:Body
     ~event:"pass.N.start" ~severity:Info ~status:Ok_
     ~trigger_id ~pass:pass_label
-    ~reason_code:(if has_continuation then "observe_detected" else "single_pass")
+    ~reason_code:(if has_continuation then "deferred_effects" else "all_execute")
     ~details:[
       "observe_ops", Cn_json.Int observe_count;
       "effect_ops", Cn_json.Int effect_count;
       "pass_index", Cn_json.Int (int_of_string pass_label - 1);
-      "has_continuation", Cn_json.Bool has_continuation;
+      "effects_deferred", Cn_json.Bool has_continuation;
     ] ();
 
   let receipts =
@@ -292,12 +292,16 @@ let repack_for_next_pass ~hub_path ~trigger_id:_ ~config
 
 type pass_stop_reason =
   | No_ops
+  | N_pass_off
+  | Effect_only_initial
   | Max_passes_reached
   | Budget_exhausted
   | Processing_failed
 
 let string_of_stop_reason = function
   | No_ops -> "no_ops"
+  | N_pass_off -> "n_pass_off"
+  | Effect_only_initial -> "effect_only"
   | Max_passes_reached -> "max_passes_reached"
   | Budget_exhausted -> "budget_exhausted"
   | Processing_failed -> "processing_failed"
@@ -455,17 +459,17 @@ let run_n_pass ~hub_path ~trigger_id ~config
 
     if not should_continue then begin
       (* Terminal: n_pass=off or first-pass effect-only *)
-      let reason_code = if config.n_pass = "off" then "n_pass_off"
-        else "effect_only" in
+      let stop_reason = if config.n_pass = "off" then N_pass_off
+        else Effect_only_initial in
       Cn_trace.gemit ~component:"orchestrator" ~layer:Body
         ~event:"pass.N.complete" ~severity:Info ~status:Ok_
         ~trigger_id ~pass:pass_label
-        ~reason_code
+        ~reason_code:(string_of_stop_reason stop_reason)
         ~details:[
           "pass_index", Cn_json.Int pass_index;
           "receipt_count", Cn_json.Int (List.length receipts);
         ] ();
-      make_terminal ~pass_index ~stop_reason:No_ops
+      make_terminal ~pass_index ~stop_reason
         ~last_parsed ~effect_receipts:receipts
 
     end else if pass_index + 1 >= max_passes then begin
