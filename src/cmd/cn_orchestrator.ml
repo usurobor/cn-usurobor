@@ -381,7 +381,7 @@ let run_n_pass ~hub_path ~trigger_id ~config
         ~event:"pass.N.llm.error" ~severity:Error_ ~status:Error_status
         ~trigger_id ~pass:pass_label ~reason_code:"llm_error" ();
       (match indicator with Some h -> Cn_indicator.fail h | None -> ());
-      Error (Printf.sprintf "Pass %s LLM call failed: %s" pass_label msg)
+      `Error (Printf.sprintf "Pass %s LLM call failed: %s" pass_label msg)
     | Ok raw_output ->
       Cn_trace.gemit ~component:"orchestrator" ~layer:Mind
         ~event:"pass.N.llm.ok" ~severity:Info ~status:Ok_
@@ -510,7 +510,7 @@ let run_n_pass ~hub_path ~trigger_id ~config
         ] ();
 
       match call_llm_and_continue ~pass_index ~pass_label ~receipts with
-      | Error msg -> Error msg
+      | `Error msg -> Error msg
       | `Continue (next_ops, next_parsed) ->
         loop ~pass_index:(pass_index + 1) ~current_ops:next_ops
              ~last_parsed:next_parsed
