@@ -572,7 +572,7 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
 
         match Cn_llm.call ~api_key:config.anthropic_key
                 ~model:config.model ~max_tokens:config.max_tokens
-                ~system ~messages with
+                ~system ~messages () with
         | Error msg ->
           Cn_trace.gemit ~component:"runtime" ~layer:Mind
             ~event:"llm.call.error" ~severity:Error_ ~status:Error_status
@@ -1023,7 +1023,7 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
             let llm_t0 = Unix.gettimeofday () in
             match Cn_llm.call ~api_key:config.anthropic_key
                     ~model:config.model ~max_tokens:config.max_tokens
-                    ~system:packed.system ~messages:packed.messages with
+                    ~system:packed.system ~messages:packed.messages () with
             | Error msg ->
                 let latency_ms = int_of_float ((Unix.gettimeofday () -. llm_t0) *. 1000.0) in
                 Cn_trace.gemit ~component:"runtime" ~layer:Mind
