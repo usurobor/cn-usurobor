@@ -96,13 +96,13 @@ let gate_coordination ~effect_receipts (op : Cn_lib.agent_op) =
 (** Convert a 0-indexed pass_index to a 1-indexed pass label string. *)
 let pass_label_of_index i = string_of_int (i + 1)
 
-(* === Observe-class pass === *)
+(* === Pass execution === *)
 
-(** Run a pass with observe/effect classification.
+(** Run a single pass with observe/effect classification.
     If n_pass=auto and observe ops present: observe ops execute, effects deferred.
     If n_pass=off or no observe ops: all ops execute.
     Returns (receipts, effects_deferred). *)
-let run_observe_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
+let run_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
   let has_continuation = Cn_shell.needs_continuation
       ~n_pass_mode:config.Cn_shell.n_pass typed_ops in
 
@@ -151,12 +151,15 @@ let run_observe_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
 
   (receipts, has_continuation)
 
+(** Backward-compatible alias for tests that reference the old name. *)
+let run_observe_pass = run_pass
+
 (* === Effect-class pass (unit-testable helper, not used in main loop) === *)
 
 (** Run an effect-class pass.
     Effect ops execute normally, observe ops denied with max_passes_exceeded.
     Note: retained as a directly testable helper. The main run_n_pass loop
-    uses run_observe_pass for all passes — it no longer calls this function. *)
+    uses run_pass for all passes — it no longer calls this function. *)
 let run_effect_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
   Cn_trace.gemit ~component:"orchestrator" ~layer:Body
     ~event:"pass.N.start" ~severity:Info ~status:Ok_
@@ -424,9 +427,9 @@ let run_n_pass ~hub_path ~trigger_id ~config
     if pass_index > 0 then
       (match indicator with Some h -> Cn_indicator.refresh h | None -> ());
 
-    (* Execute pass via run_observe_pass (handles both observe-deferred
+    (* Execute pass via run_pass (handles both observe-deferred
        and all-execute cases based on op classification) *)
-    let (receipts, effects_deferred) = run_observe_pass ~hub_path ~trigger_id
+    let (receipts, effects_deferred) = run_pass ~hub_path ~trigger_id
         ~config ~pass_label current_ops in
     all_receipts := !all_receipts @ receipts;
     total_ops := !total_ops + List.length current_ops;
@@ -435,7 +438,16 @@ let run_n_pass ~hub_path ~trigger_id ~config
        - n_pass=off → never continue
        - first pass (index 0) effect-only → terminal (LLM had full context)
        - any pass with deferred effects → continue (LLM needs to re-propose)
-       - any non-first pass → continue (multi-pass chain may need more work) *)
+       - any non-first pass → continue (multi-pass chain may need more work)
+
+       DESIGN NOTE: The "pass 0, effect-only → terminal" rule is an intentional
+       optimization, not a legacy constraint. On pass 0, the LLM already had
+       the full packed context when it chose effect-only ops. No repack would
+       add new information, so an extra LLM call would be pure waste. On pass
+       N>0, the LLM may want to verify, observe again, or adapt — so the loop
+       always continues regardless of op class. This makes the loop generic
+       for multi-pass chains while avoiding a useless round-trip on simple
+       single-effect requests. *)
     let should_continue =
       config.Cn_shell.n_pass <> "off"
       && (effects_deferred || pass_index > 0)
