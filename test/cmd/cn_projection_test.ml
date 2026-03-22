@@ -157,25 +157,25 @@ let show_coord_decision d =
 
 let%expect_test "reply: pass-A-safe when projection is idempotent" =
   show_coord_decision
-    (Cn_orchestrator.classify_coordination_pass_a
+    (Cn_orchestrator.classify_coordination_pass_safe
        ~has_idempotent_projection:true (Cn_lib.Reply ("id", "msg")));
   [%expect {| execute |}]
 
 let%expect_test "reply: pass-A-unsafe when projection is NOT idempotent" =
   show_coord_decision
-    (Cn_orchestrator.classify_coordination_pass_a
+    (Cn_orchestrator.classify_coordination_pass_safe
        ~has_idempotent_projection:false (Cn_lib.Reply ("id", "msg")));
   [%expect {| skip: pass_a_unsafe |}]
 
 let%expect_test "ack: always pass-A-safe regardless of projection" =
   show_coord_decision
-    (Cn_orchestrator.classify_coordination_pass_a
+    (Cn_orchestrator.classify_coordination_pass_safe
        ~has_idempotent_projection:false (Cn_lib.Ack "id"));
   [%expect {| execute |}]
 
 let%expect_test "done: always pass-A-unsafe regardless of projection" =
   show_coord_decision
-    (Cn_orchestrator.classify_coordination_pass_a
+    (Cn_orchestrator.classify_coordination_pass_safe
        ~has_idempotent_projection:true (Cn_lib.Done "id"));
   [%expect {| skip: pass_a_unsafe |}]
 

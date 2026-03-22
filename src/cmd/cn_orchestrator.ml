@@ -1,19 +1,25 @@
-(** cn_orchestrator.ml — Two-pass execution orchestrator for CN Shell
+(** cn_orchestrator.ml — N-pass execution orchestrator for CN Shell
 
-    Implements the two-pass execution model from AGENT-RUNTIME v3.3.6:
-    - Pass A: observe ops execute, effect ops deferred
-    - Pass B: effect ops execute, observe ops denied (max_passes_exceeded)
+    Implements the bounded N-pass bind loop from N-PASS-BIND-v3.8.0:
+    - Bounded loop: execute → repack → call → parse → execute → …
+    - Observe-class pass: observe ops execute, effects deferred
+    - Effect-class pass: all ops execute (no observe ops present)
+    - Terminal pass: no typed ops → project final output
+    - Any non-terminal pass may continue (not just observe passes)
 
     Delegates actual op execution to Cn_executor.
-    Provides coordination op classification (pass-A-safe vs pass-A-unsafe)
+    Provides coordination op classification (pass-safe vs pass-unsafe)
     and gating logic (terminal ops gated on effect success).
 
     Key invariants:
-    - pass field is per-receipt ("A" or "B"), not per-container
-    - max_passes = 2 (hard limit, not configurable)
-    - two_pass=off → all ops execute in single pass, no Pass B
-    - two_pass=auto → any observe op triggers two-pass
-    - Receipts from both passes written to same file via append *)
+    - pass field is per-receipt (numeric label: "1", "2", ...)
+    - max_passes is configurable via shell_config (default 5)
+    - n_pass=off → all ops execute in single pass, no continuation
+    - n_pass=auto → loop continues after any pass that produces
+      new evidence (observe artifacts, deferred effects, or any
+      non-first pass), bounded by max_passes / max_total_ops
+    - Receipts from all passes written to same file via append
+    - Only final pass projected to user; intermediates archived *)
 
 (* === Coordination decision type === *)
 
@@ -38,21 +44,21 @@ let contains_sub (s : string) (sub : string) : bool =
 
 (* === Coordination classification === *)
 
-(** Classify a coordination op for Pass A.
-    Pass-A-safe: ack, surface/mca.
+(** Classify a coordination op for non-terminal passes.
+    Pass-safe: ack, surface/mca.
     Reply: conditionally safe — only if projection is idempotent
     (has_idempotent_projection=true). Without idempotent projection,
-    reply is deferred to Pass B as pass_a_unsafe per v3.3.6.
-    Pass-A-unsafe: done, fail, send, delegate, defer, delete. *)
-let classify_coordination_pass_a
+    reply is deferred as pass_unsafe.
+    Pass-unsafe: done, fail, send, delegate, defer, delete. *)
+let classify_coordination_pass_safe
       ?(has_idempotent_projection = true) (op : Cn_lib.agent_op) =
   match op with
   | Ack _ | Surface _ -> Execute
   | Reply _ ->
     if has_idempotent_projection then Execute
-    else Skip "pass_a_unsafe"
+    else Skip "pass_unsafe"
   | Done _ | Fail _ | Send _ | Delegate _ | Defer _ | Delete _ ->
-    Skip "pass_a_unsafe"
+    Skip "pass_unsafe"
 
 (* === Coordination gating === *)
 
@@ -85,104 +91,100 @@ let gate_coordination ~effect_receipts (op : Cn_lib.agent_op) =
   else
     Execute
 
-(* === Pass A === *)
+(* === Pass label helper === *)
 
-type pass_a_result = {
-  receipts : Cn_shell.receipt list;
-  needs_pass_b : bool;
-}
+(** Convert a 0-indexed pass_index to a 1-indexed pass label string. *)
+let pass_label_of_index i = string_of_int (i + 1)
 
-(** Run Pass A of the two-pass model.
+(* === Pass execution === *)
 
-    - two_pass=auto + any observe op → two-pass:
-      observe ops execute, effects skipped (observe_pass_requires_followup)
-    - two_pass=auto + effect-only → single pass: all execute
-    - two_pass=off → single pass: all execute
-    - Empty ops → single pass, empty receipts
-
-    All receipts tagged with pass="A".
-    Writes receipts to state/receipts/<trigger_id>.json. *)
-let run_pass_a ~hub_path ~trigger_id ~config typed_ops =
-  let two_pass_needed = Cn_shell.needs_two_pass
-      ~two_pass_mode:config.Cn_shell.two_pass typed_ops in
+(** Run a single pass with observe/effect classification.
+    If n_pass=auto and observe ops present: observe ops execute, effects deferred.
+    If n_pass=off or no observe ops: all ops execute.
+    Returns (receipts, effects_deferred). *)
+let run_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
+  let has_continuation = Cn_shell.needs_continuation
+      ~n_pass_mode:config.Cn_shell.n_pass typed_ops in
 
   let observe_count = List.length (List.filter (fun (op : Cn_shell.typed_op) ->
     not (Cn_shell.is_effect op.kind)) typed_ops) in
   let effect_count = List.length typed_ops - observe_count in
 
   Cn_trace.gemit ~component:"orchestrator" ~layer:Body
-    ~event:"pass.selected" ~severity:Info ~status:Ok_
-    ~trigger_id ~pass:"A"
-    ~reason_code:(if two_pass_needed then "observe_detected" else "single_pass")
+    ~event:"pass.N.start" ~severity:Info ~status:Ok_
+    ~trigger_id ~pass:pass_label
+    ~reason_code:(if has_continuation then "deferred_effects" else "all_execute")
     ~details:[
       "observe_ops", Cn_json.Int observe_count;
       "effect_ops", Cn_json.Int effect_count;
-      "two_pass", Cn_json.Bool two_pass_needed;
+      "pass_index", Cn_json.Int (int_of_string pass_label - 1);
+      "effects_deferred", Cn_json.Bool has_continuation;
     ] ();
 
   let receipts =
-    if not two_pass_needed then
+    if not has_continuation then
       List.map (fun (op : Cn_shell.typed_op) ->
         let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config op in
-        { r with Cn_shell.pass = "A" }
+        { r with Cn_shell.pass = pass_label }
       ) typed_ops
     else
       List.map (fun (op : Cn_shell.typed_op) ->
         if Cn_shell.is_effect op.Cn_shell.kind then begin
           Cn_trace.gemit ~component:"orchestrator" ~layer:Governance
             ~event:"ops.classified" ~severity:Info ~status:Skipped
-            ~trigger_id ~pass:"A"
+            ~trigger_id ~pass:pass_label
             ~reason_code:"observe_pass_requires_followup"
             ~details:["kind", Cn_json.String (Cn_shell.string_of_op_kind op.kind)] ();
           let now = Cn_executor.now_iso () in
-          { (Cn_shell.make_receipt ~pass:"A" ~op_id:op.op_id
+          { (Cn_shell.make_receipt ~pass:pass_label ~op_id:op.op_id
                ~kind:(Cn_shell.string_of_op_kind op.kind)
                ~status:Skipped ~reason:"observe_pass_requires_followup")
             with start_time = now; end_time = now }
         end else
           let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config op in
-          { r with Cn_shell.pass = "A" }
+          { r with Cn_shell.pass = pass_label }
       ) typed_ops
   in
 
   if receipts <> [] then
-    Cn_executor.write_receipts ~hub_path ~trigger_id ~pass:"A" receipts;
+    Cn_executor.write_receipts ~hub_path ~trigger_id ~pass:pass_label receipts;
 
-  { receipts; needs_pass_b = two_pass_needed }
+  (receipts, has_continuation)
 
-(* === Pass B === *)
+(* === Effect-class pass (unit-testable helper, not used in main loop) === *)
 
-(** Run Pass B of the two-pass model.
-
-    - Observe ops denied with max_passes_exceeded (no third call)
-    - Effect ops execute normally
-    - All receipts tagged with pass="B"
-    - Receipts appended to existing file (Pass A already wrote) *)
-let run_pass_b ~hub_path ~trigger_id ~config typed_ops =
+(** Run an effect-class pass.
+    Effect ops execute normally, observe ops denied with max_passes_exceeded.
+    Note: retained as a directly testable helper. The main run_n_pass loop
+    uses run_pass for all passes — it no longer calls this function. *)
+let run_effect_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
   Cn_trace.gemit ~component:"orchestrator" ~layer:Body
-    ~event:"pass.selected" ~severity:Info ~status:Ok_
-    ~trigger_id ~pass:"B"
-    ~reason_code:"pass_b_effects" ();
+    ~event:"pass.N.start" ~severity:Info ~status:Ok_
+    ~trigger_id ~pass:pass_label
+    ~reason_code:"effect_pass"
+    ~details:[
+      "pass_index", Cn_json.Int (int_of_string pass_label - 1);
+    ] ();
 
   let receipts = List.map (fun (op : Cn_shell.typed_op) ->
     if not (Cn_shell.is_effect op.Cn_shell.kind) then begin
       Cn_trace.gemit ~component:"orchestrator" ~layer:Governance
         ~event:"policy.denied" ~severity:Info ~status:Skipped
-        ~trigger_id ~pass:"B"
+        ~trigger_id ~pass:pass_label
         ~reason_code:"max_passes_exceeded"
         ~details:["kind", Cn_json.String (Cn_shell.string_of_op_kind op.kind)] ();
       let now = Cn_executor.now_iso () in
-      { (Cn_shell.make_receipt ~pass:"B" ~op_id:op.Cn_shell.op_id
+      { (Cn_shell.make_receipt ~pass:pass_label ~op_id:op.Cn_shell.op_id
            ~kind:(Cn_shell.string_of_op_kind op.kind)
            ~status:Denied ~reason:"max_passes_exceeded")
         with start_time = now; end_time = now }
     end else
       let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config op in
-      { r with Cn_shell.pass = "B" }
+      { r with Cn_shell.pass = pass_label }
   ) typed_ops in
 
   if receipts <> [] then
-    Cn_executor.write_receipts ~hub_path ~trigger_id ~pass:"B" receipts;
+    Cn_executor.write_receipts ~hub_path ~trigger_id ~pass:pass_label receipts;
 
   receipts
 
@@ -195,11 +197,12 @@ let write_denial_receipts ~hub_path ~trigger_id ~pass denials =
   if denials <> [] then
     Cn_executor.write_receipts ~hub_path ~trigger_id ~pass denials
 
-(* === Pass B context repacking === *)
+(* === Context repacking for next pass === *)
 
 (** Classify a receipt as empty-result (op ran but produced no data)
     vs not-executed (op was denied/skipped/errored before producing data).
-    Used by receipts_summary to provide explicit signals to the agent. *)
+    Used by receipts_summary to provide explicit signals to the agent,
+    preventing confabulation of op results (CDD #49). *)
 let receipt_result_signal (r : Cn_shell.receipt) =
   match r.status with
   | Ok_status ->
@@ -209,13 +212,13 @@ let receipt_result_signal (r : Cn_shell.receipt) =
   | Skipped -> " [NOT_EXECUTED: op was skipped]"
   | Error_status -> " [FAILED: op execution failed]"
 
-(** Build bounded receipts summary for Pass B injection.
+(** Build bounded receipts summary for next-pass injection.
     Deterministic: iterates receipts in list order.
     Includes explicit signals distinguishing empty results from
-    non-execution, per CDD #49. *)
-let receipts_summary (receipts : Cn_shell.receipt list) =
+    non-execution (anti-confabulation, CDD #49). *)
+let receipts_summary ~pass_label (receipts : Cn_shell.receipt list) =
   let buf = Buffer.create 512 in
-  Buffer.add_string buf "## Pass A Receipts\n\n";
+  Buffer.add_string buf (Printf.sprintf "## Pass %s Receipts\n\n" pass_label);
   let has_failures = List.exists (fun (r : Cn_shell.receipt) ->
     match r.status with
     | Denied | Error_status -> true
@@ -239,7 +242,7 @@ let receipts_summary (receipts : Cn_shell.receipt list) =
   ) receipts;
   Buffer.contents buf
 
-(** Build bounded artifact excerpts for Pass B injection.
+(** Build bounded artifact excerpts for next-pass injection.
     Reads artifact files from disk, caps at max_artifact_bytes_per_op.
     Deterministic: iterates receipts in list order, artifacts within each. *)
 let artifact_excerpts ~hub_path ~config (receipts : Cn_shell.receipt list) =
@@ -265,126 +268,254 @@ let artifact_excerpts ~hub_path ~config (receipts : Cn_shell.receipt list) =
   ) receipts;
   Buffer.contents buf
 
-(** Repack context for Pass B.
+(** Repack context for the next pass.
     Produces a deterministic string containing:
-    1. Receipts summary (bounded)
+    1. Receipts summary with anti-confabulation signals (bounded)
     2. Artifact excerpts (bounded by max_artifact_bytes_per_op)
 
     Ordering is stable (receipt list order). Skills are NOT re-scored
-    (fixed at Pass A pack time per spec). *)
-let repack_for_pass_b ~hub_path ~trigger_id:_ ~config
-      ~pass_a_receipts =
+    (fixed at first pack time per spec). *)
+let repack_for_next_pass ~hub_path ~trigger_id:_ ~config
+      ~pass_label ~pass_receipts =
   let buf = Buffer.create 4096 in
-  (* 1. Receipts summary *)
-  Buffer.add_string buf (receipts_summary pass_a_receipts);
+  Buffer.add_string buf (receipts_summary ~pass_label pass_receipts);
   Buffer.add_char buf '\n';
-  (* 2. Artifact excerpts *)
-  let excerpts = artifact_excerpts ~hub_path ~config pass_a_receipts in
+  let excerpts = artifact_excerpts ~hub_path ~config pass_receipts in
   if excerpts <> "" then
     Buffer.add_string buf excerpts;
   Buffer.contents buf
 
-(* === Two-pass coordination result === *)
+(* === N-pass stop reasons === *)
 
-type two_pass_result = {
-  pass_a_receipts : Cn_shell.receipt list;
-  pass_b_receipts : Cn_shell.receipt list;
-  pass_b_coordination_ops : (Cn_lib.agent_op * coord_decision) list;
-  pass_b_output : Cn_output.parsed_output option;
-  used_two_pass : bool;
+type pass_stop_reason =
+  | No_ops
+  | N_pass_off
+  | Effect_only_initial
+  | Max_passes_reached
+  | Budget_exhausted
+  | Processing_failed
+
+let string_of_stop_reason = function
+  | No_ops -> "no_ops"
+  | N_pass_off -> "n_pass_off"
+  | Effect_only_initial -> "effect_only"
+  | Max_passes_reached -> "max_passes_reached"
+  | Budget_exhausted -> "budget_exhausted"
+  | Processing_failed -> "processing_failed"
+
+(* === N-pass result === *)
+
+type n_pass_result = {
+  all_receipts : Cn_shell.receipt list;
+  final_coordination_ops : (Cn_lib.agent_op * coord_decision) list;
+  final_output : Cn_output.parsed_output option;
+  passes_used : int;
+  stop_reason : pass_stop_reason;
 }
 
-(** Run the full two-pass orchestration.
+(* === N-pass bind loop === *)
+
+(** Run the bounded N-pass bind loop.
 
     Takes a mock-able [llm_call] function for testability:
     [llm_call : repack_content -> (Ok output_string | Error msg)]
 
-    Flow:
-    1. Run Pass A (observe ops execute, effects deferred if two-pass)
-    2. If needs_pass_b:
-       a. Repack context with artifacts/receipts
-       b. Call LLM with repack content
-       c. Parse Pass B output
-       d. Run Pass B (effects execute, observe denied)
-       e. Gate coordination ops on effect success
-    3. Return combined result *)
-let run_two_pass ~hub_path ~trigger_id ~config
-      ~llm_call typed_ops =
-  (* Pass A *)
-  let pass_a = run_pass_a ~hub_path ~trigger_id ~config typed_ops in
+    And an optional [indicator] handle for processing indicators.
 
-  if not pass_a.needs_pass_b then
-    (* Single pass: no Pass B needed *)
+    Flow per pass:
+    1. Execute ops (observe defers effects; all-execute otherwise)
+    2. Collect receipts
+    3. Check stop conditions
+    4. If continuing: repack, call LLM, parse, loop
+
+    Continuation rule:
+    - n_pass=off → single pass, never continue
+    - n_pass=auto → continue after any pass that produces new
+      evidence for the LLM (deferred effects, or any non-first pass).
+      First-pass effect-only is terminal (LLM already had full context).
+
+    Stop conditions:
+    - no ops from LLM (terminal pass)
+    - max_passes reached
+    - budget exhausted (max_total_ops)
+    - fatal runtime failure (LLM error) *)
+let run_n_pass ~hub_path ~trigger_id ~config
+      ~llm_call ?indicator typed_ops =
+  let max_passes = config.Cn_shell.max_passes in
+  let max_total_ops = config.Cn_shell.max_total_ops in
+  let total_ops = ref 0 in
+  let all_receipts = ref [] in
+
+  (* Helper: build terminal result *)
+  let make_terminal ~pass_index ~stop_reason ~last_parsed ~effect_receipts =
+    let gated_coord_ops = match last_parsed with
+      | Some p ->
+        List.map (fun op ->
+          let decision = gate_coordination ~effect_receipts op in
+          (op, decision)
+        ) p.Cn_output.coordination_ops
+      | None -> []
+    in
     Ok {
-      pass_a_receipts = pass_a.receipts;
-      pass_b_receipts = [];
-      pass_b_coordination_ops = [];
-      pass_b_output = None;
-      used_two_pass = false;
+      all_receipts = !all_receipts;
+      final_coordination_ops = gated_coord_ops;
+      final_output = last_parsed;
+      passes_used = pass_index + 1;
+      stop_reason;
     }
-  else begin
-    (* Two-pass: repack and call LLM for Pass B *)
-    Cn_trace.gemit ~component:"orchestrator" ~layer:Body
-      ~event:"pass_b.repack.start" ~severity:Info ~status:Ok_
-      ~trigger_id ~pass:"B" ();
+  in
 
-    let repack_content = repack_for_pass_b ~hub_path ~trigger_id
-        ~config ~pass_a_receipts:pass_a.receipts in
+  (* Helper: repack, call LLM, parse, and either terminate or continue *)
+  let call_llm_and_continue ~pass_index ~pass_label ~receipts =
+    let repack_content = repack_for_next_pass ~hub_path ~trigger_id
+        ~config ~pass_label ~pass_receipts:receipts in
 
-    Cn_trace.gemit ~component:"orchestrator" ~layer:Body
-      ~event:"pass_b.repack.complete" ~severity:Info ~status:Ok_
-      ~trigger_id ~pass:"B"
-      ~details:["repack_bytes", Cn_json.Int (String.length repack_content)] ();
-
-    (* Call LLM for Pass B *)
     Cn_trace.gemit ~component:"orchestrator" ~layer:Mind
-      ~event:"pass_b.llm.start" ~severity:Info ~status:Ok_
-      ~trigger_id ~pass:"B" ();
+      ~event:"pass.N.repack" ~severity:Info ~status:Ok_
+      ~trigger_id ~pass:pass_label
+      ~details:["repack_bytes", Cn_json.Int (String.length repack_content)] ();
 
     match llm_call repack_content with
     | Error msg ->
       Cn_trace.gemit ~component:"orchestrator" ~layer:Mind
-        ~event:"pass_b.llm.error" ~severity:Error_ ~status:Error_status
-        ~trigger_id ~pass:"B" ~reason_code:"llm_error" ();
-      Error (Printf.sprintf "Pass B LLM call failed: %s" msg)
-    | Ok pass_b_raw_output ->
+        ~event:"pass.N.llm.error" ~severity:Error_ ~status:Error_status
+        ~trigger_id ~pass:pass_label ~reason_code:"llm_error" ();
+      (match indicator with Some h -> Cn_indicator.fail h | None -> ());
+      Error (Printf.sprintf "Pass %s LLM call failed: %s" pass_label msg)
+    | Ok raw_output ->
       Cn_trace.gemit ~component:"orchestrator" ~layer:Mind
-        ~event:"pass_b.llm.ok" ~severity:Info ~status:Ok_
-        ~trigger_id ~pass:"B" ();
+        ~event:"pass.N.llm.ok" ~severity:Info ~status:Ok_
+        ~trigger_id ~pass:pass_label ();
 
-      (* Parse Pass B output *)
-      let pass_b_parsed = Cn_output.parse_output pass_b_raw_output in
+      let parsed = Cn_output.parse_output raw_output in
 
-      (* Execute Pass B typed ops *)
-      let pass_b_receipts =
-        if pass_b_parsed.typed_ops <> [] then
-          run_pass_b ~hub_path ~trigger_id ~config pass_b_parsed.typed_ops
-        else
-          []
-      in
+      if parsed.typed_ops = [] then begin
+        (* No more ops — terminal pass *)
+        let next_label = pass_label_of_index (pass_index + 1) in
+        Cn_trace.gemit ~component:"orchestrator" ~layer:Body
+          ~event:"pass.N.complete" ~severity:Info ~status:Ok_
+          ~trigger_id ~pass:next_label
+          ~reason_code:"no_ops"
+          ~details:[
+            "pass_index", Cn_json.Int (pass_index + 1);
+            "typed_op_count", Cn_json.Int 0;
+            "coord_op_count", Cn_json.Int (List.length parsed.coordination_ops);
+          ] ();
 
-      (* Gate Pass B coordination ops on effect success *)
-      let gated_coord_ops =
-        List.map (fun op ->
-          let decision = gate_coordination ~effect_receipts:pass_b_receipts op in
-          (op, decision)
-        ) pass_b_parsed.coordination_ops
-      in
+        let gated_coord_ops =
+          List.map (fun op ->
+            let decision = gate_coordination ~effect_receipts:!all_receipts op in
+            (op, decision)
+          ) parsed.coordination_ops
+        in
 
+        `Terminal {
+          all_receipts = !all_receipts;
+          final_coordination_ops = gated_coord_ops;
+          final_output = Some parsed;
+          passes_used = pass_index + 2;
+          stop_reason = No_ops;
+        }
+      end else
+        (* Continue to next pass with new ops *)
+        `Continue (parsed.typed_ops, Some parsed)
+  in
+
+  let rec loop ~pass_index ~current_ops ~last_parsed =
+    let pass_label = pass_label_of_index pass_index in
+
+    (* Refresh indicator before LLM call (skip first pass — already started) *)
+    if pass_index > 0 then
+      (match indicator with Some h -> Cn_indicator.refresh h | None -> ());
+
+    (* Execute pass via run_pass (handles both observe-deferred
+       and all-execute cases based on op classification) *)
+    let (receipts, effects_deferred) = run_pass ~hub_path ~trigger_id
+        ~config ~pass_label current_ops in
+    all_receipts := !all_receipts @ receipts;
+    total_ops := !total_ops + List.length current_ops;
+
+    (* Continuation rule:
+       - n_pass=off → never continue
+       - first pass (index 0) effect-only → terminal (LLM had full context)
+       - any pass with deferred effects → continue (LLM needs to re-propose)
+       - any non-first pass → continue (multi-pass chain may need more work)
+
+       DESIGN NOTE: The "pass 0, effect-only → terminal" rule is an intentional
+       optimization, not a legacy constraint. On pass 0, the LLM already had
+       the full packed context when it chose effect-only ops. No repack would
+       add new information, so an extra LLM call would be pure waste. On pass
+       N>0, the LLM may want to verify, observe again, or adapt — so the loop
+       always continues regardless of op class. This makes the loop generic
+       for multi-pass chains while avoiding a useless round-trip on simple
+       single-effect requests. *)
+    let should_continue =
+      config.Cn_shell.n_pass <> "off"
+      && (effects_deferred || pass_index > 0)
+    in
+
+    if not should_continue then begin
+      (* Terminal: n_pass=off or first-pass effect-only *)
+      let stop_reason = if config.n_pass = "off" then N_pass_off
+        else Effect_only_initial in
       Cn_trace.gemit ~component:"orchestrator" ~layer:Body
-        ~event:"pass_b.complete" ~severity:Info ~status:Ok_
-        ~trigger_id ~pass:"B"
+        ~event:"pass.N.complete" ~severity:Info ~status:Ok_
+        ~trigger_id ~pass:pass_label
+        ~reason_code:(string_of_stop_reason stop_reason)
         ~details:[
-          "typed_op_count", Cn_json.Int (List.length pass_b_parsed.typed_ops);
-          "coord_op_count", Cn_json.Int (List.length pass_b_parsed.coordination_ops);
-          "pass_b_receipt_count", Cn_json.Int (List.length pass_b_receipts);
+          "pass_index", Cn_json.Int pass_index;
+          "receipt_count", Cn_json.Int (List.length receipts);
+        ] ();
+      make_terminal ~pass_index ~stop_reason
+        ~last_parsed ~effect_receipts:receipts
+
+    end else if pass_index + 1 >= max_passes then begin
+      (* Max passes reached *)
+      Cn_trace.gemit ~component:"orchestrator" ~layer:Body
+        ~event:"pass.N.complete" ~severity:Info ~status:Ok_
+        ~trigger_id ~pass:pass_label
+        ~reason_code:"max_passes_reached"
+        ~details:[
+          "pass_index", Cn_json.Int pass_index;
+          "receipt_count", Cn_json.Int (List.length receipts);
+        ] ();
+      make_terminal ~pass_index ~stop_reason:Max_passes_reached
+        ~last_parsed ~effect_receipts:receipts
+
+    end else if !total_ops >= max_total_ops then begin
+      (* Budget exhausted *)
+      Cn_trace.gemit ~component:"orchestrator" ~layer:Body
+        ~event:"pass.N.complete" ~severity:Info ~status:Ok_
+        ~trigger_id ~pass:pass_label
+        ~reason_code:"budget_exhausted"
+        ~details:[
+          "pass_index", Cn_json.Int pass_index;
+          "total_ops", Cn_json.Int !total_ops;
+          "max_total_ops", Cn_json.Int max_total_ops;
+        ] ();
+      make_terminal ~pass_index ~stop_reason:Budget_exhausted
+        ~last_parsed ~effect_receipts:receipts
+
+    end else begin
+      (* Continue: repack, call LLM, parse *)
+      let reason_code = if effects_deferred then "deferred_effects"
+        else "continuation" in
+      Cn_trace.gemit ~component:"orchestrator" ~layer:Body
+        ~event:"pass.N.complete" ~severity:Info ~status:Ok_
+        ~trigger_id ~pass:pass_label
+        ~reason_code
+        ~details:[
+          "pass_index", Cn_json.Int pass_index;
+          "receipt_count", Cn_json.Int (List.length receipts);
         ] ();
 
-      Ok {
-        pass_a_receipts = pass_a.receipts;
-        pass_b_receipts;
-        pass_b_coordination_ops = gated_coord_ops;
-        pass_b_output = Some pass_b_parsed;
-        used_two_pass = true;
-      }
-  end
+      match call_llm_and_continue ~pass_index ~pass_label ~receipts with
+      | Error msg -> Error msg
+      | `Continue (next_ops, next_parsed) ->
+        loop ~pass_index:(pass_index + 1) ~current_ops:next_ops
+             ~last_parsed:next_parsed
+      | `Terminal final -> Ok final
+    end
+  in
+
+  loop ~pass_index:0 ~current_ops:typed_ops ~last_parsed:None

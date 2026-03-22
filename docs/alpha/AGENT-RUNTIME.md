@@ -10,6 +10,19 @@
 
 ## Patch Notes
 
+**v3.8.0** — N-Pass Bind Loop and Processing Indicators:
+- Replace hardcoded N-pass orchestration with bounded N-pass bind loop (`run_n_pass`)
+- `max_passes` configurable in `runtime.shell` (default 5), replaces hardcoded `max_passes=2`
+- Add `max_total_ops` budget (default 32) and `max_total_artifact_bytes` (default 131072) — loop stops when cumulative limits exceeded
+- Each pass emits `pass.N.start` / `pass.N.complete` telemetry with `pass_index` and `reason_code`
+- Add processing indicator abstraction (`cn_indicator.ml`) for human-facing sinks
+- Telegram typing indicator: sent on dequeue, refreshed before each subsequent LLM call, absent on non-Telegram
+- Only final pass output projected to user; intermediate outputs archived, receipted, and repacked
+- Receipt pass field uses numeric labels (`"1"`, `"2"`, ...) under N-pass; `cn.receipts.v1` schema unchanged
+- `state/runtime.json` now includes `max_passes` for operator visibility
+- Backward compatible: `max_passes=2` reproduces existing N-pass behavior
+- See: [`N-PASS-BIND-v3.8.0.md`](N-PASS-BIND-v3.8.0.md) and [`PLAN-v3.8.0-n-pass-bind.md`](../gamma/plans/PLAN-v3.8.0-n-pass-bind.md) for full design and plan
+
 **v3.8.0** — Syscall Surface Coherence Amendment:
 - Implement `fs_glob` observe op (was advertised but returned `not_yet_implemented`)
 - Add `git_stage` effect op for explicit staging; split from `git_commit`
@@ -62,7 +75,7 @@
   - structured events become authoritative for lifecycle, readiness, and transition reasoning
 
 **v3.3.6** — CLP pass: α-axis polish (spec precision):
-- **Receipts `pass` field**: moved from container-level to per-receipt entry; two-pass files contain entries with `"pass": "A"` and `"pass": "B"` in one array (self-describing, no ambiguity)
+- **Receipts `pass` field**: moved from container-level to per-receipt entry; N-pass files contain entries with `"pass": "A"` and `"pass": "B"` in one array (self-describing, no ambiguity)
 - **Capability discovery ordering**: kinds MUST be listed in fixed table order (observe first, then effect); budget keys in lexical order (maximizes prompt cache hits)
 - **`ops_version` type**: explicitly a string (`"3.3"`); runtime MUST parse as string regardless of frontmatter parser behavior; quoting recommended
 
@@ -92,16 +105,16 @@
 - **Pass-A-safe principle**: corrected to "idempotent under crash recovery + does not advance terminal lifecycle + does not route to other agents"; `reply` qualified as safe only if projection is idempotent per `trigger_id`
 - **Pass B execution ordering**: normative order defined (validate → effects in manifest order → coordination gated on effect success); effect failure skips terminal coordination ops
 - **Receipt status taxonomy**: `denied` (policy/budget/schema/unknown kind), `error` (execution failure), `skipped` (phase rules/gating) — no conflation
-- **"No tools" precision**: scoped claim to "no in-call tool loop, no direct execution authority, post-call governed capabilities only"; two-pass acknowledged as bounded re-entry
+- **"No tools" precision**: scoped claim to "no in-call tool loop, no direct execution authority, post-call governed capabilities only"; N-pass acknowledged as bounded re-entry
 - **Deferred coordination logging**: explicitly routed to receipts (not separate log)
 
 **v3.3.1** — CLP pass: β-axis strengthening (relational connections):
-- Add **Design Principle: Observe Before Act** — names the CAP invariant the two-pass architecture enforces; traces to MCA priority (CAP §3.1) and the Coherence Walk
+- Add **Design Principle: Observe Before Act** — names the CAP invariant the N-pass architecture enforces; traces to MCA priority (CAP §3.1) and the Coherence Walk
 - Replace coordination-op enumeration with **phase derivation** from single principle: "Pass-A-safe iff idempotent and does not change thread state or reach another party"; add `ack` (was missing)
 - Add **Interaction with Actor FSM** — typed ops do not drive FSM; coordination ops do; FSM sees only final pass
 - Add **Interaction with Skill Loading** — Pass B does not re-score skills; artifacts injected after skill block
 - Add **Ops Vocabulary Versioning** — closed vocab evolution rules (additive = minor, removal = major, unknown = error receipt)
-- Remove `two_pass: on` (was redundant synonym for `auto`)
+- Remove `n_pass: on` (was redundant synonym for `auto`)
 - Add **secret safety enforcement** — structural guarantee via op vocabulary + exec allowlist, not just policy
 - Add **Rationale** column to budgets table
 - Add **Host DSL validation** note — runtime applies identical checks regardless of op origin
@@ -122,8 +135,8 @@
 - Introduce receipts + artifacts as first-class runtime outputs:
   - Each executed op yields a receipt with status, timing, hashes (stdout/stderr), and artifact pointers
   - Receipts written to `state/receipts/` and archived to `logs/receipts/`
-- Two-pass execution with auto-promote:
-  - `two_pass: auto` (default): if observe ops present, cn auto-promotes to two-pass
+- N-pass execution with auto-promote:
+  - `n_pass: auto` (default): if observe ops present, cn auto-promotes to N-pass
   - Pass A: execute observe ops only; defer all effect ops with receipt
   - Pass B: repack with artifacts/receipts, agent proposes effects with full evidence
   - Strict rule: observe defers effects — agent cannot act before seeing
@@ -376,7 +389,7 @@ The LLM has no interactive tool access during a call. No tool loop. No mid-call 
 
 **v3.3.0 update:** CN Shell adds typed ops (observe + effect) that cn executes *after* the call — preserving the pure-pipe boundary while enabling the agent to request evidence gathering and propose mutations. See [CN Shell: Capability Runtime](#cn-shell-capability-runtime-v330).
 
-If the LLM needs information not in the packed context, it can now request it via observe ops (two-pass) rather than requiring interactive tools.
+If the LLM needs information not in the packed context, it can now request it via observe ops (N-pass) rather than requiring interactive tools.
 
 ### Industry Approaches Compared
 
@@ -747,7 +760,7 @@ CN Shell is not "tools for the LLM." Specifically:
 - **No direct execution authority.** The agent cannot run arbitrary code. Ops are declarative, closed-vocabulary, and validated against policy.
 - **Post-call, governed capabilities only.** Execution happens under the processor lock, with receipts and audit.
 
-Two-pass is bounded re-entry (max 2 calls), not an interactive tool loop. The agent sees artifacts from Pass A, but cannot iteratively probe — it gets one chance to revise its proposal.
+N-pass is bounded re-entry (up to `max_passes` calls), not an interactive tool loop. The agent sees artifacts from earlier passes, but cannot iteratively probe unboundedly — the loop is capped by `max_passes`, `max_total_ops`, and `max_total_artifact_bytes`.
 
 ### Design Principle: Observe Before Act
 
@@ -755,7 +768,7 @@ CN Shell encodes a coherence invariant from CAP (§cap/SKILL.md):
 
 > An agent that acts before sensing widens the gap between model and reality.
 
-The two-pass architecture is not merely a safety mechanism — it is the runtime expression of **MCA priority** (CAP §3.1): sense the gap first, then act. The `observe → effect` phase split is the capability-runtime analogue of the Coherence Walk: score first (observe), then rebalance (effect).
+The N-pass architecture is not merely a safety mechanism — it is the runtime expression of **MCA priority** (CAP §3.1): sense the gap first, then act. The `observe → effect` phase split is the capability-runtime analogue of the Coherence Walk: score first (observe), then rebalance (effect).
 
 ### Typed Ops Manifest
 
@@ -913,7 +926,7 @@ These four statuses are exhaustive. Every receipt MUST use exactly one.
 ```
 
 - `schema` is a version string. Bump when receipt fields change (additive fields = minor bump; removals/renames = major bump).
-- `pass` is per-receipt (`"A"` or `"B"`), not per-container. For two-pass execution, Pass B appends entries with `"pass": "B"` to the same `receipts` array. This removes ambiguity: the file always contains every receipt from every pass, each self-describing.
+- `pass` is per-receipt (`"A"` or `"B"`), not per-container. For N-pass execution, Pass B appends entries with `"pass": "B"` to the same `receipts` array. This removes ambiguity: the file always contains every receipt from every pass, each self-describing.
 - Hash algorithm is SHA-256, prefixed as `sha256:`.
 
 Receipts MUST be written to `state/receipts/` and archived to `logs/receipts/`.
@@ -928,14 +941,14 @@ Layout: `state/artifacts/<trigger_id>/<op_id>.*`
 
 Receipts reference artifacts by relative path + hash.
 
-### Two-Pass Execution (normative)
+### N-Pass Execution (normative)
 
-#### Runtime mode: `two_pass`
+#### Runtime mode: `n_pass`
 
 | Mode | Behavior |
 |------|----------|
-| `auto` **(DEFAULT)** | If `ops:` contains any observe-phase op, cn auto-promotes to two-pass |
-| `off` | Observe ops are audit-only (executed + receipted, no second call) |
+| `auto` **(DEFAULT)** | If `ops:` contains any observe-phase op, cn auto-promotes to N-pass (bounded by `max_passes`) |
+| `off` | Observe ops are audit-only (executed + receipted, no continuation) |
 
 #### Phase semantics
 
@@ -998,7 +1011,7 @@ Typed ops do not directly advance the actor FSM. The FSM transition rules remain
 
 - Coordination ops (`done`, `fail`, `defer`, `delete`) drive FSM transitions
 - Typed effect ops (`fs_write`, `git_commit`, etc.) are executed but do not change actor state
-- The FSM sees only the final pass's coordination ops (Pass B if two-pass, Pass A if single-pass)
+- The FSM sees only the final pass's coordination ops (Pass B if N-pass, Pass A if single-pass)
 
 This keeps the FSM simple: it reacts to intent (coordination ops), not to side effects (typed ops).
 
@@ -1047,7 +1060,7 @@ This ordering ensures the system never advances narrative state (FSM) when the w
 
 #### Cost control via pre-packing
 
-Most "read this file" requests SHOULD be satisfied without observe ops at all — `Cn_context.pack` includes a bounded cognitive context (identity, user spec, mindsets, reflections, skills, conversation history). Observe ops are the exception for cases requiring specific filesystem or git inspection ("read file X", "show diff Y"), not the norm. This keeps two-pass rare and costs predictable.
+Most "read this file" requests SHOULD be satisfied without observe ops at all — `Cn_context.pack` includes a bounded cognitive context (identity, user spec, mindsets, reflections, skills, conversation history). Observe ops are the exception for cases requiring specific filesystem or git inspection ("read file X", "show diff Y"), not the norm. This keeps N-pass rare and costs predictable.
 
 #### Budgets (configurable)
 
@@ -1449,7 +1462,7 @@ CN_MODEL          Model override (optional; default from config.json)
     "poll_interval": 1,
     "poll_timeout": 30,
     "max_tokens": 8192,
-    "two_pass": "auto",
+    "n_pass": "auto",
     "apply_mode": "branch",
     "max_observe_ops": 10,
     "max_artifact_bytes": 65536,
@@ -1524,7 +1537,7 @@ WantedBy=multi-user.target
 
 v1 targets functional parity with minimal scope. v2 features are explicitly deferred.
 
-**Resolved in v3.3.0:** CN Shell observe ops provide read-only evidence gathering without tools. Two-pass execution (opt-in) lets the agent request files/diffs in Pass A, then propose effects in Pass B — preserving the pure-pipe boundary.
+**Resolved in v3.3.0:** CN Shell observe ops provide read-only evidence gathering without tools. N-pass execution (opt-in) lets the agent request files/diffs in observe passes, then propose effects in subsequent passes — preserving the pure-pipe boundary.
 
 ---
 
@@ -1537,7 +1550,7 @@ v1 targets functional parity with minimal scope. v2 features are explicitly defe
 | **Wrap OC via HTTP relay** | Minimal code, OC does the work | Still dependent, extra latency, two failure domains | Rejected — adds complexity without removing dependency |
 | **Native runtime with tool loop** | Familiar "agentic" pattern | Breaks CN security boundary, harder to audit, more code | Rejected — tools violate "agent sees two files" |
 | **Native runtime, pure pipe** | Full ownership, single binary, CN-native, simplest possible | Must pre-load all context (no interactive retrieval) | **Accepted** — aligns with all constraints + security model |
-| **Native runtime, pure pipe + CN Shell (v3.3.0)** | Pure pipe preserved, typed ops for observe/effect, two-pass for evidence | More complexity than pure pipe alone | **Accepted** — extends pure pipe without breaking security boundary |
+| **Native runtime, pure pipe + CN Shell (v3.3.0)** | Pure pipe preserved, typed ops for observe/effect, N-pass for evidence | More complexity than pure pipe alone | **Accepted** — extends pure pipe without breaking security boundary |
 
 ---
 
@@ -1650,15 +1663,15 @@ These examples define expected runtime behavior for the key execution paths.
 Each shows exact LLM output, runtime steps, and resulting receipt JSON.
 Implementations MUST produce equivalent receipts for equivalent inputs.
 
-All examples assume default config: `two_pass: auto`, `apply_mode: branch`,
+All examples assume default config: `n_pass: auto`, `apply_mode: branch`,
 `exec_enabled: false` (unless stated otherwise).
 
 ---
 
-### Example 1: Observe-only (two-pass, read file to answer question)
+### Example 1: Observe-only (N-pass, read file to answer question)
 
-Agent reads a file to answer a user question. Under `two_pass: auto`, any
-observe op triggers two-pass — even when no effects are proposed. Pass B
+Agent reads a file to answer a user question. Under `n_pass: auto`, any
+observe op triggers N-pass — even when no effects are proposed. Pass B
 lets the agent incorporate the file content into a reply.
 
 **Pass A — LLM output (output.md):**
@@ -1675,7 +1688,7 @@ Let me check the JSON parser first.
 
 **Runtime behavior (Pass A):**
 1. Parse frontmatter → coordination op `Ack "trigger-42"` + typed op `Fs_read {path}`
-2. Classify ops: 1 observe, 0 effects → `two_pass: auto` promotes to two-pass
+2. Classify ops: 1 observe, 0 effects → `n_pass: auto` promotes to N-pass
 3. Execute `Ack "trigger-42"` (Pass-A-safe: yes — idempotent acknowledgement)
 4. Sandbox check `src/lib/cn_json.ml` → passes (not in denylist, no `..` escape)
 5. Read file, write to `state/artifacts/20260305-091200-abc/obs-01.txt`
@@ -1736,15 +1749,15 @@ character of the input.
 
 **Key points:**
 - `op_id` was not in the manifest → runtime assigned `obs-01` (first observe, position 0)
-- `two_pass: auto` promotes even with zero effects — observe ops always get Pass B so the agent can incorporate evidence
+- `n_pass: auto` promotes even with zero effects — observe ops always get Pass B so the agent can incorporate evidence
 - Body text in Pass A ("Let me check...") is consumed by `resolve_payload` for the `ack` coordination op, not typed ops
 - Pass B reply uses idempotent projection marker for crash-recovery safety
 
-> **Note:** To suppress Pass B (audit-only observation), set `two_pass: off` in config. In that mode, observe ops execute and produce receipts/artifacts, but no second LLM call is made.
+> **Note:** To suppress Pass B (audit-only observation), set `n_pass: off` in config. In that mode, observe ops execute and produce receipts/artifacts, but no second LLM call is made.
 
 ---
 
-### Example 2: Two-pass (observe + effect)
+### Example 2: N-pass (observe + effect)
 
 Agent wants to read a file, then patch it based on what it sees.
 
@@ -1761,7 +1774,7 @@ I'll read the design README, then patch it.
 
 **Runtime behavior (Pass A):**
 1. Parse manifest → 1 observe (`fs_read`), 1 effect (`fs_patch`)
-2. Mixed observe+effect → two-pass mode triggered
+2. Mixed observe+effect → N-pass mode triggered
 3. Execute observe ops only:
    - `fs_read docs/README.md` → artifact `obs-01.txt`, status `ok`
 4. Skip effect ops with receipt:
@@ -1843,7 +1856,7 @@ ops: [{"kind":"fs_patch","op_id":"patch-readme","path":"docs/README.md","unified
 ### Example 3: Effect-only (single pass, no observe)
 
 Agent commits directly without reading first. Since there are no observe ops,
-`two_pass: auto` does NOT promote — effects execute in a single pass.
+`n_pass: auto` does NOT promote — effects execute in a single pass.
 
 **LLM output:**
 
@@ -1874,7 +1887,7 @@ Committed the fix.
 
 ---
 
-### Example 4: Observe then communicate (two-pass with send)
+### Example 4: Observe then communicate (N-pass with send)
 
 Shows how `resolve_payload` interacts with typed ops, and how Pass-A-unsafe
 coordination ops (`send`) are deferred to Pass B.
@@ -1896,7 +1909,7 @@ I reviewed the last 3 commits and everything looks good.
 **Runtime behavior (Pass A):**
 1. Parse coordination ops: `Reply("trigger-55", "Quick status update")`, `Send("bob", "Hey Bob")`
 2. Parse typed ops: `Git_status` (observe), `Git_diff` (observe)
-3. Observe ops present → `two_pass: auto` promotes to two-pass
+3. Observe ops present → `n_pass: auto` promotes to N-pass
 4. Execute observe ops:
    - `git_status` → `exec_args ~prog:"git" ~args:["status"; "--porcelain"]` → artifact `obs-01.txt`
    - `git_diff` → `exec_args ~prog:"git" ~args:["diff"; "HEAD~3..HEAD"; "--"; "."; ":!.cn"; ":!state"; ":!logs"]` → artifact `obs-02.txt`
@@ -1925,7 +1938,7 @@ send: bob|Status report|All 3 recent commits look clean. No conflicts or regress
 5. Write Pass B receipts
 
 **Key points:**
-- `send` is Pass-A-unsafe (routes work to another agent) — always deferred to Pass B in two-pass
+- `send` is Pass-A-unsafe (routes work to another agent) — always deferred to Pass B in N-pass
 - `reply` is Pass-A-safe only because projection uses idempotent markers (`O_CREAT|O_EXCL`)
 - `send` body resolution follows the normative table: explicit 3rd pipe > markdown body > notification `msg`
 - Git diff argv uses raw pathspec form (`:!.cn`) not shell-quoted (`':!.cn'`) — argv execution has no shell
@@ -1956,7 +1969,7 @@ Let me read some files and make changes.
    - `fs_write src/main.ml` → `op_id` present, validate path → passes sandbox → but `apply_mode: branch` policy check passes → **however** this is a mixed manifest with observe ops → effect deferred with `skipped`, `observe_pass_requires_followup`
    - `fs_read ../../../etc/passwd` → sandbox step 2 denies (escapes hub after collapse) → receipt `denied`, `path_escape`
    - `frobnicate` → unknown kind → receipt `denied`, `unknown_op_kind`
-3. Observe ops present (even though denied) → `two_pass: auto` promotes to two-pass
+3. Observe ops present (even though denied) → `n_pass: auto` promotes to N-pass
 4. The only non-denied effect (`fs_write`) was deferred → Pass B needed
 5. Archive IO pair, repack context, call LLM (Pass B)
 
@@ -1996,7 +2009,7 @@ I'll need a different approach.
 
 **Key points:**
 - Denied observe ops still get auto-assigned `op_id` (`obs-01`, `obs-02`) for traceability
-- `fs_write` has a valid `op_id` ("write-main") — it's deferred (not denied) because mixed observe+effect triggers two-pass
+- `fs_write` has a valid `op_id` ("write-main") — it's deferred (not denied) because mixed observe+effect triggers N-pass
 - Unknown kind `frobnicate` → denied but preserves the agent-supplied `op_id`
 - **Gating rule:** if the agent had kept `done: trigger-88` in Pass B alongside a re-proposed `fs_write` that was denied, `done` would be skipped with `reason: effects_failed` — terminal coordination ops (`done`, `fail`, `send`, `delegate`, `defer`, `delete`) are gated on ALL effect ops succeeding; only `reply`/`surface` may run when effects fail
 - The agent correctly adapted in Pass B: dropped `done`, used `reply` to report the failure
@@ -2089,7 +2102,7 @@ Running tests and fetching data.
 ```
 
 **Key points:**
-- `exec` ops are effects — they execute in a single pass (no observe ops to trigger two-pass)
+- `exec` ops are effects — they execute in a single pass (no observe ops to trigger N-pass)
 - Non-zero exit → `status: error` (not `denied` — the op ran, it just failed)
 - stdout/stderr always captured as artifacts even on error (essential for debugging)
 - `Done "trigger-33"` gated: skipped because `run-tests` has `status: error` — the system never advances terminal FSM state when world actions fail

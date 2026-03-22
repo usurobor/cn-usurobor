@@ -341,7 +341,7 @@ let cleanup_once ~hub_path =
 
     Primitive sequence:
     1. inbox_check_once — fetch inbound peer branches, triage to inbox
-    2. sync_once — stage, heartbeat commit, push (git-only)
+    2. sync_once — stage, heartbeat commit, push (transport + liveness)
     3. materialize_inbox_once — queue inbox items for processing
     4. flush_outbox_once — send pending outbox to peers
     5. update_check_once — binary update (when idle)

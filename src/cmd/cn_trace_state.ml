@@ -20,7 +20,7 @@ type mind_projection = {
   skills_indexed : int;
   skills_selected_last : string list;
   capabilities_hash : string;
-  two_pass : string;
+  n_pass : string;
   apply_mode : string;
   exec_enabled : bool;
 }
@@ -62,6 +62,7 @@ type runtime_projection = {
   boot_id : string;
   current_cycle_id : string option;
   current_pass : string option;
+  max_passes : int option;
   active_trigger : string option;
   queue_depth : int;
   lock_held : bool;
@@ -138,7 +139,7 @@ let write_ready hub_path (r : ready_projection) =
           ];
           "capabilities", Cn_json.Object [
             "hash", Cn_json.String m.capabilities_hash;
-            "two_pass", Cn_json.String m.two_pass;
+            "n_pass", Cn_json.String m.n_pass;
             "apply_mode", Cn_json.String m.apply_mode;
             "exec_enabled", Cn_json.Bool m.exec_enabled;
           ];
@@ -263,6 +264,7 @@ let write_runtime hub_path (r : runtime_projection) =
     "boot_id", Cn_json.String r.boot_id;
     "current_cycle_id", opt_str r.current_cycle_id;
     "current_pass", opt_str r.current_pass;
+    "max_passes", (match r.max_passes with Some i -> Cn_json.Int i | None -> Cn_json.Null);
     "active_trigger", opt_str r.active_trigger;
     "queue_depth", Cn_json.Int r.queue_depth;
     "lock_held", Cn_json.Bool r.lock_held;
