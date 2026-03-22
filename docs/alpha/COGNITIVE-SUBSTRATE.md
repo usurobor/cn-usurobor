@@ -1,6 +1,6 @@
 # Cognitive Substrate Specification
 
-Version: 1.0.0
+Version: 1.1.0
 Status: Draft
 
 ## 0. Purpose
@@ -42,14 +42,18 @@ Conversation history, queue entries, and runtime-generated capability declaratio
 
 ### 2.1 Identity
 
-Identity defines who the agent is and who the user is.
+Identity defines who the agent is, what standing role it operates in, and who the user is.
 Identity is local to a hub and loaded at every wake-up.
 Identity is not doctrine, mindset, or skill.
 
+Role is an Identity binding, not a separate authored class.
+Profiles, lockfiles, and dependency manifests determine which packages are installed.
+Identity.role determines which installed role-specific mindsets and skills are applicable and how role-specific selection is weighted or ordered.
+
 Typical location:
 
-- `spec/SOUL.md`
-- `spec/USER.md`
+- `spec/SOUL.md` — agent identity, including role
+- `spec/USER.md` — user standing context
 
 ### 2.2 Doctrine
 
@@ -94,7 +98,7 @@ Use these tests in order.
 
 ### 3.1 Identity test
 
-If the artifact defines the agent's self-description or the user's standing context required at wake-up, it is Identity.
+If the artifact defines the agent's self-description, standing role, or the user's standing context required at wake-up, it is Identity.
 
 ### 3.2 Capability test
 
@@ -127,7 +131,7 @@ A single file MUST NOT silently mix doctrine, mindset, and skill semantics.
 
 Given new knowledge K:
 
-1. If K is wake-required self or user context, place it in Identity.
+1. If K is wake-required self, role, or user context, place it in Identity.
 2. Else if K is runtime-generated affordance information, place it in Capability.
 3. Else if K is dated or recent learning, place it in Reflection.
 4. Else if K defines a global invariant, obligation, prohibition, trust boundary, or runtime grammar, place it in Doctrine.
@@ -141,8 +145,8 @@ Given new knowledge K:
 
 ### 5.1 Identity
 
-- `spec/SOUL.md`
-- `spec/USER.md`
+- `spec/SOUL.md` — agent identity, including role
+- `spec/USER.md` — user standing context
 
 ### 5.2 Doctrine
 
@@ -193,17 +197,24 @@ Runtime-declared only.
 
 Runtime state only. Not authored substrate.
 
+### 5.8 Install manifests
+
+- `.cn/deps.json`
+- `.cn/deps.lock.json`
+
+Install manifests are configuration, not authored cognitive assets.
+
 ---
 
 ## 6. Runtime Treatment
 
 At wake-up or context packing, the runtime MUST treat the classes as follows:
 
-1. Identity — always loaded
+1. Identity — always loaded, including standing role
 2. Doctrine — always loaded, never scored, never bounded by task-slot competition
-3. Mindsets — always loaded, never scored, never bounded by task-slot competition
+3. Mindsets — always loaded from the installed package set, never scored, never bounded by task-slot competition
 4. Reflections — recent N only
-5. Skills — relevance-scored, bounded to top N
+5. Skills — relevance-scored, bounded to top N, selected from the installed package set
 6. Capabilities — always declared by runtime
 7. Conversation — recent N turns
 8. Inbound message — current demand only
@@ -211,11 +222,39 @@ At wake-up or context packing, the runtime MUST treat the classes as follows:
 Doctrine and mindsets MUST NOT compete for skill slots.
 If doctrine or mindsets are handled as task skills, the substrate is misclassified.
 
+Profiles and dependency manifests determine which packages are installed.
+Identity.role MUST NOT be treated as the sole package install authority.
+Role constrains applicability, weighting, and ordering inside the installed package set.
+
+If Identity.role implies role-bearing assets that are not present in `.cn/deps.lock.json`, the hub is misconfigured.
+
 ---
 
 ## 7. Canonical File Contracts
 
-### 7.1 Doctrine Contract
+### 7.1 Identity Contract
+
+Identity is represented across two hub-local files:
+
+- `spec/SOUL.md` — agent identity
+- `spec/USER.md` — user standing context
+
+`spec/SOUL.md` MUST make explicit near the top:
+
+- the agent's name or stable identifier
+- the agent's standing role
+- the agent's standing purpose, persona, or self-description
+
+Equivalent headings are valid, but role MUST be explicit rather than only inferable from prose.
+
+`spec/USER.md` MUST make explicit near the top whatever standing user context is required at wake-up.
+
+Role is load-bearing. It informs which installed role-specific mindsets and skills are applicable.
+Role MUST NOT be used to smuggle doctrine, mindsets, or skills into identity.
+
+Identity MAY include additional stable traits or local constraints, but MUST remain wake-stable rather than task-specific.
+
+### 7.2 Doctrine Contract
 
 A doctrine file MUST contain:
 
@@ -229,7 +268,7 @@ A doctrine file MUST be global, not trigger-based.
 A doctrine file MUST NOT depend on task selection.
 A doctrine file MUST NOT read like a productivity trick.
 
-### 7.2 Mindset Contract
+### 7.3 Mindset Contract
 
 A mindset file MUST contain:
 
@@ -250,7 +289,7 @@ A mindset MAY be organized as levels, lenses, principles, biases, anti-patterns,
 A mindset file MUST NOT define task gating or top-N selection.
 A mindset file MUST NOT encode constitutive prohibitions that belong in doctrine.
 
-### 7.3 Skill Contract
+### 7.4 Skill Contract
 
 A skill file MUST name the domain-specific coherence formula for the task.
 
@@ -275,7 +314,7 @@ A skill MUST show incoherent/coherent examples (❌/✅ pairs) when examples inc
 A skill MAY include additional sections (Checklist, Output Format, etc.) after the core contract.
 A skill MAY include `kata.md`, references, scripts, or case studies.
 
-### 7.4 Kata Contract
+### 7.5 Kata Contract
 
 A kata file is an optional companion to a skill.
 A kata MUST contain:
@@ -286,7 +325,7 @@ A kata MUST contain:
 
 A kata is a bounded exercise, not a skill definition.
 
-### 7.5 Reflection Contract
+### 7.6 Reflection Contract
 
 A reflection MUST be dated or period-bounded.
 
@@ -344,7 +383,7 @@ Normative precedence is:
 Doctrine → Mindset → Skill → Reflection
 
 Identity is loaded first but is not a general override layer.
-It localizes the subject and user context to which doctrine, mindsets, and skills apply.
+It localizes the subject, standing role, and user context to which doctrine, mindsets, and skills apply.
 
 Capabilities describe affordance, not permission.
 Runtime policy and doctrine still govern which capabilities may be used.
@@ -353,21 +392,28 @@ Runtime policy and doctrine still govern which capabilities may be used.
 
 ## 10. Validation Checks
 
-### 10.1 Doctrine is invalid if
+### 10.1 Identity is invalid if
+
+- the agent's role is absent or only inferable from prose
+- it is task-specific or unstable across normal wake-ups
+- it embeds doctrine, mindset, or skill content rather than stable self/user context
+- the declared role cannot be reconciled with installed profile/deps
+
+### 10.2 Doctrine is invalid if
 
 - it is optional or task-scoped
 - it depends on triggers
 - it can be outscored by another artifact
 - it is merely advice
 
-### 10.2 Mindset is invalid if
+### 10.3 Mindset is invalid if
 
 - it is procedural rather than orienting
 - it is only relevant to one task family
 - it must compete for loading
 - it contains constitutive law better expressed as doctrine
 
-### 10.3 Skill is invalid if
+### 10.4 Skill is invalid if
 
 - it lacks bounded applicability
 - it lacks Define/Unfold/Rules structure or equivalent inputs, rules, and effects
@@ -375,13 +421,13 @@ Runtime policy and doctrine still govern which capabilities may be used.
 - it claims always-on global authority
 - it cannot say what changed when the skill succeeds
 
-### 10.4 Reflection is invalid if
+### 10.5 Reflection is invalid if
 
 - it pretends to be timeless
 - it contains no concrete observation or update
 - it silently changes always-on substrate without explicit promotion
 
-### 10.5 Known misclassifications
+### 10.6 Known misclassifications
 
 - COHERENCE.md is doctrine per this spec. Any runtime or document treating it as a mindset is misclassified and MUST be aligned.
 
@@ -389,6 +435,7 @@ Runtime policy and doctrine still govern which capabilities may be used.
 
 ## 11. Builder Guidance
 
+Use identity for: "who I am, who the user is, and what role I operate in at wake-up."
 Use doctrine for: "this must always hold."
 Use mindset for: "always look this way."
 Use skill for: "do this when the task calls for it."
@@ -397,6 +444,7 @@ Use capability for: "the runtime can currently do this."
 
 Examples:
 
+- "Role: engineer" in SOUL.md → Identity
 - "Never fabricate evidence." → Doctrine
 - "Write so nothing can be removed without loss." → Mindset
 - "Review code so unintended behavior is unrepresentable." → Skill
@@ -408,30 +456,68 @@ Examples:
 
 This spec is normative for new substrate work.
 
-Legacy skill files that expose only Core Principle + Rules remain readable, but new and revised skills SHOULD migrate to the canonical skill contract in §7.3 so that placement, loading, and authorship rules are explicit in one place.
+Existing `spec/SOUL.md` files SHOULD make role explicit near the top.
 
-Any document that explains doctrine, mindsets, or skills MUST defer to this spec for classification and file contract.
+Legacy skill files that expose only Core Principle + Rules remain readable, but new and revised skills SHOULD migrate to the canonical skill contract in §7.4 so that placement, loading, and authorship rules are explicit in one place.
+
+Profiles and dependency manifests remain the install authority. Identity.role remains the identity-level selector for applicability within the installed package set.
+
+`cn setup` and `cn doctor` SHOULD validate Identity.role against selected profile/deps and installed vendor packages.
+
+Any document that explains identity, setup, profiles, package selection, doctrine, mindsets, or skills MUST defer to this spec for classification and role semantics.
+
+---
+
+## 13. cn setup / cn doctor — Role Validation
+
+CAR already defines profiles as setup-time presets that expand to package lists, and the repo's on-disk model uses `.cn/deps.json`, `.cn/deps.lock.json`, and `.cn/vendor/packages/` as the installed-package source of truth.
+
+The smallest MCA follow-up is validation, not a new class or a new install mechanism.
+
+`cn setup` SHOULD:
+
+1. Expand the selected profile to packages and write `.cn/deps.json`
+2. Write `.cn/deps.lock.json`
+3. Restore vendor packages
+4. Parse `spec/SOUL.md` for Identity.role
+5. Fail fast if Identity.role is absent
+6. If Identity.role names a shipped role with a corresponding role pack, verify it is installed:
+   - `engineer` → expects `cnos.eng`
+   - `pm` → expects `cnos.pm`
+7. If multiple role packs are installed, require Identity.role to be explicit
+
+`cn doctor` SHOULD verify:
+
+- Identity.role exists and is explicit
+- `.cn/deps.json`, `.cn/deps.lock.json`, and `.cn/vendor/packages/` agree
+- The selected profile and installed role pack(s) are compatible with Identity.role
+
+Suggested remediation text:
+
+- "Role is missing from spec/SOUL.md. Add an explicit role near the top."
+- "SOUL.role=engineer but cnos.eng is not installed. Re-run cn setup with the engineer profile or change SOUL.role."
+- "SOUL.role=pm but deps/profile installs cnos.eng. Either switch profile to pm or change SOUL.role intentionally."
 
 ---
 
 ## Coherence Contract for This Document
 
-**Gap:** cnos has doctrine (CAP, COHERENCE, CBP, CA-CONDUCT), architecture (CAA, CAR, AGENT-RUNTIME), and skill-writing guides (skill/SKILL.md, WRITE-A-SKILL.md), but no single normative document for classifying, placing, and structuring cognitive substrate assets. Classification rules were scattered across THESIS, CAA, CAR, and COHERENCE-SYSTEM.
+**Gap:** cnos has doctrine (CAP, COHERENCE, CBP, CA-CONDUCT), architecture (CAA, CAR, AGENT-RUNTIME), and skill-writing guides (skill/SKILL.md, WRITE-A-SKILL.md), but no single normative document for classifying, placing, and structuring cognitive substrate assets. Classification rules were scattered across THESIS, CAA, CAR, and COHERENCE-SYSTEM. v1.0.0 also lacked an Identity contract and did not name role as load-bearing for skill selection.
 
-**Mode:** MCI — unify existing concepts into one normative spec.
+**Mode:** MCI — unify existing concepts into one normative spec; make role explicit in Identity.
 
 **Scope:** System spec layer.
 
 **Expected effect:**
 
-- α: one classifier, one placement algorithm, one file contract per class
-- β: docs that reference substrate classes now defer to one spec
-- γ: new assets have a clear placement path; promotion rules prevent class drift
+- α: one classifier, one placement algorithm, one file contract per class (including Identity)
+- β: docs that reference substrate classes now defer to one spec; role/install boundary explicit
+- γ: new assets have a clear placement path; promotion rules prevent class drift; cn doctor validates role coherence
 
-**Failure if skipped:** Classification remains implicit and taste-based. Mindsets look like skills, skills look like mindsets, reflections silently become doctrine. The COHERENCE-as-mindset drift persists.
+**Failure if skipped:** Classification remains implicit and taste-based. Role is a ghost — it determines skill loadout but has no contract. Mindsets look like skills, skills look like mindsets, reflections silently become doctrine. The COHERENCE-as-mindset drift persists.
 
 **CLP:**
 
-- **TERMS:** The ontology already exists: THESIS defines the semantic distinctions, CAA defines the wake-up strata, CAR defines load behavior. The MCP is "unify classification, placement, and schema into one normative document."
-- **POINTER:** Weakest axis before patch is β. The concepts are present but their relations are broken across documents. The sharpest break is the skill contract: skill/SKILL.md teaches Define/Unfold/Rules while skills/README.md frames skills as TERMS/INPUTS/EFFECTS.
-- **EXIT:** MCI applied. The draft installs one classifier, one placement algorithm, canonical locations, explicit runtime treatment, a unified skill contract (Define/Unfold/Rules as canonical form), promotion/splitting rules, and validation checks. Remaining MCA: align CAR, AGENT-RUNTIME, WHITEPAPER, and skills/README.md to this spec.
+- **TERMS:** The ontology already exists: THESIS defines the semantic distinctions, CAA defines the wake-up strata, CAR defines load behavior, CAR says profiles are setup-time presets that expand to package lists. Role is already latent: AGENT-RUNTIME says packed mindsets are role-aware and skills are role-weighted.
+- **POINTER:** The β break was the missing Identity contract and missing role/install boundary in the substrate spec, not the absence of a sixth authored class.
+- **EXIT:** v1.1.0 lands the substrate patch (Identity contract, role semantics, install manifest placement, validation checks). §13 adds cn setup/doctor validation rules. After that, #52 is closed at the spec layer and reduced to ordinary runtime hygiene.
