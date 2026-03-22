@@ -299,3 +299,66 @@ let%expect_test "n_pass=off: even with observe ops, no Pass 2" =
     total_receipts: 2
     pass=1 kind=fs_read status=ok reason=(none)
     pass=1 kind=fs_write status=ok reason=(none) |}]
+
+(* ============================================================ *)
+(* === MISPLACED OPS CORRECTION (Issue #51 integration)       === *)
+(* ============================================================ *)
+
+let%expect_test "correction: misplaced typed ops → corrected → executed" =
+  with_test_hub (fun hub ->
+    (* Correction LLM returns valid frontmatter with typed ops *)
+    let corrected_output =
+      "---\nops: [{\"kind\":\"fs_read\",\"op_id\":\"obs-01\",\"path\":\"src/main.ml\"}]\n---\nLet me read that." in
+    let terminal_output =
+      "---\n---\nHere is what I found." in
+    let call_count = ref 0 in
+    let llm_call _ =
+      incr call_count;
+      match !call_count with
+      | 1 -> Ok corrected_output   (* correction succeeds *)
+      | _ -> Ok terminal_output    (* pass 2 terminal *)
+    in
+    let correction_msg = "Re-emit your ops in frontmatter." in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:auto_config ~llm_call
+            ~correction_message:correction_msg [] with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      show_n_pass_result result);
+  [%expect {|
+    passes_used: 3
+    stop_reason: no_ops
+    total_receipts: 1
+    pass=1 kind=fs_read status=ok reason=(none) |}]
+
+let%expect_test "correction: LLM fails → error propagated" =
+  with_test_hub (fun hub ->
+    let llm_call _ = Error "API timeout" in
+    let correction_msg = "Re-emit your ops in frontmatter." in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:auto_config ~llm_call
+            ~correction_message:correction_msg [] with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok _ -> print_endline "unexpected ok");
+  [%expect {| error: Correction pass LLM call failed: API timeout |}]
+
+let%expect_test "correction: still misplaced → safe terminal" =
+  with_test_hub (fun hub ->
+    (* Correction LLM still puts ops in body text *)
+    let still_broken =
+      "---\n---\nops: [{\"kind\":\"fs_read\",\"path\":\"x\"}]\nStill broken." in
+    let llm_call _ = Ok still_broken in
+    let correction_msg = "Re-emit your ops in frontmatter." in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:auto_config ~llm_call
+            ~correction_message:correction_msg [] with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      Printf.printf "passes_used: %d\n" result.passes_used;
+      Printf.printf "stop_reason: %s\n"
+        (Cn_orchestrator.string_of_stop_reason result.stop_reason);
+      Printf.printf "has_final_output: %b\n" (result.final_output <> None));
+  [%expect {|
+    passes_used: 1
+    stop_reason: misplaced_ops
+    has_final_output: true |}]
