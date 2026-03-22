@@ -382,20 +382,51 @@ send: sigma|Security gap in ops boundary
 ops: [{"kind":"fs_read","path":"README.md"}]
 
 The above should have been in frontmatter.|} in
-  let _parsed = Cn_output.parse_output raw in
-  [%expect {||}]
-  (* Trace warning emitted but not captured by expect test —
-     the important thing is parse_output doesn't crash.
-     The trace event output.ops_in_body is verified in integration. *)
+  let parsed = Cn_output.parse_output raw in
+  Printf.printf "has_misplaced_ops: %b\n" parsed.has_misplaced_ops;
+  Printf.printf "typed_ops: %d\n" (List.length parsed.typed_ops);
+  [%expect {|
+    has_misplaced_ops: true
+    typed_ops: 0 |}]
 
-let%expect_test "parse_output: clean body produces no warning" =
+let%expect_test "parse_output: clean body produces no misplaced_ops flag" =
   let raw = {|---
 id: test-456
 send: sigma|This is correct frontmatter
 ---
 Just a normal response body with no ops.|} in
-  let _parsed = Cn_output.parse_output raw in
-  [%expect {||}]
+  let parsed = Cn_output.parse_output raw in
+  Printf.printf "has_misplaced_ops: %b\n" parsed.has_misplaced_ops;
+  [%expect {| has_misplaced_ops: false |}]
+
+let%expect_test "parse_output: ops in frontmatter → no misplaced flag" =
+  let raw = {|---
+id: test-789
+ops: [{"kind":"fs_read","op_id":"obs-01","path":"README.md"}]
+---
+Here is the file content.|} in
+  let parsed = Cn_output.parse_output raw in
+  Printf.printf "has_misplaced_ops: %b\n" parsed.has_misplaced_ops;
+  Printf.printf "typed_ops: %d\n" (List.length parsed.typed_ops);
+  [%expect {|
+    has_misplaced_ops: false
+    typed_ops: 1 |}]
+
+let%expect_test "parse_output: body-only ops with no frontmatter ops" =
+  let raw = {|---
+id: test-abc
+reply: test-abc|Let me check that.
+---
+ops: [{"kind":"fs_read","path":"src/main.ml"}]
+done: test-abc|} in
+  let parsed = Cn_output.parse_output raw in
+  Printf.printf "has_misplaced_ops: %b\n" parsed.has_misplaced_ops;
+  Printf.printf "typed_ops: %d\n" (List.length parsed.typed_ops);
+  Printf.printf "coordination_ops: %d\n" (List.length parsed.coordination_ops);
+  [%expect {|
+    has_misplaced_ops: true
+    typed_ops: 0
+    coordination_ops: 1 |}]
 
 (* === Issue #40: mid-body frontmatter stripped from human surface === *)
 
@@ -520,3 +551,166 @@ let%expect_test "strip_embedded_frontmatter: unclosed block kept as prose" =
 
     ---
     Some notes |}]
+
+(* ============================================================ *)
+(* === STRUCTURED OUTPUT (v3.9.0, Issue #52)                  === *)
+(* ============================================================ *)
+
+let%expect_test "parse_structured: body only" =
+  let input = Cn_json.Object [
+    "body", Cn_json.String "Hello, here is my response.";
+  ] in
+  let p = Cn_output.parse_structured ~trigger_id:"test-001" input in
+  Printf.printf "body: %s\n" (match p.body with Some b -> b | None -> "(none)");
+  Printf.printf "typed_ops: %d\n" (List.length p.typed_ops);
+  Printf.printf "coord_ops: %d\n" (List.length p.coordination_ops);
+  Printf.printf "has_misplaced_ops: %b\n" p.has_misplaced_ops;
+  Printf.printf "ops_version: %s\n" (match p.ops_version with Some v -> v | None -> "(none)");
+  [%expect {|
+    body: Hello, here is my response.
+    typed_ops: 0
+    coord_ops: 0
+    has_misplaced_ops: false
+    ops_version: 3.9 |}]
+
+let%expect_test "parse_structured: with typed ops" =
+  let input = Cn_json.Object [
+    "body", Cn_json.String "Let me read the file.";
+    "typed_ops", Cn_json.Array [
+      Cn_json.Object [
+        "kind", Cn_json.String "fs_read";
+        "path", Cn_json.String "src/main.ml";
+      ];
+    ];
+  ] in
+  let p = Cn_output.parse_structured ~trigger_id:"test-002" input in
+  Printf.printf "typed_ops: %d\n" (List.length p.typed_ops);
+  Printf.printf "has_misplaced_ops: %b\n" p.has_misplaced_ops;
+  List.iter (fun (op : Cn_shell.typed_op) ->
+    Printf.printf "kind: %s\n" (Cn_shell.string_of_op_kind op.kind)
+  ) p.typed_ops;
+  [%expect {|
+    typed_ops: 1
+    has_misplaced_ops: false
+    kind: fs_read |}]
+
+let%expect_test "parse_structured: with coordination ops" =
+  let input = Cn_json.Object [
+    "body", Cn_json.String "Done with the task.";
+    "coordination_ops", Cn_json.Array [
+      Cn_json.Object [
+        "kind", Cn_json.String "reply";
+        "id", Cn_json.String "tg-123";
+        "message", Cn_json.String "Task complete.";
+      ];
+      Cn_json.Object [
+        "kind", Cn_json.String "done";
+        "id", Cn_json.String "tg-123";
+      ];
+    ];
+  ] in
+  let p = Cn_output.parse_structured ~trigger_id:"test-003" input in
+  Printf.printf "coord_ops: %d\n" (List.length p.coordination_ops);
+  List.iter (fun op ->
+    Printf.printf "op: %s\n" (Cn_lib.string_of_agent_op op)
+  ) p.coordination_ops;
+  [%expect {|
+    coord_ops: 2
+    op: reply:tg-123
+    op: done:tg-123 |}]
+
+let%expect_test "parse_structured: mixed typed + coordination ops" =
+  let input = Cn_json.Object [
+    "body", Cn_json.String "Writing the file and completing.";
+    "typed_ops", Cn_json.Array [
+      Cn_json.Object [
+        "kind", Cn_json.String "fs_write";
+        "op_id", Cn_json.String "write-01";
+        "path", Cn_json.String "src/new.ml";
+        "content", Cn_json.String "let x = 1";
+      ];
+    ];
+    "coordination_ops", Cn_json.Array [
+      Cn_json.Object [
+        "kind", Cn_json.String "done";
+        "id", Cn_json.String "tg-456";
+      ];
+    ];
+  ] in
+  let p = Cn_output.parse_structured ~trigger_id:"test-004" input in
+  Printf.printf "typed_ops: %d\n" (List.length p.typed_ops);
+  Printf.printf "coord_ops: %d\n" (List.length p.coordination_ops);
+  Printf.printf "denials: %d\n" (List.length p.ops_receipts);
+  [%expect {|
+    typed_ops: 1
+    coord_ops: 1
+    denials: 0 |}]
+
+let%expect_test "parse_structured: malformed typed op → denial receipt" =
+  let input = Cn_json.Object [
+    "body", Cn_json.String "Trying an unknown op.";
+    "typed_ops", Cn_json.Array [
+      Cn_json.Object [
+        "kind", Cn_json.String "frobnicate";
+        "path", Cn_json.String "x";
+      ];
+    ];
+  ] in
+  let p = Cn_output.parse_structured ~trigger_id:"test-005" input in
+  Printf.printf "typed_ops: %d\n" (List.length p.typed_ops);
+  Printf.printf "denials: %d\n" (List.length p.ops_receipts);
+  if p.ops_receipts <> [] then begin
+    let r = List.hd p.ops_receipts in
+    Printf.printf "denial_kind: %s\n" r.kind;
+    Printf.printf "denial_reason: %s\n" r.reason
+  end;
+  [%expect {|
+    typed_ops: 0
+    denials: 1
+    denial_kind: frobnicate
+    denial_reason: unknown_op_kind |}]
+
+let%expect_test "compile_output_md: round-trip body + ops" =
+  let input = Cn_json.Object [
+    "body", Cn_json.String "Here is the result.";
+    "typed_ops", Cn_json.Array [
+      Cn_json.Object [
+        "kind", Cn_json.String "fs_read";
+        "path", Cn_json.String "README.md";
+      ];
+    ];
+    "coordination_ops", Cn_json.Array [
+      Cn_json.Object [
+        "kind", Cn_json.String "reply";
+        "id", Cn_json.String "tg-789";
+        "message", Cn_json.String "Found it.";
+      ];
+    ];
+  ] in
+  let p = Cn_output.parse_structured ~trigger_id:"test-006" input in
+  (* The raw_output is the compiled markdown *)
+  let has_frontmatter = Cn_lib.starts_with ~prefix:"---\n" p.raw_output in
+  let has_body = String.length p.raw_output > 0 in
+  Printf.printf "has_frontmatter: %b\n" has_frontmatter;
+  Printf.printf "has_body: %b\n" has_body;
+  (* Round-trip: parse the compiled markdown *)
+  let rt = Cn_output.parse_output p.raw_output in
+  Printf.printf "rt_typed_ops: %d\n" (List.length rt.typed_ops);
+  Printf.printf "rt_coord_ops: %d\n" (List.length rt.coordination_ops);
+  Printf.printf "rt_body_present: %b\n" (rt.body <> None);
+  [%expect {|
+    has_frontmatter: true
+    has_body: true
+    rt_typed_ops: 1
+    rt_coord_ops: 1
+    rt_body_present: true |}]
+
+let%expect_test "cn_respond_tool: schema is valid JSON object" =
+  let schema = Cn_output.cn_respond_tool.input_schema in
+  let schema_type = Cn_json.get_string "type" schema in
+  let has_properties = Cn_json.get "properties" schema <> None in
+  Printf.printf "type: %s\n" (match schema_type with Some s -> s | None -> "(none)");
+  Printf.printf "has_properties: %b\n" has_properties;
+  [%expect {|
+    type: object
+    has_properties: true |}]
