@@ -468,7 +468,7 @@ let update_ready_body hub_path ~fsm_state ~lock_held ~current_cycle =
     in the N-pass bind loop. If not provided, falls back to repacking
     from scratch.
     [chat_id_opt] is used to build a processing indicator for Telegram. *)
-let finalize ~(config : Cn_config.config) ~hub_path ~name
+let rec finalize ~(config : Cn_config.config) ~hub_path ~name
       ~trigger_id ~from ~inbound_message ~output_content
       ?packed ?chat_id_opt () =
   Cn_trace.gemit ~component:"runtime" ~layer:Body
