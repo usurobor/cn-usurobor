@@ -98,33 +98,33 @@ let make_effect ~op_id ~fields kind_str =
 (* === N-PASS TRIGGERING                                      === *)
 (* ============================================================ *)
 
-let%expect_test "auto + observe ops → has_continuation=true" =
+let%expect_test "auto + observe ops → effects_deferred=true" =
   with_test_hub (fun hub ->
     let ops = [
       make_observe_with ~op_id:"obs-01"
         ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read"
     ] in
-    let (receipts, has_continuation) = Cn_orchestrator.run_observe_pass ~pass_label:"1" ~hub_path:hub ~trigger_id ~config:auto_config ops in
-    Printf.printf "has_continuation: %b\n" has_continuation;
+    let (receipts, effects_deferred) = Cn_orchestrator.run_pass ~pass_label:"1" ~hub_path:hub ~trigger_id ~config:auto_config ops in
+    Printf.printf "effects_deferred: %b\n" effects_deferred;
     Printf.printf "receipt_count: %d\n" (List.length receipts);
     List.iter show_receipt receipts);
   [%expect {|
-    has_continuation: true
+    effects_deferred: true
     receipt_count: 1
     pass=1 kind=fs_read status=ok reason=(none) |}]
 
-let%expect_test "auto + effect-only → has_continuation=false (single pass)" =
+let%expect_test "auto + effect-only → effects_deferred=false (single pass)" =
   with_test_hub (fun hub ->
     let ops = [
       make_effect ~op_id:"write-01"
         ~fields:[("path", Cn_json.String "src/new.ml");
                  ("content", Cn_json.String "let x = 1")] "fs_write"
     ] in
-    let (receipts, has_continuation) = Cn_orchestrator.run_observe_pass ~pass_label:"1" ~hub_path:hub ~trigger_id ~config:auto_config ops in
-    Printf.printf "has_continuation: %b\n" has_continuation;
+    let (receipts, effects_deferred) = Cn_orchestrator.run_pass ~pass_label:"1" ~hub_path:hub ~trigger_id ~config:auto_config ops in
+    Printf.printf "effects_deferred: %b\n" effects_deferred;
     List.iter show_receipt receipts);
   [%expect {|
-    has_continuation: false
+    effects_deferred: false
     pass=1 kind=fs_write status=ok reason=(none) |}]
 
 let%expect_test "auto + mixed observe+effect → effects deferred" =
@@ -136,11 +136,11 @@ let%expect_test "auto + mixed observe+effect → effects deferred" =
         ~fields:[("path", Cn_json.String "src/new.ml");
                  ("content", Cn_json.String "let x = 1")] "fs_write";
     ] in
-    let (receipts, has_continuation) = Cn_orchestrator.run_observe_pass ~pass_label:"1" ~hub_path:hub ~trigger_id ~config:auto_config ops in
-    Printf.printf "has_continuation: %b\n" has_continuation;
+    let (receipts, effects_deferred) = Cn_orchestrator.run_pass ~pass_label:"1" ~hub_path:hub ~trigger_id ~config:auto_config ops in
+    Printf.printf "effects_deferred: %b\n" effects_deferred;
     List.iter show_receipt receipts);
   [%expect {|
-    has_continuation: true
+    effects_deferred: true
     pass=1 kind=fs_read status=ok reason=(none)
     pass=1 kind=fs_write status=skipped reason=observe_pass_requires_followup |}]
 
@@ -153,11 +153,11 @@ let%expect_test "off + mixed → all execute, single pass" =
         ~fields:[("path", Cn_json.String "src/new.ml");
                  ("content", Cn_json.String "let x = 1")] "fs_write";
     ] in
-    let (receipts, has_continuation) = Cn_orchestrator.run_observe_pass ~pass_label:"1" ~hub_path:hub ~trigger_id ~config:off_config ops in
-    Printf.printf "has_continuation: %b\n" has_continuation;
+    let (receipts, effects_deferred) = Cn_orchestrator.run_pass ~pass_label:"1" ~hub_path:hub ~trigger_id ~config:off_config ops in
+    Printf.printf "effects_deferred: %b\n" effects_deferred;
     List.iter show_receipt receipts);
   [%expect {|
-    has_continuation: false
+    effects_deferred: false
     pass=1 kind=fs_read status=ok reason=(none)
     pass=1 kind=fs_write status=ok reason=(none) |}]
 
@@ -167,11 +167,11 @@ let%expect_test "off + observe-only → execute, no continuation" =
       make_observe_with ~op_id:"obs-01"
         ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read"
     ] in
-    let (receipts, has_continuation) = Cn_orchestrator.run_observe_pass ~pass_label:"1" ~hub_path:hub ~trigger_id ~config:off_config ops in
-    Printf.printf "has_continuation: %b\n" has_continuation;
+    let (receipts, effects_deferred) = Cn_orchestrator.run_pass ~pass_label:"1" ~hub_path:hub ~trigger_id ~config:off_config ops in
+    Printf.printf "effects_deferred: %b\n" effects_deferred;
     List.iter show_receipt receipts);
   [%expect {|
-    has_continuation: false
+    effects_deferred: false
     pass=1 kind=fs_read status=ok reason=(none) |}]
 
 (* ============================================================ *)
@@ -228,7 +228,7 @@ let%expect_test "observe pass receipts all tagged '1'" =
         ~fields:[("path", Cn_json.String "src/new.ml");
                  ("content", Cn_json.String "let x")] "fs_write";
     ] in
-    let (receipts, _has_continuation) = Cn_orchestrator.run_observe_pass ~pass_label:"1" ~hub_path:hub ~trigger_id ~config:auto_config ops in
+    let (receipts, _effects_deferred) = Cn_orchestrator.run_pass ~pass_label:"1" ~hub_path:hub ~trigger_id ~config:auto_config ops in
     let all_1 = List.for_all (fun (r : Cn_shell.receipt) -> r.pass = "1") receipts in
     Printf.printf "all_pass_1: %b\n" all_1);
   [%expect {| all_pass_1: true |}]
@@ -435,9 +435,9 @@ let%expect_test "full N-pass: receipts accumulate in one file" =
         ~fields:[("path", Cn_json.String "src/new.ml");
                  ("content", Cn_json.String "let x = 1")] "fs_write";
     ] in
-    let (receipts_1, has_continuation) = Cn_orchestrator.run_observe_pass ~pass_label:"1" ~hub_path:hub ~trigger_id
+    let (receipts_1, effects_deferred) = Cn_orchestrator.run_pass ~pass_label:"1" ~hub_path:hub ~trigger_id
                    ~config:auto_config pass_1_ops in
-    assert has_continuation;
+    assert effects_deferred;
     ignore receipts_1;
 
     (* Pass 2 (effect) *)
@@ -476,12 +476,12 @@ let%expect_test "full N-pass: receipts accumulate in one file" =
 
 let%expect_test "empty ops list → single pass, no receipts" =
   with_test_hub (fun hub ->
-    let (receipts, has_continuation) = Cn_orchestrator.run_observe_pass ~pass_label:"1" ~hub_path:hub ~trigger_id
+    let (receipts, effects_deferred) = Cn_orchestrator.run_pass ~pass_label:"1" ~hub_path:hub ~trigger_id
                    ~config:auto_config [] in
-    Printf.printf "has_continuation: %b\n" has_continuation;
+    Printf.printf "effects_deferred: %b\n" effects_deferred;
     Printf.printf "receipt_count: %d\n" (List.length receipts));
   [%expect {|
-    has_continuation: false
+    effects_deferred: false
     receipt_count: 0 |}]
 
 (* ============================================================ *)

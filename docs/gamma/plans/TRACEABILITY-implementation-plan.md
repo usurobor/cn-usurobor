@@ -191,7 +191,7 @@ Instrument `cn_orchestrator.ml`.
 
 Required events: `pass.selected`, `ops.classified`, `coordination.skipped`, `policy.denied`, `budget.denied`, `effects.execute.start`, `effects.execute.complete`.
 
-Required reason codes: `observe_detected`, `n_pass_off`, `max_passes_exceeded`, `pass_a_unsafe`, `effects_failed`, `budget_exceeded`, `unknown_op_kind`, `phase_mismatch`, `path_denied`.
+Required reason codes: `deferred_effects`, `all_execute`, `continuation`, `n_pass_off`, `effect_only`, `max_passes_reached`, `budget_exhausted`, `no_ops`, `pass_a_unsafe`, `effects_failed`, `unknown_op_kind`, `phase_mismatch`, `path_denied`.
 
 Receipts remain the primary audit for typed ops. These events are operator summaries.
 
