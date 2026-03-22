@@ -151,43 +151,6 @@ let run_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
 
   (receipts, has_continuation)
 
-(* === Effect-class pass (unit-testable helper, not used in main loop) === *)
-
-(** Run an effect-class pass.
-    Effect ops execute normally, observe ops denied with max_passes_exceeded.
-    Note: retained as a directly testable helper. The main run_n_pass loop
-    uses run_pass for all passes — it no longer calls this function. *)
-let run_effect_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
-  Cn_trace.gemit ~component:"orchestrator" ~layer:Body
-    ~event:"pass.N.start" ~severity:Info ~status:Ok_
-    ~trigger_id ~pass:pass_label
-    ~reason_code:"effect_pass"
-    ~details:[
-      "pass_index", Cn_json.Int (int_of_string pass_label - 1);
-    ] ();
-
-  let receipts = List.map (fun (op : Cn_shell.typed_op) ->
-    if not (Cn_shell.is_effect op.Cn_shell.kind) then begin
-      Cn_trace.gemit ~component:"orchestrator" ~layer:Governance
-        ~event:"policy.denied" ~severity:Info ~status:Skipped
-        ~trigger_id ~pass:pass_label
-        ~reason_code:"max_passes_exceeded"
-        ~details:["kind", Cn_json.String (Cn_shell.string_of_op_kind op.kind)] ();
-      let now = Cn_executor.now_iso () in
-      { (Cn_shell.make_receipt ~pass:pass_label ~op_id:op.Cn_shell.op_id
-           ~kind:(Cn_shell.string_of_op_kind op.kind)
-           ~status:Denied ~reason:"max_passes_exceeded")
-        with start_time = now; end_time = now }
-    end else
-      let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config op in
-      { r with Cn_shell.pass = pass_label }
-  ) typed_ops in
-
-  if receipts <> [] then
-    Cn_executor.write_receipts ~hub_path ~trigger_id ~pass:pass_label receipts;
-
-  receipts
-
 (* === Denial receipt pass-through === *)
 
 (** Write parser denial receipts with pass tagging.

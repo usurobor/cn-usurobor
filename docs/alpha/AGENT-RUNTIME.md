@@ -75,13 +75,13 @@
   - structured events become authoritative for lifecycle, readiness, and transition reasoning
 
 **v3.3.6** — CLP pass: α-axis polish (spec precision):
-- **Receipts `pass` field**: moved from container-level to per-receipt entry; N-pass files contain entries with `"pass": "A"` and `"pass": "B"` in one array (self-describing, no ambiguity)
+- **Receipts `pass` field**: moved from container-level to per-receipt entry; N-pass files contain entries with `"pass": "1"`, `"pass": "2"`, etc. in one array (self-describing, no ambiguity)
 - **Capability discovery ordering**: kinds MUST be listed in fixed table order (observe first, then effect); budget keys in lexical order (maximizes prompt cache hits)
 - **`ops_version` type**: explicitly a string (`"3.3"`); runtime MUST parse as string regardless of frontmatter parser behavior; quoting recommended
 
 **v3.3.5** — CLP pass: γ-axis hardening (evolution / migration):
 - **Capability discovery**: runtime-generated `## CN Shell Capabilities` block in packed context; declares supported kinds, budgets, apply_mode, exec allowlist at call time; agents degrade gracefully on older runtimes
-- **Receipts schema version**: `state/receipts/{trigger_id}.json` now has a normative container shape: `{ "schema": "cn.receipts.v1", "receipts": [{ "pass": "A"|"B", ... }] }`; hash algorithm specified as `sha256:`
+- **Receipts schema version**: `state/receipts/{trigger_id}.json` now has a normative container shape: `{ "schema": "cn.receipts.v1", "receipts": [{ "pass": "1"|"2"|..., ... }] }`; hash algorithm specified as `sha256:`
 - **In-band ops version**: optional `ops_version` frontmatter field; runtime warns on unsupported versions, processes known kinds normally
 - **CN Shell section header**: dropped stale version number from header (was showing v3.3.2 in v3.3.4 content)
 - **Reply marker placeholders**: angle brackets → curly braces for renderer compatibility; marker writes explicitly placed under processor lock (crash-recovery envelope)
@@ -913,7 +913,7 @@ These four statuses are exhaustive. Every receipt MUST use exactly one.
   "trigger_id": "20260304-021500-xyz",
   "receipts": [
     {
-      "pass": "A",
+      "pass": "1",
       "op_id": "01JA",
       "kind": "fs_read",
       "status": "ok",
@@ -926,7 +926,7 @@ These four statuses are exhaustive. Every receipt MUST use exactly one.
 ```
 
 - `schema` is a version string. Bump when receipt fields change (additive fields = minor bump; removals/renames = major bump).
-- `pass` is per-receipt (`"A"` or `"B"`), not per-container. For N-pass execution, Pass B appends entries with `"pass": "B"` to the same `receipts` array. This removes ambiguity: the file always contains every receipt from every pass, each self-describing.
+- `pass` is per-receipt (numeric: `"1"`, `"2"`, ...), not per-container. Each pass appends entries with its numeric label to the same `receipts` array. This removes ambiguity: the file always contains every receipt from every pass, each self-describing.
 - Hash algorithm is SHA-256, prefixed as `sha256:`.
 
 Receipts MUST be written to `state/receipts/` and archived to `logs/receipts/`.
@@ -1728,7 +1728,7 @@ character of the input.
   "trigger_id": "20260305-091200-abc",
   "receipts": [
     {
-      "pass": "A",
+      "pass": "1",
       "op_id": "obs-01",
       "kind": "fs_read",
       "status": "ok",
@@ -1811,7 +1811,7 @@ ops: [{"kind":"fs_patch","op_id":"patch-readme","path":"docs/README.md","unified
   "trigger_id": "20260305-091500-def",
   "receipts": [
     {
-      "pass": "A",
+      "pass": "1",
       "op_id": "obs-01",
       "kind": "fs_read",
       "status": "ok",
@@ -1821,7 +1821,7 @@ ops: [{"kind":"fs_patch","op_id":"patch-readme","path":"docs/README.md","unified
       "artifacts": [{"path": "state/artifacts/20260305-091500-def/obs-01.txt", "hash": "sha256:...", "size": 2048}]
     },
     {
-      "pass": "A",
+      "pass": "1",
       "op_id": "patch-readme",
       "kind": "fs_patch",
       "status": "skipped",
@@ -1831,7 +1831,7 @@ ops: [{"kind":"fs_patch","op_id":"patch-readme","path":"docs/README.md","unified
       "artifacts": []
     },
     {
-      "pass": "B",
+      "pass": "2",
       "op_id": "patch-readme",
       "kind": "fs_patch",
       "status": "ok",
@@ -1999,10 +1999,10 @@ I'll need a different approach.
   "schema": "cn.receipts.v1",
   "trigger_id": "20260305-110000-mno",
   "receipts": [
-    {"pass": "A", "op_id": "obs-01", "kind": "fs_read", "status": "denied", "reason": "path_denied", "start": "...", "end": "...", "artifacts": []},
-    {"pass": "A", "op_id": "write-main", "kind": "fs_write", "status": "skipped", "reason": "observe_pass_requires_followup", "start": "...", "end": "...", "artifacts": []},
-    {"pass": "A", "op_id": "obs-02", "kind": "fs_read", "status": "denied", "reason": "path_escape", "start": "...", "end": "...", "artifacts": []},
-    {"pass": "A", "op_id": "x1", "kind": "frobnicate", "status": "denied", "reason": "unknown_op_kind", "start": "...", "end": "...", "artifacts": []}
+    {"pass": "1", "op_id": "obs-01", "kind": "fs_read", "status": "denied", "reason": "path_denied", "start": "...", "end": "...", "artifacts": []},
+    {"pass": "1", "op_id": "write-main", "kind": "fs_write", "status": "skipped", "reason": "observe_pass_requires_followup", "start": "...", "end": "...", "artifacts": []},
+    {"pass": "1", "op_id": "obs-02", "kind": "fs_read", "status": "denied", "reason": "path_escape", "start": "...", "end": "...", "artifacts": []},
+    {"pass": "1", "op_id": "x1", "kind": "frobnicate", "status": "denied", "reason": "unknown_op_kind", "start": "...", "end": "...", "artifacts": []}
   ]
 }
 ```
@@ -2064,7 +2064,7 @@ Running tests and fetching data.
   "trigger_id": "20260305-120000-pqr",
   "receipts": [
     {
-      "pass": "A",
+      "pass": "1",
       "op_id": "run-tests",
       "kind": "exec",
       "status": "error",
@@ -2078,7 +2078,7 @@ Running tests and fetching data.
       ]
     },
     {
-      "pass": "A",
+      "pass": "1",
       "op_id": "bad-cmd",
       "kind": "exec",
       "status": "denied",
@@ -2088,7 +2088,7 @@ Running tests and fetching data.
       "artifacts": []
     },
     {
-      "pass": "A",
+      "pass": "1",
       "op_id": null,
       "kind": "done",
       "status": "skipped",

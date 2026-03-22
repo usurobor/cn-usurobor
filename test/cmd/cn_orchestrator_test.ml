@@ -175,43 +175,31 @@ let%expect_test "off + observe-only → execute, no continuation" =
     pass=1 kind=fs_read status=ok reason=(none) |}]
 
 (* ============================================================ *)
-(* === EFFECT PASS EXECUTION                                  === *)
+(* === PASS EXECUTION: effect-only and denied paths          === *)
 (* ============================================================ *)
 
-let%expect_test "effect pass: effects execute, observe denied max_passes_exceeded" =
+let%expect_test "run_pass: effect-only all execute (n_pass=auto, no observe)" =
   with_test_hub (fun hub ->
     let ops = [
-      make_observe_with ~op_id:"obs-01"
-        ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read";
       make_effect ~op_id:"write-01"
         ~fields:[("path", Cn_json.String "src/new.ml");
                  ("content", Cn_json.String "let x = 1")] "fs_write";
     ] in
-    let result = Cn_orchestrator.run_effect_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
+    let (result, effects_deferred) = Cn_orchestrator.run_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
+    Printf.printf "effects_deferred: %b\n" effects_deferred;
     List.iter show_receipt result);
   [%expect {|
-    pass=2 kind=fs_read status=denied reason=max_passes_exceeded
+    effects_deferred: false
     pass=2 kind=fs_write status=ok reason=(none) |}]
 
-let%expect_test "effect pass: effect-only all execute" =
-  with_test_hub (fun hub ->
-    let ops = [
-      make_effect ~op_id:"write-01"
-        ~fields:[("path", Cn_json.String "src/new.ml");
-                 ("content", Cn_json.String "let x = 1")] "fs_write";
-    ] in
-    let result = Cn_orchestrator.run_effect_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
-    List.iter show_receipt result);
-  [%expect {| pass=2 kind=fs_write status=ok reason=(none) |}]
-
-let%expect_test "effect pass: denied effects still receipted" =
+let%expect_test "run_pass: denied effects still receipted" =
   with_test_hub (fun hub ->
     let ops = [
       make_effect ~op_id:"write-01"
         ~fields:[("path", Cn_json.String ".cn/evil.ml");
                  ("content", Cn_json.String "bad")] "fs_write";
     ] in
-    let result = Cn_orchestrator.run_effect_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
+    let (result, _) = Cn_orchestrator.run_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
     List.iter show_receipt result);
   [%expect {| pass=2 kind=fs_write status=denied reason=path_denied |}]
 
@@ -233,14 +221,14 @@ let%expect_test "observe pass receipts all tagged '1'" =
     Printf.printf "all_pass_1: %b\n" all_1);
   [%expect {| all_pass_1: true |}]
 
-let%expect_test "effect pass receipts all tagged '2'" =
+let%expect_test "run_pass receipts all tagged '2'" =
   with_test_hub (fun hub ->
     let ops = [
       make_effect ~op_id:"write-01"
         ~fields:[("path", Cn_json.String "src/new.ml");
                  ("content", Cn_json.String "let x")] "fs_write";
     ] in
-    let result = Cn_orchestrator.run_effect_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
+    let (result, _) = Cn_orchestrator.run_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
     let all_2 = List.for_all (fun (r : Cn_shell.receipt) -> r.pass = "2") result in
     Printf.printf "all_pass_2: %b\n" all_2);
   [%expect {| all_pass_2: true |}]
@@ -440,13 +428,13 @@ let%expect_test "full N-pass: receipts accumulate in one file" =
     assert effects_deferred;
     ignore receipts_1;
 
-    (* Pass 2 (effect) *)
+    (* Pass 2 (effect-only via run_pass with n_pass=off to execute all) *)
     let pass_2_ops = [
       make_effect ~op_id:"write-01"
         ~fields:[("path", Cn_json.String "src/new.ml");
                  ("content", Cn_json.String "let x = 1")] "fs_write";
     ] in
-    let _pass_2 = Cn_orchestrator.run_effect_pass ~pass_label:"2" ~hub_path:hub ~trigger_id
+    let (_pass_2, _) = Cn_orchestrator.run_pass ~pass_label:"2" ~hub_path:hub ~trigger_id
                     ~config:auto_config pass_2_ops in
 
     (* Read receipts file *)
