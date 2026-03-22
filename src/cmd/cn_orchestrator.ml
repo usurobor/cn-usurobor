@@ -324,6 +324,14 @@ type n_pass_result = {
 
     And an optional [indicator] handle for processing indicators.
 
+    When [correction_message] is provided and [typed_ops] is empty,
+    the loop starts with a correction pass (issue #51): call the LLM
+    with the correction instruction, parse the result, and continue
+    normally with whatever ops come back. The correction pass is pass 0
+    and consumes one unit of max_passes budget. If correction fails to
+    produce any ops or coordination ops, the loop terminates with
+    [Misplaced_ops] stop reason.
+
     Flow per pass:
     1. Execute ops (observe defers effects; all-execute otherwise)
     2. Collect receipts
@@ -340,9 +348,10 @@ type n_pass_result = {
     - no ops from LLM (terminal pass)
     - max_passes reached
     - budget exhausted (max_total_ops)
-    - fatal runtime failure (LLM error) *)
+    - fatal runtime failure (LLM error)
+    - misplaced ops correction failed *)
 let run_n_pass ~hub_path ~trigger_id ~config
-      ~llm_call ?indicator typed_ops =
+      ~llm_call ?indicator ?correction_message typed_ops =
   let max_passes = config.Cn_shell.max_passes in
   let max_total_ops = config.Cn_shell.max_total_ops in
   let total_ops = ref 0 in
@@ -520,4 +529,100 @@ let run_n_pass ~hub_path ~trigger_id ~config
     end
   in
 
-  loop ~pass_index:0 ~current_ops:typed_ops ~last_parsed:None
+  (* Correction path: if typed_ops is empty but correction_message is set,
+     run a correction pass as pass 0. This is a real pass inside the loop
+     that consumes max_passes budget. See issue #51. *)
+  if typed_ops = [] then begin
+    match correction_message with
+    | None ->
+      (* No correction needed — this shouldn't normally be reached because
+         Cn_shell.execute guards typed_ops=[] with Ok None. Return empty
+         terminal for robustness. *)
+      Ok {
+        all_receipts = [];
+        final_coordination_ops = [];
+        final_output = None;
+        passes_used = 0;
+        stop_reason = No_ops;
+      }
+    | Some correction_msg ->
+      Cn_trace.gemit ~component:"orchestrator" ~layer:Body
+        ~event:"pass.N.misplaced_ops" ~severity:Warn ~status:Degraded
+        ~trigger_id ~reason_code:"misplaced_ops"
+        ~reason:"Ops detected in body text; running correction pass" ();
+
+      if max_passes < 1 then
+        Ok {
+          all_receipts = [];
+          final_coordination_ops = [];
+          final_output = None;
+          passes_used = 0;
+          stop_reason = Misplaced_ops;
+        }
+      else begin
+        (* Pass 0: correction — call LLM with formatting instructions *)
+        match llm_call correction_msg with
+        | Error msg ->
+          Cn_trace.gemit ~component:"orchestrator" ~layer:Mind
+            ~event:"pass.N.llm.error" ~severity:Error_ ~status:Error_status
+            ~trigger_id ~pass:"0" ~reason_code:"correction_llm_error" ();
+          (match indicator with Some h -> Cn_indicator.fail h | None -> ());
+          Error (Printf.sprintf "Correction pass LLM call failed: %s" msg)
+        | Ok raw_output ->
+          Cn_trace.gemit ~component:"orchestrator" ~layer:Mind
+            ~event:"pass.N.llm.ok" ~severity:Info ~status:Ok_
+            ~trigger_id ~pass:"0" ();
+
+          let corrected = Cn_output.parse_output raw_output in
+
+          if corrected.typed_ops <> [] then begin
+            (* Typed ops recovered — continue with normal loop from pass 1 *)
+            Cn_trace.gemit ~component:"orchestrator" ~layer:Body
+              ~event:"pass.N.misplaced_ops.corrected" ~severity:Info ~status:Ok_
+              ~trigger_id
+              ~details:[
+                "typed_op_count", Cn_json.Int (List.length corrected.typed_ops);
+                "coord_op_count", Cn_json.Int (List.length corrected.coordination_ops);
+              ] ();
+            (* Continue the loop from pass_index=1 (pass 0 was the correction).
+               Decrement effective max_passes by 1 since correction consumed one. *)
+            loop ~pass_index:1 ~current_ops:corrected.typed_ops
+                 ~last_parsed:(Some corrected)
+          end else if corrected.coordination_ops <> [] then begin
+            (* Only coordination ops recovered — terminal with corrected output *)
+            Cn_trace.gemit ~component:"orchestrator" ~layer:Body
+              ~event:"pass.N.misplaced_ops.corrected" ~severity:Info ~status:Ok_
+              ~trigger_id
+              ~details:[
+                "typed_op_count", Cn_json.Int 0;
+                "coord_op_count", Cn_json.Int (List.length corrected.coordination_ops);
+              ] ();
+            let gated_coord_ops =
+              List.map (fun op ->
+                (op, gate_coordination ~effect_receipts:[] op)
+              ) corrected.coordination_ops
+            in
+            Ok {
+              all_receipts = [];
+              final_coordination_ops = gated_coord_ops;
+              final_output = Some corrected;
+              passes_used = 1;
+              stop_reason = No_ops;
+            }
+          end else begin
+            (* Correction failed — no ops recovered *)
+            Cn_trace.gemit ~component:"orchestrator" ~layer:Body
+              ~event:"pass.N.misplaced_ops.failed" ~severity:Warn ~status:Degraded
+              ~trigger_id ~reason_code:"correction_failed"
+              ~reason:"Correction pass did not produce valid frontmatter ops" ();
+            Ok {
+              all_receipts = [];
+              final_coordination_ops = [];
+              final_output = Some corrected;
+              passes_used = 1;
+              stop_reason = Misplaced_ops;
+            }
+          end
+      end
+  end else
+    loop ~pass_index:0 ~current_ops:typed_ops ~last_parsed:None

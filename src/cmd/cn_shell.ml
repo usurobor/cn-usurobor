@@ -333,16 +333,21 @@ let receipts_to_json ~trigger_id receipts =
       Returns [Ok result] on success, [Error msg] on failure.
     - [write_denials denials] persists parser denial receipts to disk.
 
-    Returns [Ok (Some result)] when typed ops were executed,
-    [Ok None] when the manifest contained no typed ops,
+    When [has_misplaced_ops] is true and typed_ops is empty, the orchestrator
+    is still invoked to run a correction pass (issue #51). The correction pass
+    is a real pass inside the N-pass loop, consuming max_passes budget.
+
+    Returns [Ok (Some result)] when typed ops were executed (or correction ran),
+    [Ok None] when the manifest contained no typed ops and no correction needed,
     or [Error msg] when orchestration failed.
 
     This is the single entry point that cn_runtime should call for
     typed op execution — delegating to the N-pass orchestrator via callback. *)
-let execute ~orchestrate ~write_denials ~typed_ops ~denial_receipts =
+let execute ~orchestrate ~write_denials ~typed_ops ~denial_receipts
+      ~has_misplaced_ops =
   if denial_receipts <> [] then
     write_denials denial_receipts;
-  if typed_ops = [] then
+  if typed_ops = [] && not has_misplaced_ops then
     Ok None
   else
     match orchestrate typed_ops with
