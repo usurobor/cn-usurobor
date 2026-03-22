@@ -294,6 +294,7 @@ type pass_stop_reason =
   | Max_passes_reached
   | Budget_exhausted
   | Processing_failed
+  | Misplaced_ops
 
 let string_of_stop_reason = function
   | No_ops -> "no_ops"
@@ -302,6 +303,7 @@ let string_of_stop_reason = function
   | Max_passes_reached -> "max_passes_reached"
   | Budget_exhausted -> "budget_exhausted"
   | Processing_failed -> "processing_failed"
+  | Misplaced_ops -> "misplaced_ops"
 
 (* === N-pass result === *)
 

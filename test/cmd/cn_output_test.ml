@@ -382,20 +382,51 @@ send: sigma|Security gap in ops boundary
 ops: [{"kind":"fs_read","path":"README.md"}]
 
 The above should have been in frontmatter.|} in
-  let _parsed = Cn_output.parse_output raw in
-  [%expect {||}]
-  (* Trace warning emitted but not captured by expect test —
-     the important thing is parse_output doesn't crash.
-     The trace event output.ops_in_body is verified in integration. *)
+  let parsed = Cn_output.parse_output raw in
+  Printf.printf "has_misplaced_ops: %b\n" parsed.has_misplaced_ops;
+  Printf.printf "typed_ops: %d\n" (List.length parsed.typed_ops);
+  [%expect {|
+    has_misplaced_ops: true
+    typed_ops: 0 |}]
 
-let%expect_test "parse_output: clean body produces no warning" =
+let%expect_test "parse_output: clean body produces no misplaced_ops flag" =
   let raw = {|---
 id: test-456
 send: sigma|This is correct frontmatter
 ---
 Just a normal response body with no ops.|} in
-  let _parsed = Cn_output.parse_output raw in
-  [%expect {||}]
+  let parsed = Cn_output.parse_output raw in
+  Printf.printf "has_misplaced_ops: %b\n" parsed.has_misplaced_ops;
+  [%expect {| has_misplaced_ops: false |}]
+
+let%expect_test "parse_output: ops in frontmatter → no misplaced flag" =
+  let raw = {|---
+id: test-789
+ops: [{"kind":"fs_read","op_id":"obs-01","path":"README.md"}]
+---
+Here is the file content.|} in
+  let parsed = Cn_output.parse_output raw in
+  Printf.printf "has_misplaced_ops: %b\n" parsed.has_misplaced_ops;
+  Printf.printf "typed_ops: %d\n" (List.length parsed.typed_ops);
+  [%expect {|
+    has_misplaced_ops: false
+    typed_ops: 1 |}]
+
+let%expect_test "parse_output: body-only ops with no frontmatter ops" =
+  let raw = {|---
+id: test-abc
+reply: test-abc|Let me check that.
+---
+ops: [{"kind":"fs_read","path":"src/main.ml"}]
+done: test-abc|} in
+  let parsed = Cn_output.parse_output raw in
+  Printf.printf "has_misplaced_ops: %b\n" parsed.has_misplaced_ops;
+  Printf.printf "typed_ops: %d\n" (List.length parsed.typed_ops);
+  Printf.printf "coordination_ops: %d\n" (List.length parsed.coordination_ops);
+  [%expect {|
+    has_misplaced_ops: true
+    typed_ops: 0
+    coordination_ops: 1 |}]
 
 (* === Issue #40: mid-body frontmatter stripped from human surface === *)
 
