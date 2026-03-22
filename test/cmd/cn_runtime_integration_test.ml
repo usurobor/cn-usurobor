@@ -304,6 +304,8 @@ let%expect_test "n_pass=off: even with observe ops, no Pass 2" =
 (* === MISPLACED OPS CORRECTION (Issue #51 integration)       === *)
 (* ============================================================ *)
 
+let correction_config = { auto_config with max_passes = 5 }
+
 let%expect_test "correction: misplaced typed ops → corrected → executed" =
   with_test_hub (fun hub ->
     (* Correction LLM returns valid frontmatter with typed ops *)
@@ -320,7 +322,7 @@ let%expect_test "correction: misplaced typed ops → corrected → executed" =
     in
     let correction_msg = "Re-emit your ops in frontmatter." in
     match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
-            ~config:auto_config ~llm_call
+            ~config:correction_config ~llm_call
             ~correction_message:correction_msg [] with
     | Error msg -> Printf.printf "error: %s\n" msg
     | Ok result ->
@@ -329,14 +331,14 @@ let%expect_test "correction: misplaced typed ops → corrected → executed" =
     passes_used: 3
     stop_reason: no_ops
     total_receipts: 1
-    pass=1 kind=fs_read status=ok reason=(none) |}]
+    pass=2 kind=fs_read status=ok reason=(none) |}]
 
 let%expect_test "correction: LLM fails → error propagated" =
   with_test_hub (fun hub ->
     let llm_call _ = Error "API timeout" in
     let correction_msg = "Re-emit your ops in frontmatter." in
     match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
-            ~config:auto_config ~llm_call
+            ~config:correction_config ~llm_call
             ~correction_message:correction_msg [] with
     | Error msg -> Printf.printf "error: %s\n" msg
     | Ok _ -> print_endline "unexpected ok");
@@ -350,7 +352,7 @@ let%expect_test "correction: still misplaced → safe terminal" =
     let llm_call _ = Ok still_broken in
     let correction_msg = "Re-emit your ops in frontmatter." in
     match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
-            ~config:auto_config ~llm_call
+            ~config:correction_config ~llm_call
             ~correction_message:correction_msg [] with
     | Error msg -> Printf.printf "error: %s\n" msg
     | Ok result ->
