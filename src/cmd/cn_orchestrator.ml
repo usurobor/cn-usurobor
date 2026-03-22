@@ -151,10 +151,12 @@ let run_observe_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
 
   (receipts, has_continuation)
 
-(* === Effect-class pass === *)
+(* === Effect-class pass (unit-testable helper, not used in main loop) === *)
 
-(** Run an effect-class pass (final pass in the loop).
-    Effect ops execute normally, observe ops denied with max_passes_exceeded. *)
+(** Run an effect-class pass.
+    Effect ops execute normally, observe ops denied with max_passes_exceeded.
+    Note: retained as a directly testable helper. The main run_n_pass loop
+    uses run_observe_pass for all passes — it no longer calls this function. *)
 let run_effect_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
   Cn_trace.gemit ~component:"orchestrator" ~layer:Body
     ~event:"pass.N.start" ~severity:Info ~status:Ok_
