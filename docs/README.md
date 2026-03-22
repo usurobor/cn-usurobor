@@ -29,6 +29,7 @@ The substance of the system — doctrine, specs, definitions.
 | [AGENT-RUNTIME.md](./alpha/AGENT-RUNTIME.md) | Runtime spec: CN Shell, typed ops, N-pass orchestration, receipts |
 | [CAR.md](./alpha/CAR.md) | Cognitive asset resolver — local, versioned cognition |
 | [WHITEPAPER.md](./alpha/WHITEPAPER.md) | CN protocol specification (v3.0.0) |
+| [CTB-v4.0.0-VISION.md](./alpha/CTB-v4.0.0-VISION.md) | CTB v4.0.0 vision: skill language for Coherent Agents |
 | [PROTOCOL.md](./alpha/PROTOCOL.md) | FSM design — state diagrams, transition tables |
 | [TRACEABILITY.md](./alpha/TRACEABILITY.md) | Observability — event stream, state projections, readiness |
 | [SECURITY-MODEL.md](./alpha/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |
