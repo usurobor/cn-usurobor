@@ -1025,7 +1025,7 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
                 finalize ~config ~hub_path ~name
                   ~trigger_id ~from ~inbound_message
                   ~output_content:response.content ~packed
-                  ~chat_id_opt ()
+                  ?chat_id_opt ()
       end
     with
     | result -> finally (); result
