@@ -6,7 +6,7 @@ Setup:
 Version command shows version:
 
   $ $CN --version
-  cn 3.10.0
+  cn 3.11.0
 
 Help shows usage:
 
