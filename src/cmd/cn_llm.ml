@@ -1,7 +1,8 @@
 (** cn_llm.ml — Claude Messages API client
 
     Structured request: system blocks (with optional cache_control) +
-    multi-turn messages. No tools, no streaming.
+    multi-turn messages. Optional tool definitions with tool_choice for
+    structured output (v3.9.0).
 
     Uses Cn_json for request body (single-line guarantee) and response parsing.
     Retries 3x with exponential backoff on 5xx/timeout; 4xx fails immediately. *)
@@ -20,8 +21,26 @@ type message_turn = {
   content : string;
 }
 
+(** A tool definition for structured output. *)
+type tool = {
+  name : string;
+  description : string;
+  input_schema : Cn_json.t;
+}
+
+(** How the model should choose tools. *)
+type tool_choice =
+  | Auto
+  | Force_tool of string
+
+(** A content block in the API response. *)
+type content_block =
+  | Text_block of string
+  | Tool_use_block of { id : string; name : string; input : Cn_json.t }
+
 type response = {
   content : string;
+  content_blocks : content_block list;
   stop_reason : string;
   input_tokens : int;
   output_tokens : int;
@@ -87,19 +106,34 @@ let parse_response body =
   match Cn_json.parse body with
   | Error msg -> Error (Printf.sprintf "JSON parse error: %s" msg)
   | Ok json ->
-      (* Extract all type=text blocks, concatenate.
-         Handles multi-block responses and skips non-text blocks
-         (e.g. thinking, tool_use) so future features don't break. *)
-      let content =
+      (* Extract all content blocks, typed by kind.
+         Text blocks are concatenated for backward compat.
+         Tool_use blocks are preserved for structured output extraction. *)
+      let content_blocks =
         match Cn_json.get_list "content" json with
         | Some blocks ->
-            let texts = blocks |> List.filter_map (fun block ->
+            blocks |> List.filter_map (fun block ->
               match Cn_json.get_string "type" block with
-              | Some "text" -> Cn_json.get_string "text" block
+              | Some "text" ->
+                (match Cn_json.get_string "text" block with
+                 | Some t -> Some (Text_block t)
+                 | None -> None)
+              | Some "tool_use" ->
+                let id = match Cn_json.get_string "id" block with
+                  | Some s -> s | None -> "" in
+                let name = match Cn_json.get_string "name" block with
+                  | Some s -> s | None -> "" in
+                let input = match Cn_json.get "input" block with
+                  | Some j -> j | None -> Cn_json.Object [] in
+                Some (Tool_use_block { id; name; input })
               | _ -> None
-            ) in
-            String.concat "\n\n" texts
-        | None -> ""
+            )
+        | None -> []
+      in
+      let content =
+        content_blocks |> List.filter_map (fun block ->
+          match block with Text_block t -> Some t | _ -> None
+        ) |> String.concat "\n\n"
       in
       let stop_reason =
         match Cn_json.get_string "stop_reason" json with Some s -> s | None -> ""
@@ -111,6 +145,7 @@ let parse_response body =
       in
       Ok {
         content;
+        content_blocks;
         stop_reason;
         input_tokens = get_usage_int "input_tokens";
         output_tokens = get_usage_int "output_tokens";
@@ -136,13 +171,44 @@ let message_to_json (m : message_turn) =
     "content", Cn_json.String m.content;
   ]
 
-let call ~api_key ~model ~max_tokens ~system ~messages =
-  let body = Cn_json.to_string (Cn_json.Object [
+let tool_to_json (t : tool) =
+  Cn_json.Object [
+    "name", Cn_json.String t.name;
+    "description", Cn_json.String t.description;
+    "input_schema", t.input_schema;
+  ]
+
+let tool_choice_to_json = function
+  | Auto -> Cn_json.Object ["type", Cn_json.String "auto"]
+  | Force_tool name -> Cn_json.Object [
+      "type", Cn_json.String "tool";
+      "name", Cn_json.String name;
+    ]
+
+(** Find the first tool_use block matching a given tool name. *)
+let find_tool_use ~name (blocks : content_block list) =
+  blocks |> List.find_map (fun block ->
+    match block with
+    | Tool_use_block b when b.name = name -> Some b.input
+    | _ -> None
+  )
+
+let call ~api_key ~model ~max_tokens ~system ~messages
+      ?(tools=[]) ?(tool_choice=Auto) () =
+  let base_fields = [
     "model", Cn_json.String model;
     "max_tokens", Cn_json.Int max_tokens;
     "system", Cn_json.Array (List.map system_block_to_json system);
     "messages", Cn_json.Array (List.map message_to_json messages);
-  ]) in
+  ] in
+  let fields = match tools with
+    | [] -> base_fields
+    | _ -> base_fields @ [
+        "tools", Cn_json.Array (List.map tool_to_json tools);
+        "tool_choice", tool_choice_to_json tool_choice;
+      ]
+  in
+  let body = Cn_json.to_string (Cn_json.Object fields) in
   let max_retries = 3 in
   let rec attempt n =
     match do_request ~api_key ~body with

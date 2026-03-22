@@ -175,43 +175,31 @@ let%expect_test "off + observe-only → execute, no continuation" =
     pass=1 kind=fs_read status=ok reason=(none) |}]
 
 (* ============================================================ *)
-(* === EFFECT PASS EXECUTION                                  === *)
+(* === PASS EXECUTION: effect-only and denied paths          === *)
 (* ============================================================ *)
 
-let%expect_test "effect pass: effects execute, observe denied max_passes_exceeded" =
+let%expect_test "run_pass: effect-only all execute (n_pass=auto, no observe)" =
   with_test_hub (fun hub ->
     let ops = [
-      make_observe_with ~op_id:"obs-01"
-        ~fields:[("path", Cn_json.String "src/main.ml")] "fs_read";
       make_effect ~op_id:"write-01"
         ~fields:[("path", Cn_json.String "src/new.ml");
                  ("content", Cn_json.String "let x = 1")] "fs_write";
     ] in
-    let result = Cn_orchestrator.run_effect_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
+    let (result, effects_deferred) = Cn_orchestrator.run_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
+    Printf.printf "effects_deferred: %b\n" effects_deferred;
     List.iter show_receipt result);
   [%expect {|
-    pass=2 kind=fs_read status=denied reason=max_passes_exceeded
+    effects_deferred: false
     pass=2 kind=fs_write status=ok reason=(none) |}]
 
-let%expect_test "effect pass: effect-only all execute" =
-  with_test_hub (fun hub ->
-    let ops = [
-      make_effect ~op_id:"write-01"
-        ~fields:[("path", Cn_json.String "src/new.ml");
-                 ("content", Cn_json.String "let x = 1")] "fs_write";
-    ] in
-    let result = Cn_orchestrator.run_effect_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
-    List.iter show_receipt result);
-  [%expect {| pass=2 kind=fs_write status=ok reason=(none) |}]
-
-let%expect_test "effect pass: denied effects still receipted" =
+let%expect_test "run_pass: denied effects still receipted" =
   with_test_hub (fun hub ->
     let ops = [
       make_effect ~op_id:"write-01"
         ~fields:[("path", Cn_json.String ".cn/evil.ml");
                  ("content", Cn_json.String "bad")] "fs_write";
     ] in
-    let result = Cn_orchestrator.run_effect_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
+    let (result, _) = Cn_orchestrator.run_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
     List.iter show_receipt result);
   [%expect {| pass=2 kind=fs_write status=denied reason=path_denied |}]
 
@@ -233,14 +221,14 @@ let%expect_test "observe pass receipts all tagged '1'" =
     Printf.printf "all_pass_1: %b\n" all_1);
   [%expect {| all_pass_1: true |}]
 
-let%expect_test "effect pass receipts all tagged '2'" =
+let%expect_test "run_pass receipts all tagged '2'" =
   with_test_hub (fun hub ->
     let ops = [
       make_effect ~op_id:"write-01"
         ~fields:[("path", Cn_json.String "src/new.ml");
                  ("content", Cn_json.String "let x")] "fs_write";
     ] in
-    let result = Cn_orchestrator.run_effect_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
+    let (result, _) = Cn_orchestrator.run_pass ~pass_label:"2" ~hub_path:hub ~trigger_id ~config:auto_config ops in
     let all_2 = List.for_all (fun (r : Cn_shell.receipt) -> r.pass = "2") result in
     Printf.printf "all_pass_2: %b\n" all_2);
   [%expect {| all_pass_2: true |}]
@@ -440,13 +428,13 @@ let%expect_test "full N-pass: receipts accumulate in one file" =
     assert effects_deferred;
     ignore receipts_1;
 
-    (* Pass 2 (effect) *)
+    (* Pass 2 (effect-only via run_pass with n_pass=off to execute all) *)
     let pass_2_ops = [
       make_effect ~op_id:"write-01"
         ~fields:[("path", Cn_json.String "src/new.ml");
                  ("content", Cn_json.String "let x = 1")] "fs_write";
     ] in
-    let _pass_2 = Cn_orchestrator.run_effect_pass ~pass_label:"2" ~hub_path:hub ~trigger_id
+    let (_pass_2, _) = Cn_orchestrator.run_pass ~pass_label:"2" ~hub_path:hub ~trigger_id
                     ~config:auto_config pass_2_ops in
 
     (* Read receipts file *)
@@ -844,6 +832,127 @@ let%expect_test "n_pass: 3-pass chain hits max_passes=3 with more observe" =
   [%expect {|
     passes_used: 3
     stop_reason: max_passes_reached |}]
+
+(* ============================================================ *)
+(* === MISPLACED OPS CORRECTION (Issue #51)                   === *)
+(* ============================================================ *)
+
+let correction_msg = "Re-emit your ops in frontmatter."
+
+let%expect_test "correction: typed ops recovered → ops execute normally" =
+  with_test_hub (fun hub ->
+    let corrected_output =
+      "---\nid: orch-test-001\nops: [{\"kind\":\"fs_read\",\"op_id\":\"obs-01\",\"path\":\"src/main.ml\"}]\n---\n\nHere are the results." in
+    let terminal_output =
+      "---\nid: orch-test-001\n---\n\nAll done." in
+    let call_count = ref 0 in
+    let llm_call _ =
+      incr call_count;
+      match !call_count with
+      | 1 -> Ok corrected_output
+      | _ -> Ok terminal_output
+    in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config ~llm_call
+            ~correction_message:correction_msg [] with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      Printf.printf "passes_used: %d\n" result.passes_used;
+      Printf.printf "stop_reason: %s\n"
+        (Cn_orchestrator.string_of_stop_reason result.stop_reason);
+      Printf.printf "llm_calls: %d\n" !call_count;
+      Printf.printf "total_receipts: %d\n" (List.length result.all_receipts));
+  [%expect {|
+    passes_used: 3
+    stop_reason: no_ops
+    llm_calls: 2
+    total_receipts: 1 |}]
+
+let%expect_test "correction: coordination ops recovered → terminal with output" =
+  with_test_hub (fun hub ->
+    let corrected_output =
+      "---\nid: orch-test-001\nreply: orch-test-001|Here is my reply\ndone: orch-test-001\n---\n\nCompleted." in
+    let llm_call _ = Ok corrected_output in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config ~llm_call
+            ~correction_message:correction_msg [] with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      Printf.printf "passes_used: %d\n" result.passes_used;
+      Printf.printf "stop_reason: %s\n"
+        (Cn_orchestrator.string_of_stop_reason result.stop_reason);
+      Printf.printf "has_final_output: %b\n" (result.final_output <> None);
+      Printf.printf "coord_ops: %d\n" (List.length result.final_coordination_ops));
+  [%expect {|
+    passes_used: 1
+    stop_reason: no_ops
+    has_final_output: true
+    coord_ops: 2 |}]
+
+let%expect_test "correction: still misplaced → Misplaced_ops stop reason" =
+  with_test_hub (fun hub ->
+    let still_broken =
+      "---\nid: orch-test-001\n---\nops: [{\"kind\":\"fs_read\",\"path\":\"x\"}]\nStill broken." in
+    let llm_call _ = Ok still_broken in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config ~llm_call
+            ~correction_message:correction_msg [] with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      Printf.printf "passes_used: %d\n" result.passes_used;
+      Printf.printf "stop_reason: %s\n"
+        (Cn_orchestrator.string_of_stop_reason result.stop_reason);
+      Printf.printf "has_final_output: %b\n" (result.final_output <> None));
+  [%expect {|
+    passes_used: 1
+    stop_reason: misplaced_ops
+    has_final_output: true |}]
+
+let%expect_test "correction: consumes max_passes budget" =
+  with_test_hub (fun hub ->
+    (* max_passes=2: correction is pass 0, recovered ops execute as pass 1,
+       then pass_index+1 >= max_passes → loop stops. The recovered ops
+       get one execution pass but no further continuation. *)
+    let corrected_output =
+      "---\nid: orch-test-001\nops: [{\"kind\":\"fs_read\",\"op_id\":\"obs-01\",\"path\":\"src/main.ml\"}]\n---\n\nResults." in
+    let llm_call _ = Ok corrected_output in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config_2 ~llm_call
+            ~correction_message:correction_msg [] with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      Printf.printf "passes_used: %d\n" result.passes_used;
+      Printf.printf "stop_reason: %s\n"
+        (Cn_orchestrator.string_of_stop_reason result.stop_reason);
+      Printf.printf "total_receipts: %d\n" (List.length result.all_receipts));
+  [%expect {|
+    passes_used: 2
+    stop_reason: max_passes_reached
+    total_receipts: 1 |}]
+
+let%expect_test "correction: LLM error → Error propagated" =
+  with_test_hub (fun hub ->
+    let llm_call _ = Error "API timeout" in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config ~llm_call
+            ~correction_message:correction_msg [] with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok _ -> print_endline "unexpected ok");
+  [%expect {| error: Correction pass LLM call failed: API timeout |}]
+
+let%expect_test "no correction_message + empty ops → empty terminal" =
+  with_test_hub (fun hub ->
+    let llm_call _ = failwith "should not be called" in
+    match Cn_orchestrator.run_n_pass ~hub_path:hub ~trigger_id
+            ~config:n_pass_config ~llm_call [] with
+    | Error msg -> Printf.printf "error: %s\n" msg
+    | Ok result ->
+      Printf.printf "passes_used: %d\n" result.passes_used;
+      Printf.printf "stop_reason: %s\n"
+        (Cn_orchestrator.string_of_stop_reason result.stop_reason));
+  [%expect {|
+    passes_used: 0
+    stop_reason: no_ops |}]
 
 let%expect_test "n_pass: observe → effect → verify (effect continues)" =
   with_test_hub (fun hub ->

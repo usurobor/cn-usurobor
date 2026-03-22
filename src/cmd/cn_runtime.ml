@@ -519,7 +519,30 @@ let rec finalize ~(config : Cn_config.config) ~hub_path ~name
     in
     let indicator = Cn_indicator.start ~sink:indicator_sink ~trigger_id in
 
-    (* Run the N-pass bind loop via Cn_shell.execute *)
+    (* Run the N-pass bind loop via Cn_shell.execute.
+       When misplaced ops are detected (issue #51), the correction pass
+       runs inside run_n_pass as pass 0, consuming max_passes budget.
+       Body scanning is for anomaly detection, never for execution authority. *)
+    let correction_message =
+      if parsed.has_misplaced_ops && parsed.typed_ops = [] then
+        Some ("Your previous response placed ops: and/or coordination ops \
+               inline in the body text instead of the frontmatter section. \
+               The runtime could not parse them.\n\n\
+               Re-emit your response with the correct format:\n\
+               ---\n\
+               id: " ^ trigger_id ^ "\n\
+               ops: [<your typed ops as a single-line JSON array>]\n\
+               <any coordination ops, e.g. reply: ... | done: ...>\n\
+               ---\n\
+               <body text for the user>\n\n\
+               Rules:\n\
+               - ops: MUST be in the frontmatter (between --- fences), not in the body\n\
+               - ops: MUST be a single-line JSON array\n\
+               - The body below --- is presentation text only\n\
+               - Do not repeat the ops in the body")
+      else
+        None
+    in
     let orchestrate typed_ops =
       let conv_turns = ref [
         { Cn_llm.role = "assistant"; content = output_content };
@@ -549,7 +572,7 @@ let rec finalize ~(config : Cn_config.config) ~hub_path ~name
 
         match Cn_llm.call ~api_key:config.anthropic_key
                 ~model:config.model ~max_tokens:config.max_tokens
-                ~system ~messages with
+                ~system ~messages () with
         | Error msg ->
           Cn_trace.gemit ~component:"runtime" ~layer:Mind
             ~event:"llm.call.error" ~severity:Error_ ~status:Error_status
@@ -573,16 +596,18 @@ let rec finalize ~(config : Cn_config.config) ~hub_path ~name
           Ok response.content
       in
       Cn_orchestrator.run_n_pass ~hub_path ~trigger_id
-        ~config:config.shell ~llm_call ?indicator typed_ops
+        ~config:config.shell ~llm_call ?indicator ?correction_message typed_ops
     in
     let write_denials denials =
       Cn_orchestrator.write_denial_receipts ~hub_path ~trigger_id
         ~pass:"1" denials
     in
+
     let exec_result = Cn_shell.execute
         ~orchestrate ~write_denials
         ~typed_ops:parsed.typed_ops
-        ~denial_receipts:parsed.ops_receipts in
+        ~denial_receipts:parsed.ops_receipts
+        ~has_misplaced_ops:parsed.has_misplaced_ops in
 
     (* Stop processing indicator based on outcome *)
     (match indicator with
@@ -998,7 +1023,7 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
             let llm_t0 = Unix.gettimeofday () in
             match Cn_llm.call ~api_key:config.anthropic_key
                     ~model:config.model ~max_tokens:config.max_tokens
-                    ~system:packed.system ~messages:packed.messages with
+                    ~system:packed.system ~messages:packed.messages () with
             | Error msg ->
                 let latency_ms = int_of_float ((Unix.gettimeofday () -. llm_t0) *. 1000.0) in
                 Cn_trace.gemit ~component:"runtime" ~layer:Mind

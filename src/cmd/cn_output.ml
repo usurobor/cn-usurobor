@@ -38,6 +38,7 @@ type parsed_output = {
   ops_receipts : Cn_shell.receipt list;
   ops_version : string option;
   raw_output : string;
+  has_misplaced_ops : bool;               (** body contains ops-like syntax that should be in frontmatter *)
 }
 
 (* === Reason codes === *)
@@ -113,8 +114,8 @@ let parse_output raw_output =
     | Some raw_value -> Cn_shell.parse_ops_manifest raw_value
   in
   (* Detect coordination ops or typed ops leaked into body text *)
-  (match body with
-   | Some b ->
+  let has_misplaced_ops = match body with
+    | Some b ->
        let op_prefixes = [
          "send: "; "reply: "; "done: "; "ack: "; "fail: ";
          "delegate: "; "defer: "; "delete: "; "surface: "; "ops: ["
@@ -128,19 +129,23 @@ let parse_output raw_output =
        in
        let lines = String.split_on_char '\n' b in
        let leaked = List.filter is_op_line lines in
-       if leaked <> [] then
+       if leaked <> [] then begin
          Cn_trace.gemit ~component:"output" ~layer:Mind
            ~event:"output.ops_in_body" ~severity:Warn ~status:Degraded
-           ~reason_code:"ops_described_not_emitted"
+           ~reason_code:"misplaced_ops"
            ~reason:(Printf.sprintf "Found %d op-like line(s) in body text instead of frontmatter"
              (List.length leaked))
            ~details:[
              "count", Cn_json.Int (List.length leaked);
              "first_line", Cn_json.String (List.hd leaked |> String.trim);
-           ] ()
-   | None -> ());
+           ] ();
+         true
+       end else
+         false
+    | None -> false
+  in
   { id; body; coordination_ops; raw_coordination_ops;
-    typed_ops; ops_receipts; ops_version; raw_output }
+    typed_ops; ops_receipts; ops_version; raw_output; has_misplaced_ops }
 
 (* === Rendering === *)
 
@@ -245,3 +250,168 @@ let render_for_sink sink parsed =
   | AuditFile -> Renderable parsed.raw_output
   | HumanSurface _ | ConversationStore -> render_human_facing parsed
   | PeerOutbox -> Skipped
+
+(* === Structured output: tool schema + parser + compiler (v3.9.0) === *)
+
+(** The cn_respond tool definition for structured LLM output.
+    Forces the model to emit body, coordination_ops, and typed_ops as
+    separate typed fields instead of markdown-with-frontmatter. *)
+let cn_respond_tool : Cn_llm.tool = {
+  name = "cn_respond";
+  description = "Emit your response with structured control-plane and presentation-plane fields.";
+  input_schema = Cn_json.Object [
+    "type", Cn_json.String "object";
+    "properties", Cn_json.Object [
+      "body", Cn_json.Object [
+        "type", Cn_json.String "string";
+        "description", Cn_json.String "Presentation text for the user (markdown). This is the only field that reaches human-facing sinks.";
+      ];
+      "coordination_ops", Cn_json.Object [
+        "type", Cn_json.String "array";
+        "items", Cn_json.Object [
+          "type", Cn_json.String "object";
+          "properties", Cn_json.Object [
+            "kind", Cn_json.Object [
+              "type", Cn_json.String "string";
+              "enum", Cn_json.Array (List.map (fun s -> Cn_json.String s)
+                ["ack"; "done"; "fail"; "reply"; "send";
+                 "delegate"; "defer"; "delete"; "surface"]);
+            ];
+            "id", Cn_json.Object ["type", Cn_json.String "string"];
+            "message", Cn_json.Object ["type", Cn_json.String "string"];
+            "peer", Cn_json.Object ["type", Cn_json.String "string"];
+            "reason", Cn_json.Object ["type", Cn_json.String "string"];
+            "body", Cn_json.Object ["type", Cn_json.String "string"];
+          ];
+          "required", Cn_json.Array [Cn_json.String "kind"];
+        ];
+        "description", Cn_json.String "Coordination ops (reply, send, done, ack, etc.).";
+      ];
+      "typed_ops", Cn_json.Object [
+        "type", Cn_json.String "array";
+        "items", Cn_json.Object [
+          "type", Cn_json.String "object";
+          "properties", Cn_json.Object [
+            "kind", Cn_json.Object ["type", Cn_json.String "string"];
+            "op_id", Cn_json.Object ["type", Cn_json.String "string"];
+            "path", Cn_json.Object ["type", Cn_json.String "string"];
+            "content", Cn_json.Object ["type", Cn_json.String "string"];
+            "unified_diff", Cn_json.Object ["type", Cn_json.String "string"];
+            "command", Cn_json.Object ["type", Cn_json.String "string"];
+            "ref", Cn_json.Object ["type", Cn_json.String "string"];
+            "message", Cn_json.Object ["type", Cn_json.String "string"];
+            "pattern", Cn_json.Object ["type", Cn_json.String "string"];
+            "branch", Cn_json.Object ["type", Cn_json.String "string"];
+            "files", Cn_json.Object [
+              "type", Cn_json.String "array";
+              "items", Cn_json.Object ["type", Cn_json.String "string"];
+            ];
+          ];
+          "required", Cn_json.Array [Cn_json.String "kind"];
+        ];
+        "description", Cn_json.String "CN Shell typed capability ops (fs_read, fs_write, git_diff, etc.).";
+      ];
+    ];
+    "required", Cn_json.Array [Cn_json.String "body"];
+  ];
+}
+
+(** Parse a coordination op from a structured JSON object. *)
+let parse_structured_coord_op (obj : Cn_json.t) : Cn_lib.agent_op option =
+  match Cn_json.get_string "kind" obj with
+  | None -> None
+  | Some kind ->
+    let get_str key = match Cn_json.get_string key obj with
+      | Some s -> s | None -> "" in
+    match kind with
+    | "ack" -> Some (Cn_lib.Ack (get_str "id"))
+    | "done" -> Some (Cn_lib.Done (get_str "id"))
+    | "fail" -> Some (Cn_lib.Fail (get_str "id", get_str "reason"))
+    | "reply" -> Some (Cn_lib.Reply (get_str "id", get_str "message"))
+    | "send" ->
+      let body_opt = Cn_json.get_string "body" obj in
+      Some (Cn_lib.Send (get_str "peer", get_str "message", body_opt))
+    | "delegate" -> Some (Cn_lib.Delegate (get_str "id", get_str "peer"))
+    | "defer" -> Some (Cn_lib.Defer (get_str "id", Cn_json.get_string "reason" obj))
+    | "delete" -> Some (Cn_lib.Delete (get_str "id"))
+    | "surface" -> Some (Cn_lib.Surface (get_str "message"))
+    | _ -> None
+
+(** Parse a structured tool_use response into parsed_output.
+    The input is the JSON object from cn_respond tool_use block.
+    has_misplaced_ops is always false — ops cannot be misplaced
+    when using structured output. *)
+let parse_structured ~trigger_id (input : Cn_json.t) =
+  let body = Cn_json.get_string "body" input in
+
+  (* Parse coordination ops *)
+  let coord_ops = match Cn_json.get_list "coordination_ops" input with
+    | Some ops -> List.filter_map parse_structured_coord_op ops
+    | None -> []
+  in
+
+  (* Parse typed ops via existing manifest validator *)
+  let typed_ops_raw = match Cn_json.get_list "typed_ops" input with
+    | Some ops -> ops
+    | None -> []
+  in
+  let typed_ops, ops_receipts =
+    if typed_ops_raw = [] then ([], [])
+    else
+      (* Serialize to JSON array string and delegate to parse_ops_manifest
+         for full validation, dedup, auto-assign, denial receipts *)
+      let json_str = "[" ^
+        (typed_ops_raw |> List.map Cn_json.to_string |> String.concat ",")
+        ^ "]" in
+      Cn_shell.parse_ops_manifest json_str
+  in
+
+  (* Compile raw_output for audit *)
+  let raw_output = compile_output_md ~trigger_id ~body ~coord_ops ~typed_ops_raw in
+
+  {
+    id = Some trigger_id;
+    body;
+    coordination_ops = coord_ops;
+    raw_coordination_ops = coord_ops;
+    typed_ops;
+    ops_receipts;
+    ops_version = Some "3.9";
+    raw_output;
+    has_misplaced_ops = false;
+  }
+
+(** Compile a structured output into markdown for audit.
+    Produces the canonical state/output.md format from structured fields. *)
+and compile_output_md ~trigger_id ~body ~coord_ops ~typed_ops_raw =
+  let buf = Buffer.create 1024 in
+  Buffer.add_string buf "---\n";
+  Buffer.add_string buf (Printf.sprintf "id: %s\n" trigger_id);
+  if typed_ops_raw <> [] then begin
+    Buffer.add_string buf "ops: [";
+    Buffer.add_string buf
+      (typed_ops_raw |> List.map Cn_json.to_string |> String.concat ",");
+    Buffer.add_string buf "]\n"
+  end;
+  List.iter (fun (op : Cn_lib.agent_op) ->
+    let line = match op with
+      | Cn_lib.Ack id -> "ack: " ^ id
+      | Cn_lib.Done id -> "done: " ^ id
+      | Cn_lib.Fail (id, reason) -> "fail: " ^ id ^ "|" ^ reason
+      | Cn_lib.Reply (id, msg) -> "reply: " ^ id ^ "|" ^ msg
+      | Cn_lib.Send (peer, msg, _) -> "send: " ^ peer ^ "|" ^ msg
+      | Cn_lib.Delegate (id, peer) -> "delegate: " ^ id ^ "|" ^ peer
+      | Cn_lib.Defer (id, None) -> "defer: " ^ id
+      | Cn_lib.Defer (id, Some until) -> "defer: " ^ id ^ "|" ^ until
+      | Cn_lib.Delete id -> "delete: " ^ id
+      | Cn_lib.Surface desc -> "surface: " ^ desc
+    in
+    Buffer.add_string buf line;
+    Buffer.add_char buf '\n'
+  ) coord_ops;
+  Buffer.add_string buf "ops_version: 3.9\n";
+  Buffer.add_string buf "---\n";
+  (match body with
+   | Some b -> Buffer.add_string buf b
+   | None -> ());
+  Buffer.contents buf

@@ -207,6 +207,17 @@ If a pass at the boundary still asks to observe:
   - status: `denied`
   - reason: `max_passes_exceeded`
 
+### 5.6 Misplaced ops (Issue #51)
+
+If `typed_ops = []` but the body contains ops-like syntax (`ops: [`, `send: `, etc.):
+- classify the pass as `misplaced_ops`
+- do **not** project the raw body to human sinks
+- run a bounded correction pass: call LLM with explicit formatting instructions
+- if correction produces valid frontmatter ops: execute normally
+- if correction fails: terminate safely with `misplaced_ops` reason code
+- body scanning is for **anomaly detection**, never for execution authority
+- the correction pass counts against normal `max_passes` / budget limits
+
 ---
 
 ## 6. Final Projection Rule
