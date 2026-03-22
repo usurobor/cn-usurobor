@@ -502,7 +502,8 @@ let%expect_test "execute: no typed ops, no denials → Ok None" =
   let orchestrate _ops = failwith "should not be called" in
   let write_denials _d = failwith "should not be called" in
   (match Cn_shell.execute ~orchestrate ~write_denials
-           ~typed_ops:[] ~denial_receipts:[] with
+           ~typed_ops:[] ~denial_receipts:[]
+           ~has_misplaced_ops:false with
    | Ok None -> print_endline "Ok None"
    | _ -> print_endline "wrong");
   [%expect {| Ok None |}]
@@ -517,7 +518,8 @@ let%expect_test "execute: denials only, no typed ops → writes denials, Ok None
     wrote := true
   in
   (match Cn_shell.execute ~orchestrate ~write_denials
-           ~typed_ops:[] ~denial_receipts:[denial] with
+           ~typed_ops:[] ~denial_receipts:[denial]
+           ~has_misplaced_ops:false with
    | Ok None -> Printf.printf "Ok None, wrote=%b\n" !wrote
    | _ -> print_endline "wrong");
   [%expect {|
@@ -536,7 +538,8 @@ let%expect_test "execute: typed ops → calls orchestrate, returns Some" =
   in
   let write_denials _d = () in
   (match Cn_shell.execute ~orchestrate ~write_denials
-           ~typed_ops:ops ~denial_receipts:[] with
+           ~typed_ops:ops ~denial_receipts:[]
+           ~has_misplaced_ops:false with
    | Ok (Some "result") -> Printf.printf "Ok Some, orchestrated=%b\n" !orchestrated
    | _ -> print_endline "wrong");
   [%expect {|
@@ -550,7 +553,8 @@ let%expect_test "execute: orchestrate error → Error propagated" =
   let orchestrate _ops = Error "llm failed" in
   let write_denials _d = () in
   (match Cn_shell.execute ~orchestrate ~write_denials
-           ~typed_ops:ops ~denial_receipts:[] with
+           ~typed_ops:ops ~denial_receipts:[]
+           ~has_misplaced_ops:false with
    | Error msg -> Printf.printf "Error: %s\n" msg
    | _ -> print_endline "wrong");
   [%expect {| Error: llm failed |}]
@@ -570,7 +574,8 @@ let%expect_test "execute: denials + typed ops → both paths run" =
     denial_written := true
   in
   (match Cn_shell.execute ~orchestrate ~write_denials
-           ~typed_ops:ops ~denial_receipts:[denial] with
+           ~typed_ops:ops ~denial_receipts:[denial]
+           ~has_misplaced_ops:false with
    | Ok (Some "done") -> Printf.printf "Ok Some, denials_written=%b\n" !denial_written
    | _ -> print_endline "wrong");
   [%expect {|
