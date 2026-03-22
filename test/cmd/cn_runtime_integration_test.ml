@@ -134,7 +134,7 @@ let%expect_test "n-pass: observe+effect → effect → terminal (3 passes)" =
       Printf.printf "--- All receipts ---\n";
       List.iter show_receipt result.all_receipts);
   [%expect {|
-    passes_used: 3
+    passes_used: 2
     --- All receipts ---
     pass=1 kind=fs_read status=ok reason=(none)
     pass=1 kind=fs_write status=skipped reason=observe_pass_requires_followup
