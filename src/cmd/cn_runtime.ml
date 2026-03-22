@@ -519,7 +519,30 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
     in
     let indicator = Cn_indicator.start ~sink:indicator_sink ~trigger_id in
 
-    (* Run the N-pass bind loop via Cn_shell.execute *)
+    (* Run the N-pass bind loop via Cn_shell.execute.
+       When misplaced ops are detected (issue #51), the correction pass
+       runs inside run_n_pass as pass 0, consuming max_passes budget.
+       Body scanning is for anomaly detection, never for execution authority. *)
+    let correction_message =
+      if parsed.has_misplaced_ops && parsed.typed_ops = [] then
+        Some ("Your previous response placed ops: and/or coordination ops \
+               inline in the body text instead of the frontmatter section. \
+               The runtime could not parse them.\n\n\
+               Re-emit your response with the correct format:\n\
+               ---\n\
+               id: " ^ trigger_id ^ "\n\
+               ops: [<your typed ops as a single-line JSON array>]\n\
+               <any coordination ops, e.g. reply: ... | done: ...>\n\
+               ---\n\
+               <body text for the user>\n\n\
+               Rules:\n\
+               - ops: MUST be in the frontmatter (between --- fences), not in the body\n\
+               - ops: MUST be a single-line JSON array\n\
+               - The body below --- is presentation text only\n\
+               - Do not repeat the ops in the body")
+      else
+        None
+    in
     let orchestrate typed_ops =
       let conv_turns = ref [
         { Cn_llm.role = "assistant"; content = output_content };
@@ -573,109 +596,18 @@ let finalize ~(config : Cn_config.config) ~hub_path ~name
           Ok response.content
       in
       Cn_orchestrator.run_n_pass ~hub_path ~trigger_id
-        ~config:config.shell ~llm_call ?indicator typed_ops
+        ~config:config.shell ~llm_call ?indicator ?correction_message typed_ops
     in
     let write_denials denials =
       Cn_orchestrator.write_denial_receipts ~hub_path ~trigger_id
         ~pass:"1" denials
     in
-    (* Misplaced ops correction: if typed_ops=[] but body contains
-       ops-like syntax, the model placed ops in the wrong location.
-       Instead of projecting raw control syntax to the user, run a
-       bounded correction pass that asks the model to re-emit ops
-       in the proper frontmatter field. This uses normal pass/budget
-       limits — it is not a special retry outside the N-pass loop.
-       Body scanning is for anomaly detection, never for execution
-       authority. See issue #51. *)
-    let typed_ops, denial_receipts, parsed =
-      if parsed.typed_ops = [] && parsed.has_misplaced_ops then begin
-        Cn_trace.gemit ~component:"runtime" ~layer:Body
-          ~event:"pass.N.misplaced_ops" ~severity:Warn ~status:Degraded
-          ~trigger_id ~reason_code:"misplaced_ops"
-          ~reason:"Ops detected in body text; running correction pass" ();
-
-        let correction_message =
-          "Your previous response placed ops: and/or coordination ops \
-           inline in the body text instead of the frontmatter section. \
-           The runtime could not parse them.\n\n\
-           Re-emit your response with the correct format:\n\
-           ---\n\
-           id: <trigger_id>\n\
-           ops: [<your typed ops as a single-line JSON array>]\n\
-           <any coordination ops, e.g. reply: ... | done: ...>\n\
-           ---\n\
-           <body text for the user>\n\n\
-           Rules:\n\
-           - ops: MUST be in the frontmatter (between --- fences), not in the body\n\
-           - ops: MUST be a single-line JSON array\n\
-           - The body below --- is presentation text only\n\
-           - Do not repeat the ops in the body"
-        in
-        let system, base_messages = match packed with
-          | Some p -> (p.Cn_context.system, p.Cn_context.messages)
-          | None ->
-            let p = Cn_context.pack ~hub_path ~trigger_id
-                ~message:inbound_message ~from ~shell_config:config.shell () in
-            (p.system, p.messages)
-        in
-        let messages = base_messages @ [
-          { Cn_llm.role = "assistant"; content = output_content };
-          { Cn_llm.role = "user"; content = correction_message };
-        ] in
-
-        Cn_trace.gemit ~component:"runtime" ~layer:Mind
-          ~event:"llm.call.start" ~severity:Info ~status:Ok_
-          ~trigger_id ~pass:"correction"
-          ~details:["model", Cn_json.String config.model;
-                    "reason", Cn_json.String "misplaced_ops"] ();
-
-        match Cn_llm.call ~api_key:config.anthropic_key
-                ~model:config.model ~max_tokens:config.max_tokens
-                ~system ~messages with
-        | Error msg ->
-          Cn_trace.gemit ~component:"runtime" ~layer:Mind
-            ~event:"llm.call.error" ~severity:Error_ ~status:Error_status
-            ~trigger_id ~pass:"correction" ~reason_code:"llm_error" ();
-          (* Correction failed — proceed with empty ops; finalize will
-             project safely via render_human_facing fallback *)
-          (parsed.typed_ops, parsed.ops_receipts, parsed)
-        | Ok response ->
-          let outp = Cn_agent.output_path hub_path in
-          Cn_ffi.Fs.write outp response.content;
-          Cn_trace.gemit ~component:"runtime" ~layer:Mind
-            ~event:"llm.call.ok" ~severity:Info ~status:Ok_
-            ~trigger_id ~pass:"correction"
-            ~details:[
-              "input_tokens", Cn_json.Int response.input_tokens;
-              "output_tokens", Cn_json.Int response.output_tokens;
-              "stop_reason", Cn_json.String response.stop_reason;
-            ] ();
-          archive_raw hub_path ~trigger_id;
-          let corrected = Cn_output.parse_output response.content in
-          if corrected.typed_ops <> [] then begin
-            Cn_trace.gemit ~component:"runtime" ~layer:Body
-              ~event:"pass.N.misplaced_ops.corrected" ~severity:Info ~status:Ok_
-              ~trigger_id
-              ~details:[
-                "typed_op_count", Cn_json.Int (List.length corrected.typed_ops);
-              ] ();
-            (corrected.typed_ops, corrected.ops_receipts, corrected)
-          end else begin
-            Cn_trace.gemit ~component:"runtime" ~layer:Body
-              ~event:"pass.N.misplaced_ops.failed" ~severity:Warn ~status:Degraded
-              ~trigger_id ~reason_code:"correction_failed"
-              ~reason:"Correction pass did not produce valid frontmatter ops" ();
-            (* Still misplaced — proceed with empty ops, safe projection *)
-            (corrected.typed_ops, corrected.ops_receipts, corrected)
-          end
-      end else
-        (parsed.typed_ops, parsed.ops_receipts, parsed)
-    in
 
     let exec_result = Cn_shell.execute
         ~orchestrate ~write_denials
-        ~typed_ops
-        ~denial_receipts in
+        ~typed_ops:parsed.typed_ops
+        ~denial_receipts:parsed.ops_receipts
+        ~has_misplaced_ops:parsed.has_misplaced_ops in
 
     (* Stop processing indicator based on outcome *)
     (match indicator with
