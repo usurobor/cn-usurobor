@@ -151,9 +151,6 @@ let run_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
 
   (receipts, has_continuation)
 
-(** Backward-compatible alias for tests that reference the old name. *)
-let run_observe_pass = run_pass
-
 (* === Effect-class pass (unit-testable helper, not used in main loop) === *)
 
 (** Run an effect-class pass.
@@ -501,7 +498,7 @@ let run_n_pass ~hub_path ~trigger_id ~config
 
     end else begin
       (* Continue: repack, call LLM, parse *)
-      let reason_code = if effects_deferred then "observe_detected"
+      let reason_code = if effects_deferred then "deferred_effects"
         else "continuation" in
       Cn_trace.gemit ~component:"orchestrator" ~layer:Body
         ~event:"pass.N.complete" ~severity:Info ~status:Ok_
