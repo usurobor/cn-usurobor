@@ -204,12 +204,54 @@ At wake-up or context packing, the runtime MUST treat the classes as follows:
 3. Mindsets — always loaded, never scored, never bounded by task-slot competition
 4. Reflections — recent N only
 5. Skills — relevance-scored, bounded to top N
-6. Capabilities — always declared by runtime
+6. **Runtime Contract** — always emitted by runtime (see §6.1)
 7. Conversation — recent N turns
 8. Inbound message — current demand only
 
 Doctrine and mindsets MUST NOT compete for skill slots.
 If doctrine or mindsets are handled as task skills, the substrate is misclassified.
+
+### 6.1 Runtime Contract (normative)
+
+The runtime MUST emit a structured **Runtime Contract** at every wake. This replaces the previous "capabilities-only" declaration with three sub-blocks:
+
+**Self Model** — who the agent is:
+- `cn_version`: runtime binary version
+- `hub_name`: hub directory name (hub-relative, not absolute path)
+- `profile`: effective runtime role from config (serves as `identity_role` per issue #56; derived from package profile, not parsed from SOUL.md)
+- `installed_packages`: list with per-package doctrine/mindset/skill counts
+- `active_overrides`: hub-local overrides by category (doctrine, mindsets, skills)
+
+**Workspace** — what world the agent inhabits:
+- canonical directory layout (which directories exist)
+- writable paths (where the agent may write)
+- protected paths (sandbox denylist + protected files)
+
+**Capabilities** — what the runtime can do:
+- observe/effect op kinds
+- apply_mode, exec_enabled, budgets
+- max_passes, max_total_ops
+- known peers
+
+#### Invariant
+
+After wake, the agent MUST be able to answer from packed context alone:
+- What version am I?
+- What packages do I have?
+- What overrides are active?
+- What directories exist and which are writable?
+- What can my runtime do?
+
+If the agent must probe the filesystem for any of these, the Runtime Contract is incomplete.
+
+#### Persistence
+
+The same contract is persisted to `state/runtime-contract.json` for:
+- operator inspection
+- `cn doctor` validation
+- traceability reference
+
+See [`RUNTIME-CONTRACT-v3.10.0.md`](RUNTIME-CONTRACT-v3.10.0.md) for full design.
 
 ---
 
@@ -339,7 +381,7 @@ Split an artifact when:
 
 ## 9. Precedence
 
-Normative precedence is:
+Normative precedence for authored substrates is:
 
 Doctrine → Mindset → Skill → Reflection
 
@@ -348,6 +390,14 @@ It localizes the subject and user context to which doctrine, mindsets, and skill
 
 Capabilities describe affordance, not permission.
 Runtime policy and doctrine still govern which capabilities may be used.
+
+### 9.1 Runtime Contract Authority (normative)
+
+The Runtime Contract (§6.1) is authoritative over conversation history for all fields it declares: version, packages, overrides, workspace layout, and capabilities.
+
+Conversation history is a temporal record — it may contain probe results, version references, or workspace claims from prior sessions that are no longer true. When the Runtime Contract contradicts conversation history, the contract wins.
+
+Conversation entries SHOULD carry a `cn_version` stamp. Entries from a prior version are stale and MUST NOT be treated as current truth for any field the Runtime Contract covers.
 
 ---
 
