@@ -148,10 +148,12 @@ let append_conversation hub_path ~trigger_id ~user_msg ~assistant_msg =
       Cn_json.Object [
         "role", Cn_json.String "user";
         "content", Cn_json.String user_msg;
-        "trigger_id", Cn_json.String trigger_id];
+        "trigger_id", Cn_json.String trigger_id;
+        "cn_version", Cn_json.String Cn_lib.version];
       Cn_json.Object [
         "role", Cn_json.String "assistant";
-        "content", Cn_json.String assistant_msg];
+        "content", Cn_json.String assistant_msg;
+        "cn_version", Cn_json.String Cn_lib.version];
     ] in
     (* Keep last 50 entries *)
     let len = List.length new_entries in
@@ -1280,6 +1282,38 @@ let enqueue_telegram hub_path (msg : Cn_telegram.message) =
       (Printf.sprintf "id:%s chat_id:%d" trigger_id msg.chat_id)
   end
 
+(* === Boot banner (issue #61) === *)
+
+(** Render a structured boot banner declaring configuration sources.
+    Shows version, hub, profile, model, secrets source, and peers.
+    Secret values are never included — only presence and source. *)
+let render_boot_banner ~(config : Cn_config.config) ~hub_path
+      ~(boot : boot_info) =
+  let hub_name = Filename.basename hub_path in
+  let profile = Option.value ~default:"engineer" boot.summary.profile in
+  let peers = Cn_hub.load_peers hub_path in
+  let source_label = function
+    | Cn_dotenv.Env -> "env"
+    | Cn_dotenv.File -> ".cn/secrets.env"
+    | Cn_dotenv.Missing -> "missing"
+  in
+  let ak_src = Cn_dotenv.probe_source ~hub_path ~env_key:"ANTHROPIC_KEY" in
+  let tg_src = Cn_dotenv.probe_source ~hub_path ~env_key:"TELEGRAM_TOKEN" in
+  let buf = Buffer.create 256 in
+  Buffer.add_string buf
+    (Printf.sprintf "cn %s | hub=%s | profile=%s\n"
+       Cn_lib.version hub_name profile);
+  Buffer.add_string buf
+    (Printf.sprintf "  model: %s\n" config.model);
+  Buffer.add_string buf
+    (Printf.sprintf "  secrets: ANTHROPIC_KEY=%s TELEGRAM_TOKEN=%s\n"
+       (source_label ak_src) (source_label tg_src));
+  if peers <> [] then
+    Buffer.add_string buf
+      (Printf.sprintf "  peers: %s\n"
+         (String.concat ", " (List.map (fun (p : Cn_lib.peer_info) -> p.name) peers)));
+  Buffer.contents buf
+
 (** Unified daemon scheduler (SCHEDULER-v3.7.0 §3.2).
     Two activity sources:
     - Exteroception (sensor-driven): Telegram long-poll + immediate queue drain
@@ -1411,6 +1445,8 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
     ~event:"daemon.poll.start" ~severity:Info ~status:Ok_
     ~details:["telegram_enabled", Cn_json.Bool has_telegram] ();
 
+  (* Boot banner — declare configuration sources for operators (issue #61) *)
+  print_string (render_boot_banner ~config ~hub_path ~boot);
   let mode_desc = if has_telegram
     then Printf.sprintf "Daemon started (telegram poll=%ds timeout=%ds, sync=%ds)"
            config.poll_interval config.poll_timeout config.scheduler.sync_interval_sec

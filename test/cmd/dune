@@ -119,3 +119,27 @@
  (libraries cn_cmd cn_ffi cn_lib unix)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_runtime_contract tests (ppx_expect) — wake-up self-model (Issue #56)
+(library
+ (name cn_runtime_contract_test)
+ (modules cn_runtime_contract_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
+; cn_boot_banner tests (ppx_expect) — daemon boot config declaration (Issue #61)
+(library
+ (name cn_boot_banner_test)
+ (modules cn_boot_banner_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
+; cn_stale_history tests (ppx_expect) — stale conversation history (Issue #63)
+(library
+ (name cn_stale_history_test)
+ (modules cn_stale_history_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
