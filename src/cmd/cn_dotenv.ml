@@ -75,6 +75,20 @@ let load_file path =
         Printf.eprintf "cn: warning: cannot read %s: %s\n" path msg;
         Ok []
 
+(** Where a secret was found — for boot banner (never exposes values). *)
+type secret_source = Env | File | Missing
+
+(** Probe where a secret key is configured, without returning its value.
+    Used by the boot banner to declare config sources (issue #61). *)
+let probe_source ~hub_path ~env_key =
+  match Cn_ffi.Process.getenv_opt env_key with
+  | Some s when s <> "" -> Env
+  | _ ->
+    let secrets_path = Cn_ffi.Path.join hub_path ".cn/secrets.env" in
+    match load_file secrets_path with
+    | Ok pairs when List.mem_assoc env_key pairs -> File
+    | _ -> Missing
+
 (** Resolve a secret: env var takes precedence, then secrets.env file.
     Empty string in env treated as unset. *)
 let resolve_secret ~hub_path ~env_key =

@@ -143,6 +143,29 @@ Follow the pipeline. Each step feeds the next.
   - ❌ Code introduces concepts not in the design doc
   - ✅ Every type and interface traces to the design
 
+4.5.1. **Before any commit that references an issue: AC self-check**
+  - Re-read the issue body. Walk every AC.
+  - For each AC: verify it is met in staged changes, explicitly deferred, or descoped
+  - If any AC is unaccounted for, do not commit with `Closes #N` or `(#N)`
+  - This is the earliest gate — it fires at commit time, not at review time
+  - ❌ `git commit -m "feat: runtime contract (#56)"` without checking all 6 ACs
+  - ✅ Walk ACs → find AC4 (cn doctor) not met → either implement it or commit without `Closes`
+  - ✅ All ACs met or deferred → commit with AC coverage in message body
+
+4.5.2. **Multi-format parity: all serializers read from one source**
+  - If a value exists in a canonical module (e.g. `Cn_capabilities.observe_kinds`), every format renderer (markdown, JSON, YAML) must read from that module
+  - Never duplicate canonical lists as literals in a second serializer
+  - If the runtime contract has both a markdown renderer and a JSON serializer, both must source the same fields from the same module
+  - ❌ `render_markdown` delegates to `Cn_capabilities.render`; `to_json` hardcodes the same op lists as string literals
+  - ✅ Both `render_markdown` and `to_json` read `Cn_capabilities.observe_kinds` and `Cn_capabilities.effect_kinds_base`
+
+4.5.3. **Build-sync after editing source assets**
+  - After modifying any file under `src/agent/` (doctrine, mindsets, skills), run `cn build` before committing
+  - `cn build` copies source assets to `packages/` — skipping it causes package/source drift
+  - CI runs `cn build --check` and will catch this, but the gate belongs at commit time
+  - ❌ Edit `src/agent/skills/ops/cdd/SKILL.md`, commit without `cn build` → packages/ is stale
+  - ✅ Edit source → `cn build` → verify packages/ updated → commit both
+
 4.6. **Docs**
   - Updated to match implementation — README, operator guides, architecture
   - ❌ Ship code, leave docs describing the old behavior
@@ -257,13 +280,18 @@ When asking another CA (or human reviewer) to review a substantial change, use t
   - ✅ Reviewer states: "Converge — no critical contradictions remain" or "Iterate — β is still weak on X"
 
 7.6. **Require reviewer output format**
+  - **Issue contract table** (FIRST — before any diff analysis):
+    - AC coverage: each AC → met / partial / missing / deferred
+    - Named doc coverage: each doc the issue/plan names → updated / absent / deferred
+    - If this table is missing, the review is incomplete
   - Triadic scores (letter grades)
   - Weakest axis identified
   - Concrete patches (at least 3 for weakest)
   - Contradictions or orphans found
   - Verdict: iterate or converge
   - ❌ Free-form "looks good" review
-  - ✅ Structured response with all five elements
+  - ❌ Review that starts with diff analysis without AC/doc table
+  - ✅ Structured response: AC table → doc table → diff findings → triadic scores → verdict
 
 7.7. **Do not code until review converges**
   - No critical contradictions remain
@@ -295,6 +323,41 @@ When asking another CA (or human reviewer) to review a substantial change, use t
   - If the change claims backward compatibility, test it
   - ❌ "This is backward compatible" (assertion without evidence)
   - ✅ Test: "v1 config file loads correctly under v2 parser"
+
+---
+
+## 8.5. Author Pre-Flight
+
+Before requesting peer review, the author MUST walk the acceptance criteria and verify the full change against them. §4.5.1 catches individual commits; this section is the aggregate check across the entire branch before review.
+
+8.5.1. **Re-read the issue body**
+  - Open the originating issue. Read every AC. Do not rely on memory.
+  - ❌ "I think I covered everything"
+  - ✅ Re-read issue #56, find 6 ACs, check each one
+
+8.5.2. **Walk every AC against the diff**
+  - For each AC: verify it is met in the diff, explicitly deferred with a tracking issue, or descoped with rationale
+  - If any AC is not in any of these three categories, the change is not ready for review
+  - ❌ 3 of 6 ACs addressed, other 3 not mentioned
+  - ✅ "AC1 ✓ met (cn_runtime_contract.ml). AC4 ✗ not addressed → must fix or defer before review."
+
+8.5.3. **Record AC coverage**
+  - Write an AC coverage table in the PR description or design doc
+  - This is the contract the reviewer verifies against
+  - ❌ Ship with `Closes #56` and no AC coverage table
+  - ✅ AC table: `| AC1 | Met | cn_runtime_contract.ml | AC4 | Deferred | #58 |`
+
+8.5.4. **Spot-check 3 ACs that are marked "met"**
+  - Pick 3 ACs at random, find the specific line/commit/test that satisfies them
+  - If you cannot find evidence for an AC you marked "met," it is not met
+  - ❌ Claim AC is met without verifying
+  - ✅ "AC3 (cn doctor validates contract): verified — cn_system.ml L145-167"
+
+8.5.5. **Do not request review until every AC is accounted for**
+  - The author pre-flight is a hard gate: no unaccounted ACs may enter peer review
+  - This is distinct from the release gate (§9.1) which is the reviewer's independent check
+  - ❌ Request review hoping the reviewer will catch missing ACs
+  - ✅ Every AC has a status before review is requested
 
 ---
 
@@ -401,9 +464,13 @@ After the release gate passes, execute the release. CDD orchestrates; sub-skills
 
 ---
 
-## 11. Coherence Measurement
+## 11. Post-Release Assessment
 
-CDD's output is not the feature — it is the measured coherence delta. The feature is the vehicle; coherence improvement is the product.
+CDD does not end at merge. Every release triggers a post-release assessment that measures what shipped, what the system looks like now, and what to do next. Delegate to `ops/post-release/SKILL.md` for the full procedure.
+
+The assessment has four parts: measurement, encoding lag, process learning, and next-move decision.
+
+### Measurement
 
 11.1. **Score before starting**
   - Record the baseline α/β/γ from the previous release in the coherence contract
@@ -423,22 +490,66 @@ CDD's output is not the feature — it is the measured coherence delta. The feat
   - ❌ Release with no CHANGELOG TSC entry
   - ✅ `| v3.6.0 | A+ | A+ | A+ | A+ | CDD skill: executable development method, full lifecycle. |`
 
-11.4. **Name what improved**
+11.4. **Name what improved and what regressed**
   - The coherence note must describe which incoherence was reduced, not what feature was added
-  - ❌ "Added CDD skill"
-  - ✅ "CDD: development method made executable — closes gap between doctrine and practice"
+  - If an axis didn't improve, say why — it's either acceptable or known debt
+  - ❌ "Added CDD skill" / silent axis stagnation
+  - ✅ "CDD: development method made executable — closes gap between doctrine and practice. γ held — no evolution-path changes, expected."
 
-11.5. **Name what regressed or held**
-  - If an axis didn't improve, say why — it's either acceptable (no relevant change) or known debt
-  - ❌ Silent axis stagnation across multiple releases
-  - ✅ "γ held at A+ — no evolution-path changes in this release, expected"
-
-11.6. **The coherence contract closes the loop**
+11.5. **Close the coherence contract loop**
   - The coherence contract (§4.2) stated the gap and expected triadic effect
   - Measurement validates whether the expected effect was achieved
-  - If the expected effect was not achieved, record why and what remains
+  - If not achieved, record why and what remains
   - ❌ Contract says "improve β" but no post-release β score recorded
-  - ✅ Contract: "improve β (docs/runtime alignment)" → Result: "β held at A+, alignment verified via runtime telemetry"
+  - ✅ Contract: "improve β" → Result: "β A+ (held), alignment verified"
+
+### Encoding Lag
+
+11.6. **Encoding lag report**
+  - Every release MUST include an encoding lag table
+  - For each open design issue: design status, implementation status, lag level
+  - This is the system-level health check — is the model outpacing the body?
+
+  ```
+  ### Encoding Lag (as of vX.Y.Z)
+  | Issue | Title | Design | Impl | Lag |
+  |-------|-------|--------|------|-----|
+  | #62   | RT Contract v2 | converged | branch exists | low |
+  | #73   | Extensions | converged | not started | growing |
+  ```
+
+  - **Lag levels:** none (shipped), low (in progress), growing (design done, no impl), stale (design aging, impl not planned)
+  - ❌ Release with 5 converged designs and no encoding lag report
+  - ✅ "Encoding lag: 2 growing, 1 low. MCI freeze recommended."
+
+11.7. **MCI/MCA balance decision**
+  - Based on the encoding lag report, decide the next move:
+    - **Balanced:** design and implementation roughly in sync. Continue normally.
+    - **Freeze MCI:** encoding lag is growing on ≥3 issues, or designs outnumber implementations 3:1, or any "SHALL" in docs has no runtime enforcement. Stop designing, start shipping.
+    - **Resume MCI:** implementation has caught up. Design frontier can advance.
+  - This decision is mandatory. Every release must state the balance.
+  - ❌ Ship and start the next feature without assessing balance
+  - ✅ "3 designs at growing lag. Freezing MCI. Next sessions are pure MCA."
+
+### Process Learning
+
+11.8. **What went wrong**
+  - What broke, failed, or was caught late in this release cycle?
+  - What would have caught it earlier?
+  - ❌ Ship cleanly and skip — process learning only happens after failures
+  - ✅ "Review missed CAA.md update because §2.0 gate wasn't enforced. Added structural table format."
+
+11.9. **What went right**
+  - What process improvement from previous releases paid off?
+  - What should be reinforced or standardized?
+  - ❌ Only record failures
+  - ✅ "§2.0 AC table caught 3 missing ACs that would have slipped in previous review style."
+
+11.10. **Skill/process patches**
+  - If the post-mortem identifies a repeatable failure mode, patch the relevant skill immediately
+  - Do not defer — the next release will hit the same bug
+  - ❌ "We should fix the review process" (noted, not patched)
+  - ✅ Commit skill patch in the same session as the post-mortem
 
 ---
 
@@ -455,6 +566,7 @@ CDD is the main module. It owns the lifecycle from branch to observation and mea
 | Merge to main | `eng/ship/SKILL.md` |
 | Tag, changelog, GitHub release | `release/SKILL.md` |
 | Review protocol | `eng/review/SKILL.md` |
+| Post-release assessment | `ops/post-release/SKILL.md` |
 | Coherence scoring | `CHANGELOG.md` TSC table |
 
 CDD defines what must happen and in what order. Sub-skills define how.

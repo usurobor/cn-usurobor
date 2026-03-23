@@ -31,7 +31,7 @@ let%expect_test "default config: exec disabled, apply_mode branch" =
     apply_mode: branch
     exec_enabled: false
     budgets: max_artifact_bytes=65536, max_artifact_bytes_per_op=16384, max_observe_ops=10
-    max_passes: 2
+    max_passes: 5
     syntax: frontmatter key `ops:` with a single-line JSON array
     example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
     example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}]
@@ -58,7 +58,7 @@ let%expect_test "exec enabled: exec in effects + allowlist shown" =
     exec_enabled: true
     exec_allowlist: make, dune, ocamlfind
     budgets: max_artifact_bytes=65536, max_artifact_bytes_per_op=16384, max_observe_ops=10
-    max_passes: 2
+    max_passes: 5
     syntax: frontmatter key `ops:` with a single-line JSON array
     example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
     example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}]
@@ -80,7 +80,7 @@ let%expect_test "exec enabled with empty allowlist" =
     exec_enabled: true
     exec_allowlist: (none)
     budgets: max_artifact_bytes=65536, max_artifact_bytes_per_op=16384, max_observe_ops=10
-    max_passes: 2
+    max_passes: 5
     syntax: frontmatter key `ops:` with a single-line JSON array
     example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
     example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}]
@@ -104,7 +104,7 @@ let%expect_test "apply_mode off: no effect kinds listed" =
     apply_mode: off
     exec_enabled: false
     budgets: max_artifact_bytes=65536, max_artifact_bytes_per_op=16384, max_observe_ops=10
-    max_passes: 2
+    max_passes: 5
     syntax: frontmatter key `ops:` with a single-line JSON array
     example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
     coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface
@@ -128,7 +128,7 @@ let%expect_test "apply_mode working_tree: effects included" =
     apply_mode: working_tree
     exec_enabled: false
     budgets: max_artifact_bytes=65536, max_artifact_bytes_per_op=16384, max_observe_ops=10
-    max_passes: 2
+    max_passes: 5
     syntax: frontmatter key `ops:` with a single-line JSON array
     example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
     example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}]
@@ -156,7 +156,7 @@ let%expect_test "custom budgets reflected in block" =
     apply_mode: branch
     exec_enabled: false
     budgets: max_artifact_bytes=131072, max_artifact_bytes_per_op=32768, max_observe_ops=20
-    max_passes: 2
+    max_passes: 5
     syntax: frontmatter key `ops:` with a single-line JSON array
     example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
     example_effect: ops: [{"kind":"fs_patch","op_id":"patch-001","path":"README.md","unified_diff":"..."}]
@@ -228,7 +228,7 @@ let%expect_test "apply_mode off + exec enabled: no effects at all" =
     apply_mode: off
     exec_enabled: false
     budgets: max_artifact_bytes=65536, max_artifact_bytes_per_op=16384, max_observe_ops=10
-    max_passes: 2
+    max_passes: 5
     syntax: frontmatter key `ops:` with a single-line JSON array
     example_observe: ops: [{"kind":"fs_read","path":"README.md"}]
     coordination_ops: send, reply, done, ack, fail, delegate, defer, delete, surface

@@ -142,6 +142,31 @@ let run_doctor hub_path =
       passed = Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.lock.json");
       value = if Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.lock.json")
               then "present" else "missing (run 'cn setup')" };
+
+    (* Runtime contract validation — issue #56 *)
+    { name = "agent/";
+      passed = Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path "agent");
+      value = if Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path "agent")
+              then "exists" else "missing (run 'cn setup')" };
+
+    (let contract_path = Cn_ffi.Path.join hub_path "state/runtime-contract.json" in
+     if Cn_ffi.Fs.exists contract_path then begin
+       let content = Cn_ffi.Fs.read contract_path in
+       match Cn_json.parse content with
+       | Ok json ->
+         let has_self_model = Cn_json.get "self_model" json <> None in
+         let has_workspace = Cn_json.get "workspace" json <> None in
+         let has_caps = Cn_json.get "capabilities" json <> None in
+         let all_ok = has_self_model && has_workspace && has_caps in
+         { name = "runtime contract";
+           passed = all_ok;
+           value = if all_ok then "valid (self_model + workspace + capabilities)"
+                   else "incomplete" }
+       | Error _ ->
+         { name = "runtime contract"; passed = false; value = "invalid JSON" }
+     end else
+       { name = "runtime contract"; passed = false;
+         value = "missing (will be created on next wake)" });
   ] in
 
   let width = 22 in
@@ -243,8 +268,9 @@ let setup_assets hub_path =
 let run_setup hub_path =
   print_endline (Cn_fmt.info (Printf.sprintf "Setting up hub: %s" hub_path));
 
-  (* Ensure .cn/ directory exists *)
+  (* Ensure required directories exist *)
   Cn_ffi.Fs.ensure_dir (Cn_ffi.Path.join hub_path ".cn");
+  Cn_ffi.Fs.ensure_dir (Cn_ffi.Path.join hub_path "agent");
 
   (* Materialize cognitive substrate *)
   setup_assets hub_path;
@@ -458,6 +484,8 @@ let run_init name =
   Cn_ffi.Fs.mkdir_p (Cn_ffi.Path.join hub_dir "threads/adhoc");
   Cn_ffi.Fs.mkdir_p (Cn_ffi.Path.join hub_dir "threads/archived");
   Cn_ffi.Fs.mkdir_p (Cn_ffi.Path.join hub_dir "logs");
+  (* agent/ override root for hub-local doctrine/mindset/skill overrides *)
+  Cn_ffi.Fs.mkdir_p (Cn_ffi.Path.join hub_dir "agent");
 
   let config = Printf.sprintf {|{
   "name": "%s",
