@@ -25,9 +25,9 @@ CDD owns the full arc from branch to observation:
 6. **Gate** — verify the release checklist (§9)
 7. **Release** — version, tag, CI, merge, announce (§10)
 8. **Observe** — confirm runtime matches design (§10.7)
-9. **Measure** — score the coherence delta, update CHANGELOG TSC table (§11)
+9. **Assess** — post-release assessment: measure, encoding lag, process learning, next move commitment (§11)
 
-Start at step 1. The process is complete when the coherence delta is recorded.
+Start at step 1. The process is complete when the post-release assessment is recorded and the next MCA is committed.
 
 ---
 
