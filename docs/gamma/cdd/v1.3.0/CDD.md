@@ -207,52 +207,55 @@ These two aspects are compatible: the TERMS/POINTER/EXIT structure gives form to
 
 ## 5. The Development Pipeline
 
-In cnos, the intended sequence is:
+### 5.0 Branch rule
 
-1. **Design** — a substantial change begins in design, not in code
-2. **Coherence contract** — state the gap, mode, scope, expected effect (§7)
-3. **Plan** — steps, dependencies, risk boundaries, compile-safe increments
-4. **Tests** — pin invariants, schemas, corner cases, regressions
-5. **Code** — realizes the design, does not invent architecture
-6. **Docs** — updated to match implementation
-7. **Release** — CI, binaries, notes, migration implications, known coherence debt
-8. **Observe** — runtime telemetry confirms design/implementation alignment
+Every substantial feature or change MUST be developed on its own dedicated branch (per AGILE-PROCESS.md §Lifecycle). No work is performed directly on `main`. Branch naming follows the convention `<agent>/<topic>`.
 
-### 5.1 Relationship to AGILE-PROCESS.md
+### 5.1 Pipeline steps and deliverable artifacts
+
+Each step in the pipeline produces concrete artifacts. The table below defines what MUST exist at the end of each step before moving to the next.
+
+| # | Step | Deliverable artifacts | Location |
+|---|------|-----------------------|----------|
+| 0 | **Bootstrap** | Version directory with stub files for every artifact this branch will produce. Includes `README.md` (snapshot manifest) and one stub per deliverable. | `docs/<tier>/<bundle>/vX.Y.Z/` |
+| 1 | **Design** | Design doc or design section in the spec stub. States the structural decision and its triadic justification. | Version dir or `docs/alpha/` |
+| 2 | **Coherence contract** | Gap, mode, scope, expected triadic effect, failure-if-skipped (§6). May live in the PR body, a dedicated file, or a header block in the spec. | PR body file or spec header |
+| 3 | **Plan** | Implementation plan: ordered steps, dependencies, risk boundaries, compile-safe increments. | `docs/gamma/plans/PLAN-vX.Y.Z-<scope>.md` or version dir |
+| 4 | **Tests** | Test files that pin invariants, schemas, edge cases, and regressions. Tests SHOULD be written before the code they validate. | `tests/` or co-located `__tests__/` |
+| 5 | **Code** | Source code that realizes the design. Code does not invent architecture — it implements the plan. | `src/`, `packages/`, or relevant source dirs |
+| 6 | **Docs** | All affected documentation updated to match the implementation. Bundle README, spec, directory maps, and navigation surfaces reflect the new state. | `docs/`, bundle READMEs, `docs/README.md` |
+| 7 | **Release** | CI green, version bumped, CHANGELOG entry, release notes stating the coherence delta and known debt. Frozen snapshot in the version directory (stubs replaced with final content). | Version dir (frozen), `CHANGELOG.md`, release notes |
+| 8 | **Observe** | Runtime telemetry or manual verification confirming design/implementation alignment. Observation results recorded. | Telemetry logs, post-release assessment |
+
+**The first diff on the branch MUST be step 0 (Bootstrap).** This forces the author to name the version and enumerate deliverables before writing content.
+
+Steps 1–3 may be collapsed into a single commit for small changes. Steps 4–6 typically span multiple commits. Step 7 is the final commit before merge. Step 8 happens after merge.
+
+### 5.2 Rationale
+
+The bootstrap-first rule and per-step artifact expectations serve three CDD purposes:
+
+- **α** — naming the version and enumerating deliverables up front prevents scope drift and forces internal consistency from the first commit
+- **β** — the version directory and its stubs are immediately visible to reviewers and CI, establishing the branch's relation to the rest of the repo before any content is written
+- **γ** — the stub structure is the skeleton of the frozen snapshot; filling it in is the development path, freezing it is the release
+
+### 5.3 Small-change exception
+
+If a change is too small to warrant a version directory (e.g., a one-line fix, a typo correction), the bootstrap step does not apply. The coherence contract can be carried in the commit message alone (see §12).
+
+### 5.4 Relationship to AGILE-PROCESS.md
 
 The workflow states (Backlog → Claimed → In Progress → Review → Done) defined in `docs/gamma/AGILE-PROCESS.md` govern how work moves through the team. CDD governs what coherence means at each stage:
 
-| Agile state | CDD concern |
-|-------------|-------------|
-| Backlog | Gap identified, prioritized by coherence impact |
-| Claimed | Coherence contract drafted |
-| In Progress | Design → plan → test → code pipeline |
-| Review | Triadic check (alpha/β/γ), CLP dialogue |
-| Done | Release criteria met (§10) |
+| Agile state | CDD concern | Pipeline steps |
+|-------------|-------------|----------------|
+| Backlog | Gap identified, prioritized by coherence impact | — |
+| Claimed | Branch created, version dir bootstrapped | 0 |
+| In Progress | Design → contract → plan → test → code → docs | 1–6 |
+| Review | Triadic check (α/β/γ), CLP dialogue | — |
+| Done | Release criteria met (§9), snapshot frozen | 7–8 |
 
 CDD does not replace the agile workflow. It defines the quality function the workflow optimizes for.
-
-### 5.2 Branch bootstrapping
-
-Every feature or substantial change MUST be developed on its own dedicated branch (per AGILE-PROCESS.md §Lifecycle). CDD adds one structural requirement:
-
-> **The first diff on a feature branch MUST create the version directory with file stubs for all artifacts the branch will produce.**
-
-This means:
-
-1. **Create the branch** — `git checkout -b <agent>/<topic>`
-2. **First commit** — create the version directory (`docs/<tier>/<bundle>/vX.Y.Z/`) containing:
-   - `README.md` — snapshot manifest (may be minimal; will be completed before merge)
-   - Stub files for each artifact the release will contain (e.g., `SPEC.md`, `PLAN.md`)
-3. **Subsequent commits** — fill in the stubs, implement, test, update docs
-
-**Rationale.** The first-diff rule serves three CDD purposes:
-
-- **α** — forces the author to name the version and enumerate deliverables before writing content, preventing scope drift
-- **β** — the version directory is immediately visible to reviewers and CI, establishing the bundle's relation to the rest of the repo from the first commit
-- **γ** — the stub structure is the skeleton of the frozen snapshot; filling it in is the development path, freezing it is the release
-
-If a change is too small to warrant a version directory (e.g., a one-line fix), the first-diff rule does not apply. The coherence contract can be carried in the commit message alone (see §12).
 
 ---
 
