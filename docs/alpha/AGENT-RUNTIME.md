@@ -1874,7 +1874,7 @@ ops: [{"kind":"fs_patch","op_id":"patch-readme","path":"docs/README.md","unified
 - `obs-01` auto-assigned for the observe op
 - `apply_mode: branch` causes effects to land on `cn/20260305-091500-def`, not the working tree
 - `Reply` coordination op only executes after effect succeeds (gating)
-- If Pass B had proposed new observe ops → denied with `max_passes_exceeded`
+- If the final pass proposes new observe ops beyond `max_passes` → denied with `max_passes_exceeded`
 
 ---
 
