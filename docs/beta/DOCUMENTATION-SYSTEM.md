@@ -110,10 +110,10 @@ Audits, RCAs, and model↔reality assessments. Lives in `beta/evidence/`.
 
 ### 2.9 Snapshot
 
-A frozen copy of a canonical spec at a release boundary. Lives in the feature bundle's `versions/` directory.
+A frozen copy of a canonical spec at a release boundary. Lives in the feature bundle's `versions/spec/` directory.
 
-- Filename: `vX.Y.Z.md` (matching the spec version at time of snapshot)
-- Content: exact copy of the canonical spec at that point
+- Path: `docs/alpha/<feature>/versions/spec/vX.Y.Z.md`
+- Content: exact copy of the canonical spec at that version
 - Never edited after creation — it is a historical record
 
 ---
@@ -146,10 +146,12 @@ Create a snapshot of a canonical spec when:
 
 ### Where snapshots live
 
-Snapshots belong to the feature bundle:
+Snapshots belong to the feature bundle, scoped by the document they freeze:
 ```
-docs/alpha/<feature>/versions/vX.Y.Z.md
+docs/alpha/<feature>/versions/spec/vX.Y.Z.md
 ```
+
+The `spec/` subdirectory names the document being snapshotted (the canonical spec). If a bundle later has additional normative documents, each gets its own sibling directory (e.g., `versions/contract/`).
 
 If the feature does not yet have a bundle directory, create one when the first snapshot is needed.
 
@@ -160,6 +162,12 @@ A snapshot is a verbatim copy of the canonical spec at that version. No edits af
 ---
 
 ## 5. Feature bundle rules
+
+### The bundle contract
+
+**Every feature bundle has `README.md` as the navigation entrypoint and names exactly one canonical spec as the normative source of truth.**
+
+The canonical spec may live at `alpha/<feature>/SPEC.md` (bundle-local) or at `alpha/<FEATURE-NAME>.md` (legacy root placement). Either is valid; the README.md must link to it unambiguously.
 
 ### When to create a bundle
 
@@ -173,16 +181,19 @@ Single-document features (e.g., SECURITY-MODEL.md) do not need a bundle.
 
 ```
 docs/alpha/<feature-name>/
-├── README.md       # Required: bundle index
-├── versions/       # Snapshots (when they exist)
-│   └── vX.Y.Z.md
-└── ...             # Additional bundle-local docs if needed
+├── README.md            # Required: bundle index, names the canonical
+├── versions/
+│   └── spec/            # Snapshots of the canonical spec
+│       └── vX.Y.Z.md
+└── ...                  # Additional bundle-local docs if needed
 ```
+
+The `versions/spec/` subdirectory scopes snapshots to the canonical spec. This scales: if a bundle later owns additional normative documents, each gets its own subdirectory under `versions/` (e.g., `versions/contract/vX.Y.Z.md`).
 
 ### Bundle README requirements
 
 - Feature name and one-sentence purpose
-- Link to canonical spec (wherever it lives)
+- **Which document is the canonical spec** (by name and path)
 - Document map: every file in the bundle, with one-line description
 - Reading order for new readers
 - Link to related plans in `gamma/plans/`
@@ -210,11 +221,13 @@ Several documents in `docs/alpha/` use version-stamped filenames at the root lev
 | `PLAN-v3.7.0.md` | `gamma/plans/` |
 | `PLAN-v3.8.0-syscall-surface.md` | `gamma/plans/` |
 
-### Migration rules
+### What stays, what moves
 
-- Legacy files are **not moved** in this version. They are documented here.
+- **Canonical specs stay at their current root paths.** `alpha/AGENT-RUNTIME.md` and `alpha/RUNTIME-EXTENSIONS.md` remain where they are. Bundle READMEs link to them. No moved notices needed.
+- **Snapshots move into their owning bundle.** The Runtime Extensions snapshot moved from `alpha/versions/runtime-extensions/v1.0.6.md` to `alpha/runtime-extensions/versions/spec/v1.0.6.md`. Version history now lives with the feature it belongs to.
+- **Feature-scoped design docs are not moved in this version.** They are documented in the table above. Future migration: move into the owning bundle, leave a one-line moved-notice at the old path.
+- **Legacy plans at alpha root are not moved in this version.** Future migration: move to `gamma/plans/`.
 - New documents MUST follow the bundle/placement rules above.
-- Future migration: move legacy files into their bundles, leave a one-line moved-notice at the old path if any external references exist.
 - A moved-notice is a file that says: `Moved to <new-path>. This file will be removed in a future release.`
 
 ---
@@ -242,8 +255,8 @@ If it doesn't fit any axis, the taxonomy may need to evolve — but update this 
 
 The following invariants should be enforced by CI:
 
-- Every feature bundle directory has a README.md
-- Every `versions/` directory contains only files matching `v*.md`
+- Every feature bundle directory has a README.md that names exactly one canonical spec
+- Every `versions/spec/` directory contains only files matching `v*.md`
 - No canonical spec has a version-stamped filename (flag as legacy if found)
 - Snapshot content matches the canonical spec at the tagged version (advisory)
 
