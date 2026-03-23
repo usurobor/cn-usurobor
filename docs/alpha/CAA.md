@@ -73,11 +73,13 @@ The agent reconstitutes from local files in this order:
 | 3 | Mindsets | All installed packages | Always, not scored |
 | 4 | Reflections | `threads/reflections/` | Always (recent N) |
 | 5 | Task Skills | All installed packages | Scored, bounded (top N) |
-| 6 | Capabilities | Runtime-generated | Always |
+| 6 | Runtime Contract | Runtime-generated (v2: identity, cognition, body, medium) | Always |
 | 7 | Conversation | `state/conversation.json` | Recent N turns |
 | 8 | Inbound message | Queue / stdin | Current demand |
 
 Strata 1-3 are stable and cacheable. Strata 4-8 are dynamic.
+
+Stratum 6 (Runtime Contract) is a vertical self-model emitted fresh at every wake. It tells the agent who it is (identity), what shapes its thinking (cognition), what its body can do (body/capabilities), and what world it inhabits (medium with zone-classified paths). The Runtime Contract is authoritative over conversation history for all fields it declares (see COGNITIVE-SUBSTRATE §9.1).
 
 Doctrine and mindsets never compete for skill slots. If they do,
 the architecture is broken.

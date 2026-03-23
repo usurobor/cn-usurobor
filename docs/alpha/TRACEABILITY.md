@@ -484,7 +484,7 @@ A runtime is structurally coherent if:
 - required packages installed
 - required doctrine present
 - required mindsets present
-- capability block rendered
+- Runtime Contract rendered (v2: identity, cognition, body, medium)
 - direct I/O boundary intact
 - receipts schema available
 - transport initialized (if configured)

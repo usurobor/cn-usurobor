@@ -140,7 +140,9 @@ projection_surface: threads/outbox/
 
 ## 6. Doctor Validation (v2)
 
-Check for four top-level keys: `identity`, `cognition`, `body`, `medium`.
+**Structural checks (this issue):** `cn doctor` validates that `state/runtime-contract.json` contains the four top-level keys: `identity`, `cognition`, `body`, `medium`.
+
+**Semantic consistency checks (deferred to #59):** deeper validation that the contract matches live hub state — e.g., profile matches installed packages, lockfile matches vendor, overrides resolve to real files, zone paths match actual directory layout. This is tracked as issue #59 (enhancement, not a #62 blocker).
 
 ## 7. Invariant (preserved)
 
