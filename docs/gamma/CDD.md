@@ -1,6 +1,6 @@
 # Coherence-Driven Development (CDD)
 
-**Version:** 1.3.0
+**Version:** 3.13.0
 **Status:** Draft
 **Date:** 2026-03-23
 **Placement:** γ document (`docs/gamma/`)

@@ -2,7 +2,7 @@
 
 How the docs/ tree is organized and how documents evolve.
 
-**Version:** 2.0.0
+**Version:** 3.13.0
 **Date:** 2026-03-23
 
 ---
@@ -132,19 +132,38 @@ docs/alpha/<feature>/v1.0.6/
 
 ## 3. Versioning rules
 
-### When to version-bump a canonical doc
+### Single version lineage
 
-| Change | Version bump |
-|--------|-------------|
-| Wording, examples, typos | Patch (e.g., 1.0.0 → 1.0.1) |
-| New section, additive capability | Minor (e.g., 1.0.0 → 1.1.0) |
-| Scope change, structural rewrite, removed sections | Major (e.g., 1.0.0 → 2.0.0) |
+All documents in the cnos repository use **cnos release versions**. There is no independent per-document version lineage.
+
+The `Version:` header in every document records the **cnos release in which the document was last substantively changed**. A document at `Version: 3.13.0` means "this document was last updated as part of cnos v3.13.0."
+
+This rule eliminates version-alignment confusion. "What does cnos v3.13.0 look like?" answers everything — specs, governance, runtime, docs — with one version number.
+
+### When a document's version advances
+
+A document's version advances to the current cnos release version when:
+
+| Change type | Advances version? |
+|-------------|-------------------|
+| Wording, examples, typos | Yes (next patch release) |
+| New section, additive capability | Yes (next minor release) |
+| Scope change, structural rewrite | Yes (next minor or major release) |
+| No change in a release | No — version stays at the last release that touched it |
+
+### Version directories
+
+Version directories inside feature bundles use the cnos release version, not a document-local version. Example: `docs/alpha/agent-runtime/v3.8.0/` — not `v2.0.0/`.
 
 ### Supersession
 
-When a canonical document is fully replaced, the new document carries its own version starting at 1.0.0.
+When a canonical document is fully replaced, the new document's version is the cnos release in which it first appears. It does not restart at 1.0.0.
 
-Do not maintain parallel "v1" and "v2" files in active directories.
+Do not maintain parallel versions of the same document in active directories.
+
+### Legacy versions
+
+Some existing documents carry pre-cnos-aligned version numbers (e.g., THESIS 1.0.0, COHERENCE-SYSTEM 1.0). These will be re-versioned to cnos release numbers when next substantively updated. No retroactive bulk rename is required.
 
 ---
 

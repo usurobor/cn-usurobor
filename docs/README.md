@@ -2,7 +2,7 @@
 
 A recurrent coherence system with Git as its lowest durable substrate.
 
-**Version:** 2.0.0
+**Version:** 3.13.0
 **Date:** 2026-03-23
 
 ---
