@@ -1069,7 +1069,7 @@ Most "read this file" requests SHOULD be satisfied without observe ops at all �
 | Max observe ops per pass | 10 | Covers typical investigate-then-act (read 3–5 files + 2–3 git queries, headroom for growth) | `runtime.max_observe_ops` |
 | Max artifact bytes (total) | 64 KB | Fits comfortably in context window (~16K tokens) alongside skills + conversation | `runtime.max_artifact_bytes` |
 | Max artifact bytes (per op) | 16 KB | Single file/diff should not dominate artifact budget | `runtime.max_artifact_bytes_per_op` |
-| Max passes | 2 | Hard limit — not configurable | — |
+| Max passes | 5 | Configurable — controls how many observe→orient→act cycles the runtime permits | `runtime.max_passes` |
 
 Ops exceeding budgets receive receipt `status: denied`, `reason: budget_exceeded`.
 
