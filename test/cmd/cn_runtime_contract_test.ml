@@ -94,7 +94,7 @@ let%expect_test "gather: produces contract with correct hub name" =
     Printf.printf "packages: %d\n" (List.length c.packages);
     Printf.printf "peers: %d\n" (List.length c.peers));
   [%expect {|
-    cn_version: 3.11.0
+    cn_version: 3.12.0
     hub_name_present: true
     profile: engineer
     packages: 2
@@ -206,7 +206,7 @@ let%expect_test "to_json: self_model has version and packages" =
       Printf.printf "cn_version: %s\n" (match ver with Some v -> v | None -> "(none)");
       Printf.printf "hub_name_present: %b\n" (hub <> None));
   [%expect {|
-    cn_version: 3.11.0
+    cn_version: 3.12.0
     hub_name_present: true |}]
 
 let%expect_test "to_json: capabilities match Cn_capabilities (single source of truth)" =
