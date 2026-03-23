@@ -208,45 +208,63 @@ let render_markdown (c : runtime_contract) =
 
 (* === JSON persistence === *)
 
-(** Convert the contract to JSON for state/runtime-contract.json. *)
-let to_json (c : runtime_contract) =
+(** Convert the contract to JSON for state/runtime-contract.json.
+    Capabilities read from Cn_capabilities (single source of truth, §4.5.2). *)
+let to_json ~(shell_config : Cn_shell.shell_config) (c : runtime_contract) =
+  let effects_enabled = shell_config.apply_mode <> "off" in
+  let effective_exec = effects_enabled && shell_config.exec_enabled in
+  let effect_kinds =
+    if not effects_enabled then []
+    else if effective_exec then Cn_capabilities.effect_kinds_base @ ["exec"]
+    else Cn_capabilities.effect_kinds_base
+  in
+  let str s = Cn_json.String s in
   Cn_json.Object [
-    "schema", Cn_json.String "cn.runtime_contract.v1";
+    "schema", str "cn.runtime_contract.v1";
     "self_model", Cn_json.Object [
-      "cn_version", Cn_json.String c.cn_version;
-      "hub_name", Cn_json.String c.hub_name;
-      "profile", Cn_json.String c.profile;
+      "cn_version", str c.cn_version;
+      "hub_name", str c.hub_name;
+      "profile", str c.profile;
       "installed_packages", Cn_json.Array (List.map (fun (p : package_info) ->
         Cn_json.Object [
-          "name", Cn_json.String p.name;
+          "name", str p.name;
           "doctrine_count", Cn_json.Int p.doctrine_count;
           "mindset_count", Cn_json.Int p.mindset_count;
           "skill_count", Cn_json.Int p.skill_count;
         ]) c.packages);
       "active_overrides", Cn_json.Object [
-        "doctrine", Cn_json.Array (List.map (fun s -> Cn_json.String s) c.overrides.doctrine);
-        "mindsets", Cn_json.Array (List.map (fun s -> Cn_json.String s) c.overrides.mindsets);
-        "skills", Cn_json.Array (List.map (fun s -> Cn_json.String s) c.overrides.skills);
+        "doctrine", Cn_json.Array (List.map str c.overrides.doctrine);
+        "mindsets", Cn_json.Array (List.map str c.overrides.mindsets);
+        "skills", Cn_json.Array (List.map str c.overrides.skills);
       ];
     ];
     "workspace", Cn_json.Object [
-      "root", Cn_json.String ".";
-      "directories", Cn_json.Array (List.map (fun (rel, _) ->
-        Cn_json.String rel) c.workspace_dirs);
-      "writable", Cn_json.Array (List.map (fun s -> Cn_json.String s) c.writable);
-      "protected", Cn_json.Array (List.map (fun s -> Cn_json.String s) c.protected);
+      "root", str ".";
+      "directories", Cn_json.Array (List.map (fun (rel, _) -> str rel) c.workspace_dirs);
+      "writable", Cn_json.Array (List.map str c.writable);
+      "protected", Cn_json.Array (List.map str c.protected);
     ];
-    "peers", Cn_json.Array (List.map (fun s -> Cn_json.String s) c.peers);
-    "capabilities", Cn_json.Object [
-      "observe", Cn_json.Array (List.map (fun s -> Cn_json.String s)
-        ["fs_read"; "fs_list"; "fs_glob"; "git_status"; "git_diff"; "git_log"; "git_grep"]);
-      "effect", Cn_json.Array (List.map (fun s -> Cn_json.String s)
-        ["fs_write"; "fs_patch"; "git_branch"; "git_stage"; "git_commit"]);
-    ];
+    "peers", Cn_json.Array (List.map str c.peers);
+    "capabilities", Cn_json.Object ([
+      "observe", Cn_json.Array (List.map str Cn_capabilities.observe_kinds);
+      "effect", Cn_json.Array (List.map str effect_kinds);
+      "apply_mode", str shell_config.apply_mode;
+      "exec_enabled", Cn_json.Bool effective_exec;
+      "max_passes", Cn_json.Int shell_config.max_passes;
+      "budgets", Cn_json.Object [
+        "max_artifact_bytes", Cn_json.Int shell_config.max_artifact_bytes;
+        "max_artifact_bytes_per_op", Cn_json.Int shell_config.max_artifact_bytes_per_op;
+        "max_observe_ops", Cn_json.Int shell_config.max_observe_ops;
+        "max_total_artifact_bytes", Cn_json.Int shell_config.max_total_artifact_bytes;
+        "max_total_ops", Cn_json.Int shell_config.max_total_ops;
+      ];
+    ] @ (if effective_exec && shell_config.exec_allowlist <> [] then
+      ["exec_allowlist", Cn_json.Array (List.map str shell_config.exec_allowlist)]
+    else []));
   ]
 
 (** Write the contract to state/runtime-contract.json. *)
-let write ~hub_path (c : runtime_contract) =
+let write ~hub_path ~shell_config (c : runtime_contract) =
   let path = Cn_ffi.Path.join hub_path "state/runtime-contract.json" in
   Cn_ffi.Fs.ensure_dir (Filename.dirname path);
-  Cn_ffi.Fs.write path (Cn_json.to_string (to_json c))
+  Cn_ffi.Fs.write path (Cn_json.to_string (to_json ~shell_config c))

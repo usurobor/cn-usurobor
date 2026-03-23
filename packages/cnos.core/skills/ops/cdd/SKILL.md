@@ -143,6 +143,29 @@ Follow the pipeline. Each step feeds the next.
   - ❌ Code introduces concepts not in the design doc
   - ✅ Every type and interface traces to the design
 
+4.5.1. **Before any commit that references an issue: AC self-check**
+  - Re-read the issue body. Walk every AC.
+  - For each AC: verify it is met in staged changes, explicitly deferred, or descoped
+  - If any AC is unaccounted for, do not commit with `Closes #N` or `(#N)`
+  - This is the earliest gate — it fires at commit time, not at review time
+  - ❌ `git commit -m "feat: runtime contract (#56)"` without checking all 6 ACs
+  - ✅ Walk ACs → find AC4 (cn doctor) not met → either implement it or commit without `Closes`
+  - ✅ All ACs met or deferred → commit with AC coverage in message body
+
+4.5.2. **Multi-format parity: all serializers read from one source**
+  - If a value exists in a canonical module (e.g. `Cn_capabilities.observe_kinds`), every format renderer (markdown, JSON, YAML) must read from that module
+  - Never duplicate canonical lists as literals in a second serializer
+  - If the runtime contract has both a markdown renderer and a JSON serializer, both must source the same fields from the same module
+  - ❌ `render_markdown` delegates to `Cn_capabilities.render`; `to_json` hardcodes the same op lists as string literals
+  - ✅ Both `render_markdown` and `to_json` read `Cn_capabilities.observe_kinds` and `Cn_capabilities.effect_kinds_base`
+
+4.5.3. **Build-sync after editing source assets**
+  - After modifying any file under `src/agent/` (doctrine, mindsets, skills), run `cn build` before committing
+  - `cn build` copies source assets to `packages/` — skipping it causes package/source drift
+  - CI runs `cn build --check` and will catch this, but the gate belongs at commit time
+  - ❌ Edit `src/agent/skills/ops/cdd/SKILL.md`, commit without `cn build` → packages/ is stale
+  - ✅ Edit source → `cn build` → verify packages/ updated → commit both
+
 4.6. **Docs**
   - Updated to match implementation — README, operator guides, architecture
   - ❌ Ship code, leave docs describing the old behavior
@@ -295,6 +318,41 @@ When asking another CA (or human reviewer) to review a substantial change, use t
   - If the change claims backward compatibility, test it
   - ❌ "This is backward compatible" (assertion without evidence)
   - ✅ Test: "v1 config file loads correctly under v2 parser"
+
+---
+
+## 8.5. Author Pre-Flight
+
+Before requesting peer review, the author MUST walk the acceptance criteria and verify the full change against them. §4.5.1 catches individual commits; this section is the aggregate check across the entire branch before review.
+
+8.5.1. **Re-read the issue body**
+  - Open the originating issue. Read every AC. Do not rely on memory.
+  - ❌ "I think I covered everything"
+  - ✅ Re-read issue #56, find 6 ACs, check each one
+
+8.5.2. **Walk every AC against the diff**
+  - For each AC: verify it is met in the diff, explicitly deferred with a tracking issue, or descoped with rationale
+  - If any AC is not in any of these three categories, the change is not ready for review
+  - ❌ 3 of 6 ACs addressed, other 3 not mentioned
+  - ✅ "AC1 ✓ met (cn_runtime_contract.ml). AC4 ✗ not addressed → must fix or defer before review."
+
+8.5.3. **Record AC coverage**
+  - Write an AC coverage table in the PR description or design doc
+  - This is the contract the reviewer verifies against
+  - ❌ Ship with `Closes #56` and no AC coverage table
+  - ✅ AC table: `| AC1 | Met | cn_runtime_contract.ml | AC4 | Deferred | #58 |`
+
+8.5.4. **Spot-check 3 ACs that are marked "met"**
+  - Pick 3 ACs at random, find the specific line/commit/test that satisfies them
+  - If you cannot find evidence for an AC you marked "met," it is not met
+  - ❌ Claim AC is met without verifying
+  - ✅ "AC3 (cn doctor validates contract): verified — cn_system.ml L145-167"
+
+8.5.5. **Do not request review until every AC is accounted for**
+  - The author pre-flight is a hard gate: no unaccounted ACs may enter peer review
+  - This is distinct from the release gate (§9.1) which is the reviewer's independent check
+  - ❌ Request review hoping the reviewer will catch missing ACs
+  - ✅ Every AC has a status before review is requested
 
 ---
 

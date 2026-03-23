@@ -152,6 +152,20 @@ Follow the pipeline. Each step feeds the next.
   - ✅ Walk ACs → find AC4 (cn doctor) not met → either implement it or commit without `Closes`
   - ✅ All ACs met or deferred → commit with AC coverage in message body
 
+4.5.2. **Multi-format parity: all serializers read from one source**
+  - If a value exists in a canonical module (e.g. `Cn_capabilities.observe_kinds`), every format renderer (markdown, JSON, YAML) must read from that module
+  - Never duplicate canonical lists as literals in a second serializer
+  - If the runtime contract has both a markdown renderer and a JSON serializer, both must source the same fields from the same module
+  - ❌ `render_markdown` delegates to `Cn_capabilities.render`; `to_json` hardcodes the same op lists as string literals
+  - ✅ Both `render_markdown` and `to_json` read `Cn_capabilities.observe_kinds` and `Cn_capabilities.effect_kinds_base`
+
+4.5.3. **Build-sync after editing source assets**
+  - After modifying any file under `src/agent/` (doctrine, mindsets, skills), run `cn build` before committing
+  - `cn build` copies source assets to `packages/` — skipping it causes package/source drift
+  - CI runs `cn build --check` and will catch this, but the gate belongs at commit time
+  - ❌ Edit `src/agent/skills/ops/cdd/SKILL.md`, commit without `cn build` → packages/ is stale
+  - ✅ Edit source → `cn build` → verify packages/ updated → commit both
+
 4.6. **Docs**
   - Updated to match implementation — README, operator guides, architecture
   - ❌ Ship code, leave docs describing the old behavior

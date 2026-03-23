@@ -225,7 +225,7 @@ let pack ~hub_path ~trigger_id ~message ~from ?shell_config () =
        let contract = Cn_runtime_contract.gather ~hub_path ~shell_config:sc ~assets ~peers in
        Buffer.add_string dynamic_buf (Cn_runtime_contract.render_markdown contract);
        (* Persist contract to disk for operator inspection *)
-       (try Cn_runtime_contract.write ~hub_path contract with _ -> ())
+       (try Cn_runtime_contract.write ~hub_path ~shell_config:sc contract with _ -> ())
    | None -> ());
 
   let system =

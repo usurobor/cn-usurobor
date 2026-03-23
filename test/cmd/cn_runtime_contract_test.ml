@@ -180,7 +180,7 @@ let%expect_test "to_json: contains required fields" =
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
               ~shell_config:default_shell_config ~assets ~peers:["sigma"] in
-    let json = Cn_runtime_contract.to_json c in
+    let json = Cn_runtime_contract.to_json ~shell_config:default_shell_config c in
     let has key = Cn_json.get key json <> None in
     Printf.printf "schema: %b\n" (has "schema");
     Printf.printf "self_model: %b\n" (has "self_model");
@@ -197,7 +197,7 @@ let%expect_test "to_json: self_model has version and packages" =
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
               ~shell_config:default_shell_config ~assets ~peers:[] in
-    let json = Cn_runtime_contract.to_json c in
+    let json = Cn_runtime_contract.to_json ~shell_config:default_shell_config c in
     match Cn_json.get "self_model" json with
     | None -> print_endline "missing self_model"
     | Some sm ->
@@ -208,3 +208,65 @@ let%expect_test "to_json: self_model has version and packages" =
   [%expect {|
     cn_version: 3.9.3
     hub_name_present: true |}]
+
+let%expect_test "to_json: capabilities match Cn_capabilities (single source of truth)" =
+  with_test_hub (fun hub ->
+    let assets = Cn_assets.summarize ~hub_path:hub in
+    let c = Cn_runtime_contract.gather ~hub_path:hub
+              ~shell_config:default_shell_config ~assets ~peers:[] in
+    let json = Cn_runtime_contract.to_json ~shell_config:default_shell_config c in
+    match Cn_json.get "capabilities" json with
+    | None -> print_endline "missing capabilities"
+    | Some caps ->
+      (* Verify observe list matches Cn_capabilities.observe_kinds *)
+      let observe = match Cn_json.get "observe" caps with
+        | Some (Cn_json.Array items) ->
+          List.map (function Cn_json.String s -> s | _ -> "?") items
+        | _ -> []
+      in
+      let observe_match = observe = Cn_capabilities.observe_kinds in
+      Printf.printf "observe_matches_canonical: %b\n" observe_match;
+      (* Verify effect list matches Cn_capabilities.effect_kinds_base *)
+      let effect = match Cn_json.get "effect" caps with
+        | Some (Cn_json.Array items) ->
+          List.map (function Cn_json.String s -> s | _ -> "?") items
+        | _ -> []
+      in
+      let effect_match = effect = Cn_capabilities.effect_kinds_base in
+      Printf.printf "effect_matches_canonical: %b\n" effect_match;
+      (* Verify full capability posture fields present *)
+      Printf.printf "apply_mode: %b\n" (Cn_json.get "apply_mode" caps <> None);
+      Printf.printf "exec_enabled: %b\n" (Cn_json.get "exec_enabled" caps <> None);
+      Printf.printf "max_passes: %b\n" (Cn_json.get "max_passes" caps <> None);
+      Printf.printf "budgets: %b\n" (Cn_json.get "budgets" caps <> None));
+  [%expect {|
+    observe_matches_canonical: true
+    effect_matches_canonical: true
+    apply_mode: true
+    exec_enabled: true
+    max_passes: true
+    budgets: true |}]
+
+let%expect_test "to_json: exec_enabled reflects shell_config" =
+  with_test_hub (fun hub ->
+    let assets = Cn_assets.summarize ~hub_path:hub in
+    let exec_config = { default_shell_config with
+      exec_enabled = true;
+      exec_allowlist = ["make"; "dune"] } in
+    let c = Cn_runtime_contract.gather ~hub_path:hub
+              ~shell_config:exec_config ~assets ~peers:[] in
+    let json = Cn_runtime_contract.to_json ~shell_config:exec_config c in
+    match Cn_json.get "capabilities" json with
+    | None -> print_endline "missing capabilities"
+    | Some caps ->
+      let effect = match Cn_json.get "effect" caps with
+        | Some (Cn_json.Array items) ->
+          List.map (function Cn_json.String s -> s | _ -> "?") items
+        | _ -> []
+      in
+      let has_exec = List.mem "exec" effect in
+      Printf.printf "has_exec: %b\n" has_exec;
+      Printf.printf "has_exec_allowlist: %b\n" (Cn_json.get "exec_allowlist" caps <> None));
+  [%expect {|
+    has_exec: true
+    has_exec_allowlist: true |}]
