@@ -689,14 +689,14 @@ cn packs the following into `state/input.md` before LLM invocation:
 | Matched skills (top 3, role-weighted) | `src/agent/skills/**/SKILL.md` | ~1500 |
 | Conversation history (last 10) | `state/conversation.json` | ~2000 |
 | Inbound message | The Telegram message text | ~200 |
-| CN Shell capabilities (v3.3.5+) | Runtime-generated | ~100 |
+| Runtime Contract v2 (identity, cognition, body, medium) | Runtime-generated | ~200 |
 | **Total** | | **~8600** |
 
 Token budget varies by model and context mode. The runtime should treat headroom as telemetry, not a hardcoded assumption.
 
-#### Capability Discovery Block (v3.3.5+)
+#### Runtime Contract (v3.13.0+, replaces Capability Discovery Block)
 
-`Cn_context.pack` MUST include a short capability-discovery block in the packed context so the agent knows what the runtime supports before proposing ops. This is not a tool loop — it is declaring the syscall ABI at call time.
+`Cn_context.pack` MUST include a **Runtime Contract** in the packed context. This is a vertical four-layer self-model (identity, cognition, body, medium) that tells the agent who it is, what shapes its thinking, what its body can do, and what world it inhabits. Capabilities are nested under body. The contract is authoritative over conversation history (COGNITIVE-SUBSTRATE §9.1).
 
 The block is runtime-generated (not hand-authored) and placed after skills, before conversation history. Format:
 
