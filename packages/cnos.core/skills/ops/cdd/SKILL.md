@@ -86,6 +86,13 @@ Before any artifact is created, name the incoherence.
   - ❌ "It would be nice to fix"
   - ✅ "Operators will configure L2 transport that silently falls back to L0"
 
+2.4. **Reconcile with issue acceptance criteria**
+  - If the change originates from an issue, read every AC in the issue body
+  - The coherence contract must account for every AC: met in this change, explicitly deferred as known debt, or descoped with rationale
+  - ACs not mentioned are scope leaks — they will pass through the entire pipeline undetected
+  - ❌ Write a coherence contract that covers 3 of 6 issue ACs without mentioning the other 3
+  - ✅ "Issue #56 has 6 ACs. This change addresses ACs 1-3, 6. ACs 4-5 (cn doctor, cn setup) deferred to follow-up — tracked in issue #58."
+
 ---
 
 ## 3. Choose Mode
@@ -116,8 +123,10 @@ Follow the pipeline. Each step feeds the next.
 
 4.2. **Coherence contract**
   - State: gap, mode, scope, expected triadic effect, failure if skipped
+  - If the change originates from an issue, the contract must reconcile with all issue ACs (per §2.4)
   - ❌ PR with no stated purpose beyond "implements feature X"
-  - ✅ Coherence contract in PR description or design doc header
+  - ❌ Coherence contract that silently narrows scope below the issue's AC list
+  - ✅ Coherence contract in PR description or design doc header, with AC coverage table
 
 4.3. **Implementation plan**
   - Steps, dependencies, risk boundaries, compile-safe increments
@@ -293,47 +302,53 @@ When asking another CA (or human reviewer) to review a substantial change, use t
 
 Before merge or release, verify each item. A missing item is a known coherence debt — list it explicitly.
 
-9.1. **Design doc updated**
+9.1. **Issue acceptance criteria verified**
+  - Every AC from the originating issue is met, explicitly deferred, or descoped with rationale
+  - This is the outermost contract — if code matches the design doc but misses issue ACs, the pipeline leaked
+  - ❌ 3 of 6 ACs addressed, other 3 not mentioned anywhere
+  - ✅ "ACs 1-3, 6 met. ACs 4-5 deferred to #58 (cn doctor, cn setup)."
+
+9.2. **Design doc updated**
   - Reflects the change as implemented, not as originally proposed
   - ❌ Design doc describes the v1 plan; code ships v1.1
   - ✅ Design doc updated in the same branch
 
-9.2. **Plan written (if substantial)**
+9.3. **Plan written (if substantial)**
   - Exists and was followed; deviations noted
   - ❌ Plan exists but implementation diverged silently
   - ✅ Plan updated with "deviated at step 4 — reason: X"
 
-9.3. **Tests added or updated**
+9.4. **Tests added or updated**
   - Cover new invariants and boundaries
   - ❌ "Tests will be added later"
   - ✅ Tests in the same PR as the code
 
-9.4. **Code matches spec**
+9.5. **Code matches spec**
   - Types, interfaces, and behavior match the design doc
   - ❌ Design says `Result`, code uses exceptions
   - ✅ Code structure traces to design types
 
-9.5. **Docs and operator surface updated**
+9.6. **Docs and operator surface updated**
   - README, architecture docs, operator guides reflect new behavior
   - ❌ New CLI flag with no docs
   - ✅ README updated, `--help` output verified
 
-9.6. **Traceability updated**
+9.7. **Traceability updated**
   - If runtime behavior changed, traceability covers the new paths
   - ❌ New state transition with no reason codes
   - ✅ Transition logged with evidence and reason
 
-9.7. **Release notes written**
+9.8. **Release notes written**
   - CHANGELOG and/or PR description explain the coherence delta
   - ❌ Empty PR description
   - ✅ Summary: what gap was closed, what changed, what operators need to know
 
-9.8. **Known coherence debt listed**
+9.9. **Known coherence debt listed**
   - If anything is deferred, say so explicitly
   - ❌ Silently skip a release gate item
   - ✅ "Known debt: L2 transport docs not yet updated — tracked in issue #42"
 
-9.9. **Coherence must not regress**
+9.10. **Coherence must not regress**
   - Score α/β/γ for the release; no axis may drop below the previous release
   - If an axis regresses, either fix it before release or list it as explicit known debt with a remediation plan
   - ❌ Ship v3.6.0 with β = B+ when v3.5.1 was β = A+, no explanation

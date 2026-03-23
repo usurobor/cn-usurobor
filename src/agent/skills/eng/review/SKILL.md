@@ -32,6 +32,28 @@ Review code so that every verdict traces to evidence in the diff.
 
 ## 2. Unfold
 
+### 2.0 Issue — what was promised
+
+Before reading the diff, read the issue body and any linked acceptance criteria.
+
+2.0.1. **Walk every acceptance criterion**
+  - Each AC is either met in the diff, explicitly deferred as known debt, or missing (finding)
+  - The absence of a change is a finding when the issue requires it
+  - ❌ Review only what changed without checking what was promised
+  - ✅ "AC 4 (cn doctor validates contract) — not addressed in diff, no known-debt note → D"
+
+2.0.2. **Check required spec/doc updates**
+  - If the issue requires a spec or design doc change, verify that file was changed
+  - Missing spec updates are β gaps between issue contract and implementation
+  - ❌ "Diff looks clean" (spec update was required but not in diff)
+  - ✅ "Issue requires COGNITIVE-SUBSTRATE §6 update — file not in diff → C"
+
+2.0.3. **Distinguish scope reduction from omission**
+  - If the author intentionally narrowed scope, the commit/PR should say so
+  - Unmentioned AC omissions are findings; noted deferrals are known debt
+  - ❌ Assume missing AC was intentionally deferred
+  - ✅ "3 of 6 ACs met; remaining 3 not mentioned — are these deferred or forgotten?"
+
 ### 2.1 Diff — what changed
 
 Read the diff for internal coherence.
@@ -60,7 +82,13 @@ Check whether the change creates obligations on code it didn't touch.
   - ❌ Review executor in isolation
   - ✅ "Executor writes state/artifacts/; git_status would surface those paths to the agent"
 
-2.2.3. **Exclusion symmetry**
+2.2.3. **Multi-format parity**
+  - If a module renders to multiple formats (markdown + JSON, prompt + disk, human + machine), verify both carry equivalent semantic content
+  - A field present in one projection but absent in another is a contract asymmetry
+  - ❌ Review render_markdown and to_json independently without comparing coverage
+  - ✅ "Markdown includes capabilities sub-block; JSON omits it — asymmetry finding"
+
+2.2.4. **Exclusion symmetry**
   - If paths are excluded in one place, verify they're excluded everywhere they should be
   - ❌ "Exclusions look correct in git_diff" (didn't check git_grep, git_log, git_status)
   - ✅ Grep for every use of the exclusion set, verify consistent application
@@ -141,6 +169,8 @@ The verdict is a function of the worst named incoherence.
 
 Before submitting a review:
 
+- [ ] Every issue acceptance criterion verified (met, deferred with note, or flagged as finding)
+- [ ] Multi-format outputs checked for semantic parity (markdown/JSON, prompt/disk)
 - [ ] Every claim traces to a line, commit, or behavior
 - [ ] Fixes validated against upstream spec where applicable
 - [ ] Unchanged siblings checked for new incoherence
