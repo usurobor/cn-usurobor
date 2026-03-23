@@ -20,6 +20,22 @@ The native cnos agent runtime: CN Shell, typed ops, N-pass orchestration, receip
 | [SYSCALL-SURFACE-v3.8.0.md](../SYSCALL-SURFACE-v3.8.0.md) | Feature-scoped design | Syscall surface redesign for v3.8.0 |
 | [SCHEDULER-v3.7.0.md](../SCHEDULER-v3.7.0.md) | Feature-scoped design | Scheduler design for v3.7.0 |
 
+### Migration target
+
+When the legacy design docs move into this bundle, the structure becomes:
+
+```
+agent-runtime/
+├── README.md
+├── v3.7.0/
+│   └── DESIGN.md            ← SCHEDULER-v3.7.0.md
+├── v3.8.0/
+│   ├── DESIGN.md            ← N-PASS-BIND-v3.8.0.md
+│   └── SYSCALL-SURFACE.md   ← SYSCALL-SURFACE-v3.8.0.md
+└── v3.10.0/
+    └── DESIGN.md            ← RUNTIME-CONTRACT-v3.10.0.md
+```
+
 ## Related Plans
 
 | Plan | Scope |
@@ -40,7 +56,7 @@ The native cnos agent runtime: CN Shell, typed ops, N-pass orchestration, receip
 
 ## Version History
 
-The canonical spec (AGENT-RUNTIME.md) evolves in place. Feature-scoped design docs above capture the design narrative for each major iteration. See patch notes in AGENT-RUNTIME.md header for the full changelog.
+The canonical spec (AGENT-RUNTIME.md) evolves in place. Feature-scoped design docs capture the design narrative for each major iteration. See patch notes in AGENT-RUNTIME.md header for the full changelog.
 
 | Version | Highlights |
 |---------|-----------|

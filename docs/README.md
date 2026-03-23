@@ -150,9 +150,8 @@ docs/
 │   │   └── README.md
 │   ├── runtime-extensions/            # Feature bundle
 │   │   ├── README.md
-│   │   └── versions/
-│   │       └── spec/                  # Snapshots of the canonical spec
-│   │           └── v1.0.6.md
+│   │   └── v1.0.6/                   # Version directory
+│   │       └── SPEC.md               # Frozen spec at v1.0.6
 │   └── schemas/                       # JSON schemas
 ├── beta/                              # β Relation
 │   ├── ARCHITECTURE.md

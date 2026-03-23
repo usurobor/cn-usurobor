@@ -108,13 +108,20 @@ Implementation plan for a specific release or subsystem. Lives in `gamma/plans/`
 
 Audits, RCAs, and model↔reality assessments. Lives in `beta/evidence/`.
 
-### 2.9 Snapshot
+### 2.9 Version directory
 
-A frozen copy of a canonical spec at a release boundary. Lives in the feature bundle's `versions/spec/` directory.
+A version directory groups all frozen artifacts for a single release milestone. Lives directly inside the feature bundle as `v<MAJOR>.<MINOR>.<PATCH>/`.
 
-- Path: `docs/alpha/<feature>/versions/spec/vX.Y.Z.md`
-- Content: exact copy of the canonical spec at that version
-- Never edited after creation — it is a historical record
+```
+docs/alpha/<feature>/v1.0.6/
+├── SPEC.md        # Frozen canonical spec at this version
+├── DESIGN.md      # Design narrative (if one existed for this version)
+└── ...            # Any other version-scoped artifacts
+```
+
+- Directory name is the version number: `v1.0.6/`, `v3.8.0/`, etc.
+- Contents are never edited after creation — they are historical records
+- Each version directory holds whatever that version produced; no fixed schema
 
 ---
 
@@ -136,28 +143,35 @@ Do not maintain parallel "v1" and "v2" files in active directories.
 
 ---
 
-## 4. Snapshot rules
+## 4. Version directory rules
 
-### When to snapshot
+### When to create a version directory
 
-Create a snapshot of a canonical spec when:
+Create a version directory inside a feature bundle when:
 - A minor or major release ships that changes the spec
 - The spec is referenced by a released runtime version
+- A feature-scoped design doc is produced for that version
 
-### Where snapshots live
+### Where version directories live
 
-Snapshots belong to the feature bundle, scoped by the document they freeze:
+Version directories live directly inside the feature bundle:
 ```
-docs/alpha/<feature>/versions/spec/vX.Y.Z.md
+docs/alpha/<feature>/vX.Y.Z/
 ```
 
-The `spec/` subdirectory names the document being snapshotted (the canonical spec). If a bundle later has additional normative documents, each gets its own sibling directory (e.g., `versions/contract/`).
+If the feature does not yet have a bundle directory, create one when the first version directory is needed.
 
-If the feature does not yet have a bundle directory, create one when the first snapshot is needed.
+### What goes inside
 
-### Snapshot content
+A version directory holds whatever that version produced. Common contents:
 
-A snapshot is a verbatim copy of the canonical spec at that version. No edits after creation.
+| File | When to include |
+|------|----------------|
+| `SPEC.md` | Frozen copy of the canonical spec at this version |
+| `DESIGN.md` | Design narrative for this version's changes |
+| Other | Any version-scoped artifact (issue summary, migration notes, etc.) |
+
+No fixed schema — each version directory holds what is relevant. All contents are frozen after creation.
 
 ---
 
@@ -182,13 +196,15 @@ Single-document features (e.g., SECURITY-MODEL.md) do not need a bundle.
 ```
 docs/alpha/<feature-name>/
 ├── README.md            # Required: bundle index, names the canonical
-├── versions/
-│   └── spec/            # Snapshots of the canonical spec
-│       └── vX.Y.Z.md
-└── ...                  # Additional bundle-local docs if needed
+├── v1.0.6/              # Version directory: frozen artifacts for v1.0.6
+│   └── SPEC.md
+├── v3.8.0/              # Version directory: frozen artifacts for v3.8.0
+│   ├── DESIGN.md
+│   └── SYSCALL-SURFACE.md
+└── ...
 ```
 
-The `versions/spec/` subdirectory scopes snapshots to the canonical spec. This scales: if a bundle later owns additional normative documents, each gets its own subdirectory under `versions/` (e.g., `versions/contract/vX.Y.Z.md`).
+Each version directory holds whatever that version produced. The version number in the directory name carries the historical signal; no intermediate `versions/` layer needed.
 
 ### Bundle README requirements
 
@@ -224,8 +240,8 @@ Several documents in `docs/alpha/` use version-stamped filenames at the root lev
 ### What stays, what moves
 
 - **Canonical specs stay at their current root paths.** `alpha/AGENT-RUNTIME.md` and `alpha/RUNTIME-EXTENSIONS.md` remain where they are. Bundle READMEs link to them. No moved notices needed.
-- **Snapshots move into their owning bundle.** The Runtime Extensions snapshot moved from `alpha/versions/runtime-extensions/v1.0.6.md` to `alpha/runtime-extensions/versions/spec/v1.0.6.md`. Version history now lives with the feature it belongs to.
-- **Feature-scoped design docs are not moved in this version.** They are documented in the table above. Future migration: move into the owning bundle, leave a one-line moved-notice at the old path.
+- **Snapshots move into version directories in their owning bundle.** The Runtime Extensions snapshot moved from `alpha/versions/runtime-extensions/v1.0.6.md` to `alpha/runtime-extensions/v1.0.6/SPEC.md`. Version history now lives with the feature it belongs to.
+- **Feature-scoped design docs are not moved in this version.** They are documented in the table above. Future migration: move into the owning bundle's version directory (e.g., `N-PASS-BIND-v3.8.0.md` → `agent-runtime/v3.8.0/DESIGN.md`), leave a one-line moved-notice at the old path.
 - **Legacy plans at alpha root are not moved in this version.** Future migration: move to `gamma/plans/`.
 - New documents MUST follow the bundle/placement rules above.
 - A moved-notice is a file that says: `Moved to <new-path>. This file will be removed in a future release.`
@@ -256,9 +272,9 @@ If it doesn't fit any axis, the taxonomy may need to evolve — but update this 
 The following invariants should be enforced by CI:
 
 - Every feature bundle directory has a README.md that names exactly one canonical spec
-- Every `versions/spec/` directory contains only files matching `v*.md`
+- Version directories match `v[0-9]*` and contain only `.md` files
 - No canonical spec has a version-stamped filename (flag as legacy if found)
-- Snapshot content matches the canonical spec at the tagged version (advisory)
+- `SPEC.md` in a version directory matches the canonical spec at that tagged version (advisory)
 
 ---
 
