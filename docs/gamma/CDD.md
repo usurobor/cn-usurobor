@@ -1,8 +1,8 @@
 # Coherence-Driven Development (CDD)
 
-**Version:** 1.2.0
+**Version:** 1.3.0
 **Status:** Draft
-**Date:** 2026-03-11
+**Date:** 2026-03-23
 **Placement:** γ document (`docs/gamma/`)
 **Audience:** Contributors, reviewers, maintainers, release operators
 **Scope:** Defines the development method used to evolve cnos coherently
@@ -231,6 +231,28 @@ The workflow states (Backlog → Claimed → In Progress → Review → Done) de
 | Done | Release criteria met (§10) |
 
 CDD does not replace the agile workflow. It defines the quality function the workflow optimizes for.
+
+### 5.2 Branch bootstrapping
+
+Every feature or substantial change MUST be developed on its own dedicated branch (per AGILE-PROCESS.md §Lifecycle). CDD adds one structural requirement:
+
+> **The first diff on a feature branch MUST create the version directory with file stubs for all artifacts the branch will produce.**
+
+This means:
+
+1. **Create the branch** — `git checkout -b <agent>/<topic>`
+2. **First commit** — create the version directory (`docs/<tier>/<bundle>/vX.Y.Z/`) containing:
+   - `README.md` — snapshot manifest (may be minimal; will be completed before merge)
+   - Stub files for each artifact the release will contain (e.g., `SPEC.md`, `PLAN.md`)
+3. **Subsequent commits** — fill in the stubs, implement, test, update docs
+
+**Rationale.** The first-diff rule serves three CDD purposes:
+
+- **α** — forces the author to name the version and enumerate deliverables before writing content, preventing scope drift
+- **β** — the version directory is immediately visible to reviewers and CI, establishing the bundle's relation to the rest of the repo from the first commit
+- **γ** — the stub structure is the skeleton of the frozen snapshot; filling it in is the development path, freezing it is the release
+
+If a change is too small to warrant a version directory (e.g., a one-line fix), the first-diff rule does not apply. The coherence contract can be carried in the commit message alone (see §12).
 
 ---
 
