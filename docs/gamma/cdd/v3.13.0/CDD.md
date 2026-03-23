@@ -209,7 +209,29 @@ These two aspects are compatible: the TERMS/POINTER/EXIT structure gives form to
 
 ### 5.0 Branch rule
 
-Every substantial feature or change MUST be developed on its own dedicated branch (per AGILE-PROCESS.md §Lifecycle). No work is performed directly on `main`. Branch naming follows the convention `<agent>/<topic>`.
+Every substantial feature or change MUST be developed on its own dedicated branch (per AGILE-PROCESS.md §Lifecycle). No work is performed directly on `main`.
+
+#### Branch naming
+
+The canonical branch name format is:
+
+```
+<agent>/<issue>-<scope>-<version>
+```
+
+| Segment | Required | Description | Example |
+|---------|----------|-------------|---------|
+| `<agent>` | Yes | The actor performing the work | `claude`, `sigma`, `pi` |
+| `<issue>` | Yes | Issue number from the tracker | `75` |
+| `<scope>` | Yes | Short kebab-case topic | `docs-governance` |
+| `<version>` | When known | Target cnos release version | `v3.13.0` |
+
+Examples:
+- `claude/75-docs-governance-v3.13.0`
+- `sigma/42-actor-model-v3.14.0`
+- `pi/58-packages-sync`
+
+**Tooling suffixes.** Some CI or automation systems append session identifiers to branch names (e.g., `-PfdYZ`). These are transport artifacts, not part of the logical branch name. Reviews, commit messages, and documentation SHOULD reference the branch by its logical name without the suffix.
 
 ### 5.1 Pipeline steps and deliverable artifacts
 
