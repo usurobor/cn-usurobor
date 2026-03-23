@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.12.1 | A+  | A+          | A+           | A+               | Daemon boot log declares config sources (#61): version, hub, profile, model, secrets provenance, peers. Type-safe secret_source. |
 | v3.12.0 | A+  | A+          | A+           | A+               | Wake-up self-model contract (#56): Runtime Contract replaces overloaded capabilities block. CDD/review skill hardening (#57): issue AC gates, multi-format parity. |
 | v3.11.0 | A+  | A+          | A+           | A                | N-pass merge + misplaced ops correction (#51). Structured output reverted (needs rework). |
 | v3.10.0 | A+  | A+          | A+           | A+               | N-pass bind loop (#50): effect pass no longer terminal, generic pass architecture, processing indicators. |
@@ -48,6 +49,21 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v3.12.1 (2026-03-23)
+
+**Daemon Boot Log: Configuration Sources (#61)**
+
+Operators no longer have to probe files to understand what the daemon is running.
+
+### Added
+
+- **Boot banner** — daemon prints structured config declaration before "Daemon started" line: version, hub name, profile, model, secrets source, peers.
+- **`secret_source` type** in `cn_dotenv.ml` — `Env | File | Missing` with no value payload. Makes secret leakage structurally impossible at the type level.
+- **`probe_source`** function — checks where a secret key is configured without returning its value.
+- 5 ppx_expect tests for probe_source (env precedence, file fallback, missing, type safety).
 
 ---
 
