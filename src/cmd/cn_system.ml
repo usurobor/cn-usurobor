@@ -143,7 +143,7 @@ let run_doctor hub_path =
       value = if Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.lock.json")
               then "present" else "missing (run 'cn setup')" };
 
-    (* Runtime contract validation — issue #56 *)
+    (* Runtime contract validation — issue #56, #62 (v2 vertical self-model) *)
     { name = "agent/";
       passed = Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path "agent");
       value = if Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path "agent")
@@ -154,13 +154,15 @@ let run_doctor hub_path =
        let content = Cn_ffi.Fs.read contract_path in
        match Cn_json.parse content with
        | Ok json ->
-         let has_self_model = Cn_json.get "self_model" json <> None in
-         let has_workspace = Cn_json.get "workspace" json <> None in
-         let has_caps = Cn_json.get "capabilities" json <> None in
-         let all_ok = has_self_model && has_workspace && has_caps in
+         (* v2: four layers — identity, cognition, body, medium *)
+         let has_identity = Cn_json.get "identity" json <> None in
+         let has_cognition = Cn_json.get "cognition" json <> None in
+         let has_body = Cn_json.get "body" json <> None in
+         let has_medium = Cn_json.get "medium" json <> None in
+         let all_ok = has_identity && has_cognition && has_body && has_medium in
          { name = "runtime contract";
            passed = all_ok;
-           value = if all_ok then "valid (self_model + workspace + capabilities)"
+           value = if all_ok then "valid (identity + cognition + body + medium)"
                    else "incomplete" }
        | Error _ ->
          { name = "runtime contract"; passed = false; value = "invalid JSON" }

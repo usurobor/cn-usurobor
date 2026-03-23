@@ -1,9 +1,10 @@
-(** cn_runtime_contract_test: ppx_expect tests for Runtime Contract
+(** cn_runtime_contract_test: ppx_expect tests for Runtime Contract v2
 
-    Tests the wake-up self-model contract per RUNTIME-CONTRACT-v3.10.0:
-    - gather produces correct contract from hub state
-    - render_markdown produces deterministic output with all sub-blocks
-    - to_json produces valid structured JSON
+    Tests the vertical self-model contract per RUNTIME-CONTRACT-v2.md:
+    - gather produces correct four-layer contract from hub state
+    - render_markdown produces deterministic output with all four layers
+    - to_json produces valid v2 structured JSON
+    - Zone classification covers expected paths
     - No absolute paths in rendered output *)
 
 (* === Temp hub setup === *)
@@ -26,6 +27,7 @@ let with_test_hub f =
   let hub = mk_temp_dir "cn-contract-test" in
   let dirs = ["src"; "docs"; "spec"; "state"; "logs"; "agent";
               "threads/reflections/daily"; "threads/reflections/weekly";
+              "threads/outbox";
               ".cn/vendor/packages/cnos.core@1.0.0/doctrine";
               ".cn/vendor/packages/cnos.core@1.0.0/mindsets";
               ".cn/vendor/packages/cnos.eng@1.0.0/skills/eng/review"] in
@@ -83,22 +85,24 @@ let default_shell_config = {
 (* === GATHER                                                === *)
 (* ============================================================ *)
 
-let%expect_test "gather: produces contract with correct hub name" =
+let%expect_test "gather: produces contract with four layers" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
               ~shell_config:default_shell_config ~assets ~peers:["sigma"] in
-    Printf.printf "cn_version: %s\n" c.cn_version;
-    Printf.printf "hub_name_present: %b\n" (c.hub_name <> "");
-    Printf.printf "profile: %s\n" c.profile;
-    Printf.printf "packages: %d\n" (List.length c.packages);
-    Printf.printf "peers: %d\n" (List.length c.peers));
+    Printf.printf "cn_version: %s\n" c.identity.cn_version;
+    Printf.printf "hub_name_present: %b\n" (c.identity.hub_name <> "");
+    Printf.printf "profile: %s\n" c.identity.profile;
+    Printf.printf "packages: %d\n" (List.length c.cognition.packages);
+    Printf.printf "peers: %d\n" (List.length c.body.peers);
+    Printf.printf "zones: %d\n" (List.length c.medium));
   [%expect {|
-    cn_version: 3.12.2
+    cn_version: 3.13.0
     hub_name_present: true
     profile: engineer
     packages: 2
-    peers: 1 |}]
+    peers: 1
+    zones: 11 |}]
 
 let%expect_test "gather: package info has correct counts" =
   with_test_hub (fun hub ->
@@ -108,33 +112,35 @@ let%expect_test "gather: package info has correct counts" =
     List.iter (fun (p : Cn_runtime_contract.package_info) ->
       Printf.printf "%s: %d doctrine, %d mindsets, %d skills\n"
         p.name p.doctrine_count p.mindset_count p.skill_count
-    ) c.packages);
+    ) c.cognition.packages);
   [%expect {|
     cnos.core: 6 doctrine, 2 mindsets, 0 skills
     cnos.eng: 0 doctrine, 0 mindsets, 1 skills |}]
 
-let%expect_test "gather: workspace dirs reflect actual hub" =
+let%expect_test "gather: zone classification covers all five types" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
               ~shell_config:default_shell_config ~assets ~peers:[] in
-    List.iter (fun (rel, _) ->
-      Printf.printf "dir: %s\n" rel
-    ) c.workspace_dirs);
+    let has_zone z = List.exists (fun (e : Cn_runtime_contract.zone_entry) ->
+      e.zone = z) c.medium in
+    Printf.printf "constitutive_self: %b\n" (has_zone Constitutive_self);
+    Printf.printf "memory: %b\n" (has_zone Memory);
+    Printf.printf "private_body: %b\n" (has_zone Private_body);
+    Printf.printf "work_medium: %b\n" (has_zone Work_medium);
+    Printf.printf "projection_surface: %b\n" (has_zone Projection_surface));
   [%expect {|
-    dir: spec
-    dir: agent
-    dir: threads/reflections
-    dir: state
-    dir: .cn/vendor/packages
-    dir: docs
-    dir: src |}]
+    constitutive_self: true
+    memory: true
+    private_body: true
+    work_medium: true
+    projection_surface: true |}]
 
 (* ============================================================ *)
 (* === RENDER MARKDOWN                                       === *)
 (* ============================================================ *)
 
-let%expect_test "render_markdown: contains all three sub-blocks" =
+let%expect_test "render_markdown: contains all four layers" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
@@ -142,14 +148,37 @@ let%expect_test "render_markdown: contains all three sub-blocks" =
     let md = Cn_runtime_contract.render_markdown c in
     let has sec = if Cn_orchestrator.contains_sub md sec then "yes" else "no" in
     Printf.printf "Runtime Contract: %s\n" (has "## Runtime Contract");
-    Printf.printf "Self Model: %s\n" (has "### Self Model");
-    Printf.printf "Workspace: %s\n" (has "### Workspace");
+    Printf.printf "Identity: %s\n" (has "### Identity");
+    Printf.printf "Cognition: %s\n" (has "### Cognition");
+    Printf.printf "Body: %s\n" (has "### Body");
+    Printf.printf "Medium: %s\n" (has "### Medium");
     Printf.printf "Capabilities: %s\n" (has "## CN Shell Capabilities"));
   [%expect {|
     Runtime Contract: yes
-    Self Model: yes
-    Workspace: yes
+    Identity: yes
+    Cognition: yes
+    Body: yes
+    Medium: yes
     Capabilities: yes |}]
+
+let%expect_test "render_markdown: medium shows zone classifications" =
+  with_test_hub (fun hub ->
+    let assets = Cn_assets.summarize ~hub_path:hub in
+    let c = Cn_runtime_contract.gather ~hub_path:hub
+              ~shell_config:default_shell_config ~assets ~peers:[] in
+    let md = Cn_runtime_contract.render_markdown c in
+    let has sec = if Cn_orchestrator.contains_sub md sec then "yes" else "no" in
+    Printf.printf "constitutive_self: %s\n" (has "constitutive_self:");
+    Printf.printf "memory: %s\n" (has "memory:");
+    Printf.printf "private_body: %s\n" (has "private_body:");
+    Printf.printf "work_medium: %s\n" (has "work_medium:");
+    Printf.printf "projection_surface: %s\n" (has "projection_surface:"));
+  [%expect {|
+    constitutive_self: yes
+    memory: yes
+    private_body: yes
+    work_medium: yes
+    projection_surface: yes |}]
 
 let%expect_test "render_markdown: no absolute paths" =
   with_test_hub (fun hub ->
@@ -190,7 +219,7 @@ let%expect_test "render_markdown: deterministic (two calls identical)" =
 (* === TO_JSON                                               === *)
 (* ============================================================ *)
 
-let%expect_test "to_json: contains required fields" =
+let%expect_test "to_json: v2 schema with four layers" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
@@ -198,69 +227,102 @@ let%expect_test "to_json: contains required fields" =
     let json = Cn_runtime_contract.to_json ~shell_config:default_shell_config c in
     let has key = Cn_json.get key json <> None in
     Printf.printf "schema: %b\n" (has "schema");
-    Printf.printf "self_model: %b\n" (has "self_model");
-    Printf.printf "workspace: %b\n" (has "workspace");
-    Printf.printf "peers: %b\n" (has "peers"));
+    Printf.printf "identity: %b\n" (has "identity");
+    Printf.printf "cognition: %b\n" (has "cognition");
+    Printf.printf "body: %b\n" (has "body");
+    Printf.printf "medium: %b\n" (has "medium");
+    (* Verify schema version *)
+    match Cn_json.get_string "schema" json with
+    | Some s -> Printf.printf "schema_version: %s\n" s
+    | None -> ());
   [%expect {|
     schema: true
-    self_model: true
-    workspace: true
-    peers: true |}]
+    identity: true
+    cognition: true
+    body: true
+    medium: true
+    schema_version: cn.runtime_contract.v2 |}]
 
-let%expect_test "to_json: self_model has version and packages" =
+let%expect_test "to_json: identity has version" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
               ~shell_config:default_shell_config ~assets ~peers:[] in
     let json = Cn_runtime_contract.to_json ~shell_config:default_shell_config c in
-    match Cn_json.get "self_model" json with
-    | None -> print_endline "missing self_model"
-    | Some sm ->
-      let ver = Cn_json.get_string "cn_version" sm in
-      let hub = Cn_json.get_string "hub_name" sm in
+    match Cn_json.get "identity" json with
+    | None -> print_endline "missing identity"
+    | Some id ->
+      let ver = Cn_json.get_string "cn_version" id in
+      let hub = Cn_json.get_string "hub_name" id in
       Printf.printf "cn_version: %s\n" (match ver with Some v -> v | None -> "(none)");
       Printf.printf "hub_name_present: %b\n" (hub <> None));
   [%expect {|
-    cn_version: 3.12.2
+    cn_version: 3.13.0
     hub_name_present: true |}]
 
-let%expect_test "to_json: capabilities match Cn_capabilities (single source of truth)" =
+let%expect_test "to_json: body.capabilities match Cn_capabilities (single source of truth)" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
               ~shell_config:default_shell_config ~assets ~peers:[] in
     let json = Cn_runtime_contract.to_json ~shell_config:default_shell_config c in
-    match Cn_json.get "capabilities" json with
-    | None -> print_endline "missing capabilities"
-    | Some caps ->
-      (* Verify observe list matches Cn_capabilities.observe_kinds *)
-      let observe = match Cn_json.get "observe" caps with
-        | Some (Cn_json.Array items) ->
-          List.map (function Cn_json.String s -> s | _ -> "?") items
-        | _ -> []
-      in
-      let observe_match = observe = Cn_capabilities.observe_kinds in
-      Printf.printf "observe_matches_canonical: %b\n" observe_match;
-      (* Verify effect list matches Cn_capabilities.effect_kinds_base *)
-      let effect = match Cn_json.get "effect" caps with
-        | Some (Cn_json.Array items) ->
-          List.map (function Cn_json.String s -> s | _ -> "?") items
-        | _ -> []
-      in
-      let effect_match = effect = Cn_capabilities.effect_kinds_base in
-      Printf.printf "effect_matches_canonical: %b\n" effect_match;
-      (* Verify full capability posture fields present *)
-      Printf.printf "apply_mode: %b\n" (Cn_json.get "apply_mode" caps <> None);
-      Printf.printf "exec_enabled: %b\n" (Cn_json.get "exec_enabled" caps <> None);
-      Printf.printf "max_passes: %b\n" (Cn_json.get "max_passes" caps <> None);
-      Printf.printf "budgets: %b\n" (Cn_json.get "budgets" caps <> None));
+    match Cn_json.get "body" json with
+    | None -> print_endline "missing body"
+    | Some body ->
+      match Cn_json.get "capabilities" body with
+      | None -> print_endline "missing capabilities"
+      | Some caps ->
+        let observe = match Cn_json.get "observe" caps with
+          | Some (Cn_json.Array items) ->
+            List.map (function Cn_json.String s -> s | _ -> "?") items
+          | _ -> []
+        in
+        let observe_match = observe = Cn_capabilities.observe_kinds in
+        Printf.printf "observe_matches_canonical: %b\n" observe_match;
+        let effect = match Cn_json.get "effect" caps with
+          | Some (Cn_json.Array items) ->
+            List.map (function Cn_json.String s -> s | _ -> "?") items
+          | _ -> []
+        in
+        let effect_match = effect = Cn_capabilities.effect_kinds_base in
+        Printf.printf "effect_matches_canonical: %b\n" effect_match;
+        Printf.printf "apply_mode: %b\n" (Cn_json.get "apply_mode" caps <> None);
+        Printf.printf "exec_enabled: %b\n" (Cn_json.get "exec_enabled" caps <> None);
+        Printf.printf "budgets: %b\n" (Cn_json.get "budgets" caps <> None));
   [%expect {|
     observe_matches_canonical: true
     effect_matches_canonical: true
     apply_mode: true
     exec_enabled: true
-    max_passes: true
     budgets: true |}]
+
+let%expect_test "to_json: medium contains zone entries" =
+  with_test_hub (fun hub ->
+    let assets = Cn_assets.summarize ~hub_path:hub in
+    let c = Cn_runtime_contract.gather ~hub_path:hub
+              ~shell_config:default_shell_config ~assets ~peers:[] in
+    let json = Cn_runtime_contract.to_json ~shell_config:default_shell_config c in
+    match Cn_json.get "medium" json with
+    | None -> print_endline "missing medium"
+    | Some med ->
+      match Cn_json.get "zones" med with
+      | Some (Cn_json.Array zones) ->
+        Printf.printf "zone_count: %d\n" (List.length zones);
+        let has_zone_type z = List.exists (fun entry ->
+          Cn_json.get_string "zone" entry = Some z) zones in
+        Printf.printf "constitutive_self: %b\n" (has_zone_type "constitutive_self");
+        Printf.printf "memory: %b\n" (has_zone_type "memory");
+        Printf.printf "private_body: %b\n" (has_zone_type "private_body");
+        Printf.printf "work_medium: %b\n" (has_zone_type "work_medium");
+        Printf.printf "projection_surface: %b\n" (has_zone_type "projection_surface")
+      | _ -> print_endline "zones not array");
+  [%expect {|
+    zone_count: 11
+    constitutive_self: true
+    memory: true
+    private_body: true
+    work_medium: true
+    projection_surface: true |}]
 
 let%expect_test "to_json: exec_enabled reflects shell_config" =
   with_test_hub (fun hub ->
@@ -271,17 +333,20 @@ let%expect_test "to_json: exec_enabled reflects shell_config" =
     let c = Cn_runtime_contract.gather ~hub_path:hub
               ~shell_config:exec_config ~assets ~peers:[] in
     let json = Cn_runtime_contract.to_json ~shell_config:exec_config c in
-    match Cn_json.get "capabilities" json with
-    | None -> print_endline "missing capabilities"
-    | Some caps ->
-      let effect = match Cn_json.get "effect" caps with
-        | Some (Cn_json.Array items) ->
-          List.map (function Cn_json.String s -> s | _ -> "?") items
-        | _ -> []
-      in
-      let has_exec = List.mem "exec" effect in
-      Printf.printf "has_exec: %b\n" has_exec;
-      Printf.printf "has_exec_allowlist: %b\n" (Cn_json.get "exec_allowlist" caps <> None));
+    match Cn_json.get "body" json with
+    | None -> print_endline "missing body"
+    | Some body ->
+      match Cn_json.get "capabilities" body with
+      | None -> print_endline "missing capabilities"
+      | Some caps ->
+        let effect = match Cn_json.get "effect" caps with
+          | Some (Cn_json.Array items) ->
+            List.map (function Cn_json.String s -> s | _ -> "?") items
+          | _ -> []
+        in
+        let has_exec = List.mem "exec" effect in
+        Printf.printf "has_exec: %b\n" has_exec;
+        Printf.printf "has_exec_allowlist: %b\n" (Cn_json.get "exec_allowlist" caps <> None));
   [%expect {|
     has_exec: true
     has_exec_allowlist: true |}]

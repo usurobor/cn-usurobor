@@ -213,34 +213,37 @@ If doctrine or mindsets are handled as task skills, the substrate is misclassifi
 
 ### 6.1 Runtime Contract (normative)
 
-The runtime MUST emit a structured **Runtime Contract** at every wake. This replaces the previous "capabilities-only" declaration with three sub-blocks:
+The runtime MUST emit a structured **Runtime Contract** at every wake. The contract uses a vertical four-layer self-model (issue #62, replacing the flat three-block v1):
 
-**Self Model** — who the agent is:
+**Identity** — who am I?
 - `cn_version`: runtime binary version
 - `hub_name`: hub directory name (hub-relative, not absolute path)
-- `profile`: effective runtime role from config (serves as `identity_role` per issue #56; derived from package profile, not parsed from SOUL.md)
+- `profile`: effective runtime role from config (derived from package profile, not parsed from SOUL.md)
+
+**Cognition** — what shapes my thinking?
 - `installed_packages`: list with per-package doctrine/mindset/skill counts
 - `active_overrides`: hub-local overrides by category (doctrine, mindsets, skills)
 
-**Workspace** — what world the agent inhabits:
-- canonical directory layout (which directories exist)
-- writable paths (where the agent may write)
-- protected paths (sandbox denylist + protected files)
-
-**Capabilities** — what the runtime can do:
-- observe/effect op kinds
-- apply_mode, exec_enabled, budgets
+**Body** — what can my body do?
+- observe/effect op kinds, apply_mode, exec_enabled, budgets
 - max_passes, max_total_ops
 - known peers
+
+**Medium** — what world do I inhabit?
+- `constitutive_self`: identity substrate (spec/SOUL.md, spec/USER.md, installed doctrine/mindsets)
+- `memory`: temporal record (threads/reflections/, state/conversation.json)
+- `private_body`: runtime internals (.cn/, state/, logs/)
+- `work_medium`: legitimate work surfaces (src/, docs/, agent/)
+- `projection_surface`: communication channels (threads/outbox/)
 
 #### Invariant
 
 After wake, the agent MUST be able to answer from packed context alone:
-- What version am I?
-- What packages do I have?
-- What overrides are active?
-- What directories exist and which are writable?
-- What can my runtime do?
+- Who am I? → identity
+- What shapes my thinking? → cognition
+- What can my body do? → body
+- What world do I inhabit? → medium
+- What is my memory vs. my work surface vs. my private internals? → medium zones
 
 If the agent must probe the filesystem for any of these, the Runtime Contract is incomplete.
 
@@ -251,7 +254,7 @@ The same contract is persisted to `state/runtime-contract.json` for:
 - `cn doctor` validation
 - traceability reference
 
-See [`RUNTIME-CONTRACT-v3.10.0.md`](RUNTIME-CONTRACT-v3.10.0.md) for full design.
+See [`RUNTIME-CONTRACT-v2.md`](RUNTIME-CONTRACT-v2.md) for full design.
 
 ---
 

@@ -217,10 +217,9 @@ let pack ~hub_path ~trigger_id ~message ~from ?shell_config () =
     add_section dynamic_buf "Relevant Skills"
       (String.concat "\n---\n" skills);
 
-  (* Runtime Contract — after skills, before conversation.
-     Replaces the old capabilities-only block with a structured self-model
-     (version, hub, packages, overrides) + workspace layout + capabilities.
-     See RUNTIME-CONTRACT-v3.10.0.md and issue #56. *)
+  (* Runtime Contract v2 — after skills, before conversation.
+     Vertical four-layer self-model: identity, cognition, body, medium.
+     See RUNTIME-CONTRACT-v2.md and issue #62. *)
   (match shell_config with
    | Some sc ->
        let assets = Cn_assets.summarize ~hub_path in
