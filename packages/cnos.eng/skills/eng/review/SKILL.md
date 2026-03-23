@@ -34,7 +34,7 @@ Review code so that every verdict traces to evidence in the diff.
 
 ### 2.0 Issue — what was promised
 
-Before reading the diff, read the issue body and any linked acceptance criteria.
+**GATE: Complete §2.0 before reading the diff.** Produce the AC table and doc-update checklist first. This is not optional — reviewing the diff first causes §2.0 to be forgotten or done superficially.
 
 2.0.1. **Walk every acceptance criterion**
   - Each AC is either met in the diff, explicitly deferred as known debt, or missing (finding)
@@ -44,15 +44,23 @@ Before reading the diff, read the issue body and any linked acceptance criteria.
 
 2.0.2. **Check required spec/doc updates**
   - If the issue requires a spec or design doc change, verify that file was changed
+  - If the issue or plan names specific docs (e.g. CAA.md, AGENT-RUNTIME.md), check EACH one — present in diff, or explicitly deferred
   - Missing spec updates are β gaps between issue contract and implementation
   - ❌ "Diff looks clean" (spec update was required but not in diff)
-  - ✅ "Issue requires COGNITIVE-SUBSTRATE §6 update — file not in diff → C"
+  - ❌ Check only the docs that happen to appear in the diff (ignoring named docs that don't)
+  - ✅ "Issue names 5 docs for update. 2 updated in diff. 3 absent — are these deferred or forgotten?"
 
 2.0.3. **Distinguish scope reduction from omission**
   - If the author intentionally narrowed scope, the commit/PR should say so
   - Unmentioned AC omissions are findings; noted deferrals are known debt
   - ❌ Assume missing AC was intentionally deferred
   - ✅ "3 of 6 ACs met; remaining 3 not mentioned — are these deferred or forgotten?"
+
+2.0.4. **AC strength — met means fully met**
+  - If an AC says "validates X against Y" and the code only checks "X exists", that is not met — it is partially met
+  - Score partial ACs honestly: partially met is a finding, not an approval
+  - ❌ "Doctor checks for the key → AC met" (AC says validate against runtime state, not just key presence)
+  - ✅ "AC says 'validates contract against hub/runtime state.' Doctor checks key presence only → C. Either strengthen or defer to #59."
 
 ### 2.1 Diff — what changed
 
