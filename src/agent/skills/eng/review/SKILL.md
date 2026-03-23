@@ -34,7 +34,18 @@ Review code so that every verdict traces to evidence in the diff.
 
 ### 2.0 Issue — what was promised
 
-**GATE: Complete §2.0 before reading the diff.** Produce the AC table and doc-update checklist first. This is not optional — reviewing the diff first causes §2.0 to be forgotten or done superficially.
+**GATE: Complete §2.0 before reading the diff.** The review MUST begin with these two tables. If they are absent, the review is structurally incomplete regardless of diff analysis quality.
+
+```
+## §2.0 Issue Contract
+### AC Coverage
+| # | AC | In diff? | Status (met/partial/missing/deferred) |
+|---|-----|----------|---------------------------------------|
+
+### Named Doc Updates
+| Doc | In diff? | Status (updated/absent/deferred) |
+|-----|----------|----------------------------------|
+```
 
 2.0.1. **Walk every acceptance criterion**
   - Each AC is either met in the diff, explicitly deferred as known debt, or missing (finding)

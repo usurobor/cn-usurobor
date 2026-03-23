@@ -280,13 +280,18 @@ When asking another CA (or human reviewer) to review a substantial change, use t
   - ✅ Reviewer states: "Converge — no critical contradictions remain" or "Iterate — β is still weak on X"
 
 7.6. **Require reviewer output format**
+  - **Issue contract table** (FIRST — before any diff analysis):
+    - AC coverage: each AC → met / partial / missing / deferred
+    - Named doc coverage: each doc the issue/plan names → updated / absent / deferred
+    - If this table is missing, the review is incomplete
   - Triadic scores (letter grades)
   - Weakest axis identified
   - Concrete patches (at least 3 for weakest)
   - Contradictions or orphans found
   - Verdict: iterate or converge
   - ❌ Free-form "looks good" review
-  - ✅ Structured response with all five elements
+  - ❌ Review that starts with diff analysis without AC/doc table
+  - ✅ Structured response: AC table → doc table → diff findings → triadic scores → verdict
 
 7.7. **Do not code until review converges**
   - No critical contradictions remain
