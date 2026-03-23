@@ -1,163 +1,132 @@
 # Release
 
-Ship a version. Tag, changelog, push.
+## Core Principle
 
----
+**Coherent release: every version bump is a measured coherence delta with a complete audit trail.**
 
-## TERMS
+A release has parts: readiness check, version decision, changelog, tag, binaries, deployment, validation. Coherence = each part completed and each artifact matches the others (version in code = tag = changelog = binary = deployed agent).
 
-1. All branches merged or returned
-2. Tests passing
-3. Clean main branch
-4. Know what version (semver)
+Failure mode: version drift — tag says X, binary says Y, agent reports Z. Or: releasing without validation, so breakage ships silently.
 
----
+## 1. Define
 
-## Checklist
+1.1. **Identify the parts**
+  - Readiness: CI green, branches merged or returned, main clean
+  - Version: semver bump decided from commit content
+  - Artifacts: cn.json, cn_lib.ml, cram tests, CHANGELOG, tag, GitHub release, binaries
+  - Deployment: binary on target hosts, `cn deps restore`, validation
+  - ❌ Push tag, hope it works
+  - ✅ Every artifact checked, deployed, validated end-to-end
 
-- [ ] Decide version (major/minor/patch)
-- [ ] Update CHANGELOG.md (table + detailed notes)
-- [ ] Commit: `git commit -m "release: vX.Y.Z — Summary"`
-- [ ] Tag: `git tag -a vX.Y.Z -m "vX.Y.Z: Summary"`
-- [ ] Push: `git push origin main --tags`
-- [ ] GitHub Release: `gh release create vX.Y.Z ...`
+1.2. **Articulate how they fit**
+  - Version flows: cn.json + cn_lib.ml → cram tests → CHANGELOG → commit → tag → CI → binaries → deploy → validate
+  - Each step depends on the prior; skip one and the chain breaks
+  - ❌ Tag pushed before version bumped in code (binary reports old version)
+  - ✅ Version string updated everywhere before commit, tag matches code
 
----
+1.3. **Name the failure mode**
+  - Version drift: any two artifacts disagree on the version
+  - Silent breakage: release ships but CI failed or validation skipped
+  - Incomplete deploy: binary updated but packages stale (`cn deps restore` not run)
+  - ❌ "cn update worked" (but agent still reports old version)
+  - ✅ `cn --version` matches tag, `cn deps restore` run, agent can execute ops
 
-## Versioning (Semver)
+## 2. Unfold
 
-| Bump | When | Example |
-|------|------|---------|
-| **Major** (X.0.0) | Paradigm shift, breaking changes | v1.x → v2.0.0 |
-| **Minor** (x.Y.0) | New features, backwards compatible | v2.0.0 → v2.1.0 |
-| **Patch** (x.y.Z) | Bug fixes only | v2.1.0 → v2.1.1 |
+2.1. **Readiness check**
+  - CI passing on main (unit tests + cram tests)
+  - No unmerged branches that should be in this release
+  - `git branch -r --no-merged origin/main` — review each, merge or defer
+  - ❌ Release with failing CI ("it's just a flaky test")
+  - ✅ CI green, or known failure documented and accepted (e.g. Coherence workflow on #22)
 
----
+2.2. **Version decision**
+  - Review commits since last tag: `git log --oneline $(git describe --tags --abbrev=0)..HEAD`
+  - Major: breaking changes, paradigm shift
+  - Minor: new features, backwards compatible (new ops, new skills, new specs)
+  - Patch: bug fixes only
+  - ❌ Patch for a new runtime feature (undersells the change)
+  - ✅ Minor for new `Cn_shell.execute` entry point; patch for CI fix
 
-## Process
+2.3. **Version bump — all locations**
+  - `cn.json` → `"version": "X.Y.Z"`
+  - `src/lib/cn_lib.ml` → `let version = "X.Y.Z"`
+  - `test/cram/version.t` → `cn X.Y.Z`
+  - `test/cram/cli/cli.t` → `cn X.Y.Z` and `cn vX.Y.Z`
+  - ❌ Update cn.json but forget cram tests (CI fails)
+  - ✅ `grep -rn 'old_version'` to find all locations before committing
 
-### 1. Check readiness
+2.4. **CHANGELOG**
+  - Add row to version table with TSC grades
+  - Add detailed section: Added / Changed / Fixed
+  - ❌ "Various improvements" (no detail)
+  - ✅ Each commit's impact named, linked to issues
 
-```bash
-# All branches merged?
-git branch -r --no-merged origin/main
+2.5. **Tag and push**
+  - Commit: `git commit -m "release: vX.Y.Z — summary"`
+  - Tag: `git tag -a vX.Y.Z -m "vX.Y.Z: summary"`
+  - Push: `git push origin main --tags`
+  - GitHub release: `gh release create vX.Y.Z --title "..." --notes "..."`
+  - ❌ Push commit without tag (release CI doesn't trigger)
+  - ✅ Commit, tag, push in one command; verify release CI starts
 
-# On main, up to date?
-git checkout main && git pull
-```
+2.6. **Wait for release CI**
+  - Release workflow builds binaries (linux-x64, macos-x64, macos-arm64)
+  - Wait for completion before deploying
+  - ❌ Deploy while CI still running (stale binary from previous release)
+  - ✅ `gh run watch <id> --exit-status` then verify assets attached
 
-### 2. Decide version
+2.7. **Deploy to target hosts**
+  - Stop daemon, download binary, replace, start daemon
+  - `cn deps restore` to sync cognitive substrate
+  - Validate: `cn --version`, test an op that exercises the fix
+  - ❌ Replace binary while daemon running (`Text file busy`)
+  - ✅ `systemctl stop → cp → chmod → systemctl start → cn --version`
 
-Review commits since last tag:
-```bash
-git log --oneline $(git describe --tags --abbrev=0)..HEAD
-```
+2.8. **Validate**
+  - Version matches everywhere: binary, cn.json, tag
+  - The specific fix or feature works end-to-end
+  - Check telemetry for errors on first cycle
+  - ❌ "It deployed" (no functional validation)
+  - ✅ Trace telemetry, confirm receipts/artifacts exist, agent responds correctly
 
-Ask: Major? Minor? Patch?
+## 3. Rules
 
-### 3. Update CHANGELOG.md
+3.1. **All version strings must agree**
+  - cn.json, cn_lib.ml, cram tests, tag, binary output, CHANGELOG
+  - ❌ Tag is v3.9.1 but `cn --version` says 3.9.0
+  - ✅ `grep -rn 'old_version' src/ test/ cn.json` returns nothing after bump
 
-Add entry to version table:
-```markdown
-| v2.0.0 | A+ | A+ | A+ | A+ | Summary of changes |
-```
+3.2. **CI must pass before tag**
+  - If CI fails after tag, fix and force-push tag (amend release commit)
+  - ❌ Ship with known test failure ("we'll fix it next patch")
+  - ✅ Fix the test, amend, force-push tag, wait for green
 
-Add detailed release notes:
-```markdown
-## v2.0.0 (YYYY-MM-DD)
+3.3. **Never deploy stale binaries**
+  - Release CI builds from the tag; wait for it to complete
+  - Clear cached downloads (`--clobber` or `rm` old artifacts)
+  - ❌ `cn update` downloads cached v3.5.1 binary from /tmp
+  - ✅ Fresh download after CI completes, verify binary version after install
 
-**Title**
+3.4. **Deploy includes deps restore**
+  - Binary update alone leaves cognitive substrate stale
+  - `cn deps restore` syncs doctrine, mindsets, skills from packages
+  - ❌ Binary is v3.9.1 but skills are from v3.8.0 (package drift)
+  - ✅ `cn deps restore` immediately after binary update
 
-### Added
-- Feature 1
-- Feature 2
+3.5. **Validate with the specific fix**
+  - Don't just check version — exercise the feature or fix
+  - ❌ "Version looks right, ship it"
+  - ✅ For #46: send a message, check telemetry for receipts, confirm artifacts exist
 
-### Changed
-- Change 1
+3.6. **If CI fails post-tag, amend don't re-tag**
+  - `git commit --amend --no-edit && git tag -d vX.Y.Z && git tag -a vX.Y.Z && git push --force --tags`
+  - Keeps a clean single tag, single release commit
+  - ❌ v3.9.1, v3.9.1-fix, v3.9.1-fix2
+  - ✅ One tag, amended until CI green
 
-### Fixed
-- Fix 1
-```
-
-### 4. Commit and tag
-
-```bash
-git add CHANGELOG.md
-git commit -m "release: vX.Y.Z — Summary"
-git tag -a vX.Y.Z -m "vX.Y.Z: Summary"
-git push origin main --tags
-```
-
-### 5. Create GitHub Release
-
-```bash
-# Create release with notes from CHANGELOG
-gh release create vX.Y.Z --title "vX.Y.Z: Summary" --notes "
-## What's New
-
-- Feature 1
-- Feature 2
-
-## Changed
-
-- Change 1
-
-## Full Changelog
-
-See CHANGELOG.md for details.
-"
-```
-
-Or use `--generate-notes` for auto-generated notes:
-```bash
-gh release create vX.Y.Z --title "vX.Y.Z: Summary" --generate-notes
-```
-
-### 6. Announce
-
-Post summary to relevant channels.
-
----
-
-## TSC Scoring
-
-Rate each release on coherence axes:
-
-| Axis | Question |
-|------|----------|
-| **α (Pattern)** | Is the codebase structurally consistent? |
-| **β (Relation)** | Do parts fit together? Docs match code? |
-| **γ (Process)** | Is evolution stable? Clear upgrade path? |
-
-Grades: A+ / A / A- / B+ / B / B- / C+ / C / C- / D / F
-
----
-
-## Quick Reference
-
-```bash
-# Check what's new
-git log --oneline $(git describe --tags --abbrev=0)..HEAD
-
-# Tag and push
-git tag -a v2.1.0 -m "v2.1.0: New feature"
-git push origin main --tags
-```
-
----
-
-## Anti-Patterns
-
-- Releasing without updating CHANGELOG
-- Forgetting to push tags (`--tags`)
-- Major version for minor changes
-- Patch version for breaking changes
-- Releasing with unmerged branches
-
----
-
-## NOTES
-
-- See `skills/ship/` for branch → main workflow
-- See `CHANGELOG.md` for version history
-- Tags trigger GitHub releases automatically (if configured)
+3.7. **TSC scoring in CHANGELOG**
+  - Rate α (pattern), β (relation), γ (process) for each release
+  - Honest grades — not everything is A+
+  - ❌ Every release is A+ (grade inflation, no signal)
+  - ✅ "β: A- — DUR skills synced but README.md still references old framing"

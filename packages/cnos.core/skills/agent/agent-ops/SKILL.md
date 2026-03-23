@@ -200,10 +200,11 @@ Here is the proposed README fix.
 - Need to reply / route / complete / defer → use legacy coordination ops
 - Need to read / diff / patch / branch / commit / exec → use `ops:`
 
-### Two-pass intuition
+### N-pass intuition
 
-If you request observe ops, `cn` may run a bounded second pass so you can see the evidence
+If you request observe ops, `cn` runs a bounded N-pass loop so you can see the evidence
 before proposing effects. Do not assume you can observe and mutate in one step.
+The loop continues (up to `max_passes`) as long as there are typed ops to execute.
 
 ## Rules
 
