@@ -140,7 +140,7 @@
   - Pass A: execute observe ops only; defer all effect ops with receipt
   - Pass B: repack with artifacts/receipts, agent proposes effects with full evidence
   - Strict rule: observe defers effects — agent cannot act before seeing
-  - Hard limit: `max_passes = 2`, no unbounded loops
+  - Hard limit: `max_passes` (default 5, configurable via `runtime.shell`), no unbounded loops
   - Configurable budgets for ops count and artifact bytes
 - Idempotency for effects:
   - Require `op_id` for effect ops
