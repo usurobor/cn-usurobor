@@ -151,6 +151,7 @@ docs/
 │   ├── runtime-extensions/            # Feature bundle
 │   │   ├── README.md
 │   │   └── v1.0.6/                   # Version directory
+│   │       ├── README.md             # Snapshot manifest
 │   │       └── SPEC.md               # Frozen spec at v1.0.6
 │   └── schemas/                       # JSON schemas
 ├── beta/                              # β Relation

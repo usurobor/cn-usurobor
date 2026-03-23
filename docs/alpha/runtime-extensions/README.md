@@ -15,6 +15,7 @@ Capability providers, discovery, and isolation in cnos. The extension model for 
 | Document | Class | Description |
 |----------|-------|-------------|
 | [RUNTIME-EXTENSIONS.md](../RUNTIME-EXTENSIONS.md) | Canonical spec | Full extensions spec — providers, discovery, lifecycle, isolation |
+| [v1.0.6/README.md](./v1.0.6/README.md) | Snapshot manifest | Version directory manifest — enumerates canonical files at v1.0.6 |
 | [v1.0.6/SPEC.md](./v1.0.6/SPEC.md) | Frozen spec | Spec frozen at v1.0.6 (converged draft) |
 
 ---
