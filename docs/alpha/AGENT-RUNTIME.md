@@ -683,10 +683,10 @@ cn packs the following into `state/input.md` before LLM invocation:
 |----------|----------|---------------|
 | Agent identity | `spec/SOUL.md` | ~500 |
 | User context | `spec/USER.md` | ~300 |
-| Mindsets (session substrate) | `src/agent/mindsets/{COHERENCE,ENG/PM,WRITING,OPS,PERSONALITY,MEMES}.md` | ~2000 |
+| Mindsets (session substrate) | Installed packages + `agent/` overrides (via CAR) | ~2000 |
 | Recent daily reflections (last 3) | `threads/reflections/daily/YYYYMMDD.md` | ~1500 |
 | Current weekly reflection | `threads/reflections/weekly/YYYY-WNN.md` | ~500 |
-| Matched skills (top 3, role-weighted) | `src/agent/skills/**/SKILL.md` | ~1500 |
+| Matched skills (top 3, role-weighted) | Installed packages + `agent/` overrides (via CAR) | ~1500 |
 | Conversation history (last 10) | `state/conversation.json` | ~2000 |
 | Inbound message | The Telegram message text | ~200 |
 | Runtime Contract v2 (identity, cognition, body, medium) | Runtime-generated | ~200 |
