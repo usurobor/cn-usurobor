@@ -135,3 +135,11 @@
  (libraries cn_cmd cn_ffi cn_lib unix)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_stale_history tests (ppx_expect) — stale conversation history (Issue #63)
+(library
+ (name cn_stale_history_test)
+ (modules cn_stale_history_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))

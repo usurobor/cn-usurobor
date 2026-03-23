@@ -161,6 +161,21 @@ let%expect_test "render_markdown: no absolute paths" =
     Printf.printf "contains_absolute_path: %b\n" has_abs);
   [%expect {| contains_absolute_path: false |}]
 
+let%expect_test "render_markdown: contains authority preamble (issue #63)" =
+  with_test_hub (fun hub ->
+    let assets = Cn_assets.summarize ~hub_path:hub in
+    let c = Cn_runtime_contract.gather ~hub_path:hub
+              ~shell_config:default_shell_config ~assets ~peers:[] in
+    let md = Cn_runtime_contract.render_markdown c in
+    let has s = if Cn_orchestrator.contains_sub md s then "yes" else "no" in
+    Printf.printf "Authority: %s\n" (has "**Authority:**");
+    Printf.printf "authoritative: %s\n" (has "authoritative source");
+    Printf.printf "supersedes: %s\n" (has "this contract supersedes"));
+  [%expect {|
+    Authority: yes
+    authoritative: yes
+    supersedes: yes |}]
+
 let%expect_test "render_markdown: deterministic (two calls identical)" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in

@@ -120,7 +120,10 @@ let load_skills ~hub_path ~message ~(role : string option) ~n =
     |> List.map (fun (_, content, _, _) -> content)
 
 (** Load last N entries from state/conversation.json as message turns.
-    Returns structured turns for the messages array. *)
+    Returns structured turns for the messages array.
+    Entries from a different cn_version are prefixed with a staleness
+    notice so the agent knows they may contain outdated claims
+    (issue #63: stale history must not override Runtime Contract). *)
 let load_conversation_turns ~hub_path ~n : Cn_llm.message_turn list =
   let path = Cn_ffi.Path.join hub_path "state/conversation.json" in
   let raw = read_opt path in
@@ -133,10 +136,22 @@ let load_conversation_turns ~hub_path ~n : Cn_llm.message_turn list =
         let recent = if len <= n then items
           else List.filteri (fun i _ -> i >= len - n) items
         in
+        let current_version = Cn_lib.version in
         recent |> List.filter_map (fun entry ->
           match Cn_json.get_string "role" entry, Cn_json.get_string "content" entry with
           | Some role, Some content when content <> "" ->
-              Some { Cn_llm.role; content }
+              let entry_version = Cn_json.get_string "cn_version" entry in
+              let is_stale = match entry_version with
+                | Some v -> v <> current_version
+                | None -> true  (* pre-versioning entries are stale by definition *)
+              in
+              let content' = if is_stale then
+                Printf.sprintf "[stale: from cn %s — current runtime is %s. \
+Runtime Contract is authoritative for version, packages, workspace, capabilities.]\n%s"
+                  (Option.value ~default:"unknown" entry_version) current_version content
+              else content
+              in
+              Some { Cn_llm.role; content = content' }
           | _ -> None)
     | _ -> []
 

@@ -148,10 +148,12 @@ let append_conversation hub_path ~trigger_id ~user_msg ~assistant_msg =
       Cn_json.Object [
         "role", Cn_json.String "user";
         "content", Cn_json.String user_msg;
-        "trigger_id", Cn_json.String trigger_id];
+        "trigger_id", Cn_json.String trigger_id;
+        "cn_version", Cn_json.String Cn_lib.version];
       Cn_json.Object [
         "role", Cn_json.String "assistant";
-        "content", Cn_json.String assistant_msg];
+        "content", Cn_json.String assistant_msg;
+        "cn_version", Cn_json.String Cn_lib.version];
     ] in
     (* Keep last 50 entries *)
     let len = List.length new_entries in

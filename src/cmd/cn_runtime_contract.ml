@@ -161,6 +161,14 @@ let render_markdown (c : runtime_contract) =
   let buf = Buffer.create 2048 in
   Buffer.add_string buf "## Runtime Contract\n\n";
 
+  (* Authority declaration — issue #63: conversation history must not
+     override the current contract. This preamble is the agent-facing
+     instruction that closes the stale-history gap. *)
+  Buffer.add_string buf "**Authority:** This contract is the authoritative source for version, \
+packages, workspace layout, and capabilities. It is emitted fresh at every wake. \
+If conversation history contains contradictory claims (e.g. a directory that \
+was absent in a prior session), this contract supersedes them.\n\n";
+
   (* Self Model *)
   Buffer.add_string buf "### Self Model\n";
   Buffer.add_string buf (Printf.sprintf "cn_version: %s\n" c.cn_version);

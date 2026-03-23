@@ -381,7 +381,7 @@ Split an artifact when:
 
 ## 9. Precedence
 
-Normative precedence is:
+Normative precedence for authored substrates is:
 
 Doctrine → Mindset → Skill → Reflection
 
@@ -390,6 +390,14 @@ It localizes the subject and user context to which doctrine, mindsets, and skill
 
 Capabilities describe affordance, not permission.
 Runtime policy and doctrine still govern which capabilities may be used.
+
+### 9.1 Runtime Contract Authority (normative)
+
+The Runtime Contract (§6.1) is authoritative over conversation history for all fields it declares: version, packages, overrides, workspace layout, and capabilities.
+
+Conversation history is a temporal record — it may contain probe results, version references, or workspace claims from prior sessions that are no longer true. When the Runtime Contract contradicts conversation history, the contract wins.
+
+Conversation entries SHOULD carry a `cn_version` stamp. Entries from a prior version are stale and MUST NOT be treated as current truth for any field the Runtime Contract covers.
 
 ---
 

@@ -204,3 +204,5 @@ v3.10.0 replaces the overloaded capabilities block with a first-class Runtime Co
 - **capabilities** — observe/effect ABI, budgets, constraints
 
 The result: probing for self-knowledge becomes a contract bug, not normal behavior.
+
+The contract is authoritative over conversation history (COGNITIVE-SUBSTRATE §9.1). Stale conversation entries from prior versions MUST NOT override the current contract. Conversation entries carry a `cn_version` stamp; entries from a different version are annotated as stale at load time.
