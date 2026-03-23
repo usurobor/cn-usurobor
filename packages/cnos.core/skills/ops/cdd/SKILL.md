@@ -464,9 +464,13 @@ After the release gate passes, execute the release. CDD orchestrates; sub-skills
 
 ---
 
-## 11. Coherence Measurement
+## 11. Post-Release Assessment
 
-CDD's output is not the feature — it is the measured coherence delta. The feature is the vehicle; coherence improvement is the product.
+CDD does not end at merge. Every release triggers a post-release assessment that measures what shipped, what the system looks like now, and what to do next. Delegate to `ops/post-release/SKILL.md` for the full procedure.
+
+The assessment has four parts: measurement, encoding lag, process learning, and next-move decision.
+
+### Measurement
 
 11.1. **Score before starting**
   - Record the baseline α/β/γ from the previous release in the coherence contract
@@ -486,27 +490,25 @@ CDD's output is not the feature — it is the measured coherence delta. The feat
   - ❌ Release with no CHANGELOG TSC entry
   - ✅ `| v3.6.0 | A+ | A+ | A+ | A+ | CDD skill: executable development method, full lifecycle. |`
 
-11.4. **Name what improved**
+11.4. **Name what improved and what regressed**
   - The coherence note must describe which incoherence was reduced, not what feature was added
-  - ❌ "Added CDD skill"
-  - ✅ "CDD: development method made executable — closes gap between doctrine and practice"
+  - If an axis didn't improve, say why — it's either acceptable or known debt
+  - ❌ "Added CDD skill" / silent axis stagnation
+  - ✅ "CDD: development method made executable — closes gap between doctrine and practice. γ held — no evolution-path changes, expected."
 
-11.5. **Name what regressed or held**
-  - If an axis didn't improve, say why — it's either acceptable (no relevant change) or known debt
-  - ❌ Silent axis stagnation across multiple releases
-  - ✅ "γ held at A+ — no evolution-path changes in this release, expected"
-
-11.6. **The coherence contract closes the loop**
+11.5. **Close the coherence contract loop**
   - The coherence contract (§4.2) stated the gap and expected triadic effect
   - Measurement validates whether the expected effect was achieved
-  - If the expected effect was not achieved, record why and what remains
+  - If not achieved, record why and what remains
   - ❌ Contract says "improve β" but no post-release β score recorded
-  - ✅ Contract: "improve β (docs/runtime alignment)" → Result: "β held at A+, alignment verified via runtime telemetry"
+  - ✅ Contract: "improve β" → Result: "β A+ (held), alignment verified"
 
-11.7. **Encoding lag report**
-  - Every release MUST include an encoding lag table in the CHANGELOG coherence note or release notes
-  - For each open design issue: what is the design status, what is the implementation status, what is the lag?
-  - This is not optional — it tracks whether the system's designs are being realized or accumulating as debt
+### Encoding Lag
+
+11.6. **Encoding lag report**
+  - Every release MUST include an encoding lag table
+  - For each open design issue: design status, implementation status, lag level
+  - This is the system-level health check — is the model outpacing the body?
 
   ```
   ### Encoding Lag (as of vX.Y.Z)
@@ -518,16 +520,36 @@ CDD's output is not the feature — it is the measured coherence delta. The feat
 
   - **Lag levels:** none (shipped), low (in progress), growing (design done, no impl), stale (design aging, impl not planned)
   - ❌ Release with 5 converged designs and no encoding lag report
-  - ✅ "Encoding lag: 2 growing, 1 low. MCI freeze recommended until #73 Phase 1 ships."
+  - ✅ "Encoding lag: 2 growing, 1 low. MCI freeze recommended."
 
-11.8. **MCI freeze criteria**
-  - Freeze doctrinal iteration (no new design docs) when:
-    - Encoding lag is "growing" on ≥3 issues
-    - Design issues outnumber implementation PRs 3:1 or worse
-    - Any "SHALL" in substrate docs has no matching runtime enforcement
-  - Resume MCI when implementation has caught up to the design frontier
-  - ❌ File 10 design issues and 0 implementations with no freeze assessment
-  - ✅ "3 designs at growing lag. Freezing MCI. Next 3 sessions are pure MCA."
+11.7. **MCI/MCA balance decision**
+  - Based on the encoding lag report, decide the next move:
+    - **Balanced:** design and implementation roughly in sync. Continue normally.
+    - **Freeze MCI:** encoding lag is growing on ≥3 issues, or designs outnumber implementations 3:1, or any "SHALL" in docs has no runtime enforcement. Stop designing, start shipping.
+    - **Resume MCI:** implementation has caught up. Design frontier can advance.
+  - This decision is mandatory. Every release must state the balance.
+  - ❌ Ship and start the next feature without assessing balance
+  - ✅ "3 designs at growing lag. Freezing MCI. Next sessions are pure MCA."
+
+### Process Learning
+
+11.8. **What went wrong**
+  - What broke, failed, or was caught late in this release cycle?
+  - What would have caught it earlier?
+  - ❌ Ship cleanly and skip — process learning only happens after failures
+  - ✅ "Review missed CAA.md update because §2.0 gate wasn't enforced. Added structural table format."
+
+11.9. **What went right**
+  - What process improvement from previous releases paid off?
+  - What should be reinforced or standardized?
+  - ❌ Only record failures
+  - ✅ "§2.0 AC table caught 3 missing ACs that would have slipped in previous review style."
+
+11.10. **Skill/process patches**
+  - If the post-mortem identifies a repeatable failure mode, patch the relevant skill immediately
+  - Do not defer — the next release will hit the same bug
+  - ❌ "We should fix the review process" (noted, not patched)
+  - ✅ Commit skill patch in the same session as the post-mortem
 
 ---
 
@@ -544,6 +566,7 @@ CDD is the main module. It owns the lifecycle from branch to observation and mea
 | Merge to main | `eng/ship/SKILL.md` |
 | Tag, changelog, GitHub release | `release/SKILL.md` |
 | Review protocol | `eng/review/SKILL.md` |
+| Post-release assessment | `ops/post-release/SKILL.md` |
 | Coherence scoring | `CHANGELOG.md` TSC table |
 
 CDD defines what must happen and in what order. Sub-skills define how.
