@@ -9,7 +9,7 @@
 
     Structured output:
     - system[0]: Identity + Doctrine + Mindsets (stable, cache_control=true)
-    - system[1]: Reflections + Skills + Capabilities (dynamic, no cache)
+    - system[1]: Reflections + Skills + Runtime Contract (dynamic, no cache)
     - messages[]: Conversation history turns + inbound message
 
     Loading order (per unified package model):
@@ -20,7 +20,7 @@
     5. Daily reflections        → system block 2
     6. Weekly reflection        → system block 2
     7. Keyword-matched skills (via CAR) → system block 2 (scored, bounded)
-    8. Capabilities + asset summary     → system block 2
+    8. Runtime Contract (v2)             → system block 2
     9. Conversation history    → messages (real turns)
    10. Inbound message         → messages (last user turn) *)
 

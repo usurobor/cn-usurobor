@@ -80,7 +80,7 @@
 - **`ops_version` type**: explicitly a string (`"3.3"`); runtime MUST parse as string regardless of frontmatter parser behavior; quoting recommended
 
 **v3.3.5** — CLP pass: γ-axis hardening (evolution / migration):
-- **Capability discovery**: runtime-generated `## CN Shell Capabilities` block in packed context; declares supported kinds, budgets, apply_mode, exec allowlist at call time; agents degrade gracefully on older runtimes
+- **Runtime Contract**: runtime-generated `## Runtime Contract` block in packed context; vertical four-layer self-model (identity, cognition, body, medium) with capabilities nested under body; agents degrade gracefully on older runtimes
 - **Receipts schema version**: `state/receipts/{trigger_id}.json` now has a normative container shape: `{ "schema": "cn.receipts.v1", "receipts": [{ "pass": "1"|"2"|..., ... }] }`; hash algorithm specified as `sha256:`
 - **In-band ops version**: optional `ops_version` frontmatter field; runtime warns on unsupported versions, processes known kinds normally
 - **CN Shell section header**: dropped stale version number from header (was showing v3.3.2 in v3.3.4 content)
@@ -701,8 +701,24 @@ Token budget varies by model and context mode. The runtime should treat headroom
 The block is runtime-generated (not hand-authored) and placed after skills, before conversation history. Format:
 
 ```
-## CN Shell Capabilities
+## Runtime Contract
 
+**Authority:** This contract is the authoritative source for identity,
+cognition, body, and medium. It is emitted fresh at every wake.
+If conversation history contains contradictory claims, this contract
+supersedes them.
+
+### Identity
+cn_version: 3.13.0
+hub_name: my-hub
+profile: engineer
+
+### Cognition
+installed_packages:
+  - alpha (12 doctrine, 3 mindsets, 8 skills)
+active_overrides: 0 (none)
+
+### Body
 observe: fs_read, fs_glob, git_diff, git_log
 effect: fs_write, fs_patch, git_branch, git_commit, exec
 apply_mode: branch
@@ -710,15 +726,23 @@ exec_enabled: true
 exec_allowlist: make, dune, ocamlfind
 budgets: max_observe_ops=10, max_artifact_bytes=65536, max_artifact_bytes_per_op=16384
 max_passes: 5
+peers: bob, carol
+
+### Medium
+spec/: SOUL.md, USER.md
+agent/: alpha (12 doctrine, 3 mindsets, 8 skills)
+state/: runtime-contract.json, conversation.json
 ```
 
 Rules:
 
-- Only list `kind` values the runtime actually supports (closed vocabulary from `cn_runtime.ml`).
-- **Deterministic ordering:** kinds MUST be listed in the fixed table order defined in `cn_runtime.ml` (observe kinds first, then effect kinds, each in declaration order). Budget keys MUST be emitted in lexical order. This maximizes prompt cache hits and keeps the block low-noise across invocations.
+- The contract is a **vertical four-layer self-model**: identity (who am I?), cognition (what shapes my thinking?), body (what can I do?), medium (what world do I inhabit?).
+- Capabilities are nested under **Body**, not top-level.
+- **Deterministic ordering:** within Body, kinds MUST be listed in the fixed table order defined in `cn_runtime.ml` (observe kinds first, then effect kinds, each in declaration order). Budget keys MUST be emitted in lexical order. This maximizes prompt cache hits and keeps the block low-noise across invocations.
 - If `exec` is disabled (`exec_enabled: false`), omit `exec` from the effect list and omit `exec_allowlist`.
 - If `apply_mode: off`, omit all effect kinds.
 - Budgets reflect the runtime's current config, not hardcoded defaults.
+- The Medium section groups paths by zone (spec, agent, state, threads, workspace) — only non-empty zones are shown.
 - Older runtimes that predate this block simply omit it; agents degrade to proposing ops speculatively (denied via `unknown_op_kind` receipts as before).
 
 ### Skill Matching
