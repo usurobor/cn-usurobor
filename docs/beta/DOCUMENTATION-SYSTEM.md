@@ -2,14 +2,19 @@
 
 How the docs/ tree is organized and how documents evolve.
 
-**Version:** 1.0.0
-**Date:** 2026-03-13
+**Version:** 2.0.0
+**Date:** 2026-03-23
 
 ---
 
 ## 1. Taxonomy
 
-The docs tree unfolds along the three ontological axes of coherence. Each document has a dominant axis.
+The docs tree has two dimensions:
+
+1. **Triad axis** — every document has a dominant ontological character (α, β, γ)
+2. **Feature bundle** — related documents across classes are grouped by the feature they serve
+
+### 1.1 Triad axis
 
 | Directory | Axis | Question it answers |
 |-----------|------|-------------------|
@@ -18,38 +23,98 @@ The docs tree unfolds along the three ontological axes of coherence. Each docume
 | `beta/` | **Relation** | Do the parts reveal one system? System overview, vocabulary, guides, evidence. |
 | `gamma/` | **Evolution** | How does it change? Method, plans, checklists. |
 
-### Root-level documents
+### 1.2 Feature bundles
+
+A feature bundle groups all documents that belong to a single feature or subsystem. A bundle lives as a subdirectory within its dominant axis (usually `alpha/`).
+
+Structure:
+```
+docs/alpha/<feature-name>/
+├── README.md           # Bundle index: what this feature is, reading order, document map
+├── versions/           # Snapshots of the canonical spec at release boundaries
+│   ├── v1.0.0.md
+│   └── v1.0.6.md
+└── (other bundle-local docs if needed)
+```
+
+The canonical spec for a bundled feature may live either:
+- **Inside the bundle** as `docs/alpha/<feature-name>/SPEC.md`, or
+- **At the alpha root** as `docs/alpha/<FEATURE-NAME>.md` (legacy placement, see §6)
+
+A bundle's README.md always links to the canonical spec regardless of placement.
+
+### 1.3 Root-level documents
 
 - **THESIS.md** — the whole, above the triad. Always the entry point.
-- **README.md** — reading guide and navigation for the docs tree.
+- **README.md** — reading guide, navigation, and feature bundle index.
 
 ---
 
 ## 2. Document classes
 
-### Canonical documents
+### 2.1 Whole
 
-Evolve in place. Never forked into versioned copies.
+The thesis. Sits above the triad. One document: `THESIS.md`.
 
-- Keep a version in the header
+### 2.2 Canonical spec
+
+Evolves in place. Never forked into versioned copies at the same level. The single source of truth for its scope.
+
+- Keep a version and date in the header
 - Accumulate patch notes or version history internally
-- Remain the single source of truth for their scope
+- Snapshot to `versions/` at release boundaries (see §4)
 
-Examples: THESIS.md, COHERENCE-SYSTEM.md, CAA.md, AGENT-RUNTIME.md, TRACEABILITY.md, CDD.md.
+Examples: AGENT-RUNTIME.md, RUNTIME-EXTENSIONS.md, COGNITIVE-SUBSTRATE.md, COHERENCE-SYSTEM.md, CAA.md.
 
-### Episodic documents
+### 2.3 Feature README
 
-Capture a specific coherence delta. Scoped to a release, incident, or bounded effort.
+The index document for a feature bundle. Lives at `docs/alpha/<feature>/README.md`.
 
-- Live in `plans/` or `evidence/`
-- Filename encodes the scope (e.g., `PLAN-v3.6.0.md`, `2026-02-07-wake-failure.md`)
-- May reference canonical docs but never duplicate them
+- Lists every document in the bundle
+- Provides reading order
+- Links to the canonical spec, snapshots, and related plans
+- Updated whenever the bundle's contents change
 
-### Reference documents
+### 2.4 Feature-scoped design doc
+
+A design document scoped to a specific version or feature iteration. These are created when a release introduces substantial new behavior that warrants a dedicated design narrative.
+
+- Filename encodes scope: `<FEATURE>-v<VERSION>.md` or `<FEATURE>-<SCOPE>.md`
+- Lives at `alpha/` root (legacy) or inside a feature bundle
+- Not canonical — the canonical spec absorbs the design after implementation ships
+
+Examples: N-PASS-BIND-v3.8.0.md, RUNTIME-CONTRACT-v3.10.0.md, SYSCALL-SURFACE-v3.8.0.md.
+
+### 2.5 Reference document
 
 Stable lookup material. Updated when terminology or conventions change, not per release.
 
 Examples: GLOSSARY.md, NAMING.md.
+
+### 2.6 Guide
+
+Task-oriented procedures connecting operator to system. Lives in `beta/guides/`.
+
+Examples: AUTOMATION.md, HANDSHAKE.md, TROUBLESHOOTING.md.
+
+### 2.7 Plan
+
+Implementation plan for a specific release or subsystem. Lives in `gamma/plans/`.
+
+- Filename encodes scope: `PLAN-vX.Y.Z.md` or `NAME-implementation-plan.md`
+- Ephemeral — relevant during implementation, archived after
+
+### 2.8 Evidence
+
+Audits, RCAs, and model↔reality assessments. Lives in `beta/evidence/`.
+
+### 2.9 Snapshot
+
+A frozen copy of a canonical spec at a release boundary. Lives in the feature bundle's `versions/` directory.
+
+- Filename: `vX.Y.Z.md` (matching the spec version at time of snapshot)
+- Content: exact copy of the canonical spec at that point
+- Never edited after creation — it is a historical record
 
 ---
 
@@ -65,14 +130,96 @@ Examples: GLOSSARY.md, NAMING.md.
 
 ### Supersession
 
-When a canonical document is fully replaced:
-2. The new document carries its own version starting at 1.0.0
+When a canonical document is fully replaced, the new document carries its own version starting at 1.0.0.
 
 Do not maintain parallel "v1" and "v2" files in active directories.
 
 ---
 
-## 4. Placement rules
+## 4. Snapshot rules
+
+### When to snapshot
+
+Create a snapshot of a canonical spec when:
+- A minor or major release ships that changes the spec
+- The spec is referenced by a released runtime version
+
+### Where snapshots live
+
+Snapshots belong to the feature bundle:
+```
+docs/alpha/<feature>/versions/vX.Y.Z.md
+```
+
+If the feature does not yet have a bundle directory, create one when the first snapshot is needed.
+
+### Snapshot content
+
+A snapshot is a verbatim copy of the canonical spec at that version. No edits after creation.
+
+---
+
+## 5. Feature bundle rules
+
+### When to create a bundle
+
+Create a feature bundle when a feature has:
+- A canonical spec, AND
+- At least one snapshot OR at least one feature-scoped design doc
+
+Single-document features (e.g., SECURITY-MODEL.md) do not need a bundle.
+
+### Bundle structure
+
+```
+docs/alpha/<feature-name>/
+├── README.md       # Required: bundle index
+├── versions/       # Snapshots (when they exist)
+│   └── vX.Y.Z.md
+└── ...             # Additional bundle-local docs if needed
+```
+
+### Bundle README requirements
+
+- Feature name and one-sentence purpose
+- Link to canonical spec (wherever it lives)
+- Document map: every file in the bundle, with one-line description
+- Reading order for new readers
+- Link to related plans in `gamma/plans/`
+
+---
+
+## 6. Migration path for legacy filenames
+
+Several documents in `docs/alpha/` use version-stamped filenames at the root level. These predate the feature bundle system.
+
+### Legacy version-stamped files
+
+| File | Class | Migration target |
+|------|-------|-----------------|
+| `N-PASS-BIND-v3.8.0.md` | Feature-scoped design doc | `alpha/agent-runtime/` bundle |
+| `RUNTIME-CONTRACT-v3.10.0.md` | Feature-scoped design doc | `alpha/agent-runtime/` bundle |
+| `SYSCALL-SURFACE-v3.8.0.md` | Feature-scoped design doc | `alpha/agent-runtime/` bundle |
+| `SCHEDULER-v3.7.0.md` | Feature-scoped design doc | `alpha/agent-runtime/` bundle |
+| `CTB-v4.0.0-VISION.md` | Vision doc | Stays at root (cross-cutting) |
+
+### Legacy plans at alpha root
+
+| File | Migration target |
+|------|-----------------|
+| `PLAN-v3.7.0.md` | `gamma/plans/` |
+| `PLAN-v3.8.0-syscall-surface.md` | `gamma/plans/` |
+
+### Migration rules
+
+- Legacy files are **not moved** in this version. They are documented here.
+- New documents MUST follow the bundle/placement rules above.
+- Future migration: move legacy files into their bundles, leave a one-line moved-notice at the old path if any external references exist.
+- A moved-notice is a file that says: `Moved to <new-path>. This file will be removed in a future release.`
+
+---
+
+## 7. Placement rules
 
 When adding a new document, ask: **what is its dominant ontological character?**
 
@@ -81,6 +228,7 @@ When adding a new document, ask: **what is its dominant ontological character?**
 3. **Does it govern movement?** (method, process, plans, gates) → `gamma/`
 
 Within each axis:
+- `α/<feature>/` — feature bundle (when the feature qualifies per §5)
 - `β/guides/` — task-oriented procedures (operator ↔ system relation)
 - `β/evidence/` — audits, RCAs (model ↔ reality relation)
 - `γ/plans/` — ephemeral implementation plans
@@ -90,15 +238,27 @@ If it doesn't fit any axis, the taxonomy may need to evolve — but update this 
 
 ---
 
-## 5. Relationship to the coherence loop
+## 8. CI validation
 
-The docs tree is itself an articulation of coherence. Its structure is triadic: α (pattern), β (relation), γ (evolution).
+The following invariants should be enforced by CI:
+
+- Every feature bundle directory has a README.md
+- Every `versions/` directory contains only files matching `v*.md`
+- No canonical spec has a version-stamped filename (flag as legacy if found)
+- Snapshot content matches the canonical spec at the tagged version (advisory)
+
+---
+
+## 9. Relationship to the coherence loop
+
+The docs tree is itself an articulation of coherence. Its structure is triadic: α (pattern), β (relation), γ (evolution). Feature bundles add a second dimension: the feature surface.
 
 The reading order for CMP:
 
 1. `THESIS.md` — the whole
-2. `alpha/` — what has been articulated?
-3. `beta/` — do the parts cohere?
-4. `gamma/` — how does it move?
+2. `README.md` — navigation and bundle index
+3. `alpha/` — what has been articulated? (follow feature bundles for depth)
+4. `beta/` — do the parts cohere?
+5. `gamma/` — how does it move?
 
 This is the MCP formation sequence. If a document disrupts this order — if a reader must cross axes to form a coherent picture — the document is probably on the wrong axis.
