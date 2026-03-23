@@ -11,6 +11,9 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.12.0 | A+  | A+          | A+           | A+               | Wake-up self-model contract (#56): Runtime Contract replaces overloaded capabilities block. CDD/review skill hardening (#57): issue AC gates, multi-format parity. |
+| v3.11.0 | A+  | A+          | A+           | A                | N-pass merge + misplaced ops correction (#51). Structured output reverted (needs rework). |
+| v3.10.0 | A+  | A+          | A+           | A+               | N-pass bind loop (#50): effect pass no longer terminal, generic pass architecture, processing indicators. |
 | v3.9.3  | A+  | A+          | A+           | A+               | Anti-confabulation (#49): explicit op result signals, denial reason surfacing, doctrine. |
 | v3.9.2  | A+  | A+          | A+           | A+               | Block Pass A projection when Pass B fails (#47). CURIOSITY mindset. MIC/MICA/CDD verbs in glossary. |
 | v3.9.1  | A+  | A+          | A+           | A+               | Fix Cn_shell.execute never called (#46), sync DUR skills to packages, add git_stage to protocol contract. |
@@ -45,6 +48,78 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v3.12.0 (2026-03-23)
+
+**Wake-up Self-Model Contract (#56) + CDD/Review Skill Hardening (#57)**
+
+The agent now receives a first-class Runtime Contract at every wake, replacing the overloaded capabilities-only block. Development skills hardened with issue AC reconciliation gates.
+
+### Added
+
+- **cn_runtime_contract.ml** — new module: gather/render_markdown/to_json/write. Structured Runtime Contract with three sub-blocks: self_model (version, hub, packages, overrides), workspace (directories, writable/protected), capabilities (observe/effect ABI, budgets, config).
+- **RUNTIME-CONTRACT-v3.10.0.md** — design doc for wake-up self-model contract.
+- **COGNITIVE-SUBSTRATE §6.1** — Runtime Contract as normative required runtime-generated block with invariant: agent answers self-knowledge from packed context alone.
+- **cn doctor** validates runtime contract (self_model + workspace + capabilities + agent/ existence).
+- **cn setup/init** creates `agent/` override directory.
+- **CDD skill §2.4** — reconcile coherence contract with issue ACs.
+- **CDD skill §4.5.1-3** — AC self-check at commit, multi-format parity rule, build-sync rule.
+- **CDD skill §8.5** — author pre-flight AC walk before requesting review.
+- **CDD skill §9.1** — issue AC verification as outermost release gate.
+- **Review skill §2.0** — walk issue ACs before reading the diff.
+- **Review skill §2.2.3** — multi-format parity check for dual-serialization modules.
+- 10 new ppx_expect tests for runtime contract.
+
+### Changed
+
+- **cn_capabilities.ml** — `max_passes` now reads from `shell_config.max_passes` instead of hardcoded 2.
+- **cn_context.ml** — emits `## Runtime Contract` with three sub-blocks instead of bare `Cn_capabilities.render`.
+- **state/runtime-contract.json** — persisted at pack time for operator inspection; JSON now at full parity with markdown (observe/effect/apply_mode/exec_enabled/max_passes/budgets).
+- Protected paths derived from `Cn_sandbox.default_denylist` + `protected_files` (single source of truth).
+
+### Fixed
+
+- Package/source sync for agent-ops (N-pass vocabulary) and release skill.
+
+---
+
+## v3.11.0 (2026-03-22)
+
+**N-pass Merge + Misplaced Ops Correction (#51)**
+
+### Added
+
+- **Misplaced ops detection** — detect ops in body text and retry via correction pass (#51).
+- **N-pass bind loop merged** to main with review fixes.
+
+### Changed
+
+- Structured output contract (#52) reverted — needs rework for tool_use integration.
+
+---
+
+## v3.10.0 (2026-03-22)
+
+**N-pass Bind Loop (#50)**
+
+### Added
+
+- **Generic N-pass bind loop** — effect pass no longer terminal; loop continues up to `max_passes` as long as there are typed ops.
+- **Processing indicators** — agent sees pass labels in context.
+- Renamed `two_pass` → `n_pass` across codebase.
+- Renamed `run_observe_pass` → `run_pass`.
+- Removed observe-centered vocabulary residue.
+- Aligned stop reasons and trace reason codes.
+
+---
+
+## v3.9.3 (2026-03-21)
+
+**Anti-Confabulation: Op Result Integrity (#49)**
+
+(Previously: v3.9.1 entry below was mislabeled)
 
 ---
 
