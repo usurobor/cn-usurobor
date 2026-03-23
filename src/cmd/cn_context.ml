@@ -147,7 +147,7 @@ let load_conversation_turns ~hub_path ~n : Cn_llm.message_turn list =
               in
               let content' = if is_stale then
                 Printf.sprintf "[stale: from cn %s — current runtime is %s. \
-Runtime Contract is authoritative for version, packages, workspace, capabilities.]\n%s"
+Runtime Contract is authoritative for identity, cognition, body, and medium.]\n%s"
                   (Option.value ~default:"unknown" entry_version) current_version content
               else content
               in
