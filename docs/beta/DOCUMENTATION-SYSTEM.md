@@ -31,9 +31,12 @@ Structure:
 ```
 docs/alpha/<feature-name>/
 ├── README.md           # Bundle index: what this feature is, reading order, document map
-├── versions/           # Snapshots of the canonical spec at release boundaries
-│   ├── v1.0.0.md
-│   └── v1.0.6.md
+├── v1.0.0/             # Frozen snapshot for v1.0.0
+│   ├── README.md
+│   └── SPEC.md
+├── v1.0.6/             # Frozen snapshot for v1.0.6
+│   ├── README.md
+│   └── SPEC.md
 └── (other bundle-local docs if needed)
 ```
 
@@ -62,7 +65,7 @@ Evolves in place. Never forked into versioned copies at the same level. The sing
 
 - Keep a version and date in the header
 - Accumulate patch notes or version history internally
-- Snapshot to `versions/` at release boundaries (see §4)
+- Snapshot to version directories at release boundaries (see §4)
 
 Examples: AGENT-RUNTIME.md, RUNTIME-EXTENSIONS.md, COGNITIVE-SUBSTRATE.md, COHERENCE-SYSTEM.md, CAA.md.
 
@@ -114,14 +117,16 @@ A version directory groups all frozen artifacts for a single release milestone. 
 
 ```
 docs/alpha/<feature>/v1.0.6/
+├── README.md      # Required: snapshot manifest
 ├── SPEC.md        # Frozen canonical spec at this version
 ├── DESIGN.md      # Design narrative (if one existed for this version)
 └── ...            # Any other version-scoped artifacts
 ```
 
 - Directory name is the version number: `v1.0.6/`, `v3.8.0/`, etc.
-- Contents are never edited after creation — they are historical records
-- Each version directory holds whatever that version produced; no fixed schema
+- Contents are never edited after creation — they are historical records only and never replace the feature root as the latest source of truth
+- Each version directory MUST contain a `README.md` describing the snapshot and the canonical doc(s) published for that version
+- Additional version-scoped artifacts (design narratives, migration notes) MAY be included
 
 ---
 
@@ -163,15 +168,23 @@ If the feature does not yet have a bundle directory, create one when the first v
 
 ### What goes inside
 
-A version directory holds whatever that version produced. Common contents:
+A version directory is a frozen snapshot of that feature bundle's published artifact set for that version. The feature root contains the current canonical documents. Version directories are historical records only and never replace the feature root as the latest source of truth.
+
+Each version directory MUST contain:
+
+| File | Purpose |
+|------|---------|
+| `README.md` | Snapshot manifest: what this version shipped and why |
+| Canonical doc(s) | Frozen copy of the canonical spec (`SPEC.md`, etc.) published for this version |
+
+Each version directory MAY also contain:
 
 | File | When to include |
 |------|----------------|
-| `SPEC.md` | Frozen copy of the canonical spec at this version |
 | `DESIGN.md` | Design narrative for this version's changes |
-| Other | Any version-scoped artifact (issue summary, migration notes, etc.) |
+| Other | Any version-scoped artifact (migration notes, issue summary, etc.) |
 
-No fixed schema — each version directory holds what is relevant. All contents are frozen after creation.
+All contents are immutable after creation. Legacy flat filenames (e.g., `v1.0.6.md`) MUST be mapped in the feature root README (see §6).
 
 ---
 
@@ -196,15 +209,17 @@ Single-document features (e.g., SECURITY-MODEL.md) do not need a bundle.
 ```
 docs/alpha/<feature-name>/
 ├── README.md            # Required: bundle index, names the canonical
-├── v1.0.6/              # Version directory: frozen artifacts for v1.0.6
+├── v1.0.6/              # Version directory: frozen snapshot for v1.0.6
+│   ├── README.md
 │   └── SPEC.md
-├── v3.8.0/              # Version directory: frozen artifacts for v3.8.0
+├── v3.8.0/              # Version directory: frozen snapshot for v3.8.0
+│   ├── README.md
 │   ├── DESIGN.md
 │   └── SYSCALL-SURFACE.md
 └── ...
 ```
 
-Each version directory holds whatever that version produced. The version number in the directory name carries the historical signal; no intermediate `versions/` layer needed.
+Each version directory is a frozen snapshot of that version's published artifact set (see §4). The feature root holds the current canonical; version directories are historical records only. No intermediate `versions/` layer needed.
 
 ### Bundle README requirements
 
