@@ -202,8 +202,10 @@ let pack ~hub_path ~trigger_id ~message ~from ?shell_config () =
     add_section dynamic_buf "Relevant Skills"
       (String.concat "\n---\n" skills);
 
-  (* CN Shell capabilities block — after skills, before conversation.
-     Includes asset summary for cognitive substrate awareness. *)
+  (* Runtime Contract — after skills, before conversation.
+     Replaces the old capabilities-only block with a structured self-model
+     (version, hub, packages, overrides) + workspace layout + capabilities.
+     See RUNTIME-CONTRACT-v3.10.0.md and issue #56. *)
   (match shell_config with
    | Some sc ->
        let assets = Cn_assets.summarize ~hub_path in
@@ -220,7 +222,10 @@ let pack ~hub_path ~trigger_id ~message ~from ?shell_config () =
              else None)
          else []
        in
-       Buffer.add_string dynamic_buf (Cn_capabilities.render ~assets ~peers sc)
+       let contract = Cn_runtime_contract.gather ~hub_path ~shell_config:sc ~assets ~peers in
+       Buffer.add_string dynamic_buf (Cn_runtime_contract.render_markdown contract);
+       (* Persist contract to disk for operator inspection *)
+       (try Cn_runtime_contract.write ~hub_path ~shell_config:sc contract with _ -> ())
    | None -> ());
 
   let system =
