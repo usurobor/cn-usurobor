@@ -6,5 +6,6 @@
           cn_commands cn_system cn_config cn_llm cn_telegram cn_context
           cn_runtime cn_maintenance cn_dotenv cn_shell cn_sandbox cn_executor
           cn_orchestrator cn_indicator cn_projection cn_capabilities
-          cn_assets cn_deps cn_trace cn_trace_state cn_build cn_output)
+          cn_assets cn_deps cn_trace cn_trace_state cn_build cn_output
+          cn_runtime_contract)
  (libraries cn_ffi cn_lib cn_protocol inbox_lib git cn_io unix))

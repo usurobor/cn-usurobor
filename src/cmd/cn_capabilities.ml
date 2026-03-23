@@ -73,8 +73,8 @@ let render ?(assets : Cn_assets.asset_summary option) ?(peers : string list = []
     "budgets: max_artifact_bytes=%d, max_artifact_bytes_per_op=%d, max_observe_ops=%d\n"
     config.max_artifact_bytes config.max_artifact_bytes_per_op config.max_observe_ops);
 
-  (* max_passes: hard limit, always 2 *)
-  Buffer.add_string buf "max_passes: 2\n";
+  (* max_passes: from config, not hardcoded *)
+  Buffer.add_string buf (Printf.sprintf "max_passes: %d\n" config.max_passes);
 
   (* Canonical emission examples — always present so the model sees
      the exact ops: syntax on every wake-up *)

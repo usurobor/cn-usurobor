@@ -119,3 +119,11 @@
  (libraries cn_cmd cn_ffi cn_lib unix)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_runtime_contract tests (ppx_expect) — wake-up self-model (Issue #56)
+(library
+ (name cn_runtime_contract_test)
+ (modules cn_runtime_contract_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
