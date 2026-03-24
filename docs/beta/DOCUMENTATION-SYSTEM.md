@@ -165,6 +165,10 @@ Do not maintain parallel versions of the same document in active directories.
 
 Some existing documents carry pre-cnos-aligned version numbers (e.g., THESIS 1.0.0, COHERENCE-SYSTEM 1.0). These will be re-versioned to cnos release numbers when next substantively updated. No retroactive bulk rename is required.
 
+### Frozen legacy snapshots
+
+Version directories created before the single-lineage rule MAY retain their historical version numbers (e.g., `runtime-extensions/v1.0.6/`). These are frozen artifacts — renaming them would violate the freeze contract (§4). The legacy version number in a frozen snapshot directory name records the version under which that snapshot was originally published, not a current cnos release version. New version directories MUST use cnos release versions.
+
 ---
 
 ## 4. Version directory rules
