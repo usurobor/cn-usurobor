@@ -11,7 +11,7 @@
 - CDD v3.13.0: §5 rewrite — branch rule (all dev on dedicated branch), per-step deliverable artifacts table (9 steps, each with explicit artifacts and locations), bootstrap-first rule (first diff = version dir with stubs)
 - DOCUMENTATION-SYSTEM.md v3.13.0: §3 rewrite — single version lineage rule (all docs use cnos release versions, no independent per-document lineages), legacy version migration path
 - docs/README.md v3.13.0: start-here paths by persona, two-dimensional reading model (triad × feature bundle), anchor doc index, directory map
-- CDD feature bundle created: `docs/gamma/cdd/` with `v3.13.0/` frozen snapshot
+- CDD feature bundle created: `docs/gamma/3.13.0-75-cdd/` with `v3.13.0/` frozen snapshot
 - Two alpha feature bundles: `agent-runtime/` and `runtime-extensions/` with bundle READMEs
 - `runtime-extensions/v1.0.6/` snapshot directory with frozen SPEC.md and manifest README
 - Fix: AGENT-RUNTIME.md internal inconsistencies (packed_context, max_passes budgets table)
