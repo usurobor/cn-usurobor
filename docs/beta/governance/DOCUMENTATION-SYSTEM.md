@@ -304,6 +304,7 @@ Several documents in `docs/alpha/` use version-stamped filenames at the root lev
 
 ### What stays, what moves
 
+- **Gamma root docs organized into bundles** (v3.14.5, #91). CDD.md and AGILE-PROCESS.md moved into `cdd/` bundle. RULES.md and INVARIANTS.md into `rules/`. STATELESS-AGENCY.md and EXECUTABLE-SKILLS.md into `essays/`. Bundle READMEs created.
 - **Beta root docs organized into bundles** (v3.14.4, #89). ARCHITECTURE.md, DOCUMENTATION-SYSTEM.md, NAMING.md, GLOSSARY.md, ORIGIN.md, LINEAGE.md, and DESIGN-LLM-SCHEMA.md moved into `architecture/`, `governance/`, `lineage/`, and `schema/` bundles. Bundle READMEs link to them.
 - **Canonical specs live inside their feature bundle.** All 18 former root-level specs have been moved into thematic subdirectories (v3.14.3, #86): `agent-runtime/`, `cli/`, `cognitive-substrate/`, `ctb/`, `doctrine/`, `protocol/`, `runtime-extensions/`, `security/`. Bundle READMEs link to them.
 - **Snapshots move into version directories in their owning bundle.** The Runtime Extensions snapshot moved from `alpha/versions/runtime-extensions/v1.0.6.md` to `alpha/runtime-extensions/1.0.6/SPEC.md`. Version history now lives with the feature it belongs to.

@@ -22,7 +22,7 @@ A bounded movement from a less coherent state to a more coherent one. The archit
 
 A coherence delta is not merely a feature or a fix — it is the change in coherence itself, of which the feature or fix is the concrete, operator-visible articulation.
 
-Used in: `docs/alpha/agent-runtime/CAA.md` §5.6, §10; `docs/gamma/CDD.md` §3.4, §9.5.
+Used in: `docs/alpha/agent-runtime/CAA.md` §5.6, §10; `docs/gamma/cdd/CDD.md` §3.4, §9.5.
 
 ### CAP (Coherent Agent Principle)
 
@@ -81,7 +81,7 @@ An MCP includes:
 
 MCP is what Sense → Compare (FOUNDATIONS §3) produces implicitly at the agent scale, named explicitly at the system scale.
 
-Defined in: `docs/alpha/doctrine/COHERENCE-SYSTEM.md` §3.1; used in `docs/alpha/agent-runtime/CAA.md` §5.2, `docs/gamma/CDD.md` §2.1.
+Defined in: `docs/alpha/doctrine/COHERENCE-SYSTEM.md` §3.1; used in `docs/alpha/agent-runtime/CAA.md` §5.2, `docs/gamma/cdd/CDD.md` §2.1.
 
 ### CMP (Coherence Mapping Pass)
 
@@ -91,7 +91,7 @@ At the agent scale, CMP is the sensing / comparison phase that precedes the MCA-
 
 CMP asks: what are the relevant articulations right now? How do they relate? Where are the strongest incoherences? What is the weakest axis?
 
-Defined in: `docs/alpha/doctrine/COHERENCE-SYSTEM.md` §3.2; used in `docs/alpha/agent-runtime/CAA.md` §5.1, `docs/gamma/CDD.md` §4.2.
+Defined in: `docs/alpha/doctrine/COHERENCE-SYSTEM.md` §3.2; used in `docs/alpha/agent-runtime/CAA.md` §5.1, `docs/gamma/cdd/CDD.md` §4.2.
 
 ### CLP (Coherence Ladder Process)
 
@@ -259,7 +259,7 @@ The development method in which every meaningful change is treated as an interve
 
 Each substantial release is a **measured coherence delta**. Features are the operator-facing articulation of that movement.
 
-Document: `docs/gamma/CDD.md`.
+Document: `docs/gamma/cdd/CDD.md`.
 
 ### CN Shell
 
@@ -313,7 +313,7 @@ Document: `docs/alpha/cognitive-substrate/CAR.md`.
 
 A lightweight declaration that accompanies every substantial change under CDD. Answers: what gap is being closed? Is this MCA or MCI? Which layer is affected? What is the expected triadic effect (alpha/β/γ)? What fails if skipped? What is the expected coherence delta?
 
-Defined in: `docs/gamma/CDD.md` §6.
+Defined in: `docs/gamma/cdd/CDD.md` §6.
 
 ---
 

@@ -2,7 +2,7 @@
 ## Implementation Plan
 
 **Status:** Active
-**Implements:** `docs/gamma/INVARIANTS.md`
+**Implements:** `docs/gamma/rules/INVARIANTS.md`
 **Mode:** MCA
 **Goal:** Make the current coherent repo structure self-enforcing.
 
@@ -134,7 +134,7 @@ Update CI workflow so deterministic checks are required.
 ## 3. File Layout
 
 ### New files
-- `docs/gamma/INVARIANTS.md` — canonical invariant catalog
+- `docs/gamma/rules/INVARIANTS.md` — canonical invariant catalog
 - `docs/gamma/plans/INVARIANT-HARDENING-v1.md` — this plan
 - `docs/alpha/schemas/protocol-contract.json` — machine-readable protocol contract
 - `test/cmd/cn_contract_test.ml` — protocol contract consistency test
