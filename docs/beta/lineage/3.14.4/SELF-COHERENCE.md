@@ -1,3 +1,3 @@
-# Self-Coherence Report — v3.14.4 (stub)
+# Self-Coherence Report — lineage 3.14.4
 
-To be completed at release (CDD §7.8).
+See `docs/gamma/cdd/3.14.4/SELF-COHERENCE.md` for the full branch-level report. This bundle's migration is part of #89.
