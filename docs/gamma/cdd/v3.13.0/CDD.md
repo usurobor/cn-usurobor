@@ -239,19 +239,21 @@ Each step in the pipeline produces concrete artifacts. The table below defines w
 
 | # | Step | Deliverable artifacts | Location |
 |---|------|-----------------------|----------|
-| 0 | **Bootstrap** | Version directory with stub files for every artifact this branch will produce. Includes `README.md` (snapshot manifest) and one stub per deliverable. | `docs/<tier>/<bundle>/vX.Y.Z/` |
+| 0 | **Bootstrap** | Version directory with stub files for every artifact the **target bundle** will produce for this version. Includes `README.md` (snapshot manifest) and one stub per deliverable. If a branch touches multiple bundles, each bundle that will receive a frozen snapshot gets its own version directory. Artifacts that live outside version directories (PR body files, navigation docs, bundle READMEs) are not enumerated in the bootstrap stubs. | `docs/<tier>/<bundle>/vX.Y.Z/` |
 | 1 | **Design** | Design doc or design section in the spec stub. States the structural decision and its triadic justification. | Version dir or `docs/alpha/` |
 | 2 | **Coherence contract** | Gap, mode, scope, expected triadic effect, failure-if-skipped (§6). May live in the PR body, a dedicated file, or a header block in the spec. | PR body file or spec header |
 | 3 | **Plan** | Implementation plan: ordered steps, dependencies, risk boundaries, compile-safe increments. | `docs/gamma/plans/PLAN-vX.Y.Z-<scope>.md` or version dir |
 | 4 | **Tests** | Test files that pin invariants, schemas, edge cases, and regressions. Tests SHOULD be written before the code they validate. | `tests/` or co-located `__tests__/` |
 | 5 | **Code** | Source code that realizes the design. Code does not invent architecture — it implements the plan. | `src/`, `packages/`, or relevant source dirs |
 | 6 | **Docs** | All affected documentation updated to match the implementation. Bundle README, spec, directory maps, and navigation surfaces reflect the new state. | `docs/`, bundle READMEs, `docs/README.md` |
-| 7 | **Release** | CI green, version bumped, CHANGELOG entry, release notes stating the coherence delta and known debt. Frozen snapshot in the version directory (stubs replaced with final content). | Version dir (frozen), `CHANGELOG.md`, release notes |
+| 7 | **Release** | CI green, version bumped, CHANGELOG entry, release notes stating the coherence delta and known debt. Frozen snapshot in the version directory (stubs replaced with final content). **Self-coherence report** (see §7.8) in the version directory. | Version dir (frozen), `CHANGELOG.md`, release notes, `SELF-COHERENCE.md` |
 | 8 | **Observe** | Runtime telemetry or manual verification confirming design/implementation alignment. Observation results recorded. | Telemetry logs, post-release assessment |
 
 **The first diff on the branch MUST be step 0 (Bootstrap).** This forces the author to name the version and enumerate deliverables before writing content.
 
 Steps 1–3 may be collapsed into a single commit for small changes. Steps 4–6 typically span multiple commits. Step 7 is the final commit before merge. Step 8 happens after merge.
+
+**Before requesting review:** the branch MUST be rebased on `main`. Reviewer time is more valuable than author time (per RULES.md). A branch that is not rebased MUST NOT be submitted for review.
 
 ### 5.2 Rationale
 
@@ -346,14 +348,13 @@ Role: define the structural system.
 
 ### 7.3 Process artifacts
 - `docs/gamma/AGILE-PROCESS.md`
-- `RULES.md`
-- `RELEASE.md`
+- `docs/gamma/RULES.md`
+- `CHANGELOG.md`
 
 Role: define workflow, governance, and release procedure.
 
 ### 7.4 Implementation plans
-- `PLAN.md`
-- Feature-specific plans (e.g., `docs/gamma/plans/CAR-implementation-plan.md`)
+- Feature-specific plans in `docs/gamma/plans/` (e.g., `PLAN-vX.Y.Z-<scope>.md`)
 
 Role: define build order and scope.
 
@@ -365,6 +366,60 @@ Role: explain the coherence delta to operators and contributors.
 
 ### 7.7 Runtime telemetry
 Role: expose whether the actual running system matches the design.
+
+### 7.8 Self-coherence report
+
+Every substantial release SHOULD include a `SELF-COHERENCE.md` in its version directory. This artifact records the branch author's own CDD-compliance assessment before requesting review.
+
+**Required format:**
+
+```markdown
+# Self-Coherence Report — <branch logical name>
+
+**Version:** <cnos version>
+**Date:** <date>
+**Author:** <agent or contributor>
+
+## Pipeline compliance
+
+| # | Step | Status | Evidence / artifact |
+|---|------|--------|---------------------|
+| 0 | Bootstrap | <done/partial/skipped/n-a> | <path or note> |
+| 1 | Design | ... | ... |
+| ... | ... | ... | ... |
+
+## Triadic assessment
+
+| Axis | Score | Rationale |
+|------|-------|-----------|
+| α Pattern | <A-D> | <one sentence> |
+| β Relation | <A-D> | <one sentence> |
+| γ Exit | <A-D> | <one sentence> |
+
+## Checklist pass
+
+Which checklists were applied and what was the outcome:
+- [ ] engineering
+- [ ] documenting
+- [ ] functional (if code changes)
+- [ ] testing (if code changes)
+
+## Known coherence debt
+
+| Item | Severity | Note |
+|------|----------|------|
+| ... | ... | ... |
+
+## Reviewer notes
+
+Anything the reviewer should pay attention to; unresolved tensions; open questions.
+```
+
+**Placement:** `docs/<tier>/<bundle>/vX.Y.Z/SELF-COHERENCE.md`
+
+**When to omit:** Small changes covered by the §5.3 exception do not require a self-coherence report. The coherence contract in the commit message or PR body is sufficient.
+
+Role: make the branch author's coherence assessment inspectable before review. Prevents the reviewer from having to reconstruct compliance from commit history alone.
 
 ---
 

@@ -1,6 +1,6 @@
 # PR: docs governance v3.13.0 — feature bundles, version directories, cnos-aligned versioning
 
-**Branch:** `claude/cdd-branch-bootstrap-PfdYZ`
+**Branch:** `claude/75-docs-governance-v3.13.0`
 **Base:** `main`
 **Date:** 2026-03-23
 
@@ -45,7 +45,7 @@
 
 - [x] Verify CDD §5 table enumerates deliverables for all 9 steps
 - [x] Verify DOCUMENTATION-SYSTEM.md §3 establishes single version lineage
-- [x] Verify all docs touched by this branch carry version 3.13.0
+- [x] Verify all new/updated docs carry version 3.13.0 (frozen legacy snapshots retain historical versions per DOCUMENTATION-SYSTEM.md §3)
 - [x] Verify version directory renamed from v1.3.0 to v3.13.0
 - [x] Verify bundle READMEs and snapshot manifests are consistent
 
