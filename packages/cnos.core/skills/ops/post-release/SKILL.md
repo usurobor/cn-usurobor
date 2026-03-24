@@ -72,6 +72,8 @@ Add a row:
 
 The coherence note describes which incoherence was reduced, not what feature was added.
 
+**Scoring sequence:** The CHANGELOG TSC entry written at release time is **provisional** — it is the author's self-score. The post-release assessment is the independent score and MAY revise the CHANGELOG entry. If the assessment disagrees with the self-score, update the CHANGELOG to match the assessment. The assessment governs.
+
 ### Step 3: Encoding lag table
 
 All converged-but-unimplemented design commitments MUST appear in the lag table. This is not optional and has no wiggle room — if a design is converged and not shipped, it appears here.

@@ -101,7 +101,7 @@ No system gets built alone. This one did not.
 - **Inga** and **Ada** kept the question of continuity anchored in ordinary life.
 - **Ekaterina Kolmakova** helped move the material into public form.
 - **Pavel Lisovin** and **Michael Gnesin** tested early versions.
-- **Ilya Feygin** gave the metric an early real-world use.
+- **Ilya Feigin** gave the metric an early real-world use.
 - **Seb Holington** forced the foundational thinking to remain honest.
 - **Natalya Kuzhilina** kept the practical question of coherent relations on the table.
 - **Maggie Angelova** gave the work early confirmation that it was finding real ground.
