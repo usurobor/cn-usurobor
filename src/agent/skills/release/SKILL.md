@@ -63,12 +63,14 @@ Failure mode: version drift — tag says X, binary says Y, agent reports Z. Or: 
   - ✅ Each commit's impact named, linked to issues
 
 2.5. **Tag and push**
-  - Commit: `git commit -m "release: vX.Y.Z — summary"`
-  - Tag: `git tag -a vX.Y.Z -m "vX.Y.Z: summary"`
-  - Push: `git push origin main --tags`
-  - GitHub release: `gh release create vX.Y.Z --title "..." --notes "..."`
+  - **Tag naming convention:** use bare version numbers without `v` prefix: `3.15.1`, not `v3.15.1`. This matches VERSION file content, branch naming (`claude/3.15.0-22-...`), and snapshot directory names (`docs/gamma/cdd/3.15.0/`). Consistency across all version surfaces.
+  - Commit: `git commit -m "release: X.Y.Z — summary"`
+  - Tag: `git tag X.Y.Z` (lightweight tag, bare version)
+  - Push: `git push origin main && git push origin X.Y.Z`
+  - GitHub release: `gh release create X.Y.Z --title "X.Y.Z — summary" --notes "..."`
   - ❌ Push commit without tag (release CI doesn't trigger)
-  - ✅ Commit, tag, push in one command; verify release CI starts
+  - ❌ Mix `v` prefix and bare versions across tags (`v3.14.6` then `3.14.7`)
+  - ✅ Commit, tag (bare), push in sequence; verify release CI starts
 
 2.6. **Wait for release CI**
   - Release workflow builds binaries (linux-x64, macos-x64, macos-arm64)

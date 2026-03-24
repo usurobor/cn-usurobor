@@ -29,7 +29,14 @@ CDD owns the full arc from branch to observation:
 10. **Observe** — confirm runtime matches design (§10.7)
 11. **Assess** — post-release assessment: measure, encoding lag, process learning, next move commitment (§11)
 
-Start at step 1. The process is complete when the post-release assessment is recorded and the next MCA is committed.
+Start at step 1. The process is complete when the post-release assessment is done **and its outputs are executed**:
+
+- **MCAs** identified by the assessment are executed immediately (CHANGELOG corrections, skill patches, tag fixes)
+- **MCIs** are captured in an adhoc thread with status per learning
+- **Issues** are filed or updated per §11.12 (process debt integration)
+- **Skill/CDD patches** are committed if the assessment surfaces a missing rule
+
+The cycle closes when all MCAs are done, all MCIs are captured, and all issues are filed. Not before.
 
 ---
 
@@ -75,9 +82,15 @@ Start at step 1. The process is complete when the post-release assessment is rec
   - **Branch uniqueness:** no existing remote branch may claim the same issue number (`git branch -r | grep '{issue}'`). A second branch for the same issue means either the first should be deleted or the work is a duplicate.
   - **Open PR check:** no open PR may already cover the same issue (`gh pr list --state open` or equivalent). Starting work that duplicates an open PR wastes an entire cycle.
   - **Convention check:** branch name matches `{agent}/{version}-{issue}-{scope}` or `{agent}/{issue}-{scope}` per §1.4. Deviations cause superseded PRs when renamed later.
+  - **Scope declaration:** the bootstrap README MUST list which files the branch will modify. Files outside this list MUST NOT be touched without updating the scope declaration. This prevents background agents from regressing files outside their issue's domain.
+  - **CI status check:** if any CI check is currently red on main for a domain this branch touches, document it in the PR body with the issue number (e.g., "I1 failing — known #58"). Do not silently merge red CI on your domain.
   - ❌ Pick version `3.14.1`, do all the work, discover the tag already exists → entire PR superseded
   - ❌ Create branch for #81 when another branch already targets #81 → duplicate work
+  - ❌ Modify the design skill from a version-coherence branch (out of declared scope)
+  - ❌ Merge with red CI on package/source drift from a PR about version/package coherence
   - ✅ Check `git tag`, `git branch -r`, open PRs → confirm version is next, no conflicts → create branch
+  - ✅ Bootstrap README lists: "In scope: cn_lib.ml, cn_deps.ml, cn_system.ml, cn.json, 3 package manifests, tests. Out of scope: skills, docs (except frozen snapshot)."
+  - ✅ PR body: "Note: I1 (package/source drift) is red on main — pre-existing #58, not introduced by this PR."
 
 ---
 
