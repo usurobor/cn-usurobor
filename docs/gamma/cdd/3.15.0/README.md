@@ -18,16 +18,16 @@ MCA — runtime code, build system, tests, and manifests all change.
 
 | # | AC | Status |
 |---|-----|--------|
-| 1 | VERSION file as single source of truth | Pending |
-| 2 | Bumping requires editing one file | Pending |
-| 3 | CI fails if derived files stale | Pending |
-| 4 | First-party package versions = repo version, engines exact | Pending |
-| 5 | Lockfile first-party from VERSION + cnos_commit | Pending |
-| 6 | cn update reconciles packages in-hub | Pending |
-| 7 | Runtime contract includes package version | Pending |
-| 8 | status/doctor/runtime.md surface package versions + drift | Pending |
-| 9 | Tests derive version dynamically | Pending |
-| 10 | Release gate blocks on version disagreement | Pending |
+| 1 | VERSION file as single source of truth | Met |
+| 2 | Bumping requires editing one file | Met |
+| 3 | CI fails if derived files stale | Met |
+| 4 | First-party package versions = repo version, engines exact | Met |
+| 5 | Lockfile first-party from VERSION + cnos_commit | Met |
+| 6 | cn update reconciles packages in-hub | Met |
+| 7 | Runtime contract includes package version | Met |
+| 8 | status/doctor/runtime.md surface package versions + drift | Met |
+| 9 | Tests derive version dynamically | Met |
+| 10 | Release gate blocks on version disagreement | Met |
 
 ## Deliverables
 
