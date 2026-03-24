@@ -356,27 +356,29 @@ let doctor ~hub_path =
     engineer => [cnos.core, cnos.eng]
     pm       => [cnos.core, cnos.pm] *)
 let default_manifest_for_profile profile =
+  let ver = Cn_lib.version in
   let packages = match String.lowercase_ascii profile with
     | "pm" -> [
-        { name = "cnos.core"; version = "^1.0.0" };
-        { name = "cnos.pm"; version = "^1.0.0" };
+        { name = "cnos.core"; version = ver };
+        { name = "cnos.pm"; version = ver };
       ]
     | _ -> (* engineer is default *)
       [
-        { name = "cnos.core"; version = "^1.0.0" };
-        { name = "cnos.eng"; version = "^1.0.0" };
+        { name = "cnos.core"; version = ver };
+        { name = "cnos.eng"; version = ver };
       ]
   in
   { schema = "cn.deps.v1"; profile; packages }
 
 (** Create a lockfile with first-party package entries.
-    Queries the source repo via ls-remote to get the correct HEAD rev. *)
+    First-party entries use VERSION + cnos_commit for exact coherence.
+    Third-party entries query the source repo via ls-remote. *)
 let lockfile_for_manifest (m : manifest) =
-  let rev =
+  let first_party_rev = Cn_lib.cnos_commit in
+  let third_party_rev =
     let (code, output) = Cn_ffi.Process.exec_args ~prog:"git"
       ~args:["ls-remote"; default_first_party_source; "HEAD"] () in
     if code = 0 then
-      (* ls-remote output: "<sha>\tHEAD\n" — extract the SHA *)
       let trimmed = String.trim output in
       (match String.index_opt trimmed '\t' with
        | Some i -> String.sub trimmed 0 i
@@ -391,9 +393,10 @@ let lockfile_for_manifest (m : manifest) =
       else
         ("", "")
     in
-    let version = if dep.version = "" || dep.version.[0] = '^'
-                     || dep.version.[0] = '~'
-      then "1.0.0" else dep.version in
+    let version = if is_first_party dep.name then Cn_lib.version
+      else dep.version in
+    let rev = if is_first_party dep.name then first_party_rev
+      else third_party_rev in
     { name = dep.name; version; source; rev; subdir;
       integrity = None }
   ) in

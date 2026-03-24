@@ -6,6 +6,7 @@ Setup:
   $ export NO_COLOR=1
   $ chmod +x cn.sh
   $ export CN="$(pwd)/cn.sh"
+  $ CNOS_VERSION=$(cat ../../../VERSION | tr -d '\n')
 
 Help:
 
@@ -16,10 +17,12 @@ Help:
   
   Commands:
 
-Version:
+Version (derived from VERSION file, not hardcoded):
 
-  $ $CN --version
-  cn 3.14.7
+  $ ACTUAL=$($CN --version)
+  $ EXPECTED="cn $CNOS_VERSION"
+  $ [ "$ACTUAL" = "$EXPECTED" ] && echo "version ok" || echo "MISMATCH: got '$ACTUAL' expected '$EXPECTED'"
+  version ok
 
 Init - create a new hub:
 
@@ -59,11 +62,12 @@ Outbox (with message):
   $ $CN outbox 2>&1 | grep "test-message"
     → self: test-message.md
 
-Doctor - health check:
+Doctor - health check (version derived from VERSION file):
 
-  $ $CN doctor 2>&1 | head -2
-  cn v3.14.7
-  Checking health...
+  $ DOCTOR_LINE=$($CN doctor 2>&1 | head -1)
+  $ EXPECTED_DOC="cn v$CNOS_VERSION"
+  $ [ "$DOCTOR_LINE" = "$EXPECTED_DOC" ] && echo "doctor version ok" || echo "MISMATCH: got '$DOCTOR_LINE' expected '$EXPECTED_DOC'"
+  doctor version ok
 
 Aliases:
 

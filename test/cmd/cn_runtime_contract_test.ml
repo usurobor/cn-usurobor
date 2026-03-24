@@ -25,12 +25,13 @@ let mk_temp_dir prefix =
 
 let with_test_hub f =
   let hub = mk_temp_dir "cn-contract-test" in
+  let v = Cn_lib.version in
   let dirs = ["src"; "docs"; "spec"; "state"; "logs"; "agent";
               "threads/reflections/daily"; "threads/reflections/weekly";
               "threads/outbox";
-              ".cn/vendor/packages/cnos.core@1.0.0/doctrine";
-              ".cn/vendor/packages/cnos.core@1.0.0/mindsets";
-              ".cn/vendor/packages/cnos.eng@1.0.0/skills/eng/review"] in
+              Printf.sprintf ".cn/vendor/packages/cnos.core@%s/doctrine" v;
+              Printf.sprintf ".cn/vendor/packages/cnos.core@%s/mindsets" v;
+              Printf.sprintf ".cn/vendor/packages/cnos.eng@%s/skills/eng/review" v] in
   List.iter (fun d ->
     Cn_ffi.Fs.ensure_dir (Filename.concat hub d)
   ) dirs;
@@ -43,18 +44,20 @@ let with_test_hub f =
   in
   touch "spec/SOUL.md" "# Identity";
   touch "spec/USER.md" "# User";
+  let core = Printf.sprintf ".cn/vendor/packages/cnos.core@%s" v in
+  let eng = Printf.sprintf ".cn/vendor/packages/cnos.eng@%s" v in
   (* Core doctrine files *)
-  touch ".cn/vendor/packages/cnos.core@1.0.0/doctrine/FOUNDATIONS.md" "# FOUNDATIONS";
-  touch ".cn/vendor/packages/cnos.core@1.0.0/doctrine/COHERENCE.md" "# COHERENCE";
-  touch ".cn/vendor/packages/cnos.core@1.0.0/doctrine/CAP.md" "# CAP";
-  touch ".cn/vendor/packages/cnos.core@1.0.0/doctrine/CA-CONDUCT.md" "# CA-CONDUCT";
-  touch ".cn/vendor/packages/cnos.core@1.0.0/doctrine/CBP.md" "# CBP";
-  touch ".cn/vendor/packages/cnos.core@1.0.0/doctrine/AGENT-OPS.md" "# AGENT-OPS";
+  touch (core ^ "/doctrine/FOUNDATIONS.md") "# FOUNDATIONS";
+  touch (core ^ "/doctrine/COHERENCE.md") "# COHERENCE";
+  touch (core ^ "/doctrine/CAP.md") "# CAP";
+  touch (core ^ "/doctrine/CA-CONDUCT.md") "# CA-CONDUCT";
+  touch (core ^ "/doctrine/CBP.md") "# CBP";
+  touch (core ^ "/doctrine/AGENT-OPS.md") "# AGENT-OPS";
   (* Core mindsets *)
-  touch ".cn/vendor/packages/cnos.core@1.0.0/mindsets/ENGINEERING.md" "# ENGINEERING";
-  touch ".cn/vendor/packages/cnos.core@1.0.0/mindsets/WRITING.md" "# WRITING";
+  touch (core ^ "/mindsets/ENGINEERING.md") "# ENGINEERING";
+  touch (core ^ "/mindsets/WRITING.md") "# WRITING";
   (* Eng package skill *)
-  touch ".cn/vendor/packages/cnos.eng@1.0.0/skills/eng/review/SKILL.md" "# Review Skill";
+  touch (eng ^ "/skills/eng/review/SKILL.md") "# Review Skill";
   Fun.protect ~finally:(fun () ->
     let rec rm path =
       if Sys.is_directory path then begin
@@ -90,14 +93,14 @@ let%expect_test "gather: produces contract with four layers" =
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
               ~shell_config:default_shell_config ~assets ~peers:["sigma"] in
-    Printf.printf "cn_version: %s\n" c.identity.cn_version;
+    Printf.printf "cn_version_matches: %b\n" (c.identity.cn_version = Cn_lib.version);
     Printf.printf "hub_name_present: %b\n" (c.identity.hub_name <> "");
     Printf.printf "profile: %s\n" c.identity.profile;
     Printf.printf "packages: %d\n" (List.length c.cognition.packages);
     Printf.printf "peers: %d\n" (List.length c.body.peers);
     Printf.printf "zones: %d\n" (List.length c.medium));
   [%expect {|
-    cn_version: 3.14.7
+    cn_version_matches: true
     hub_name_present: true
     profile: engineer
     packages: 2
@@ -254,10 +257,10 @@ let%expect_test "to_json: identity has version" =
     | Some id ->
       let ver = Cn_json.get_string "cn_version" id in
       let hub = Cn_json.get_string "hub_name" id in
-      Printf.printf "cn_version: %s\n" (match ver with Some v -> v | None -> "(none)");
+      Printf.printf "cn_version_matches: %b\n" (ver = Some Cn_lib.version);
       Printf.printf "hub_name_present: %b\n" (hub <> None));
   [%expect {|
-    cn_version: 3.14.7
+    cn_version_matches: true
     hub_name_present: true |}]
 
 let%expect_test "to_json: body.capabilities match Cn_capabilities (single source of truth)" =

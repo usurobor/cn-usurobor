@@ -2,11 +2,14 @@ Setup:
 
   $ chmod +x cn.sh
   $ CN="$(pwd)/cn.sh"
+  $ CNOS_VERSION=$(cat ../../VERSION | tr -d '\n')
 
-Version command shows version:
+Version command shows version derived from VERSION file:
 
-  $ $CN --version
-  cn 3.14.7
+  $ ACTUAL=$($CN --version)
+  $ EXPECTED="cn $CNOS_VERSION"
+  $ [ "$ACTUAL" = "$EXPECTED" ] && echo "version ok" || echo "MISMATCH: got '$ACTUAL' expected '$EXPECTED'"
+  version ok
 
 Help shows usage:
 
