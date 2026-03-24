@@ -27,7 +27,7 @@
 | Axis | Score | Rationale |
 |------|-------|-----------|
 | α Pattern | A- | Artifact expectations explicit (§5.1 table), version lineage is single (§3), bootstrap rule per-bundle, self-coherence format in §7.8, placeholders use `{curly}` not `<angle>` for GitHub safety. |
-| β Relation | A- | Canonical CDD doc and executable CDD skill now specify the same artifact contract (§4.0 bootstrap, §4.8 self-coherence). Stale §7 references fixed. PR body matches actual branch. Frozen snapshot matches canonical. |
+| β Relation | A- | Canonical CDD doc and executable CDD skill specify the same artifact contract: §4.0 bootstrap (per-bundle, frozen-snapshot, re-freeze rule), §4.8 self-coherence, §1.4 branch naming with transport-suffix rule. Skill declares canonical doc as authoritative for full detail. Stale §7 references fixed. PR body matches actual branch. Frozen snapshot matches canonical. CHANGELOG entry present. |
 | γ Exit | A- | Next moves bounded: implement CI validation (§8), migrate legacy design docs into bundles (§6 table). Self-coherence artifact format gives future branches an explicit template. |
 
 ---
@@ -54,14 +54,12 @@
 
 ## Reviewer notes
 
-1. **All three review findings from the third review pass are resolved:**
-   - CDD skill now matches canonical doc: §4.0 (bootstrap), §4.8 (self-coherence), lifecycle steps 2 and 6 added
-   - CHANGELOG.md entry added for v3.13.0 with TSC row (A- across all axes)
-   - Placeholder syntax changed from `<angle>` to `{curly}` in both CDD.md and DOCUMENTATION-SYSTEM.md
-
-2. **Cumulative review findings resolved across all three passes:**
+1. **All review findings across four passes are resolved:**
    - Pass 1: stale §7 refs, PR body branch name, version-lineage rule, bootstrap scope, self-coherence artifact
    - Pass 2: missing PLAN artifact, self-coherence report update
-   - Pass 3: skill/doc parity, CHANGELOG entry, placeholder rendering
+   - Pass 3: skill/doc parity (§4.0, §4.8, lifecycle), CHANGELOG entry, placeholder rendering
+   - Pass 4: skill/doc parity depth (§1.4 branch naming with transport-suffix, §4.0 per-bundle + frozen-snapshot + re-freeze rules, Authority section declaring canonical doc as authoritative)
+
+2. **Skill/doc parity strategy:** The executable skill is an actionable summary. The canonical doc (`docs/gamma/CDD.md`) is authoritative for the full artifact contract, pipeline table, and governance detail. The skill now explicitly declares this in its Authority section, eliminating the ambiguity about which governs when they diverge.
 
 3. **Remaining pre-merge gate:** none. All pipeline steps are done or n/a. Review is the next step.
