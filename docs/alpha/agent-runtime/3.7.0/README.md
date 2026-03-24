@@ -3,7 +3,8 @@
 | | |
 |---|---|
 | **Version** | 3.7.0 |
-| **Issue** | #81 (alpha bundle migration) |
+| **Date** | 2026-03-24 |
+| **Issue** | Scheduler unification (pre-tracker) |
 | **Status** | Frozen |
 
 ## Contents
