@@ -12,9 +12,9 @@ Help:
 
   $ $CN --help | head -5
   cn - Coherent Network agent CLI
-
+  
   Usage: cn <command> [options]
-
+  
   Commands:
 
 Version (derived from VERSION file, not hardcoded):
