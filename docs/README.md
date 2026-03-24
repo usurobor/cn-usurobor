@@ -110,6 +110,8 @@ The graph of relations — system overview, shared vocabulary, operator connecti
 | [GLOSSARY.md](./beta/GLOSSARY.md) | Terms and definitions |
 | [NAMING.md](./beta/NAMING.md) | Naming conventions (CN, cnos, cn) |
 | [DOCUMENTATION-SYSTEM.md](./beta/DOCUMENTATION-SYSTEM.md) | How docs are organized and evolve (this system) |
+| [ORIGIN.md](./beta/ORIGIN.md) | How CNOS came to be — from Joscha's objection to Git substrate |
+| [LINEAGE.md](./beta/LINEAGE.md) | Structural lineage and acknowledgments |
 | [β/guides/](./beta/guides/) | Operator ↔ system: handshake, automation, migration, skills, dojo, build/release |
 | [β/evidence/](./beta/evidence/) | Model ↔ reality: audit, RCAs |
 
