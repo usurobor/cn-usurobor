@@ -55,6 +55,7 @@ fi
 echo ""
 if [ "$ERRORS" -gt 0 ]; then
   echo "FAILED: $ERRORS version inconsistencies found"
+  echo "Fix: run 'scripts/stamp-versions.sh' to rewrite manifests from VERSION, then commit."
   exit 1
 else
   echo "PASSED: all version-stamped files agree with VERSION=$VERSION"

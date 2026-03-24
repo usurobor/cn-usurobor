@@ -331,9 +331,48 @@ let run_check () =
             print_endline (Cn_fmt.fail (Printf.sprintf "%s: out of sync" name));
             issues |> List.iter (fun msg ->
               print_endline (Printf.sprintf "  %s" msg)));
+      (* Version consistency: all manifests must agree with VERSION *)
+      let version_file = Cn_ffi.Path.join root "VERSION" in
+      if Cn_ffi.Fs.exists version_file then begin
+        let expected = String.trim (Cn_ffi.Fs.read version_file) in
+        let check_version file_path field_name actual =
+          if actual <> expected then begin
+            all_ok := false;
+            print_endline (Cn_fmt.fail (Printf.sprintf
+              "%s %s: got '%s', expected '%s'" file_path field_name actual expected))
+          end
+        in
+        (* Check cn.json *)
+        let cn_json_path = Cn_ffi.Path.join root "cn.json" in
+        (match Cn_ffi.Fs.read cn_json_path |> Cn_json.parse with
+         | Ok json ->
+           (match Cn_json.get_string "version" json with
+            | Some v -> check_version "cn.json" "version" v
+            | None -> ())
+         | Error _ -> ());
+        (* Check package manifests *)
+        packages |> List.iter (fun (dir_name, _pkg) ->
+          let manifest_path = Cn_ffi.Path.join
+            (Cn_ffi.Path.join pkgs_dir dir_name) "cn.package.json" in
+          match Cn_ffi.Fs.read manifest_path |> Cn_json.parse with
+          | Ok json ->
+            (match Cn_json.get_string "version" json with
+             | Some v -> check_version manifest_path "version" v
+             | None -> ());
+            (match Cn_json.get "engines" json with
+             | Some engines ->
+               (match Cn_json.get_string "cnos" engines with
+                | Some v -> check_version manifest_path "engines.cnos" v
+                | None -> ())
+             | None -> ())
+          | Error _ -> ());
+        if !all_ok then
+          print_endline (Cn_fmt.ok (Printf.sprintf
+            "Version consistency: all manifests match VERSION=%s" expected))
+      end;
       if not !all_ok then begin
         print_endline "";
-        print_endline (Cn_fmt.fail "packages/ out of sync with src/agent/ — run 'cn build'");
+        print_endline (Cn_fmt.fail "Check failed — run 'cn build' and/or 'scripts/stamp-versions.sh'");
         Cn_ffi.Process.exit 1
       end else
         print_endline (Cn_fmt.ok "All packages in sync with src/agent/")

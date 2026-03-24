@@ -9,13 +9,7 @@ open Cn_lib
 
 let update_runtime hub_path =
   let runtime_path = Cn_ffi.Path.join hub_path "state/runtime.md" in
-  let cn_ver = match Cn_ffi.Child_process.exec "cn --version 2>/dev/null" with
-    | Some v -> String.trim v |> fun s ->
-        (match String.split_on_char ' ' s with
-         | _ :: v :: _ -> v
-         | _ -> "unknown")
-    | None -> "unknown"
-  in
+  let cn_ver = version in
   let hub_name = derive_name hub_path in
   let hub_commit = match Cn_ffi.Child_process.exec_in ~cwd:hub_path "git rev-parse --short HEAD 2>/dev/null" with
     | Some c -> String.trim c
@@ -382,6 +376,14 @@ let reconcile_packages hub_path =
      print_endline (Cn_fmt.fail (Printf.sprintf "Package reconciliation failed: %s" msg)))
 
 let run_update hub_path_opt =
+  (* If re-exec'd after binary update, reconcile packages with new version and return *)
+  (match Sys.getenv_opt "CN_RECONCILE_HUB" with
+   | Some hp when hp <> "" ->
+     reconcile_packages hp;
+     (* Clear env var so downstream code doesn't see it *)
+     Unix.putenv "CN_RECONCILE_HUB" ""
+   | _ -> ());
+
   print_endline (Cn_fmt.info "Checking for updates...");
   print_endline (Printf.sprintf "Current version: %s" version);
 
@@ -401,9 +403,13 @@ let run_update hub_path_opt =
         match result with
         | Cn_protocol.Update_complete ->
             print_endline (Cn_fmt.ok (Printf.sprintf "Updated to %s" tag));
-            (* In-hub: reconcile packages after binary update *)
+            (* Re-exec into the new binary so reconciliation uses the correct
+               version/commit constants. The new process detects CN_RECONCILE_HUB
+               and reconciles before proceeding with its normal update check. *)
             (match hub_path_opt with
-             | Some hp -> reconcile_packages hp
+             | Some hp ->
+               Unix.putenv "CN_RECONCILE_HUB" hp;
+               Cn_agent.re_exec ()
              | None -> ())
         | _ ->
             print_endline (Cn_fmt.fail "Binary download failed. Check network and try again.")
@@ -472,6 +478,17 @@ let run_release hub_path_opt version_override =
   let branch = Git.current_branch ~cwd:install_dir |> Option.value ~default:"" in
   if branch <> "main" && branch <> "master" then begin
     print_endline (Cn_fmt.fail (Printf.sprintf "Must be on main branch (currently on %s)" branch));
+    Cn_ffi.Process.exit 1
+  end;
+
+  (* Verify version consistency before tagging — release gate (#22) *)
+  let version_ok =
+    Cn_ffi.Child_process.exec_in ~cwd:install_dir
+      "scripts/check-version-consistency.sh"
+    |> Option.is_some
+  in
+  if not version_ok then begin
+    print_endline (Cn_fmt.fail "Version consistency check failed — run 'scripts/stamp-versions.sh' then commit");
     Cn_ffi.Process.exit 1
   end;
 
