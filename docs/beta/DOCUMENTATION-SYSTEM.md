@@ -54,10 +54,10 @@ This sorts directories chronologically by `ls` and makes every bundle traceable 
 ```
 docs/alpha/3.14.0-62-agent-runtime/
 ├── README.md           # Bundle index: what this feature is, reading order, document map
-├── v3.14.0/            # Frozen snapshot for v3.14.0
+├── 3.14.0/            # Frozen snapshot for v3.14.0
 │   ├── README.md
 │   └── SPEC.md
-├── v3.15.0/            # Frozen snapshot for v3.15.0
+├── 3.15.0/            # Frozen snapshot for v3.15.0
 │   ├── README.md
 │   └── SPEC.md
 └── (other bundle-local docs if needed)
@@ -105,11 +105,11 @@ The index document for a feature bundle. Lives at `docs/alpha/{feature}/README.m
 
 A design document scoped to a specific version or feature iteration. These are created when a release introduces substantial new behavior that warrants a dedicated design narrative.
 
-- Filename encodes scope: `{FEATURE}-v{VERSION}.md` or `{FEATURE}-{SCOPE}.md`
+- Filename encodes scope: `{FEATURE}-{VERSION}.md` or `{FEATURE}-{SCOPE}.md`
 - Lives at `alpha/` root (legacy) or inside a feature bundle
 - Not canonical — the canonical spec absorbs the design after implementation ships
 
-Examples: N-PASS-BIND-v3.8.0.md, RUNTIME-CONTRACT-v3.10.0.md, SYSCALL-SURFACE-v3.8.0.md.
+Examples: N-PASS-BIND-3.8.0.md, RUNTIME-CONTRACT-v3.10.0.md, SYSCALL-SURFACE-v3.8.0.md.
 
 ### 2.5 Reference document
 
@@ -136,10 +136,10 @@ Audits, RCAs, and model↔reality assessments. Lives in `beta/evidence/`.
 
 ### 2.9 Version directory
 
-A version directory groups all frozen artifacts for a single release milestone. Lives directly inside the feature bundle as `v{MAJOR}.{MINOR}.{PATCH}/`.
+A version directory groups all frozen artifacts for a single release milestone. Lives directly inside the feature bundle as `{MAJOR}.{MINOR}.{PATCH}/`.
 
 ```
-docs/alpha/{feature}/v1.0.6/
+docs/alpha/{feature}/1.0.6/
 ├── README.md      # Required: snapshot manifest
 ├── SPEC.md        # Frozen canonical spec at this version
 ├── DESIGN.md      # Design narrative (if one existed for this version)
@@ -176,7 +176,7 @@ A document's version advances to the current cnos release version when:
 
 ### Version directories
 
-Version directories inside feature bundles use the cnos release version, not a document-local version. Example: `docs/alpha/3.14.0-62-agent-runtime/v3.8.0/` — not `v2.0.0/`.
+Version directories inside feature bundles use the cnos release version, not a document-local version. Example: `docs/alpha/3.14.0-62-agent-runtime/3.8.0/` — not `2.0.0/`.
 
 ### Supersession
 
@@ -190,7 +190,7 @@ Some existing documents carry pre-cnos-aligned version numbers (e.g., THESIS 1.0
 
 ### Frozen legacy snapshots
 
-Version directories created before the single-lineage rule MAY retain their historical version numbers (e.g., `runtime-extensions/v1.0.6/`). These are frozen artifacts — renaming them would violate the freeze contract (§4). The legacy version number in a frozen snapshot directory name records the version under which that snapshot was originally published, not a current cnos release version. New version directories MUST use cnos release versions.
+Version directories created before the single-lineage rule MAY retain their historical version numbers (e.g., `runtime-extensions/1.0.6/`). These are frozen artifacts — renaming them would violate the freeze contract (§4). The legacy version number in a frozen snapshot directory name records the version under which that snapshot was originally published, not a current cnos release version. New version directories MUST use cnos release versions.
 
 ---
 
@@ -255,7 +255,7 @@ Single-document features (e.g., SECURITY-MODEL.md) do not need a bundle.
 ```
 docs/alpha/{feature-name}/
 ├── README.md            # Required: bundle index, names the canonical
-├── v1.0.6/              # Version directory: frozen snapshot for v1.0.6
+├── 1.0.6/              # Version directory: frozen snapshot for v1.0.6
 │   ├── README.md
 │   └── SPEC.md
 ├── v3.8.0/              # Version directory: frozen snapshot for v3.8.0
@@ -285,7 +285,7 @@ Several documents in `docs/alpha/` use version-stamped filenames at the root lev
 
 | File | Class | Migration target |
 |------|-------|-----------------|
-| `N-PASS-BIND-v3.8.0.md` | Feature-scoped design doc | `alpha/3.14.0-62-agent-runtime/` bundle |
+| `N-PASS-BIND-3.8.0.md` | Feature-scoped design doc | `alpha/3.14.0-62-agent-runtime/` bundle |
 | `RUNTIME-CONTRACT-v3.10.0.md` | Feature-scoped design doc | `alpha/3.14.0-62-agent-runtime/` bundle |
 | `SYSCALL-SURFACE-v3.8.0.md` | Feature-scoped design doc | `alpha/3.14.0-62-agent-runtime/` bundle |
 | `SCHEDULER-v3.7.0.md` | Feature-scoped design doc | `alpha/3.14.0-62-agent-runtime/` bundle |
@@ -301,8 +301,8 @@ Several documents in `docs/alpha/` use version-stamped filenames at the root lev
 ### What stays, what moves
 
 - **Canonical specs stay at their current root paths.** `alpha/AGENT-RUNTIME.md` and `alpha/RUNTIME-EXTENSIONS.md` remain where they are. Bundle READMEs link to them. No moved notices needed.
-- **Snapshots move into version directories in their owning bundle.** The Runtime Extensions snapshot moved from `alpha/versions/runtime-extensions/v1.0.6.md` to `alpha/3.12.0-73-runtime-extensions/v1.0.6/SPEC.md`. Version history now lives with the feature it belongs to.
-- **Feature-scoped design docs are not moved in this version.** They are documented in the table above. Future migration: move into the owning bundle's version directory (e.g., `N-PASS-BIND-v3.8.0.md` → `agent-runtime/v3.8.0/DESIGN.md`), leave a one-line moved-notice at the old path.
+- **Snapshots move into version directories in their owning bundle.** The Runtime Extensions snapshot moved from `alpha/versions/runtime-extensions/v1.0.6.md` to `alpha/3.12.0-73-runtime-extensions/1.0.6/SPEC.md`. Version history now lives with the feature it belongs to.
+- **Feature-scoped design docs are not moved in this version.** They are documented in the table above. Future migration: move into the owning bundle's version directory (e.g., `N-PASS-BIND-3.8.0.md` → `agent-runtime/3.8.0/DESIGN.md`), leave a one-line moved-notice at the old path.
 - **Legacy plans at alpha root are not moved in this version.** Future migration: move to `gamma/plans/`.
 - New documents MUST follow the bundle/placement rules above.
 - A moved-notice is a file that says: `Moved to <new-path>. This file will be removed in a future release.`
