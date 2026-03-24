@@ -139,7 +139,7 @@ docs/alpha/{feature}/1.0.6/
 ```
 
 - Directory name is the version number: `v1.0.6/`, `v3.8.0/`, etc.
-- Version directories are frozen by repository policy. After creation, their contents MUST NOT be modified in later commits. Corrections MUST be published as a new version directory or an explicit superseding note in the feature root README
+- Version directories are frozen by repository policy. After creation, their contents MUST NOT be modified in later commits. Corrections MUST be published as a new version directory or an explicit superseding note in the feature root README. **Exception:** path references (backtick paths, markdown links) MAY be updated when the target file has moved, so that references remain resolvable. No semantic content may change.
 - Each version directory MUST contain a `README.md` describing the snapshot and the canonical doc(s) published for that version
 - Additional version-scoped artifacts (design narratives, migration notes) MAY be included
 
@@ -222,7 +222,7 @@ Each version directory MAY also contain:
 | `DESIGN.md` | Design narrative for this version's changes |
 | Other | Any version-scoped artifact (migration notes, issue summary, etc.) |
 
-Version directories are frozen by repository policy. After creation, their contents MUST NOT be modified in later commits. Corrections MUST be published as a new version directory or an explicit superseding note in the feature root README. Legacy flat filenames (e.g., `v1.0.6.md`) MUST be mapped in the feature root README (see §6).
+Version directories are frozen by repository policy. After creation, their contents MUST NOT be modified in later commits. Corrections MUST be published as a new version directory or an explicit superseding note in the feature root README. **Exception:** path references (backtick paths, markdown links) MAY be updated when the target file has moved, so that references remain resolvable. No semantic content may change. Legacy flat filenames (e.g., `v1.0.6.md`) MUST be mapped in the feature root README (see §6).
 
 ---
 
