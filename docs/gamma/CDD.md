@@ -251,6 +251,8 @@ Each step in the pipeline produces concrete artifacts. The table below defines w
 
 **The first diff on the branch MUST be step 0 (Bootstrap).** This forces the author to name the version and enumerate deliverables before writing content.
 
+**Frozen snapshot semantics.** After step 7, version directories are governed by the freeze policy in DOCUMENTATION-SYSTEM.md §2.9/§4. Contents MUST NOT be modified — with one exception: path references (backtick paths, markdown links) MAY be updated when the target file has moved, so that references remain resolvable. No semantic content may change.
+
 Steps 1–3 may be collapsed into a single commit for small changes. Steps 4–6 typically span multiple commits. Step 7 is the final commit before merge. Step 8 happens after merge.
 
 **Before requesting review:** the branch MUST be rebased on `main`. Reviewer time is more valuable than author time (per RULES.md). A branch that is not rebased MUST NOT be submitted for review.
