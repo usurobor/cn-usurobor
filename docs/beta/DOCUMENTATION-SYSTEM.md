@@ -29,30 +29,22 @@ A feature bundle groups all documents that belong to a single feature or subsyst
 
 #### Bundle directory naming
 
-Bundle directories follow the same convention as branch names: **version-issue-scope**.
+Bundle directories use the **kebab-case feature scope** as the directory name.
 
 ```
-docs/alpha/{VERSION}-{ISSUE}-{scope}/
+docs/alpha/{scope}/
 ```
-
-| Segment | Required | Description | Example |
-|---------|----------|-------------|---------|
-| `{VERSION}` | Yes | cnos release version when the bundle was created | `v3.14.0` |
-| `{ISSUE}` | Yes | Originating issue number | `62` |
-| `{scope}` | Yes | Kebab-case feature name | `agent-runtime` |
-
-The version and issue are set at creation and **never change**. They record provenance, not current state.
 
 Examples:
-- `docs/alpha/3.14.0-62-agent-runtime/`
-- `docs/alpha/3.12.0-73-runtime-extensions/`
+- `docs/alpha/agent-runtime/`
+- `docs/alpha/runtime-extensions/`
 
-This sorts directories chronologically by `ls` and makes every bundle traceable to its originating issue and release.
+Provenance (originating version, issue number) is recorded in the bundle's `README.md`, not in the directory name. This is deliberate: bundles are long-lived feature containers that accumulate version snapshots over time. Their identity is the feature scope, not their creation moment. Branches use `{version}-{issue}-{scope}` because branches are ephemeral and need disambiguation; directories are permanent structure and need stability.
 
 #### Bundle structure
 
 ```
-docs/alpha/3.14.0-62-agent-runtime/
+docs/alpha/agent-runtime/
 ├── README.md           # Bundle index: what this feature is, reading order, document map
 ├── 3.14.0/            # Frozen snapshot for v3.14.0
 │   ├── README.md
@@ -176,7 +168,7 @@ A document's version advances to the current cnos release version when:
 
 ### Version directories
 
-Version directories inside feature bundles use the cnos release version, not a document-local version. Example: `docs/alpha/3.14.0-62-agent-runtime/3.8.0/` — not `2.0.0/`.
+Version directories inside feature bundles use the cnos release version, not a document-local version. Example: `docs/alpha/agent-runtime/3.8.0/` — not `2.0.0/`.
 
 ### Supersession
 
@@ -285,10 +277,10 @@ Several documents in `docs/alpha/` use version-stamped filenames at the root lev
 
 | File | Class | Migration target |
 |------|-------|-----------------|
-| `N-PASS-BIND-3.8.0.md` | Feature-scoped design doc | `alpha/3.14.0-62-agent-runtime/` bundle |
-| `RUNTIME-CONTRACT-v3.10.0.md` | Feature-scoped design doc | `alpha/3.14.0-62-agent-runtime/` bundle |
-| `SYSCALL-SURFACE-v3.8.0.md` | Feature-scoped design doc | `alpha/3.14.0-62-agent-runtime/` bundle |
-| `SCHEDULER-v3.7.0.md` | Feature-scoped design doc | `alpha/3.14.0-62-agent-runtime/` bundle |
+| `N-PASS-BIND-3.8.0.md` | Feature-scoped design doc | `alpha/agent-runtime/` bundle |
+| `RUNTIME-CONTRACT-v3.10.0.md` | Feature-scoped design doc | `alpha/agent-runtime/` bundle |
+| `SYSCALL-SURFACE-v3.8.0.md` | Feature-scoped design doc | `alpha/agent-runtime/` bundle |
+| `SCHEDULER-v3.7.0.md` | Feature-scoped design doc | `alpha/agent-runtime/` bundle |
 | `CTB-v4.0.0-VISION.md` | Vision doc | Stays at root (cross-cutting) |
 
 ### Legacy plans at alpha root
@@ -301,7 +293,7 @@ Several documents in `docs/alpha/` use version-stamped filenames at the root lev
 ### What stays, what moves
 
 - **Canonical specs stay at their current root paths.** `alpha/AGENT-RUNTIME.md` and `alpha/RUNTIME-EXTENSIONS.md` remain where they are. Bundle READMEs link to them. No moved notices needed.
-- **Snapshots move into version directories in their owning bundle.** The Runtime Extensions snapshot moved from `alpha/versions/runtime-extensions/v1.0.6.md` to `alpha/3.12.0-73-runtime-extensions/1.0.6/SPEC.md`. Version history now lives with the feature it belongs to.
+- **Snapshots move into version directories in their owning bundle.** The Runtime Extensions snapshot moved from `alpha/versions/runtime-extensions/v1.0.6.md` to `alpha/runtime-extensions/1.0.6/SPEC.md`. Version history now lives with the feature it belongs to.
 - **Feature-scoped design docs are not moved in this version.** They are documented in the table above. Future migration: move into the owning bundle's version directory (e.g., `N-PASS-BIND-3.8.0.md` → `agent-runtime/3.8.0/DESIGN.md`), leave a one-line moved-notice at the old path.
 - **Legacy plans at alpha root are not moved in this version.** Future migration: move to `gamma/plans/`.
 - New documents MUST follow the bundle/placement rules above.
