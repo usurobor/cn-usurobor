@@ -216,15 +216,15 @@ Every substantial feature or change MUST be developed on its own dedicated branc
 The canonical branch name format is:
 
 ```
-<agent>/<issue>-<scope>-<version>
+{agent}/{issue}-{scope}-{version}
 ```
 
 | Segment | Required | Description | Example |
 |---------|----------|-------------|---------|
-| `<agent>` | Yes | The actor performing the work | `claude`, `sigma`, `pi` |
-| `<issue>` | Yes | Issue number from the tracker | `75` |
-| `<scope>` | Yes | Short kebab-case topic | `docs-governance` |
-| `<version>` | When known | Target cnos release version | `v3.13.0` |
+| `{agent}` | Yes | The actor performing the work | `claude`, `sigma`, `pi` |
+| `{issue}` | Yes | Issue number from the tracker | `75` |
+| `{scope}` | Yes | Short kebab-case topic | `docs-governance` |
+| `{version}` | When known | Target cnos release version | `v3.13.0` |
 
 Examples:
 - `claude/75-docs-governance-v3.13.0`
@@ -239,10 +239,10 @@ Each step in the pipeline produces concrete artifacts. The table below defines w
 
 | # | Step | Deliverable artifacts | Location |
 |---|------|-----------------------|----------|
-| 0 | **Bootstrap** | Version directory with stub files for every artifact the **target bundle** will produce for this version. Includes `README.md` (snapshot manifest) and one stub per deliverable. If a branch touches multiple bundles, each bundle that will receive a frozen snapshot gets its own version directory. Artifacts that live outside version directories (PR body files, navigation docs, bundle READMEs) are not enumerated in the bootstrap stubs. | `docs/<tier>/<bundle>/vX.Y.Z/` |
+| 0 | **Bootstrap** | Version directory with stub files for every artifact the **target bundle** will produce for this version. Includes `README.md` (snapshot manifest) and one stub per deliverable. If a branch touches multiple bundles, each bundle that will receive a frozen snapshot gets its own version directory. Artifacts that live outside version directories (PR body files, navigation docs, bundle READMEs) are not enumerated in the bootstrap stubs. | `docs/{tier}/{bundle}/vX.Y.Z/` |
 | 1 | **Design** | Design doc or design section in the spec stub. States the structural decision and its triadic justification. | Version dir or `docs/alpha/` |
 | 2 | **Coherence contract** | Gap, mode, scope, expected triadic effect, failure-if-skipped (§6). May live in the PR body, a dedicated file, or a header block in the spec. | PR body file or spec header |
-| 3 | **Plan** | Implementation plan: ordered steps, dependencies, risk boundaries, compile-safe increments. | `docs/gamma/plans/PLAN-vX.Y.Z-<scope>.md` or version dir |
+| 3 | **Plan** | Implementation plan: ordered steps, dependencies, risk boundaries, compile-safe increments. | `docs/gamma/plans/PLAN-vX.Y.Z-{scope}.md` or version dir |
 | 4 | **Tests** | Test files that pin invariants, schemas, edge cases, and regressions. Tests SHOULD be written before the code they validate. | `tests/` or co-located `__tests__/` |
 | 5 | **Code** | Source code that realizes the design. Code does not invent architecture — it implements the plan. | `src/`, `packages/`, or relevant source dirs |
 | 6 | **Docs** | All affected documentation updated to match the implementation. Bundle README, spec, directory maps, and navigation surfaces reflect the new state. | `docs/`, bundle READMEs, `docs/README.md` |
@@ -354,7 +354,7 @@ Role: define the structural system.
 Role: define workflow, governance, and release procedure.
 
 ### 7.4 Implementation plans
-- Feature-specific plans in `docs/gamma/plans/` (e.g., `PLAN-vX.Y.Z-<scope>.md`)
+- Feature-specific plans in `docs/gamma/plans/` (e.g., `PLAN-vX.Y.Z-{scope}.md`)
 
 Role: define build order and scope.
 
@@ -374,17 +374,17 @@ Every substantial release SHOULD include a `SELF-COHERENCE.md` in its version di
 **Required format:**
 
 ```markdown
-# Self-Coherence Report — <branch logical name>
+# Self-Coherence Report — {branch logical name}
 
-**Version:** <cnos version>
-**Date:** <date>
-**Author:** <agent or contributor>
+**Version:** {cnos version}
+**Date:** {date}
+**Author:** {agent or contributor}
 
 ## Pipeline compliance
 
 | # | Step | Status | Evidence / artifact |
 |---|------|--------|---------------------|
-| 0 | Bootstrap | <done/partial/skipped/n-a> | <path or note> |
+| 0 | Bootstrap | {done/partial/skipped/n-a} | {path or note} |
 | 1 | Design | ... | ... |
 | ... | ... | ... | ... |
 
@@ -392,9 +392,9 @@ Every substantial release SHOULD include a `SELF-COHERENCE.md` in its version di
 
 | Axis | Score | Rationale |
 |------|-------|-----------|
-| α Pattern | <A-D> | <one sentence> |
-| β Relation | <A-D> | <one sentence> |
-| γ Exit | <A-D> | <one sentence> |
+| α Pattern | {A-D} | {one sentence} |
+| β Relation | {A-D} | {one sentence} |
+| γ Exit | {A-D} | {one sentence} |
 
 ## Checklist pass
 
@@ -415,7 +415,7 @@ Which checklists were applied and what was the outcome:
 Anything the reviewer should pay attention to; unresolved tensions; open questions.
 ```
 
-**Placement:** `docs/<tier>/<bundle>/vX.Y.Z/SELF-COHERENCE.md`
+**Placement:** `docs/{tier}/{bundle}/vX.Y.Z/SELF-COHERENCE.md`
 
 **When to omit:** Small changes covered by the §5.3 exception do not require a self-coherence report. The coherence contract in the commit message or PR body is sufficient.
 

@@ -18,14 +18,16 @@ Incoherence not named is incoherence not reduced. Artifacts not aligned are drif
 CDD owns the full arc from branch to observation:
 
 1. **Branch** — create the branch (§1.4)
-2. **Gap** — name the incoherence (§2)
-3. **Mode** — choose MCA or MCI (§3)
-4. **Artifacts** — design → contract → plan → tests → code → docs (§4)
-5. **Review** — CLP with another CA until convergence (§7)
-6. **Gate** — verify the release checklist (§9)
-7. **Release** — version, tag, CI, merge, announce (§10)
-8. **Observe** — confirm runtime matches design (§10.7)
-9. **Measure** — score the coherence delta, update CHANGELOG TSC table (§11)
+2. **Bootstrap** — create version directory with stub files for each deliverable artifact (§4.0)
+3. **Gap** — name the incoherence (§2)
+4. **Mode** — choose MCA or MCI (§3)
+5. **Artifacts** — design → contract → plan → tests → code → docs (§4)
+6. **Self-coherence** — write `SELF-COHERENCE.md` in the version directory (§4.8)
+7. **Review** — CLP with another CA until convergence (§7)
+8. **Gate** — verify the release checklist (§9)
+9. **Release** — version, tag, CI, merge, announce (§10)
+10. **Observe** — confirm runtime matches design (§10.7)
+11. **Measure** — score the coherence delta, update CHANGELOG TSC table (§11)
 
 Start at step 1. The process is complete when the coherence delta is recorded.
 
@@ -116,6 +118,14 @@ Before any artifact is created, name the incoherence.
 
 Follow the pipeline. Each step feeds the next.
 
+4.0. **Bootstrap — version directory**
+  - The first diff on the branch MUST create a version directory with stub files for every artifact the target bundle will produce
+  - The directory lives at `docs/{tier}/{bundle}/vX.Y.Z/` and MUST contain a `README.md` (snapshot manifest)
+  - If the branch touches multiple bundles, each bundle that will receive a frozen snapshot gets its own version directory
+  - Artifacts outside version directories (PR body files, navigation docs, bundle READMEs) are not enumerated as stubs
+  - ❌ Start coding before naming the version or enumerating deliverables
+  - ✅ First commit: `docs/gamma/cdd/v3.13.0/README.md` + `CDD.md` stub
+
 4.1. **Design doc**
   - Create or update before coding
   - ❌ Code first, backfill the design doc
@@ -175,6 +185,16 @@ Follow the pipeline. Each step feeds the next.
   - Explain the coherence delta to operators and contributors
   - ❌ "Various improvements"
   - ✅ "Added L2 transport — operators can now configure push-based sync"
+
+4.8. **Self-coherence report**
+  - Every substantial release SHOULD include a `SELF-COHERENCE.md` in its version directory
+  - Records the branch author's own CDD-compliance assessment before requesting review
+  - Required sections: pipeline compliance table, triadic assessment (α/β/γ scores with rationale), checklist pass, known coherence debt, reviewer notes
+  - Placement: `docs/{tier}/{bundle}/vX.Y.Z/SELF-COHERENCE.md`
+  - Small changes covered by §1.2 do not require a self-coherence report
+  - See `docs/gamma/CDD.md` §7.8 for the full format template
+  - ❌ Request review without recording your own compliance assessment
+  - ✅ Write SELF-COHERENCE.md, score each pipeline step, list known debt, then request review
 
 ---
 

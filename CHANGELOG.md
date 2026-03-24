@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.13.0 | A-  | A-          | A-           | A-               | Docs governance (#75): CDD pipeline with per-step artifacts, self-coherence report format, single cnos version lineage, feature bundles, frozen snapshots, bootstrap-first rule. CDD skill synced. |
 | v3.12.1 | A+  | A+          | A+           | A+               | Daemon boot log declares config sources (#61): version, hub, profile, model, secrets provenance, peers. Type-safe secret_source. |
 | v3.12.0 | A+  | A+          | A+           | A+               | Wake-up self-model contract (#56): Runtime Contract replaces overloaded capabilities block. CDD/review skill hardening (#57): issue AC gates, multi-format parity. |
 | v3.11.0 | A+  | A+          | A+           | A                | N-pass merge + misplaced ops correction (#51). Structured output reverted (needs rework). |
@@ -49,6 +50,33 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v3.13.0 (2026-03-24)
+
+**Docs Governance: CDD Pipeline, Self-Coherence, Feature Bundles (#75)**
+
+Development method and documentation governance made explicit and self-enforcing.
+
+### Added
+
+- **CDD §5.1 pipeline table** — 9 steps (0–8), each with explicit deliverable artifacts and locations. Bootstrap-first rule: first diff on a branch must create the version directory with stubs.
+- **CDD §7.8 self-coherence report** — new artifact format (`SELF-COHERENCE.md`) in version directories. Records pipeline compliance, triadic assessment, checklist pass, known debt, and reviewer notes.
+- **DOCUMENTATION-SYSTEM.md §3 single version lineage** — all docs use cnos release versions. No independent per-document version lineages. Frozen legacy snapshots explicitly allowed to retain historical versions.
+- **Feature bundles** — `docs/alpha/agent-runtime/`, `docs/alpha/runtime-extensions/`, `docs/gamma/cdd/` with bundle READMEs, version directories, and frozen snapshots.
+- **CDD skill §4.0 bootstrap** — executable skill now requires version-directory creation before any artifacts.
+- **CDD skill §4.8 self-coherence** — executable skill now requires self-coherence report before review.
+
+### Changed
+
+- **CDD §7.3 process artifacts** — fixed stale references: `RULES.md` → `docs/gamma/RULES.md`, removed nonexistent `RELEASE.md`, `PLAN.md` → `docs/gamma/plans/`.
+- **CDD §5.0 branch naming** — canonical format `{agent}/{issue}-{scope}-{version}`, tooling suffix rule.
+- **Placeholder syntax** — governance docs now use `{placeholder}` instead of `<placeholder>` to prevent GitHub markdown stripping.
+
+### Removed
+
+- **CURIOSITY mindset** — removed `packages/cnos.core/mindsets/CURIOSITY.md`.
 
 ---
 
