@@ -5,7 +5,7 @@ How CNOS and Triadic Self-Coherence relate to prior people, ideas, and systems.
 | | |
 |---|---|
 | **Version** | 3.14.0 |
-| **Status** | Draft |
+| **Status** | Converged |
 | **Doc-Class** | reference |
 | **Canonical-Path** | docs/beta/LINEAGE.md |
 | **Owns** | structural debts, direct catalysts, conceptual lineage, substrate precursors, documentation and workflow influences |
@@ -15,7 +15,7 @@ How CNOS and Triadic Self-Coherence relate to prior people, ideas, and systems.
 
 ## Purpose
 
-This document records the structural lineage behind CNOS and Triadic Self-Coherence. It is a dependency map, not a prestige wall. A name belongs here only if the person or system changed one of the following:
+This document records the structural lineage behind CNOS and Triadic Self-Coherence. It is a dependency map, not a prestige wall. Entries are grouped by kind of influence, not by importance or chronology. A name belongs here only if the person or system changed one of the following:
 
 - the formalism
 - the architecture
@@ -37,25 +37,19 @@ This document does not claim that the people named here endorse CNOS, agree with
 
 Applied rigor pressure to claims about truth, love, and agency.
 
-Role in lineage: catalyst.
+Type: catalyst.
 
 ### David Lattimore Gay
 
 Pushed architectural rigor and translation of abstraction into executable design.
 
-Role in lineage: mentor.
+Type: mentor.
 
 ### Evgeny Perevalov
 
 Made the Whole a live problem rather than a decorative philosophical term.
 
-Role in lineage: initiating pressure.
-
-### Seb Holington
-
-Pushed for formal whitepapers and explicit articulation instead of leaving the system implicit.
-
-Role in lineage: documentation discipline.
+Type: initiating pressure.
 
 ---
 
@@ -63,49 +57,49 @@ Role in lineage: documentation discipline.
 
 ### Karl Friston
 
-Pressure toward self-organisation, active inference, and systemic integrity.
+Self-organisation, free energy, and active inference as pressure toward systemic integrity.
 
-Role in lineage: systems-theoretic influence.
+Type: systems-theoretic influence.
 
 ### David Bohm
 
 Dialogue, implicate order, and preservation of concurrent articulation.
 
-Role in lineage: process and dialogue influence.
+Type: process and dialogue influence.
 
 ### Michael Levin
 
 Agency across scales, collective intelligence, and permeable boundaries.
 
-Role in lineage: agential systems influence.
+Type: agential systems influence.
 
 ### Riccardo Manzotti
 
 Object-mind identity and pressure against representational shortcuts.
 
-Role in lineage: ontological influence.
+Type: ontological influence.
 
 ---
 
-## Infrastructure Lineage
+## Substrate and Open Systems Lineage
 
 ### Linus Torvalds
 
 Git object model, distributed history, merges, and content-addressed state.
 
-Role in lineage: substrate precursor.
+Type: substrate precursor.
 
 ### Richard Stallman
 
 Software freedom as a substrate requirement rather than a licensing ornament.
 
-Role in lineage: ethical boundary.
+Type: freedom boundary.
 
 ### Eric S. Raymond
 
-Public-by-default development and bazaar-style open collaboration.
+Bazaar-style open collaboration and public-by-default development.
 
-Role in lineage: open development influence.
+Type: open development influence.
 
 ---
 
@@ -113,15 +107,21 @@ Role in lineage: open development influence.
 
 ### Naomi Gleit
 
-Canonical documents, recursive documentation, and single-source project orientation.
+Canonical documents and single-source project orientation.
 
-Role in lineage: documentation governance.
+Type: documentation governance.
+
+### Seb Holington
+
+Pushed for formal whitepapers and explicit articulation instead of leaving the system implicit.
+
+Type: documentation discipline.
 
 ### David Allen
 
-Externalized workflow, trusted capture, and inbox discipline.
+Externalized workflow, trusted capture, and regular review.
 
-Role in lineage: workflow influence.
+Type: workflow influence.
 
 ---
 
