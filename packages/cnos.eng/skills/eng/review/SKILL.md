@@ -121,6 +121,20 @@ Check whether the change creates obligations on code it didn't touch.
   - ❌ Approve a file-move PR without grepping for old paths
   - ✅ `grep -r 'docs/gamma/RULES.md' docs/ src/ packages/ --include='*.md' | grep -v '/3.13.0/' | grep -v '/3.14.1/'` → zero matches → cross-refs clean
 
+2.2.6. **Execution timeline for state-changing paths**
+  - If code runs across a process boundary (binary replacement, daemon restart, re-exec), trace which process holds which values at each step
+  - In-process constants (`Cn_lib.version`, module-level refs) reflect the *old* binary after replacement — they do not magically update
+  - ❌ "reconcile_packages uses Cn_lib.version → correct" (structurally correct, but old process holds old version after binary replacement)
+  - ✅ "After do_update replaces the binary, re_exec into the new binary before calling reconcile_packages — old process version constants are stale"
+  - ❌ "update_runtime calls `cn --version` via shell, status uses Cn_lib.version — both read version" (two different truth reads in the same process)
+  - ✅ "Unify: either all paths read in-process, or all paths shell out. Mixed reads create divergence windows."
+
+2.2.7. **Derivation vs validation**
+  - If an AC claims "single source of truth" or "one-file edit," verify that a *generation* step exists, not just a *check* step
+  - A CI script that fails when manifests don't match VERSION is validation. A build step that writes manifests from VERSION is derivation. Only derivation satisfies "edit one file"
+  - ❌ "CI script validates manifests match VERSION → AC2 (one-file bump) met" (validation ≠ derivation — you still edit 5 files, CI just yells if you miss one)
+  - ✅ "AC2 says one-file bump → verify: after editing VERSION, how many other files need manual edits? If >0, AC2 is not met — need a stamp/generate step"
+
 ### 2.3 Verdict — the judgment
 
 The verdict is a function of the worst named incoherence.
