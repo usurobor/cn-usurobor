@@ -16,6 +16,8 @@ Coherence-Driven Development: the method used to evolve cnos coherently.
 |----------|-------|-------------|
 | [CDD.md](./CDD.md) | Canonical spec | Full CDD method: gap → mode → artifacts → review → gate → release → assess |
 | [AGILE-PROCESS.md](./AGILE-PROCESS.md) | Reference | Lightweight agile process for async agent collaboration |
+| [POST-RELEASE-EPOCH-v3.12.md](./POST-RELEASE-EPOCH-v3.12.md) | Assessment | Epoch assessment: v3.12.0–v3.12.2 (Runtime Contract v1 + authority hardening) |
+| [POST-RELEASE-EPOCH-v3.14.md](./POST-RELEASE-EPOCH-v3.14.md) | Assessment | Epoch assessment: v3.14.0–v3.14.2 (RT v2 + CDD governance + bundle migration) |
 
 ---
 
