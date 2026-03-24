@@ -292,7 +292,7 @@ Several documents in `docs/alpha/` use version-stamped filenames at the root lev
 
 ### What stays, what moves
 
-- **Canonical specs stay at their current root paths.** `alpha/AGENT-RUNTIME.md` and `alpha/RUNTIME-EXTENSIONS.md` remain where they are. Bundle READMEs link to them. No moved notices needed.
+- **Canonical specs live inside their feature bundle.** All 18 former root-level specs have been moved into thematic subdirectories (v3.14.3, #86): `agent-runtime/`, `cli/`, `cognitive-substrate/`, `ctb/`, `doctrine/`, `protocol/`, `runtime-extensions/`, `security/`. Bundle READMEs link to them.
 - **Snapshots move into version directories in their owning bundle.** The Runtime Extensions snapshot moved from `alpha/versions/runtime-extensions/v1.0.6.md` to `alpha/runtime-extensions/1.0.6/SPEC.md`. Version history now lives with the feature it belongs to.
 - **Feature-scoped design docs have been migrated** (v3.14.2, #81). Moved-notices remain at old paths; they will be removed in a future release.
 - **Legacy plans have been migrated** to `gamma/plans/` (v3.14.2, #81). Moved-notices remain at old paths.
