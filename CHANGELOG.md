@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.14.0 | A   | A           | A-           | A                | Runtime Contract v2 (#62): vertical self-model (identity, cognition, body, medium). Zone classification for all paths. All architecture docs updated. Doctor structural validation. |
 | v3.13.0 | A-  | A-          | A-           | A-               | Docs governance (#75): CDD pipeline with per-step artifacts, self-coherence report format, single cnos version lineage, feature bundles, frozen snapshots, bootstrap-first rule. CDD skill synced. |
 | v3.12.1 | A+  | A+          | A+           | A+               | Daemon boot log declares config sources (#61): version, hub, profile, model, secrets provenance, peers. Type-safe secret_source. |
 | v3.12.0 | A+  | A+          | A+           | A+               | Wake-up self-model contract (#56): Runtime Contract replaces overloaded capabilities block. CDD/review skill hardening (#57): issue AC gates, multi-format parity. |
