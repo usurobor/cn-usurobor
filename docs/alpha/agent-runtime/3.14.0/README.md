@@ -15,4 +15,4 @@
 ## Freeze Notice
 
 This directory is frozen. Contents MUST NOT be modified after creation.
-The canonical evolving doc is `docs/alpha/RUNTIME-CONTRACT-v2.md`.
+The canonical evolving doc is `docs/alpha/agent-runtime/RUNTIME-CONTRACT-v2.md`.

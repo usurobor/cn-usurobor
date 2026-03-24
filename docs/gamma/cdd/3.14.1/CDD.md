@@ -340,9 +340,9 @@ CDD uses the standard cnos artifact set.
 Role: define first principles and normative boundaries.
 
 ### 7.2 Design artifacts
-- `docs/alpha/CAA.md`
-- `docs/alpha/AGENT-RUNTIME.md`
-- `docs/alpha/CAR.md`
+- `docs/alpha/agent-runtime/CAA.md`
+- `docs/alpha/agent-runtime/AGENT-RUNTIME.md`
+- `docs/alpha/cognitive-substrate/CAR.md`
 
 Role: define the structural system.
 
