@@ -443,6 +443,13 @@ Before merge or release, verify each item. A missing item is a known coherence d
   - ❌ Ship v3.6.0 with β = B+ when v3.5.1 was β = A+, no explanation
   - ✅ "β dropped from A+ to A because traceability docs lag — tracked, will fix in v3.6.1"
 
+9.11. **Previous release post-release assessment exists**
+  - Before tagging a new release, verify that the previous release has a completed post-release assessment (§11)
+  - The assessment may be individual or part of an epoch assessment covering the previous release
+  - This gate prevents the accumulation of unassessed releases — the failure mode described in #85
+  - ❌ Tag v3.15.0 when v3.14.5 has no post-release assessment
+  - ✅ "v3.14.5 assessment exists (POST-RELEASE-EPOCH-v3.14.md covers v3.14.0–v3.14.2; individual assessments exist for v3.14.3+)"
+
 ---
 
 ## 10. Release and Close
