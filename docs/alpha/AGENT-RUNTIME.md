@@ -709,7 +709,7 @@ apply_mode: branch
 exec_enabled: true
 exec_allowlist: make, dune, ocamlfind
 budgets: max_observe_ops=10, max_artifact_bytes=65536, max_artifact_bytes_per_op=16384
-max_passes: 2
+max_passes: 5
 ```
 
 Rules:
@@ -1054,9 +1054,9 @@ This ordering ensures the system never advances narrative state (FSM) when the w
 
 #### Loop prevention
 
-- **`max_passes = 2`** (Pass A + Pass B). Hard limit, not configurable.
-- If Pass B output requests observe ops: they are denied with receipt `status: denied`, `reason: max_passes_exceeded`. No third call.
-- If Pass B fails (LLM error, timeout), the system stops. No retry loop.
+- **`max_passes`** configurable in `runtime.shell` (default: 5). Bounds the N-pass loop.
+- If the pass limit is reached and the agent requests more observe ops: they are denied with receipt `status: denied`, `reason: max_passes_exceeded`. No further calls.
+- If any pass fails (LLM error, timeout), the system stops. No retry loop.
 
 #### Cost control via pre-packing
 
@@ -1069,7 +1069,7 @@ Most "read this file" requests SHOULD be satisfied without observe ops at all �
 | Max observe ops per pass | 10 | Covers typical investigate-then-act (read 3–5 files + 2–3 git queries, headroom for growth) | `runtime.max_observe_ops` |
 | Max artifact bytes (total) | 64 KB | Fits comfortably in context window (~16K tokens) alongside skills + conversation | `runtime.max_artifact_bytes` |
 | Max artifact bytes (per op) | 16 KB | Single file/diff should not dominate artifact budget | `runtime.max_artifact_bytes_per_op` |
-| Max passes | 2 | Hard limit — not configurable | — |
+| Max passes | 5 | Configurable — controls how many observe→orient→act cycles the runtime permits | `runtime.max_passes` |
 
 Ops exceeding budgets receive receipt `status: denied`, `reason: budget_exceeded`.
 
@@ -1223,10 +1223,11 @@ type response = {
 type packed_context = {
   soul : string;                    (* spec/SOUL.md *)
   user : string;                    (* spec/USER.md *)
-  mindsets : string;                (* src/agent/mindsets/, deterministic order, role-aware *)
+  mindsets : string;                (* installed packages + agent/ overrides, via CAR *)
   daily_threads : string list;      (* threads/reflections/daily/, last 3 *)
   weekly_thread : string option;    (* threads/reflections/weekly/, current *)
-  skills : string list;             (* src/agent/skills/**/SKILL.md, role-weighted *)
+  skills : string list;             (* installed packages + agent/ overrides, via CAR *)
+  runtime_contract : string;        (* Runtime Contract v2: self_model + workspace + capabilities *)
   conversation : llm_message list;  (* state/conversation.json, last 10 *)
   inbound_message : string;         (* the Telegram message text *)
 }
@@ -1796,7 +1797,7 @@ ops: [{"kind":"fs_patch","op_id":"patch-readme","path":"docs/README.md","unified
 
 **Runtime behavior (Pass B):**
 1. Parse manifest → 0 observe, 1 effect (`fs_patch`)
-2. No observe ops in Pass B → execute effects directly (no Pass C — `max_passes = 2`)
+2. No observe ops in Pass B → execute effects directly (no further passes needed)
 3. `apply_mode: branch` → ensure branch `cn/20260305-091500-def` exists (create or checkout)
 4. Sandbox check `docs/README.md` → passes (not in denylist, not a protected file)
 5. Apply unified diff → success
