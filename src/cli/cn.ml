@@ -49,7 +49,7 @@ let () =
   | Some Update ->
       (match Cn_hub.find_hub_path (Cn_ffi.Process.cwd ()) with
        | Some hub_path -> Cn_system.run_update_with_cron hub_path
-       | None -> Cn_system.run_update ())
+       | None -> Cn_system.run_update None)
   | Some (Release v) ->
       let hub_path_opt = Cn_hub.find_hub_path (Cn_ffi.Process.cwd ()) in
       Cn_system.run_release hub_path_opt v
