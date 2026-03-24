@@ -23,7 +23,7 @@ Make cnos documentation governance self-consistent: explicit artifact expectatio
 4. **Bootstrap CDD v1.3.0** — create version directory `docs/gamma/cdd/v3.13.0/` with stub files (later renamed from v1.3.0 to v3.13.0)
 5. **CDD §5 rewrite** — pipeline table with 9 steps (0–8), each with explicit deliverable artifacts and locations; bootstrap-first rule
 6. **cnos-aligned versioning** — single version lineage rule in DOCUMENTATION-SYSTEM.md §3; no per-document versions
-7. **Branch naming** — CDD §5.0 naming convention: `<agent>/<issue>-<scope>-<version>`; tooling suffix rule
+7. **Branch naming** — CDD §5.0 naming convention: `{agent}/{issue}-{scope}-{version}`; tooling suffix rule
 
 ### Phase 3: Self-coherence review (commit dc69e11)
 
