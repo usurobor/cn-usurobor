@@ -16,6 +16,8 @@ Coherence-Driven Development: the method used to evolve cnos coherently.
 |----------|-------|-------------|
 | [CDD.md](./CDD.md) | Canonical spec | Full CDD method: gap → mode → artifacts → review → gate → release → assess |
 | [AGILE-PROCESS.md](./AGILE-PROCESS.md) | Reference | Lightweight agile process for async agent collaboration |
+| [POST-RELEASE-EPOCH-v3.12.md](./POST-RELEASE-EPOCH-v3.12.md) | Assessment | Epoch assessment: v3.12.0–v3.12.2 (Runtime Contract v1 + authority hardening) |
+| [POST-RELEASE-EPOCH-v3.14.md](./POST-RELEASE-EPOCH-v3.14.md) | Assessment | Epoch assessment: v3.14.0–v3.14.5 (RT v2 + CDD governance + bundle migration) |
 
 ---
 
@@ -30,6 +32,7 @@ Coherence-Driven Development: the method used to evolve cnos coherently.
 
 | Version | Directory | Highlights |
 |---------|-----------|-----------|
+| v3.14.6 | [3.14.6/](3.14.6/) | Epoch 2 addendum: v3.14.3–v3.14.5 coverage (#85). |
 | v3.14.5 | [3.14.5/](3.14.5/) | Gamma root migration (#91). AGILE-PROCESS.md joins CDD bundle. |
 | v3.14.4 | [3.14.4/](3.14.4/) | Beta reorg (#89). CDD §5.1 freeze semantics note. |
 | v3.14.1 | [3.14.1/](3.14.1/) | CDD post-release tightening (#78). |
