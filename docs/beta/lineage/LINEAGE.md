@@ -7,7 +7,7 @@ How CNOS and Triadic Self-Coherence relate to prior people, ideas, and systems.
 | **Version** | 3.14.0 |
 | **Status** | Converged |
 | **Doc-Class** | reference |
-| **Canonical-Path** | docs/beta/LINEAGE.md |
+| **Canonical-Path** | docs/beta/lineage/LINEAGE.md |
 | **Owns** | structural debts, direct catalysts, conceptual lineage, substrate precursors, documentation and workflow influences |
 | **Does-Not-Own** | endorsements, biography, personal gratitude, project history |
 
