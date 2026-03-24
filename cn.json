@@ -3,7 +3,7 @@
   "protocol": "git-cn-v1",
   "kind": "system",
   "name": "cnos",
-  "version": "3.14.6",
+  "version": "3.14.7",
   "description": "A recurrent coherence system — runtime, doctrine, packages, and tools for coherent agents",
   "repo_urls": [
     "https://github.com/usurobor/cnos"
