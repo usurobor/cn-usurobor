@@ -212,6 +212,6 @@ This file states the theory/practice dependency stack.
 | [CAA.md](./CAA.md) | What a coherent agent is structurally |
 | [AGENT-RUNTIME.md](./AGENT-RUNTIME.md) | How coherent action runs |
 | [CAR.md](./CAR.md) | How cognition arrives locally |
-| [CDD.md](../gamma/CDD.md) | How cnos itself evolves coherently |
+| [CDD.md](../gamma/cdd/CDD.md) | How cnos itself evolves coherently |
 
 FOUNDATIONS explains the ground. The other docs explain the practices built on it.

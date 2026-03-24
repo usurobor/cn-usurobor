@@ -615,7 +615,7 @@ A release is a milestone on the coherence gradient:
 - `docs/alpha/cognitive-substrate/CAR.md`
 
 ### Development method / How cnos evolves coherently
-- `docs/gamma/CDD.md`
+- `docs/gamma/cdd/CDD.md`
 
 This document sits between the whitepaper and the individual design docs:
 - the whitepaper defines the thesis for external audiences

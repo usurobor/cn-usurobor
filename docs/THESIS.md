@@ -720,7 +720,7 @@ It is a milestone on the coherence gradient.
 - `docs/alpha/security/TRACEABILITY.md`
 
 ### Development method / How cnos evolves coherently
-- `docs/gamma/CDD.md`
+- `docs/gamma/cdd/CDD.md`
 
 This document sits above them:
 - not to replace them
