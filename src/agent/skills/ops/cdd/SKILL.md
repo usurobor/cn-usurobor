@@ -198,7 +198,7 @@ Follow the pipeline. Each step feeds the next.
   - Required sections: pipeline compliance table, triadic assessment (α/β/γ scores with rationale), checklist pass, known coherence debt, reviewer notes
   - Placement: `docs/{tier}/{bundle}/vX.Y.Z/SELF-COHERENCE.md`
   - Small changes covered by §1.2 do not require a self-coherence report
-  - See `docs/gamma/CDD.md` §7.8 for the full format template
+  - See `docs/gamma/cdd/CDD.md` §7.8 for the full format template
   - ❌ Request review without recording your own compliance assessment
   - ✅ Write SELF-COHERENCE.md, score each pipeline step, list known debt, then request review
 
@@ -601,17 +601,17 @@ CDD defines what must happen and in what order. Sub-skills define how.
 
 ## Authority
 
-This skill is the **executable summary** of CDD. The **authoritative source** for the full artifact contract, pipeline table, frozen-snapshot rules, self-coherence report format, and governance detail is `docs/gamma/CDD.md`. When this skill and the canonical doc disagree, the canonical doc governs.
+This skill is the **executable summary** of CDD. The **authoritative source** for the full artifact contract, pipeline table, frozen-snapshot rules, self-coherence report format, and governance detail is `docs/gamma/cdd/CDD.md`. When this skill and the canonical doc disagree, the canonical doc governs.
 
 ---
 
 ## Reference
 
 - Coherence history: `CHANGELOG.md` (TSC table — α/β/γ per release)
-- **Canonical CDD method doc: `docs/gamma/CDD.md`** (authoritative for full artifact contract)
+- **Canonical CDD method doc: `docs/gamma/cdd/CDD.md`** (authoritative for full artifact contract)
 - Triadic coherence model: `packages/cnos.core/doctrine/COHERENCE.md`
 - CAP (MCA/MCI): `packages/cnos.core/doctrine/CAP.md`
-- Agile workflow integration: `docs/gamma/AGILE-PROCESS.md`
+- Agile workflow integration: `docs/gamma/cdd/AGILE-PROCESS.md`
 - Release procedure: `packages/cnos.core/skills/release/SKILL.md`
 - Design doc creation: `packages/cnos.eng/skills/eng/design/SKILL.md`
 - Code coherence: `packages/cnos.eng/skills/eng/coding/SKILL.md`

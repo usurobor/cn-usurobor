@@ -257,5 +257,5 @@ hub/
 | [CAA.md](../alpha/agent-runtime/CAA.md) | Agent structure — this doc maps it to runtime modules |
 | [AGENT-RUNTIME.md](../alpha/agent-runtime/AGENT-RUNTIME.md) | Runtime spec — this doc shows how it relates to FSMs and observability |
 | [PROTOCOL.md](../alpha/protocol/PROTOCOL.md) | FSM design — this doc shows how FSMs compose |
-| [CDD.md](../gamma/CDD.md) | Development method — governs how all these relations evolve |
+| [CDD.md](../gamma/cdd/CDD.md) | Development method — governs how all these relations evolve |
 | [AUDIT.md](./evidence/AUDIT.md) | Evidence — tracks which relations are current vs stale |
