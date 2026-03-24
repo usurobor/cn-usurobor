@@ -511,20 +511,40 @@ The system works one way, but teaches another.
 
 ---
 
-## 11. The Place of Human Judgment
+## 11. Post-Release Assessment
 
-CDD is rigorous, but not mechanical.
+CDD does not end at merge. Every release triggers a post-release assessment.
 
-It requires judgment:
+The assessment has four mandatory parts:
+
+1. **Coherence measurement** — score α/β/γ, compare to baseline, update CHANGELOG TSC table
+2. **Encoding lag report** — all converged-but-unimplemented design commitments in a lag table (none/low/growing/stale)
+3. **Process learning** — what went wrong, what went right, skill patches executed immediately
+4. **Next move commitment** — concrete next MCA (issue, owner, branch, first AC, freeze state)
+
+### Rules
+
+- After every release, all outstanding MCI must be captured in the Encoding Lag table.
+- The MCI/MCA balance decision is mandatory (balanced / freeze MCI / resume MCI).
+- The next MCA must be named concretely: issue number, owner, first AC, freeze/resume state.
+- Small process/skill corrections discovered in the assessment should be executed immediately.
+- Larger MCA becomes the next delivery cycle's work.
+- "Freeze MCI" means operationally: no new substantial design docs or plans until the committed MCA backlog is reduced below threshold.
+
+### Delegation
+
+The full procedure is defined in `ops/post-release/SKILL.md`. CDD §11 defines the requirement; the skill defines the execution.
+
+### Human judgment
+
+CDD is rigorous, but not mechanical. It requires judgment:
 
 - when to stop iterating
 - what counts as the real gap
 - whether a contradiction is superficial or structural
 - whether a release is coherent enough
 
-CLP exists because coherence cannot always be inferred from checklists alone. But checklists still matter.
-
-This also means CDD must not become a gate that blocks shipping. CA-CONDUCT says: "Done beats perfect. Bias for action." CDD's role is to ensure that action is coherent, not to replace action with ceremony.
+CLP exists because coherence cannot always be inferred from checklists alone. But checklists still matter. CDD must not become a gate that blocks shipping. CA-CONDUCT says: "Done beats perfect. Bias for action." CDD's role is to ensure that action is coherent, not to replace action with ceremony.
 
 ---
 
@@ -543,6 +563,7 @@ This also means CDD must not become a gate that blocks shipping. CA-CONDUCT says
 9. Update docs
 10. Release with notes
 11. Observe the running system
+12. Post-release assessment (measurement, lag, learning, next move)
 
 For a small change, the coherence contract can be a single sentence in the commit message or PR description. The method scales down.
 
