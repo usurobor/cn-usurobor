@@ -155,4 +155,4 @@ Security is enforced across the module stack:
 | `cn_commands.ml` | Peer add/remove, commit/push scoped to hub |
 | `cn_hub.ml` | Hub discovery, path constants |
 
-See [ARCHITECTURE.md](../beta/ARCHITECTURE.md) for module structure and dependency layers.
+See [ARCHITECTURE.md](../beta/architecture/ARCHITECTURE.md) for module structure and dependency layers.

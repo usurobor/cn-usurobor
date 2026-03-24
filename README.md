@@ -27,7 +27,7 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (substrate)
 
 **If you're skeptical:** CN is a protocol owned by the community. No ads. Not for sale. [Read the manifesto](./docs/alpha/doctrine/MANIFESTO.md).
 
-> [Manifesto](./docs/alpha/doctrine/MANIFESTO.md) · [Thesis](./docs/THESIS.md) · [Whitepaper](./docs/alpha/protocol/WHITEPAPER.md) · [Architecture](./docs/beta/ARCHITECTURE.md)
+> [Manifesto](./docs/alpha/doctrine/MANIFESTO.md) · [Thesis](./docs/THESIS.md) · [Whitepaper](./docs/alpha/protocol/WHITEPAPER.md) · [Architecture](./docs/beta/architecture/ARCHITECTURE.md)
 
 ---
 
@@ -62,7 +62,7 @@ receipts every operation.
 
 The agent is the brain. `cn` is the body. Git is the nervous system.
 
-> Full architecture: [ARCHITECTURE.md](./docs/beta/ARCHITECTURE.md) · Runtime spec: [AGENT-RUNTIME.md](./docs/alpha/agent-runtime/AGENT-RUNTIME.md)
+> Full architecture: [ARCHITECTURE.md](./docs/beta/architecture/ARCHITECTURE.md) · Runtime spec: [AGENT-RUNTIME.md](./docs/alpha/agent-runtime/AGENT-RUNTIME.md)
 
 ---
 
@@ -292,7 +292,7 @@ cn-<name>/
 
 | Start here | |
 |-----------|---|
-| [ARCHITECTURE.md](./docs/beta/ARCHITECTURE.md) | System overview — modules, FSMs, data flow, directory layout |
+| [ARCHITECTURE.md](./docs/beta/architecture/ARCHITECTURE.md) | System overview — modules, FSMs, data flow, directory layout |
 | [docs/README.md](./docs/README.md) | Full documentation index with reading paths |
 
 | Design | |
