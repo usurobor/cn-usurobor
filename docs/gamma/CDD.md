@@ -224,11 +224,11 @@ The canonical branch name format is:
 | `{agent}` | Yes | The actor performing the work | `claude`, `sigma`, `pi` |
 | `{issue}` | Yes | Issue number from the tracker | `75` |
 | `{scope}` | Yes | Short kebab-case topic | `docs-governance` |
-| `{version}` | When known | Target cnos release version | `v3.13.0` |
+| `{version}` | When known | Target cnos release version | `3.13.0` |
 
 Examples:
-- `claude/75-docs-governance-v3.13.0`
-- `sigma/42-actor-model-v3.14.0`
+- `claude/75-docs-governance-3.13.0`
+- `sigma/42-actor-model-3.14.0`
 - `pi/58-packages-sync`
 
 **Tooling suffixes.** Some CI or automation systems append session identifiers to branch names (e.g., `-PfdYZ`). These are transport artifacts, not part of the logical branch name. Reviews, commit messages, and documentation SHOULD reference the branch by its logical name without the suffix.
