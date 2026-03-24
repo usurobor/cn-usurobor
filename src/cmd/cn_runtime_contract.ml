@@ -16,6 +16,7 @@
 
 type package_info = {
   name : string;
+  version : string;
   doctrine_count : int;
   mindset_count : int;
   skill_count : int;
@@ -129,6 +130,12 @@ let gather ~hub_path ~(shell_config : Cn_shell.shell_config)
   let packages =
     Cn_assets.list_installed_packages hub_path
     |> List.map (fun (pkg_name, pkg_path) ->
+      (* Extract version from directory name (e.g. cnos.core@3.15.0) *)
+      let dir_name = Filename.basename pkg_path in
+      let pkg_version = match String.index_opt dir_name '@' with
+        | Some i -> String.sub dir_name (i + 1) (String.length dir_name - i - 1)
+        | None -> "unknown"
+      in
       let doctrine_dir = Cn_ffi.Path.join pkg_path "doctrine" in
       let doctrine_count =
         if Cn_ffi.Fs.exists doctrine_dir then
@@ -147,7 +154,8 @@ let gather ~hub_path ~(shell_config : Cn_shell.shell_config)
       in
       let skills_dir = Cn_ffi.Path.join pkg_path "skills" in
       let skill_count = List.length (Cn_assets.walk_skills skills_dir) in
-      { name = pkg_name; doctrine_count; mindset_count; skill_count })
+      { name = pkg_name; version = pkg_version;
+        doctrine_count; mindset_count; skill_count })
   in
 
   (* Override info: scan agent/ directories *)
@@ -231,8 +239,8 @@ was absent in a prior session), this contract supersedes them.\n\n";
   else begin
     Buffer.add_char buf '\n';
     List.iter (fun (p : package_info) ->
-      Buffer.add_string buf (Printf.sprintf "  - %s (%d doctrine, %d mindsets, %d skills)\n"
-        p.name p.doctrine_count p.mindset_count p.skill_count)
+      Buffer.add_string buf (Printf.sprintf "  - %s@%s (%d doctrine, %d mindsets, %d skills)\n"
+        p.name p.version p.doctrine_count p.mindset_count p.skill_count)
     ) c.cognition.packages
   end;
 
@@ -302,6 +310,7 @@ let to_json ~(shell_config : Cn_shell.shell_config) (c : runtime_contract) =
       "installed_packages", Cn_json.Array (List.map (fun (p : package_info) ->
         Cn_json.Object [
           "name", str p.name;
+          "version", str p.version;
           "doctrine_count", Cn_json.Int p.doctrine_count;
           "mindset_count", Cn_json.Int p.mindset_count;
           "skill_count", Cn_json.Int p.skill_count;
