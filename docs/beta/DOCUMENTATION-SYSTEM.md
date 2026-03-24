@@ -275,27 +275,27 @@ Several documents in `docs/alpha/` use version-stamped filenames at the root lev
 
 ### Legacy version-stamped files
 
-| File | Class | Migration target |
-|------|-------|-----------------|
-| `N-PASS-BIND-3.8.0.md` | Feature-scoped design doc | `alpha/agent-runtime/` bundle |
-| `RUNTIME-CONTRACT-v3.10.0.md` | Feature-scoped design doc | `alpha/agent-runtime/` bundle |
-| `SYSCALL-SURFACE-v3.8.0.md` | Feature-scoped design doc | `alpha/agent-runtime/` bundle |
-| `SCHEDULER-v3.7.0.md` | Feature-scoped design doc | `alpha/agent-runtime/` bundle |
-| `CTB-v4.0.0-VISION.md` | Vision doc | Stays at root (cross-cutting) |
+| File | Class | Migration target | Status |
+|------|-------|-----------------|--------|
+| `N-PASS-BIND-v3.8.0.md` | Feature-scoped design doc | `alpha/agent-runtime/3.8.0/N-PASS-BIND.md` | **Migrated** (#81) |
+| `RUNTIME-CONTRACT-v3.10.0.md` | Feature-scoped design doc | `alpha/agent-runtime/3.10.0/DESIGN.md` | **Migrated** (#81) |
+| `SYSCALL-SURFACE-v3.8.0.md` | Feature-scoped design doc | `alpha/agent-runtime/3.8.0/SYSCALL-SURFACE.md` | **Migrated** (#81) |
+| `SCHEDULER-v3.7.0.md` | Feature-scoped design doc | `alpha/agent-runtime/3.7.0/DESIGN.md` | **Migrated** (#81) |
+| `CTB-v4.0.0-VISION.md` | Vision doc | Stays at root (cross-cutting) | No action needed |
 
 ### Legacy plans at alpha root
 
-| File | Migration target |
-|------|-----------------|
-| `PLAN-v3.7.0.md` | `gamma/plans/` |
-| `PLAN-v3.8.0-syscall-surface.md` | `gamma/plans/` |
+| File | Migration target | Status |
+|------|-----------------|--------|
+| `PLAN-v3.7.0.md` | `gamma/plans/PLAN-v3.7.0-scheduler.md` | **Migrated** (#81) |
+| `PLAN-v3.8.0-syscall-surface.md` | `gamma/plans/PLAN-v3.8.0-syscall-surface.md` | **Migrated** (#81) |
 
 ### What stays, what moves
 
 - **Canonical specs stay at their current root paths.** `alpha/AGENT-RUNTIME.md` and `alpha/RUNTIME-EXTENSIONS.md` remain where they are. Bundle READMEs link to them. No moved notices needed.
 - **Snapshots move into version directories in their owning bundle.** The Runtime Extensions snapshot moved from `alpha/versions/runtime-extensions/v1.0.6.md` to `alpha/runtime-extensions/1.0.6/SPEC.md`. Version history now lives with the feature it belongs to.
-- **Feature-scoped design docs are not moved in this version.** They are documented in the table above. Future migration: move into the owning bundle's version directory (e.g., `N-PASS-BIND-3.8.0.md` → `agent-runtime/3.8.0/DESIGN.md`), leave a one-line moved-notice at the old path.
-- **Legacy plans at alpha root are not moved in this version.** Future migration: move to `gamma/plans/`.
+- **Feature-scoped design docs have been migrated** (v3.14.2, #81). Moved-notices remain at old paths; they will be removed in a future release.
+- **Legacy plans have been migrated** to `gamma/plans/` (v3.14.2, #81). Moved-notices remain at old paths.
 - New documents MUST follow the bundle/placement rules above.
 - A moved-notice is a file that says: `Moved to <new-path>. This file will be removed in a future release.`
 
