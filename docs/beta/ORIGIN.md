@@ -4,7 +4,7 @@ How CNOS came to be.
 
 | | |
 |---|---|
-| **Version** | 1.0.0 |
+| **Version** | 3.14.0 |
 | **Status** | Converged |
 | **Doc-Class** | reference |
 | **Canonical-Path** | docs/beta/ORIGIN.md |

@@ -4,7 +4,7 @@ How CNOS and Triadic Self-Coherence relate to prior people, ideas, and systems.
 
 | | |
 |---|---|
-| **Version** | 1.0.2 |
+| **Version** | 3.14.0 |
 | **Status** | Draft |
 | **Doc-Class** | reference |
 | **Canonical-Path** | docs/beta/LINEAGE.md |
