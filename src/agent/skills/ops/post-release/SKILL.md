@@ -32,8 +32,15 @@ The assessment produces one artifact with four sections:
 **Skill patches:** (committed Y/N, link if Y)
 
 ### 4. Next Move
-**Priority:** ...
+**Next MCA:** #NN — title
+**Owner:** ...
+**Branch:** ...
+**First AC:** ...
+**MCI frozen until shipped?** yes / no
 **Rationale:** ...
+
+**Immediate fixes** (executed in this session):
+- ...
 ```
 
 ## Procedure
@@ -59,6 +66,8 @@ The coherence note describes which incoherence was reduced, not what feature was
 
 ### Step 3: Encoding lag table
 
+All converged-but-unimplemented design commitments MUST appear in the lag table. This is not optional and has no wiggle room — if a design is converged and not shipped, it appears here.
+
 For every open design issue (issues with design docs, architecture docs, or converged plans that are not yet fully implemented):
 
 | Issue | Title | Design | Impl | Lag |
@@ -79,6 +88,8 @@ Based on the lag table:
 
 This decision is **mandatory**. Every release states the balance.
 
+**What "freeze MCI" means operationally:** No new substantial design docs, plans, or architecture proposals until the committed MCA backlog is reduced below the freeze threshold. Small clarifications to existing designs are allowed; new design commitments are not.
+
 ### Step 5: Process learning
 
 Answer three questions:
@@ -88,10 +99,20 @@ Answer three questions:
 
 ### Step 6: Decide next move
 
-Based on measurement + lag + learning, state what happens next:
-- Which issue to implement
-- Whether to freeze or resume MCI
-- Any skill/process patches to ship first
+Based on measurement + lag + learning, state what happens next as a **concrete commitment**:
+
+- **Next MCA issue:** the specific issue number to implement next
+- **Owner:** who is responsible for the next MCA
+- **Branch:** name of branch (or "pending branch creation")
+- **First AC to close:** which acceptance criterion ships first
+- **MCI frozen?** Whether MCI is frozen until this MCA ships
+
+This turns the assessment into an executable handoff, not just reflection.
+
+**Execution rule:**
+- Small process/skill fixes discovered in the assessment → execute immediately (same session)
+- Everything larger → becomes the next cycle's work via the commitment above
+- Do not attempt to execute a large MCA inside the post-release assessment itself
 
 ## Anti-patterns
 
@@ -119,7 +140,7 @@ Based on measurement + lag + learning, state what happens next:
 | #67 | Network | subsumed by #73 | not started | growing |
 
 MCI/MCA balance: **Freeze MCI** — 3 issues at growing lag.
-Next sessions are pure MCA until #62 and #73 Phase 1 ship.
+No new design docs until backlog reduced below threshold.
 
 ### Process Learning
 Wrong: Review missed CAA.md (§2.0 gate not followed). Fixed with structural table format.
@@ -127,5 +148,14 @@ Right: Three-agent review loop caught complementary gaps.
 Skill patches: review §2.0 gate (committed), CDD §7.6 output format (committed).
 
 ### Next Move
-#62 (land branch with doc fixes) → #73 Phase 1 (open op registry).
+Next MCA: #62 — Runtime Contract v2
+Owner: sigma
+Branch: claude/runtime-contract-v2-VWKUT
+First AC: CAA.md updated with wake-time architecture
+MCI frozen until shipped? Yes
+Rationale: Vertical self-model is foundation for #73, #65, #59.
+
+Immediate fixes (executed this session):
+- review §2.0 structural gate (eeca922)
+- CDD §7.6 output format (64634fb)
 ```
