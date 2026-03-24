@@ -32,7 +32,7 @@ Init - create a new hub:
   $ git config --global user.name "Test"
   $ $CN init my-hub 2>&1 | head -3
   Initializing hub: my-hub
-  * Updated state/runtime.md (glob)
+  ✓ Updated state/runtime.md
   Installing cognitive packages...
 
 Status - check hub status:
@@ -40,27 +40,27 @@ Status - check hub status:
   $ cd cn-my-hub
   $ $CN status 2>&1 | grep -E "^(cn hub|name\.)"
   cn hub: my-hub
-  name.................... * my-hub (glob)
+  name.................... ✓ my-hub
 
 Inbox (empty):
 
   $ $CN inbox 2>&1 | grep -v "^Checking"
-  * Inbox clear (glob)
+  ✓ Inbox clear
 
 Outbox (empty):
 
   $ $CN outbox 2>&1 | grep -v "^Checking"
-  * Outbox clear (glob)
+  ✓ Outbox clear
 
 Send (self-message):
 
   $ $CN send self "Test message" 2>&1 | head -1
-  * Created message to self: test-message (glob)
+  ✓ Created message to self: test-message
 
 Outbox (with message):
 
   $ $CN outbox 2>&1 | grep "test-message"
-  * test-message.md (glob)
+    → self: test-message.md
 
 Doctor - health check (version derived from VERSION file):
 
@@ -72,7 +72,7 @@ Doctor - health check (version derived from VERSION file):
 Aliases:
 
   $ $CN i 2>&1 | grep -v "^Checking"
-  * Inbox clear (glob)
+  ✓ Inbox clear
 
   $ $CN s 2>&1 | grep "^cn hub"
   cn hub: my-hub
