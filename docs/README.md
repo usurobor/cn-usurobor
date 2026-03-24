@@ -18,7 +18,7 @@ Then choose your path:
 | Understand what cnos is | [THESIS.md](./THESIS.md) → [COHERENCE-SYSTEM.md](./alpha/COHERENCE-SYSTEM.md) → [FOUNDATIONS.md](./alpha/FOUNDATIONS.md) |
 | Build or run a cnos agent | [AGENT-RUNTIME.md](./alpha/AGENT-RUNTIME.md) → [CLI.md](./alpha/CLI.md) → [HANDSHAKE.md](./beta/guides/HANDSHAKE.md) |
 | Contribute code | [CDD.md](./gamma/CDD.md) → [AGILE-PROCESS.md](./gamma/AGILE-PROCESS.md) → [ARCHITECTURE.md](./beta/ARCHITECTURE.md) |
-| Understand the runtime extensions model | [RUNTIME-EXTENSIONS.md](./alpha/RUNTIME-EXTENSIONS.md) → [runtime-extensions bundle](./alpha/3.12.0-73-runtime-extensions/) |
+| Understand the runtime extensions model | [RUNTIME-EXTENSIONS.md](./alpha/RUNTIME-EXTENSIONS.md) → [runtime-extensions bundle](./alpha/runtime-extensions/) |
 | Write or modify a skill | [WRITE-A-SKILL.md](./beta/guides/WRITE-A-SKILL.md) → [COGNITIVE-SUBSTRATE.md](./alpha/COGNITIVE-SUBSTRATE.md) |
 | Do a release | [release skill](../packages/cnos.core/skills/release/SKILL.md) → [BUILD-RELEASE.md](./beta/guides/BUILD-RELEASE.md) |
 
@@ -45,8 +45,8 @@ Related documents (spec, snapshots, design docs) are grouped into **feature bund
 
 | Bundle | Canonical spec | What it covers |
 |--------|---------------|----------------|
-| [agent-runtime/](./alpha/3.14.0-62-agent-runtime/) | [AGENT-RUNTIME.md](./alpha/AGENT-RUNTIME.md) | CN Shell, typed ops, N-pass orchestration, receipts |
-| [runtime-extensions/](./alpha/3.12.0-73-runtime-extensions/) | [RUNTIME-EXTENSIONS.md](./alpha/RUNTIME-EXTENSIONS.md) | Capability providers, discovery, isolation |
+| [agent-runtime/](./alpha/agent-runtime/) | [AGENT-RUNTIME.md](./alpha/AGENT-RUNTIME.md) | CN Shell, typed ops, N-pass orchestration, receipts |
+| [runtime-extensions/](./alpha/runtime-extensions/) | [RUNTIME-EXTENSIONS.md](./alpha/RUNTIME-EXTENSIONS.md) | Capability providers, discovery, isolation |
 
 See [DOCUMENTATION-SYSTEM.md](./beta/DOCUMENTATION-SYSTEM.md) for the full taxonomy and rules.
 
@@ -95,8 +95,8 @@ The substance of the system — doctrine, specs, definitions.
 
 | Bundle | Contents |
 |--------|----------|
-| [agent-runtime/](./alpha/3.14.0-62-agent-runtime/) | Bundle index, version-scoped design docs |
-| [runtime-extensions/](./alpha/3.12.0-73-runtime-extensions/) | Bundle index, version snapshots |
+| [agent-runtime/](./alpha/agent-runtime/) | Bundle index, version-scoped design docs |
+| [runtime-extensions/](./alpha/runtime-extensions/) | Bundle index, version snapshots |
 
 ### β — Relation: How Parts Cohere
 

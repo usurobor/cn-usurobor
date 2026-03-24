@@ -14,13 +14,13 @@ Make cnos documentation governance self-consistent: explicit artifact expectatio
 
 ### Phase 1: Foundation (commits 588495e–a513e64)
 
-1. **Feature bundles + snapshot rules** — create `docs/alpha/3.14.0-62-agent-runtime/`, `docs/alpha/3.12.0-73-runtime-extensions/` with bundle READMEs; move `runtime-extensions/v1.0.6/` into proper directory structure
+1. **Feature bundles + snapshot rules** — create `docs/alpha/agent-runtime/`, `docs/alpha/runtime-extensions/` with bundle READMEs; move `runtime-extensions/v1.0.6/` into proper directory structure
 2. **Version-as-directory** — replace `versions/spec/` flat layout with `v<X.Y.Z>/` directories; each version dir gets a frozen `README.md` manifest
 3. **Bundle contract** — tighten bundle README requirements: name canonical, scope snapshots, clarify migration
 
 ### Phase 2: CDD pipeline formalization (commits 1e37e98–728d89f)
 
-4. **Bootstrap CDD v1.3.0** — create version directory `docs/gamma/3.13.0-75-cdd/3.13.0/` with stub files (later renamed from v1.3.0 to v3.13.0)
+4. **Bootstrap CDD v1.3.0** — create version directory `docs/gamma/cdd/3.13.0/` with stub files (later renamed from v1.3.0 to v3.13.0)
 5. **CDD §5 rewrite** — pipeline table with 9 steps (0–8), each with explicit deliverable artifacts and locations; bootstrap-first rule
 6. **cnos-aligned versioning** — single version lineage rule in DOCUMENTATION-SYSTEM.md §3; no per-document versions
 7. **Branch naming** — CDD §5.0 naming convention: `{agent}/{issue}-{scope}-{version}`; tooling suffix rule
