@@ -97,7 +97,7 @@ let%expect_test "gather: produces contract with four layers" =
     Printf.printf "peers: %d\n" (List.length c.body.peers);
     Printf.printf "zones: %d\n" (List.length c.medium));
   [%expect {|
-    cn_version: 3.14.3
+    cn_version: 3.14.4
     hub_name_present: true
     profile: engineer
     packages: 2
@@ -257,7 +257,7 @@ let%expect_test "to_json: identity has version" =
       Printf.printf "cn_version: %s\n" (match ver with Some v -> v | None -> "(none)");
       Printf.printf "hub_name_present: %b\n" (hub <> None));
   [%expect {|
-    cn_version: 3.14.3
+    cn_version: 3.14.4
     hub_name_present: true |}]
 
 let%expect_test "to_json: body.capabilities match Cn_capabilities (single source of truth)" =
