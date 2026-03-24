@@ -18,14 +18,16 @@ Incoherence not named is incoherence not reduced. Artifacts not aligned are drif
 CDD owns the full arc from branch to observation:
 
 1. **Branch** — create the branch (§1.4)
-2. **Gap** — name the incoherence (§2)
-3. **Mode** — choose MCA or MCI (§3)
-4. **Artifacts** — design → contract → plan → tests → code → docs (§4)
-5. **Review** — CLP with another CA until convergence (§7)
-6. **Gate** — verify the release checklist (§9)
-7. **Release** — version, tag, CI, merge, announce (§10)
-8. **Observe** — confirm runtime matches design (§10.7)
-9. **Measure** — score the coherence delta, update CHANGELOG TSC table (§11)
+2. **Bootstrap** — create version directory with stub files for each deliverable artifact (§4.0)
+3. **Gap** — name the incoherence (§2)
+4. **Mode** — choose MCA or MCI (§3)
+5. **Artifacts** — design → contract → plan → tests → code → docs (§4)
+6. **Self-coherence** — write `SELF-COHERENCE.md` in the version directory (§4.8)
+7. **Review** — CLP with another CA until convergence (§7)
+8. **Gate** — verify the release checklist (§9)
+9. **Release** — version, tag, CI, merge, announce (§10)
+10. **Observe** — confirm runtime matches design (§10.7)
+11. **Measure** — score the coherence delta, update CHANGELOG TSC table (§11)
 
 Start at step 1. The process is complete when the coherence delta is recorded.
 
@@ -59,11 +61,13 @@ Start at step 1. The process is complete when the coherence delta is recorded.
 
 1.4. **Branch before artifacts**
   - Create the branch before the design doc
-  - Branch name encodes the change scope
+  - Branch name format: `{agent}/{issue}-{scope}-{version}` (e.g., `claude/75-docs-governance-v3.13.0`)
+  - `{agent}`: the actor (`claude`, `sigma`, `pi`). `{issue}`: tracker number. `{scope}`: short kebab-case topic. `{version}`: target cnos version (when known)
+  - **Tooling suffixes** (e.g., `-PfdYZ`) are transport artifacts. Reviews, commits, and documentation SHOULD use the logical name without the suffix
   - ❌ Work on `main`, commit design doc directly
-  - ✅ `claude/v3.9.0-workspace-constitution-abc` — version + focus + suffix
-  - ✅ `claude/cdd-executable-skill-PfdYZ` — feature + suffix
-  - ✅ `claude/fix-heartbeat-silent-death-xQ2` — fix + dominant incoherence + suffix
+  - ❌ Reference the transport suffix in documentation or PR body
+  - ✅ `claude/75-docs-governance-v3.13.0` — issue + scope + version
+  - ✅ `claude/58-packages-sync` — issue + scope, no version yet
 
 ---
 
@@ -115,6 +119,18 @@ Before any artifact is created, name the incoherence.
 ## 4. Create Artifacts in Order
 
 Follow the pipeline. Each step feeds the next.
+
+4.0. **Bootstrap — version directory**
+  - The first diff on the branch MUST create a version directory with stub files for every artifact the **target bundle** will produce for this version
+  - The directory lives at `docs/{tier}/{bundle}/vX.Y.Z/` and MUST contain a `README.md` (snapshot manifest)
+  - If the branch touches multiple bundles, each bundle that will receive a frozen snapshot gets its own version directory
+  - Artifacts outside version directories (PR body files, navigation docs, bundle READMEs) are not enumerated as stubs
+  - Version directories are **frozen by repository policy** — after creation, their contents MUST NOT be modified in later commits. When the canonical doc changes during the branch, **re-freeze**: copy the current canonical into the version directory before requesting review
+  - The snapshot README MUST list every frozen artifact in the directory
+  - ❌ Start coding before naming the version or enumerating deliverables
+  - ❌ Leave a stale snapshot that doesn't match the canonical
+  - ✅ First commit: `docs/gamma/cdd/v3.13.0/README.md` + `CDD.md` stub
+  - ✅ Before review: verify `diff canonical frozen` = zero
 
 4.1. **Design doc**
   - Create or update before coding
@@ -175,6 +191,16 @@ Follow the pipeline. Each step feeds the next.
   - Explain the coherence delta to operators and contributors
   - ❌ "Various improvements"
   - ✅ "Added L2 transport — operators can now configure push-based sync"
+
+4.8. **Self-coherence report**
+  - Every substantial release SHOULD include a `SELF-COHERENCE.md` in its version directory
+  - Records the branch author's own CDD-compliance assessment before requesting review
+  - Required sections: pipeline compliance table, triadic assessment (α/β/γ scores with rationale), checklist pass, known coherence debt, reviewer notes
+  - Placement: `docs/{tier}/{bundle}/vX.Y.Z/SELF-COHERENCE.md`
+  - Small changes covered by §1.2 do not require a self-coherence report
+  - See `docs/gamma/CDD.md` §7.8 for the full format template
+  - ❌ Request review without recording your own compliance assessment
+  - ✅ Write SELF-COHERENCE.md, score each pipeline step, list known debt, then request review
 
 ---
 
@@ -573,10 +599,16 @@ CDD defines what must happen and in what order. Sub-skills define how.
 
 ---
 
+## Authority
+
+This skill is the **executable summary** of CDD. The **authoritative source** for the full artifact contract, pipeline table, frozen-snapshot rules, self-coherence report format, and governance detail is `docs/gamma/CDD.md`. When this skill and the canonical doc disagree, the canonical doc governs.
+
+---
+
 ## Reference
 
 - Coherence history: `CHANGELOG.md` (TSC table — α/β/γ per release)
-- Theory and rationale: `docs/gamma/CDD.md`
+- **Canonical CDD method doc: `docs/gamma/CDD.md`** (authoritative for full artifact contract)
 - Triadic coherence model: `packages/cnos.core/doctrine/COHERENCE.md`
 - CAP (MCA/MCI): `packages/cnos.core/doctrine/CAP.md`
 - Agile workflow integration: `docs/gamma/AGILE-PROCESS.md`

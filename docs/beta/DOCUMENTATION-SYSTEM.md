@@ -2,7 +2,7 @@
 
 How the docs/ tree is organized and how documents evolve.
 
-**Version:** 2.0.0
+**Version:** 3.13.0
 **Date:** 2026-03-23
 
 ---
@@ -29,7 +29,7 @@ A feature bundle groups all documents that belong to a single feature or subsyst
 
 Structure:
 ```
-docs/alpha/<feature-name>/
+docs/alpha/{feature-name}/
 ├── README.md           # Bundle index: what this feature is, reading order, document map
 ├── v1.0.0/             # Frozen snapshot for v1.0.0
 │   ├── README.md
@@ -41,8 +41,8 @@ docs/alpha/<feature-name>/
 ```
 
 The canonical spec for a bundled feature may live either:
-- **Inside the bundle** as `docs/alpha/<feature-name>/SPEC.md`, or
-- **At the alpha root** as `docs/alpha/<FEATURE-NAME>.md` (legacy placement, see §6)
+- **Inside the bundle** as `docs/alpha/{feature-name}/SPEC.md`, or
+- **At the alpha root** as `docs/alpha/{FEATURE-NAME}.md` (legacy placement, see §6)
 
 A bundle's README.md always links to the canonical spec regardless of placement.
 
@@ -71,7 +71,7 @@ Examples: AGENT-RUNTIME.md, RUNTIME-EXTENSIONS.md, COGNITIVE-SUBSTRATE.md, COHER
 
 ### 2.3 Feature README
 
-The index document for a feature bundle. Lives at `docs/alpha/<feature>/README.md`.
+The index document for a feature bundle. Lives at `docs/alpha/{feature}/README.md`.
 
 - Lists every document in the bundle
 - Provides reading order
@@ -82,7 +82,7 @@ The index document for a feature bundle. Lives at `docs/alpha/<feature>/README.m
 
 A design document scoped to a specific version or feature iteration. These are created when a release introduces substantial new behavior that warrants a dedicated design narrative.
 
-- Filename encodes scope: `<FEATURE>-v<VERSION>.md` or `<FEATURE>-<SCOPE>.md`
+- Filename encodes scope: `{FEATURE}-v{VERSION}.md` or `{FEATURE}-{SCOPE}.md`
 - Lives at `alpha/` root (legacy) or inside a feature bundle
 - Not canonical — the canonical spec absorbs the design after implementation ships
 
@@ -113,10 +113,10 @@ Audits, RCAs, and model↔reality assessments. Lives in `beta/evidence/`.
 
 ### 2.9 Version directory
 
-A version directory groups all frozen artifacts for a single release milestone. Lives directly inside the feature bundle as `v<MAJOR>.<MINOR>.<PATCH>/`.
+A version directory groups all frozen artifacts for a single release milestone. Lives directly inside the feature bundle as `v{MAJOR}.{MINOR}.{PATCH}/`.
 
 ```
-docs/alpha/<feature>/v1.0.6/
+docs/alpha/{feature}/v1.0.6/
 ├── README.md      # Required: snapshot manifest
 ├── SPEC.md        # Frozen canonical spec at this version
 ├── DESIGN.md      # Design narrative (if one existed for this version)
@@ -132,19 +132,42 @@ docs/alpha/<feature>/v1.0.6/
 
 ## 3. Versioning rules
 
-### When to version-bump a canonical doc
+### Single version lineage
 
-| Change | Version bump |
-|--------|-------------|
-| Wording, examples, typos | Patch (e.g., 1.0.0 → 1.0.1) |
-| New section, additive capability | Minor (e.g., 1.0.0 → 1.1.0) |
-| Scope change, structural rewrite, removed sections | Major (e.g., 1.0.0 → 2.0.0) |
+All documents in the cnos repository use **cnos release versions**. There is no independent per-document version lineage.
+
+The `Version:` header in every document records the **cnos release in which the document was last substantively changed**. A document at `Version: 3.13.0` means "this document was last updated as part of cnos v3.13.0."
+
+This rule eliminates version-alignment confusion. "What does cnos v3.13.0 look like?" answers everything — specs, governance, runtime, docs — with one version number.
+
+### When a document's version advances
+
+A document's version advances to the current cnos release version when:
+
+| Change type | Advances version? |
+|-------------|-------------------|
+| Wording, examples, typos | Yes (next patch release) |
+| New section, additive capability | Yes (next minor release) |
+| Scope change, structural rewrite | Yes (next minor or major release) |
+| No change in a release | No — version stays at the last release that touched it |
+
+### Version directories
+
+Version directories inside feature bundles use the cnos release version, not a document-local version. Example: `docs/alpha/agent-runtime/v3.8.0/` — not `v2.0.0/`.
 
 ### Supersession
 
-When a canonical document is fully replaced, the new document carries its own version starting at 1.0.0.
+When a canonical document is fully replaced, the new document's version is the cnos release in which it first appears. It does not restart at 1.0.0.
 
-Do not maintain parallel "v1" and "v2" files in active directories.
+Do not maintain parallel versions of the same document in active directories.
+
+### Legacy versions
+
+Some existing documents carry pre-cnos-aligned version numbers (e.g., THESIS 1.0.0, COHERENCE-SYSTEM 1.0). These will be re-versioned to cnos release numbers when next substantively updated. No retroactive bulk rename is required.
+
+### Frozen legacy snapshots
+
+Version directories created before the single-lineage rule MAY retain their historical version numbers (e.g., `runtime-extensions/v1.0.6/`). These are frozen artifacts — renaming them would violate the freeze contract (§4). The legacy version number in a frozen snapshot directory name records the version under which that snapshot was originally published, not a current cnos release version. New version directories MUST use cnos release versions.
 
 ---
 
@@ -161,7 +184,7 @@ Create a version directory inside a feature bundle when:
 
 Version directories live directly inside the feature bundle:
 ```
-docs/alpha/<feature>/vX.Y.Z/
+docs/alpha/{feature}/vX.Y.Z/
 ```
 
 If the feature does not yet have a bundle directory, create one when the first version directory is needed.
@@ -194,7 +217,7 @@ Version directories are frozen by repository policy. After creation, their conte
 
 **Every feature bundle has `README.md` as the navigation entrypoint and names exactly one canonical spec as the normative source of truth.**
 
-The canonical spec may live at `alpha/<feature>/SPEC.md` (bundle-local) or at `alpha/<FEATURE-NAME>.md` (legacy root placement). Either is valid; the README.md must link to it unambiguously.
+The canonical spec may live at `alpha/{feature}/SPEC.md` (bundle-local) or at `alpha/{FEATURE-NAME}.md` (legacy root placement). Either is valid; the README.md must link to it unambiguously.
 
 ### When to create a bundle
 
@@ -207,7 +230,7 @@ Single-document features (e.g., SECURITY-MODEL.md) do not need a bundle.
 ### Bundle structure
 
 ```
-docs/alpha/<feature-name>/
+docs/alpha/{feature-name}/
 ├── README.md            # Required: bundle index, names the canonical
 ├── v1.0.6/              # Version directory: frozen snapshot for v1.0.6
 │   ├── README.md
@@ -272,7 +295,7 @@ When adding a new document, ask: **what is its dominant ontological character?**
 3. **Does it govern movement?** (method, process, plans, gates) → `gamma/`
 
 Within each axis:
-- `α/<feature>/` — feature bundle (when the feature qualifies per §5)
+- `α/{feature}/` — feature bundle (when the feature qualifies per §5)
 - `β/guides/` — task-oriented procedures (operator ↔ system relation)
 - `β/evidence/` — audits, RCAs (model ↔ reality relation)
 - `γ/plans/` — ephemeral implementation plans
