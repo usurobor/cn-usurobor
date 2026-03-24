@@ -10,6 +10,7 @@
 ## Contents
 
 - `RUNTIME-CONTRACT-v2.md` — Vertical self-model design doc (4 layers, 5 zone types)
+- `SELF-COHERENCE.md` — CDD compliance report for this release (pipeline, triadic assessment, known debt)
 
 ## Freeze Notice
 
