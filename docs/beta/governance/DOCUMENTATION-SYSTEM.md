@@ -290,8 +290,21 @@ Several documents in `docs/alpha/` use version-stamped filenames at the root lev
 | `PLAN-v3.7.0.md` | `gamma/plans/PLAN-v3.7.0-scheduler.md` | **Migrated** (#81) |
 | `PLAN-v3.8.0-syscall-surface.md` | `gamma/plans/PLAN-v3.8.0-syscall-surface.md` | **Migrated** (#81) |
 
+### Beta root files organized into bundles
+
+| File | Migration target | Status |
+|------|-----------------|--------|
+| `beta/ARCHITECTURE.md` | `beta/architecture/ARCHITECTURE.md` | **Migrated** (#89) |
+| `beta/DOCUMENTATION-SYSTEM.md` | `beta/governance/DOCUMENTATION-SYSTEM.md` | **Migrated** (#89) |
+| `beta/NAMING.md` | `beta/governance/NAMING.md` | **Migrated** (#89) |
+| `beta/GLOSSARY.md` | `beta/governance/GLOSSARY.md` | **Migrated** (#89) |
+| `beta/ORIGIN.md` | `beta/lineage/ORIGIN.md` | **Migrated** (#89) |
+| `beta/LINEAGE.md` | `beta/lineage/LINEAGE.md` | **Migrated** (#89) |
+| `beta/DESIGN-LLM-SCHEMA.md` | `beta/schema/DESIGN-LLM-SCHEMA.md` | **Migrated** (#89) |
+
 ### What stays, what moves
 
+- **Beta root docs organized into bundles** (v3.14.4, #89). ARCHITECTURE.md, DOCUMENTATION-SYSTEM.md, NAMING.md, GLOSSARY.md, ORIGIN.md, LINEAGE.md, and DESIGN-LLM-SCHEMA.md moved into `architecture/`, `governance/`, `lineage/`, and `schema/` bundles. Bundle READMEs link to them.
 - **Canonical specs live inside their feature bundle.** All 18 former root-level specs have been moved into thematic subdirectories (v3.14.3, #86): `agent-runtime/`, `cli/`, `cognitive-substrate/`, `ctb/`, `doctrine/`, `protocol/`, `runtime-extensions/`, `security/`. Bundle READMEs link to them.
 - **Snapshots move into version directories in their owning bundle.** The Runtime Extensions snapshot moved from `alpha/versions/runtime-extensions/v1.0.6.md` to `alpha/runtime-extensions/1.0.6/SPEC.md`. Version history now lives with the feature it belongs to.
 - **Feature-scoped design docs have been migrated** (v3.14.2, #81). Moved-notices remain at old paths; they will be removed in a future release.

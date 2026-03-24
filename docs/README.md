@@ -17,7 +17,7 @@ Then choose your path:
 |----------------|------------|
 | Understand what cnos is | [THESIS.md](./THESIS.md) → [COHERENCE-SYSTEM.md](./alpha/doctrine/COHERENCE-SYSTEM.md) → [FOUNDATIONS.md](./alpha/doctrine/FOUNDATIONS.md) |
 | Build or run a cnos agent | [AGENT-RUNTIME.md](./alpha/agent-runtime/AGENT-RUNTIME.md) → [CLI.md](./alpha/cli/CLI.md) → [HANDSHAKE.md](./beta/guides/HANDSHAKE.md) |
-| Contribute code | [CDD.md](./gamma/CDD.md) → [AGILE-PROCESS.md](./gamma/AGILE-PROCESS.md) → [ARCHITECTURE.md](./beta/ARCHITECTURE.md) |
+| Contribute code | [CDD.md](./gamma/CDD.md) → [AGILE-PROCESS.md](./gamma/AGILE-PROCESS.md) → [ARCHITECTURE.md](./beta/architecture/ARCHITECTURE.md) |
 | Understand the runtime extensions model | [RUNTIME-EXTENSIONS.md](./alpha/runtime-extensions/RUNTIME-EXTENSIONS.md) → [runtime-extensions bundle](./alpha/runtime-extensions/) |
 | Write or modify a skill | [WRITE-A-SKILL.md](./beta/guides/WRITE-A-SKILL.md) → [COGNITIVE-SUBSTRATE.md](./alpha/cognitive-substrate/COGNITIVE-SUBSTRATE.md) |
 | Do a release | [release skill](../packages/cnos.core/skills/release/SKILL.md) → [BUILD-RELEASE.md](./beta/guides/BUILD-RELEASE.md) |
@@ -48,7 +48,7 @@ Related documents (spec, snapshots, design docs) are grouped into **feature bund
 | [agent-runtime/](./alpha/agent-runtime/) | [AGENT-RUNTIME.md](./alpha/agent-runtime/AGENT-RUNTIME.md) | CN Shell, typed ops, N-pass orchestration, receipts |
 | [runtime-extensions/](./alpha/runtime-extensions/) | [RUNTIME-EXTENSIONS.md](./alpha/runtime-extensions/RUNTIME-EXTENSIONS.md) | Capability providers, discovery, isolation |
 
-See [DOCUMENTATION-SYSTEM.md](./beta/DOCUMENTATION-SYSTEM.md) for the full taxonomy and rules.
+See [DOCUMENTATION-SYSTEM.md](./beta/governance/DOCUMENTATION-SYSTEM.md) for the full taxonomy and rules.
 
 ---
 
@@ -81,7 +81,7 @@ The substance of the system — doctrine, specs, definitions.
 | [SETUP-INSTALLER.md](./alpha/cli/SETUP-INSTALLER.md) | Install script specification |
 | [THREAD-API.md](./alpha/protocol/THREAD-API.md) | Agent content API |
 
-**Feature-scoped design docs** (version-stamped, see [migration path](./beta/DOCUMENTATION-SYSTEM.md#6-migration-path-for-legacy-filenames)):
+**Feature-scoped design docs** (version-stamped, see [migration path](./beta/governance/DOCUMENTATION-SYSTEM.md#6-migration-path-for-legacy-filenames)):
 
 | Document | Feature | Version |
 |----------|---------|---------|
@@ -112,14 +112,12 @@ The graph of relations — system overview, shared vocabulary, operator connecti
 
 | Document | Scope |
 |----------|-------|
-| [ARCHITECTURE.md](./beta/ARCHITECTURE.md) | System overview — how the parts relate |
-| [GLOSSARY.md](./beta/GLOSSARY.md) | Terms and definitions |
-| [NAMING.md](./beta/NAMING.md) | Naming conventions (CN, cnos, cn) |
-| [DOCUMENTATION-SYSTEM.md](./beta/DOCUMENTATION-SYSTEM.md) | How docs are organized and evolve (this system) |
-| [ORIGIN.md](./beta/ORIGIN.md) | How CNOS came to be — from Joscha's objection to Git substrate |
-| [LINEAGE.md](./beta/LINEAGE.md) | Structural lineage and acknowledgments |
-| [β/guides/](./beta/guides/) | Operator ↔ system: handshake, automation, migration, skills, dojo, build/release |
-| [β/evidence/](./beta/evidence/) | Model ↔ reality: audit, RCAs |
+| [architecture/](./beta/architecture/) | System overview — how the parts relate |
+| [governance/](./beta/governance/) | Doc system, naming conventions, glossary |
+| [lineage/](./beta/lineage/) | Origin narrative and structural lineage |
+| [schema/](./beta/schema/) | LLM schema design |
+| [guides/](./beta/guides/) | Operator ↔ system: handshake, automation, migration, skills, dojo, build/release |
+| [evidence/](./beta/evidence/) | Model ↔ reality: audit, RCAs |
 
 ### γ — Evolution: How the System Moves
 
@@ -172,9 +170,25 @@ docs/
 │   │   ├── SECURITY-MODEL.md, TRACEABILITY.md
 │   └── schemas/                       # JSON schemas
 ├── beta/                              # β Relation
-│   ├── ARCHITECTURE.md
-│   ├── GLOSSARY.md
-│   ├── DOCUMENTATION-SYSTEM.md        # This documentation system
+│   ├── architecture/                  # System architecture
+│   │   ├── README.md
+│   │   ├── ARCHITECTURE.md
+│   │   └── 3.14.4/
+│   ├── governance/                    # Doc system, naming, glossary
+│   │   ├── README.md
+│   │   ├── DOCUMENTATION-SYSTEM.md
+│   │   ├── NAMING.md
+│   │   ├── GLOSSARY.md
+│   │   └── 3.14.4/
+│   ├── lineage/                       # Origin and structural lineage
+│   │   ├── README.md
+│   │   ├── ORIGIN.md
+│   │   ├── LINEAGE.md
+│   │   └── 3.14.4/
+│   ├── schema/                        # LLM schema design
+│   │   ├── README.md
+│   │   ├── DESIGN-LLM-SCHEMA.md
+│   │   └── 3.14.4/
 │   ├── guides/                        # Operator guides
 │   └── evidence/                      # Audits, RCAs
 └── gamma/                             # γ Evolution
