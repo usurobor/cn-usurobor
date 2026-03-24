@@ -25,9 +25,9 @@ Agent (pure)  ──>  cn (CLI)  ──>  Git (substrate)
 
 **If you're a human:** Your agent's work is auditable. Every decision is a commit. Every collaboration is a merge. No black boxes.
 
-**If you're skeptical:** CN is a protocol owned by the community. No ads. Not for sale. [Read the manifesto](./docs/alpha/MANIFESTO.md).
+**If you're skeptical:** CN is a protocol owned by the community. No ads. Not for sale. [Read the manifesto](./docs/alpha/doctrine/MANIFESTO.md).
 
-> [Manifesto](./docs/alpha/MANIFESTO.md) · [Thesis](./docs/THESIS.md) · [Whitepaper](./docs/alpha/WHITEPAPER.md) · [Architecture](./docs/beta/ARCHITECTURE.md)
+> [Manifesto](./docs/alpha/doctrine/MANIFESTO.md) · [Thesis](./docs/THESIS.md) · [Whitepaper](./docs/alpha/protocol/WHITEPAPER.md) · [Architecture](./docs/beta/ARCHITECTURE.md)
 
 ---
 
@@ -62,7 +62,7 @@ receipts every operation.
 
 The agent is the brain. `cn` is the body. Git is the nervous system.
 
-> Full architecture: [ARCHITECTURE.md](./docs/beta/ARCHITECTURE.md) · Runtime spec: [AGENT-RUNTIME.md](./docs/alpha/AGENT-RUNTIME.md)
+> Full architecture: [ARCHITECTURE.md](./docs/beta/ARCHITECTURE.md) · Runtime spec: [AGENT-RUNTIME.md](./docs/alpha/agent-runtime/AGENT-RUNTIME.md)
 
 ---
 
@@ -216,7 +216,7 @@ Native OCaml binary. Built with `dune build src/cli/cn.exe`.
 
 Aliases: `i`=inbox · `o`=outbox · `s`=status · `d`=doctor
 
-> Full CLI reference: [CLI.md](./docs/alpha/CLI.md)
+> Full CLI reference: [CLI.md](./docs/alpha/cli/CLI.md)
 
 ---
 
@@ -297,16 +297,16 @@ cn-<name>/
 
 | Design | |
 |--------|---|
-| [COHERENCE-SYSTEM.md](./docs/alpha/COHERENCE-SYSTEM.md) | Meta-model — coherence as primary; MCP/CMP/CAP/CLP across scales |
-| [CAA.md](./docs/alpha/CAA.md) | Coherent agent architecture — what the agent *is* structurally |
-| [AGENT-RUNTIME.md](./docs/alpha/AGENT-RUNTIME.md) | Agent runtime spec — CN Shell, typed ops, N-pass bind loop, receipts, scheduler unification |
-| [MANIFESTO.md](./docs/alpha/MANIFESTO.md) | Why cnos exists. Principles and values. |
+| [COHERENCE-SYSTEM.md](./docs/alpha/doctrine/COHERENCE-SYSTEM.md) | Meta-model — coherence as primary; MCP/CMP/CAP/CLP across scales |
+| [CAA.md](./docs/alpha/agent-runtime/CAA.md) | Coherent agent architecture — what the agent *is* structurally |
+| [AGENT-RUNTIME.md](./docs/alpha/agent-runtime/AGENT-RUNTIME.md) | Agent runtime spec — CN Shell, typed ops, N-pass bind loop, receipts, scheduler unification |
+| [MANIFESTO.md](./docs/alpha/doctrine/MANIFESTO.md) | Why cnos exists. Principles and values. |
 | [THESIS.md](./docs/THESIS.md) | System thesis — cnos as a recurrent coherence system |
-| [WHITEPAPER.md](./docs/alpha/WHITEPAPER.md) | CN protocol specification (v3.0.0) |
-| [PROTOCOL.md](./docs/alpha/PROTOCOL.md) | The four FSMs — state diagrams, transition tables |
-| [CLI.md](./docs/alpha/CLI.md) | CLI command reference |
-| [SECURITY-MODEL.md](./docs/alpha/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |
-| [SETUP-INSTALLER.md](./docs/alpha/SETUP-INSTALLER.md) | Install script specification |
+| [WHITEPAPER.md](./docs/alpha/protocol/WHITEPAPER.md) | CN protocol specification (v3.0.0) |
+| [PROTOCOL.md](./docs/alpha/protocol/PROTOCOL.md) | The four FSMs — state diagrams, transition tables |
+| [CLI.md](./docs/alpha/cli/CLI.md) | CLI command reference |
+| [SECURITY-MODEL.md](./docs/alpha/security/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |
+| [SETUP-INSTALLER.md](./docs/alpha/cli/SETUP-INSTALLER.md) | Install script specification |
 
 | How-to | |
 |--------|---|

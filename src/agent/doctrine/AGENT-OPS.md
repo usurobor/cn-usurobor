@@ -44,7 +44,7 @@ This is the exact format the runtime parses. Coordination ops and typed ops go i
 ---
 id: trigger-abc123
 send: sigma|Found a security gap in ops boundary docs
-ops: [{"kind":"fs_read","path":"docs/alpha/AGENT-RUNTIME.md"}]
+ops: [{"kind":"fs_read","path":"docs/alpha/agent-runtime/AGENT-RUNTIME.md"}]
 ---
 
 I reviewed the MCA and found the issue. Sending details to Sigma for investigation.

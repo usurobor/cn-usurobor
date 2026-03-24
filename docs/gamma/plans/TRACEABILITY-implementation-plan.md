@@ -3,11 +3,11 @@
 ## Status: Implementing (Steps 1-9 complete)
 
 This plan implements the observability system defined in
-[TRACEABILITY.md](../../alpha/TRACEABILITY.md). It replaces ad hoc lifecycle logging
+[TRACEABILITY.md](../../alpha/security/TRACEABILITY.md). It replaces ad hoc lifecycle logging
 with structured events, state projections, and operator-facing readiness.
 
-**Spec:** [TRACEABILITY.md](../../alpha/TRACEABILITY.md)
-**Runtime contract:** [AGENT-RUNTIME.md](../../alpha/AGENT-RUNTIME.md) v3.3.7
+**Spec:** [TRACEABILITY.md](../../alpha/security/TRACEABILITY.md)
+**Runtime contract:** [AGENT-RUNTIME.md](../../alpha/agent-runtime/AGENT-RUNTIME.md) v3.3.7
 
 ---
 

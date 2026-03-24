@@ -210,7 +210,7 @@ Follow the pipeline. Each step feeds the next.
   - If changing an existing design lineage, update the existing file
   - Add patch notes or version bump inside it
   - ❌ Create `AGENT-RUNTIME-v2.md` alongside the original
-  - ✅ Update `docs/alpha/AGENT-RUNTIME.md`, bump version header
+  - ✅ Update `docs/alpha/agent-runtime/AGENT-RUNTIME.md`, bump version header
 
 5.2. **New subsystem — create a versioned design doc**
   - Pattern: `docs/alpha/NAME-vMAJOR.md`

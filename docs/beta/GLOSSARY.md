@@ -14,7 +14,7 @@ The degree to which a system's model matches reality. Incoherence is the gap bet
 
 Measured across three axes: α (Pattern), β (Relation), γ (Exit). See **TSC**.
 
-Defined in: `packages/cnos.core/doctrine/COHERENCE.md`, `docs/alpha/COHERENCE-SYSTEM.md`.
+Defined in: `packages/cnos.core/doctrine/COHERENCE.md`, `docs/alpha/doctrine/COHERENCE-SYSTEM.md`.
 
 ### Coherence delta
 
@@ -22,7 +22,7 @@ A bounded movement from a less coherent state to a more coherent one. The archit
 
 A coherence delta is not merely a feature or a fix — it is the change in coherence itself, of which the feature or fix is the concrete, operator-visible articulation.
 
-Used in: `docs/alpha/CAA.md` §5.6, §10; `docs/gamma/CDD.md` §3.4, §9.5.
+Used in: `docs/alpha/agent-runtime/CAA.md` §5.6, §10; `docs/gamma/CDD.md` §3.4, §9.5.
 
 ### CAP (Coherent Agent Principle)
 
@@ -81,7 +81,7 @@ An MCP includes:
 
 MCP is what Sense → Compare (FOUNDATIONS §3) produces implicitly at the agent scale, named explicitly at the system scale.
 
-Defined in: `docs/alpha/COHERENCE-SYSTEM.md` §3.1; used in `docs/alpha/CAA.md` §5.2, `docs/gamma/CDD.md` §2.1.
+Defined in: `docs/alpha/doctrine/COHERENCE-SYSTEM.md` §3.1; used in `docs/alpha/agent-runtime/CAA.md` §5.2, `docs/gamma/CDD.md` §2.1.
 
 ### CMP (Coherence Mapping Pass)
 
@@ -91,7 +91,7 @@ At the agent scale, CMP is the sensing / comparison phase that precedes the MCA-
 
 CMP asks: what are the relevant articulations right now? How do they relate? Where are the strongest incoherences? What is the weakest axis?
 
-Defined in: `docs/alpha/COHERENCE-SYSTEM.md` §3.2; used in `docs/alpha/CAA.md` §5.1, `docs/gamma/CDD.md` §4.2.
+Defined in: `docs/alpha/doctrine/COHERENCE-SYSTEM.md` §3.2; used in `docs/alpha/agent-runtime/CAA.md` §5.1, `docs/gamma/CDD.md` §4.2.
 
 ### CLP (Coherence Ladder Process)
 
@@ -165,7 +165,7 @@ If α < β, invest in PATTERN. If β < α, invest in RELATION. Balance two, let 
 
 Any durable expression of coherence at a particular scale. Doctrine, code, skills, packages, traces, release notes, and agents are all articulations. cnos is a network of recurrent coherent articulations that generate, constrain, package, execute, observe, and repair one another.
 
-Defined in: `docs/alpha/COHERENCE-SYSTEM.md` §5.
+Defined in: `docs/alpha/doctrine/COHERENCE-SYSTEM.md` §5.
 
 ---
 
@@ -219,7 +219,7 @@ DUR is to skills what TSC is to coherence scoring — the structural invariant t
 
 "MIC X to DUR" = cohere skill X to Define/Unfold/Rules for the first time. "MICA X" = restore DUR coherence lost through drift.
 
-Defined in: `docs/alpha/COGNITIVE-SUBSTRATE.md` §7.3.
+Defined in: `docs/alpha/cognitive-substrate/COGNITIVE-SUBSTRATE.md` §7.3.
 
 ### Skill
 
@@ -243,13 +243,13 @@ An articulation of coherence that can sense, compare, choose, act or learn, and 
 - review the result via CLP
 - continue the loop
 
-Defined in: `docs/alpha/CAA.md`, `docs/alpha/COHERENCE-SYSTEM.md` §7.
+Defined in: `docs/alpha/agent-runtime/CAA.md`, `docs/alpha/doctrine/COHERENCE-SYSTEM.md` §7.
 
 ### CAA (Coherent Agent Architecture)
 
 The design document that specifies what a coherent agent is structurally: definition, first principle, doctrinal layers, cognitive strata at wake-up, the agent loop, runtime embodiment, invariants, and failure modes.
 
-Document: `docs/alpha/CAA.md`.
+Document: `docs/alpha/agent-runtime/CAA.md`.
 
 ### CDD (Coherence-Driven Development)
 
@@ -271,7 +271,7 @@ The capability runtime that mediates between the agent and the world. The agent 
 
 The loop is bounded by `max_passes` (default 5), `max_total_ops`, and `max_total_artifact_bytes`. Each pass is one packed context → one LLM call → one execution step. This is CAP made runtime-real: sensing is first-class, action is governed.
 
-Defined in: `docs/alpha/AGENT-RUNTIME.md`.
+Defined in: `docs/alpha/agent-runtime/AGENT-RUNTIME.md`.
 
 ### N-pass bind loop
 
@@ -301,13 +301,13 @@ The process by which a coherent agent reconstitutes itself from local, versioned
 
 No network. No sibling checkout. Local files only.
 
-Defined in: `packages/cnos.core/doctrine/FOUNDATIONS.md` §6, `docs/alpha/CAA.md` §4.
+Defined in: `packages/cnos.core/doctrine/FOUNDATIONS.md` §6, `docs/alpha/agent-runtime/CAA.md` §4.
 
 ### CAR (Cognitive Asset Resolver)
 
 The package distribution system. Defines how cognitive assets (doctrine, mindsets, skills) are packaged, versioned, installed, and resolved locally. CAR ensures wake-up is deterministic: same lockfile + same hub state → same packed context.
 
-Document: `docs/alpha/CAR.md`.
+Document: `docs/alpha/cognitive-substrate/CAR.md`.
 
 ### Coherence Contract
 

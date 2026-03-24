@@ -15,11 +15,11 @@ Then choose your path:
 
 | You want to... | Start with |
 |----------------|------------|
-| Understand what cnos is | [THESIS.md](./THESIS.md) → [COHERENCE-SYSTEM.md](./alpha/COHERENCE-SYSTEM.md) → [FOUNDATIONS.md](./alpha/FOUNDATIONS.md) |
-| Build or run a cnos agent | [AGENT-RUNTIME.md](./alpha/AGENT-RUNTIME.md) → [CLI.md](./alpha/CLI.md) → [HANDSHAKE.md](./beta/guides/HANDSHAKE.md) |
+| Understand what cnos is | [THESIS.md](./THESIS.md) → [COHERENCE-SYSTEM.md](./alpha/doctrine/COHERENCE-SYSTEM.md) → [FOUNDATIONS.md](./alpha/doctrine/FOUNDATIONS.md) |
+| Build or run a cnos agent | [AGENT-RUNTIME.md](./alpha/agent-runtime/AGENT-RUNTIME.md) → [CLI.md](./alpha/cli/CLI.md) → [HANDSHAKE.md](./beta/guides/HANDSHAKE.md) |
 | Contribute code | [CDD.md](./gamma/CDD.md) → [AGILE-PROCESS.md](./gamma/AGILE-PROCESS.md) → [ARCHITECTURE.md](./beta/ARCHITECTURE.md) |
-| Understand the runtime extensions model | [RUNTIME-EXTENSIONS.md](./alpha/RUNTIME-EXTENSIONS.md) → [runtime-extensions bundle](./alpha/runtime-extensions/) |
-| Write or modify a skill | [WRITE-A-SKILL.md](./beta/guides/WRITE-A-SKILL.md) → [COGNITIVE-SUBSTRATE.md](./alpha/COGNITIVE-SUBSTRATE.md) |
+| Understand the runtime extensions model | [RUNTIME-EXTENSIONS.md](./alpha/runtime-extensions/RUNTIME-EXTENSIONS.md) → [runtime-extensions bundle](./alpha/runtime-extensions/) |
+| Write or modify a skill | [WRITE-A-SKILL.md](./beta/guides/WRITE-A-SKILL.md) → [COGNITIVE-SUBSTRATE.md](./alpha/cognitive-substrate/COGNITIVE-SUBSTRATE.md) |
 | Do a release | [release skill](../packages/cnos.core/skills/release/SKILL.md) → [BUILD-RELEASE.md](./beta/guides/BUILD-RELEASE.md) |
 
 ---
@@ -45,8 +45,8 @@ Related documents (spec, snapshots, design docs) are grouped into **feature bund
 
 | Bundle | Canonical spec | What it covers |
 |--------|---------------|----------------|
-| [agent-runtime/](./alpha/agent-runtime/) | [AGENT-RUNTIME.md](./alpha/AGENT-RUNTIME.md) | CN Shell, typed ops, N-pass orchestration, receipts |
-| [runtime-extensions/](./alpha/runtime-extensions/) | [RUNTIME-EXTENSIONS.md](./alpha/RUNTIME-EXTENSIONS.md) | Capability providers, discovery, isolation |
+| [agent-runtime/](./alpha/agent-runtime/) | [AGENT-RUNTIME.md](./alpha/agent-runtime/AGENT-RUNTIME.md) | CN Shell, typed ops, N-pass orchestration, receipts |
+| [runtime-extensions/](./alpha/runtime-extensions/) | [RUNTIME-EXTENSIONS.md](./alpha/runtime-extensions/RUNTIME-EXTENSIONS.md) | Capability providers, discovery, isolation |
 
 See [DOCUMENTATION-SYSTEM.md](./beta/DOCUMENTATION-SYSTEM.md) for the full taxonomy and rules.
 
@@ -64,22 +64,22 @@ The substance of the system — doctrine, specs, definitions.
 
 | Document | Scope |
 |----------|-------|
-| [COHERENCE-SYSTEM.md](./alpha/COHERENCE-SYSTEM.md) | Meta-model: coherence as primary; the instruction set |
-| [FOUNDATIONS.md](./alpha/FOUNDATIONS.md) | The coherence stack — doctrinal layers |
-| [MANIFESTO.md](./alpha/MANIFESTO.md) | Principles and values |
-| [CAA.md](./alpha/CAA.md) | Coherent agent architecture |
-| [AGENT-RUNTIME.md](./alpha/AGENT-RUNTIME.md) | Runtime spec: CN Shell, typed ops, N-pass orchestration, receipts |
-| [RUNTIME-EXTENSIONS.md](./alpha/RUNTIME-EXTENSIONS.md) | Capability providers, discovery, and isolation |
-| [COGNITIVE-SUBSTRATE.md](./alpha/COGNITIVE-SUBSTRATE.md) | Cognitive asset classes — doctrine, mindsets, skills |
-| [CAR.md](./alpha/CAR.md) | Cognitive asset resolver — local, versioned cognition |
-| [WHITEPAPER.md](./alpha/WHITEPAPER.md) | CN protocol specification (v3.0.0) |
-| [PROTOCOL.md](./alpha/PROTOCOL.md) | FSM design — state diagrams, transition tables |
-| [TRACEABILITY.md](./alpha/TRACEABILITY.md) | Observability — event stream, state projections, readiness |
-| [SECURITY-MODEL.md](./alpha/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |
-| [CLI.md](./alpha/CLI.md) | CLI command reference |
-| [DAEMON.md](./alpha/DAEMON.md) | Daemon mode design |
-| [SETUP-INSTALLER.md](./alpha/SETUP-INSTALLER.md) | Install script specification |
-| [THREAD-API.md](./alpha/THREAD-API.md) | Agent content API |
+| [COHERENCE-SYSTEM.md](./alpha/doctrine/COHERENCE-SYSTEM.md) | Meta-model: coherence as primary; the instruction set |
+| [FOUNDATIONS.md](./alpha/doctrine/FOUNDATIONS.md) | The coherence stack — doctrinal layers |
+| [MANIFESTO.md](./alpha/doctrine/MANIFESTO.md) | Principles and values |
+| [CAA.md](./alpha/agent-runtime/CAA.md) | Coherent agent architecture |
+| [AGENT-RUNTIME.md](./alpha/agent-runtime/AGENT-RUNTIME.md) | Runtime spec: CN Shell, typed ops, N-pass orchestration, receipts |
+| [RUNTIME-EXTENSIONS.md](./alpha/runtime-extensions/RUNTIME-EXTENSIONS.md) | Capability providers, discovery, and isolation |
+| [COGNITIVE-SUBSTRATE.md](./alpha/cognitive-substrate/COGNITIVE-SUBSTRATE.md) | Cognitive asset classes — doctrine, mindsets, skills |
+| [CAR.md](./alpha/cognitive-substrate/CAR.md) | Cognitive asset resolver — local, versioned cognition |
+| [WHITEPAPER.md](./alpha/protocol/WHITEPAPER.md) | CN protocol specification (v3.0.0) |
+| [PROTOCOL.md](./alpha/protocol/PROTOCOL.md) | FSM design — state diagrams, transition tables |
+| [TRACEABILITY.md](./alpha/security/TRACEABILITY.md) | Observability — event stream, state projections, readiness |
+| [SECURITY-MODEL.md](./alpha/security/SECURITY-MODEL.md) | Security architecture — sandbox, FSM enforcement, audit trail |
+| [CLI.md](./alpha/cli/CLI.md) | CLI command reference |
+| [DAEMON.md](./alpha/cli/DAEMON.md) | Daemon mode design |
+| [SETUP-INSTALLER.md](./alpha/cli/SETUP-INSTALLER.md) | Install script specification |
+| [THREAD-API.md](./alpha/protocol/THREAD-API.md) | Agent content API |
 
 **Feature-scoped design docs** (version-stamped, see [migration path](./beta/DOCUMENTATION-SYSTEM.md#6-migration-path-for-legacy-filenames)):
 
@@ -89,14 +89,20 @@ The substance of the system — doctrine, specs, definitions.
 | [N-PASS-BIND-v3.8.0.md](./alpha/N-PASS-BIND-v3.8.0.md) | N-pass bind loop and indicators | 3.8.0 |
 | [SYSCALL-SURFACE-v3.8.0.md](./alpha/SYSCALL-SURFACE-v3.8.0.md) | Syscall surface redesign | 3.8.0 |
 | [SCHEDULER-v3.7.0.md](./alpha/SCHEDULER-v3.7.0.md) | Scheduler design | 3.7.0 |
-| [CTB-v4.0.0-VISION.md](./alpha/CTB-v4.0.0-VISION.md) | CTB v4.0.0 vision: skill language | 4.0.0 |
+| [CTB-v4.0.0-VISION.md](./alpha/ctb/CTB-v4.0.0-VISION.md) | CTB v4.0.0 vision: skill language | 4.0.0 |
 
 **Feature bundles:**
 
 | Bundle | Contents |
 |--------|----------|
-| [agent-runtime/](./alpha/agent-runtime/) | Bundle index, version-scoped design docs |
-| [runtime-extensions/](./alpha/runtime-extensions/) | Bundle index, version snapshots |
+| [agent-runtime/](./alpha/agent-runtime/) | Runtime spec, CAA, runtime contract, version-scoped design docs |
+| [cli/](./alpha/cli/) | CLI reference, daemon mode, setup installer |
+| [cognitive-substrate/](./alpha/cognitive-substrate/) | Cognitive asset classes, CAR resolver |
+| [ctb/](./alpha/ctb/) | CTB v4.0.0 vision |
+| [doctrine/](./alpha/doctrine/) | Coherence system, foundations, manifesto |
+| [protocol/](./alpha/protocol/) | Whitepaper, protocol FSMs, thread API |
+| [runtime-extensions/](./alpha/runtime-extensions/) | Extensions spec, version snapshots |
+| [security/](./alpha/security/) | Security model, traceability |
 
 ### β — Relation: How Parts Cohere
 
@@ -140,21 +146,30 @@ docs/
 ├── THESIS.md                          # The whole
 ├── README.md                          # This file — navigation
 ├── alpha/                             # α Pattern
-│   ├── AGENT-RUNTIME.md               # Canonical spec (v3.8.0)
-│   ├── RUNTIME-EXTENSIONS.md          # Canonical spec (v1.0.6)
-│   ├── COGNITIVE-SUBSTRATE.md         # Canonical spec (v1.0.0)
-│   ├── COHERENCE-SYSTEM.md            # Canonical spec
-│   ├── CAA.md, CAR.md, ...            # Other canonical specs
-│   ├── RUNTIME-CONTRACT-v3.10.0.md    # Feature-scoped design doc (legacy placement)
-│   ├── N-PASS-BIND-v3.8.0.md          # Feature-scoped design doc (legacy placement)
-│   ├── ...                            # Other version-stamped docs
-│   ├── agent-runtime/                 # Feature bundle
-│   │   └── README.md
-│   ├── runtime-extensions/            # Feature bundle
+│   ├── agent-runtime/                 # Runtime spec, CAA, runtime contract
 │   │   ├── README.md
-│   │   └── v1.0.6/                   # Version directory
+│   │   ├── AGENT-RUNTIME.md           # Canonical spec (v3.8.0)
+│   │   ├── CAA.md                     # Coherent agent architecture
+│   │   ├── RUNTIME-CONTRACT-v2.md     # Runtime contract v2
+│   │   └── 3.x.0/                    # Version-scoped design docs
+│   ├── cli/                           # CLI, daemon, installer
+│   │   ├── CLI.md, DAEMON.md, SETUP-INSTALLER.md
+│   ├── cognitive-substrate/           # Cognitive assets, CAR
+│   │   ├── COGNITIVE-SUBSTRATE.md, CAR.md
+│   ├── ctb/                           # CTB vision
+│   │   └── CTB-v4.0.0-VISION.md
+│   ├── doctrine/                      # Coherence system, foundations, manifesto
+│   │   ├── COHERENCE-SYSTEM.md, FOUNDATIONS.md, MANIFESTO.md
+│   ├── protocol/                      # Whitepaper, protocol, thread API
+│   │   ├── PROTOCOL.md, WHITEPAPER.md, THREAD-API.md
+│   ├── runtime-extensions/            # Extensions spec + snapshots
+│   │   ├── README.md
+│   │   ├── RUNTIME-EXTENSIONS.md      # Canonical spec (v1.0.6)
+│   │   └── 1.0.6/                    # Version directory
 │   │       ├── README.md             # Snapshot manifest
 │   │       └── SPEC.md               # Frozen spec at v1.0.6
+│   ├── security/                      # Security model, traceability
+│   │   ├── SECURITY-MODEL.md, TRACEABILITY.md
 │   └── schemas/                       # JSON schemas
 ├── beta/                              # β Relation
 │   ├── ARCHITECTURE.md
