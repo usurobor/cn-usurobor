@@ -705,7 +705,7 @@ Runtime:
   Telegram poll is enabled when TELEGRAM_TOKEN is set.
 |}
 
-let version = "3.14.0"
+let version = "3.14.1"
 let cnos_commit = Cn_build_info.cnos_commit
 
 (* === Version Comparison (pure, semantic) === *)
