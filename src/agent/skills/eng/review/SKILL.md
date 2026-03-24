@@ -112,6 +112,15 @@ Check whether the change creates obligations on code it didn't touch.
   - ❌ "Exclusions look correct in git_diff" (didn't check git_grep, git_log, git_status)
   - ✅ Grep for every use of the exclusion set, verify consistent application
 
+2.2.5. **Cross-reference validation (file moves)**
+  - If the PR moves or renames files, grep for old paths across all live (non-frozen) docs. Any match is a **D-level blocking finding** — stale cross-refs break navigation
+  - For frozen snapshot directories: stale path references trigger **path-only repair** per DOCUMENTATION-SYSTEM.md §2.9/§4 (path references MAY be updated, no semantic content may change). Flag as **C-level** if unrepaired
+  - Validate frozen snapshot integrity: `diff canonical frozen` = zero for any bundle touched by the PR
+  - This check is mechanical and fully automatable — it should never require judgment
+  - ❌ "Cross-refs look fine" (checked by reading, not by grepping)
+  - ❌ Approve a file-move PR without grepping for old paths
+  - ✅ `grep -r 'docs/gamma/RULES.md' docs/ src/ packages/ --include='*.md' | grep -v '/3.13.0/' | grep -v '/3.14.1/'` → zero matches → cross-refs clean
+
 ### 2.3 Verdict — the judgment
 
 The verdict is a function of the worst named incoherence.
@@ -193,6 +202,7 @@ Before submitting a review:
 - [ ] Every claim traces to a line, commit, or behavior
 - [ ] Fixes validated against upstream spec where applicable
 - [ ] Unchanged siblings checked for new incoherence
+- [ ] Cross-refs validated by grep for any file-move PR (§2.2.5)
 - [ ] System writes traced to system reads
 - [ ] Severity assigned to every finding (D/C/B/A)
 - [ ] D-level findings include regression test pairs (positive + negative)
