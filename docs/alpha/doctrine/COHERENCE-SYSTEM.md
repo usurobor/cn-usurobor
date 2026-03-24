@@ -606,13 +606,13 @@ A release is a milestone on the coherence gradient:
 - `AGENT-OPS.md`
 
 ### Agent architecture / What the coherent agent is
-- `docs/alpha/CAA.md`
+- `docs/alpha/agent-runtime/CAA.md`
 
 ### Runtime embodiment / How it runs
-- `docs/alpha/AGENT-RUNTIME.md`
+- `docs/alpha/agent-runtime/AGENT-RUNTIME.md`
 
 ### Cognitive substrate / How cognition arrives locally
-- `docs/alpha/CAR.md`
+- `docs/alpha/cognitive-substrate/CAR.md`
 
 ### Development method / How cnos evolves coherently
 - `docs/gamma/CDD.md`

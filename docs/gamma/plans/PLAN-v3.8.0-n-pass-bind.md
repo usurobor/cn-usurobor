@@ -67,7 +67,7 @@ Change only:
 - `src/cmd/cn_telegram.ml`
 - `src/cmd/cn_trace_state.ml`
 - `src/cmd/cn_config.ml`
-- `docs/alpha/AGENT-RUNTIME.md` (already amended)
+- `docs/alpha/agent-runtime/AGENT-RUNTIME.md` (already amended)
 - tests under `test/cmd/`
 
 No new top-level module is strictly required; this can be done inside `cn_orchestrator` + runtime integration.

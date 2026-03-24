@@ -6,7 +6,7 @@ The native cnos agent runtime: CN Shell, typed ops, N-pass orchestration, receip
 
 ## Canonical Spec
 
-**[AGENT-RUNTIME.md](../AGENT-RUNTIME.md)** (v3.8.0) — the single source of truth for the agent runtime.
+**[AGENT-RUNTIME.md](./AGENT-RUNTIME.md)** (v3.8.0) — the single source of truth for the agent runtime.
 
 ---
 
@@ -14,7 +14,9 @@ The native cnos agent runtime: CN Shell, typed ops, N-pass orchestration, receip
 
 | Document | Class | Description |
 |----------|-------|-------------|
-| [AGENT-RUNTIME.md](../AGENT-RUNTIME.md) | Canonical spec | Full runtime spec — shell, ops, orchestration, receipts |
+| [AGENT-RUNTIME.md](./AGENT-RUNTIME.md) | Canonical spec | Full runtime spec — shell, ops, orchestration, receipts |
+| [CAA.md](./CAA.md) | Canonical spec | Coherent agent architecture — structural definition, invariants, wake-up strata |
+| [RUNTIME-CONTRACT-v2.md](./RUNTIME-CONTRACT-v2.md) | Canonical spec | Runtime contract v2 — vertical self-model (4 layers, 5 zone types) |
 | [3.10.0/DESIGN.md](3.10.0/DESIGN.md) | Feature-scoped design | Wake-up self-model contract: self_model + workspace + capabilities |
 | [3.8.0/N-PASS-BIND.md](3.8.0/N-PASS-BIND.md) | Feature-scoped design | Generalized N-pass bind loop replacing hardcoded two-pass |
 | [3.8.0/SYSCALL-SURFACE.md](3.8.0/SYSCALL-SURFACE.md) | Feature-scoped design | Syscall surface redesign for v3.8.0 |
@@ -33,7 +35,7 @@ The native cnos agent runtime: CN Shell, typed ops, N-pass orchestration, receip
 
 ## Reading Order
 
-1. **[AGENT-RUNTIME.md](../AGENT-RUNTIME.md)** — start here for the full runtime model
+1. **[AGENT-RUNTIME.md](./AGENT-RUNTIME.md)** — start here for the full runtime model
 2. **[3.8.0/N-PASS-BIND.md](3.8.0/N-PASS-BIND.md)** — how the orchestration loop works
 3. **[3.10.0/DESIGN.md](3.10.0/DESIGN.md)** — the wake-up contract design
 4. **[3.8.0/SYSCALL-SURFACE.md](3.8.0/SYSCALL-SURFACE.md)** — the op surface

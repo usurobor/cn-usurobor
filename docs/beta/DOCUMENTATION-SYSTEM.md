@@ -139,7 +139,7 @@ docs/alpha/{feature}/1.0.6/
 ```
 
 - Directory name is the version number: `v1.0.6/`, `v3.8.0/`, etc.
-- Version directories are frozen by repository policy. After creation, their contents MUST NOT be modified in later commits. Corrections MUST be published as a new version directory or an explicit superseding note in the feature root README
+- Version directories are frozen by repository policy. After creation, their contents MUST NOT be modified in later commits. Corrections MUST be published as a new version directory or an explicit superseding note in the feature root README. **Exception:** path references (backtick paths, markdown links) MAY be updated when the target file has moved, so that references remain resolvable. No semantic content may change.
 - Each version directory MUST contain a `README.md` describing the snapshot and the canonical doc(s) published for that version
 - Additional version-scoped artifacts (design narratives, migration notes) MAY be included
 
@@ -222,7 +222,7 @@ Each version directory MAY also contain:
 | `DESIGN.md` | Design narrative for this version's changes |
 | Other | Any version-scoped artifact (migration notes, issue summary, etc.) |
 
-Version directories are frozen by repository policy. After creation, their contents MUST NOT be modified in later commits. Corrections MUST be published as a new version directory or an explicit superseding note in the feature root README. Legacy flat filenames (e.g., `v1.0.6.md`) MUST be mapped in the feature root README (see §6).
+Version directories are frozen by repository policy. After creation, their contents MUST NOT be modified in later commits. Corrections MUST be published as a new version directory or an explicit superseding note in the feature root README. **Exception:** path references (backtick paths, markdown links) MAY be updated when the target file has moved, so that references remain resolvable. No semantic content may change. Legacy flat filenames (e.g., `v1.0.6.md`) MUST be mapped in the feature root README (see §6).
 
 ---
 
@@ -292,7 +292,7 @@ Several documents in `docs/alpha/` use version-stamped filenames at the root lev
 
 ### What stays, what moves
 
-- **Canonical specs stay at their current root paths.** `alpha/AGENT-RUNTIME.md` and `alpha/RUNTIME-EXTENSIONS.md` remain where they are. Bundle READMEs link to them. No moved notices needed.
+- **Canonical specs live inside their feature bundle.** All 18 former root-level specs have been moved into thematic subdirectories (v3.14.3, #86): `agent-runtime/`, `cli/`, `cognitive-substrate/`, `ctb/`, `doctrine/`, `protocol/`, `runtime-extensions/`, `security/`. Bundle READMEs link to them.
 - **Snapshots move into version directories in their owning bundle.** The Runtime Extensions snapshot moved from `alpha/versions/runtime-extensions/v1.0.6.md` to `alpha/runtime-extensions/1.0.6/SPEC.md`. Version history now lives with the feature it belongs to.
 - **Feature-scoped design docs have been migrated** (v3.14.2, #81). Moved-notices remain at old paths; they will be removed in a future release.
 - **Legacy plans have been migrated** to `gamma/plans/` (v3.14.2, #81). Moved-notices remain at old paths.

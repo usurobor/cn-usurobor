@@ -107,4 +107,4 @@ Changed:
 | `src/cmd/cn_system.ml` | Modified |
 | `src/cmd/cn_capabilities.ml` | Modified |
 | `src/lib/cn_lib.ml` | Version bump + help text |
-| `docs/alpha/CAR.md` | Updated to v3.5 |
+| `docs/alpha/cognitive-substrate/CAR.md` | Updated to v3.5 |
