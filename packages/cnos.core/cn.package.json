@@ -1,10 +1,10 @@
 {
   "schema": "cn.package.v1",
   "name": "cnos.core",
-  "version": "3.15.0",
+  "version": "3.15.1",
   "kind": "package",
   "engines": {
-    "cnos": "3.15.0"
+    "cnos": "3.15.1"
   },
   "sources": {
     "doctrine": [
