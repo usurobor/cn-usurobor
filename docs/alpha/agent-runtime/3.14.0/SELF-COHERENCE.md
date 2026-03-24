@@ -35,5 +35,5 @@
 
 ## Known Debt
 
-- Design doc at `docs/alpha/agent-runtime/RUNTIME-CONTRACT-v2.md` (versioned filename) should eventually move to `docs/alpha/agent-runtime/SPEC.md` per #75 feature bundle rules. Severity: C.
+- Design doc at `docs/alpha/RUNTIME-CONTRACT-v2.md` (versioned filename) should eventually move to `docs/alpha/agent-runtime/SPEC.md` per #75 feature bundle rules. Severity: C.
 - Doctor depth is structural only (4 top-level keys). Semantic consistency deferred to #59. Severity: C, documented in design doc §6.
