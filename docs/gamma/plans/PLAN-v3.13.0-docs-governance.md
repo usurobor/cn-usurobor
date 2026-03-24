@@ -14,7 +14,7 @@ Make cnos documentation governance self-consistent: explicit artifact expectatio
 
 ### Phase 1: Foundation (commits 588495e–a513e64)
 
-1. **Feature bundles + snapshot rules** — create `docs/alpha/agent-runtime/`, `docs/alpha/runtime-extensions/` with bundle READMEs; move `runtime-extensions/v1.0.6/` into proper directory structure
+1. **Feature bundles + snapshot rules** — create `docs/alpha/3.14.0-62-agent-runtime/`, `docs/alpha/3.12.0-73-runtime-extensions/` with bundle READMEs; move `runtime-extensions/v1.0.6/` into proper directory structure
 2. **Version-as-directory** — replace `versions/spec/` flat layout with `v<X.Y.Z>/` directories; each version dir gets a frozen `README.md` manifest
 3. **Bundle contract** — tighten bundle README requirements: name canonical, scope snapshots, clarify migration
 
