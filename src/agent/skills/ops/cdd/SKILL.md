@@ -69,6 +69,16 @@ Start at step 1. The process is complete when the post-release assessment is rec
   - ✅ `claude/3.13.0-75-docs-governance` — version + issue + scope
   - ✅ `claude/58-packages-sync` — issue + scope, no version yet
 
+1.5. **Branch pre-flight validation**
+  - Before creating the branch, run these checks:
+  - **Version check:** if a version segment is present, it MUST be greater than the latest tag (`git tag --sort=-v:refname | head -1`). If main has untagged release commits, the version must also be greater than those.
+  - **Branch uniqueness:** no existing remote branch may claim the same issue number (`git branch -r | grep '{issue}'`). A second branch for the same issue means either the first should be deleted or the work is a duplicate.
+  - **Open PR check:** no open PR may already cover the same issue (`gh pr list --state open` or equivalent). Starting work that duplicates an open PR wastes an entire cycle.
+  - **Convention check:** branch name matches `{agent}/{version}-{issue}-{scope}` or `{agent}/{issue}-{scope}` per §1.4. Deviations cause superseded PRs when renamed later.
+  - ❌ Pick version `3.14.1`, do all the work, discover the tag already exists → entire PR superseded
+  - ❌ Create branch for #81 when another branch already targets #81 → duplicate work
+  - ✅ Check `git tag`, `git branch -r`, open PRs → confirm version is next, no conflicts → create branch
+
 ---
 
 ## 2. Define the Gap
@@ -127,10 +137,13 @@ Follow the pipeline. Each step feeds the next.
   - Artifacts outside version directories (PR body files, navigation docs, bundle READMEs) are not enumerated as stubs
   - Version directories are **frozen by repository policy** — after creation, their contents MUST NOT be modified in later commits. When the canonical doc changes during the branch, **re-freeze**: copy the current canonical into the version directory before requesting review
   - The snapshot README MUST list every frozen artifact in the directory
+  - **Scope enumeration:** if the work covers a range (version range for epoch assessments, set of files for moves, set of cross-references for updates), the bootstrap README MUST list every item in scope. Enumerate mechanically (`git tag`, `ls`, `grep`), not from memory
   - ❌ Start coding before naming the version or enumerating deliverables
   - ❌ Leave a stale snapshot that doesn't match the canonical
+  - ❌ Write an epoch assessment for "v3.12–v3.14" without listing every tag in that range
   - ✅ First commit: `docs/gamma/cdd/v3.13.0/README.md` + `CDD.md` stub
   - ✅ Before review: verify `diff canonical frozen` = zero
+  - ✅ Bootstrap README for epoch assessment lists: v3.12.0, v3.12.1, v3.12.2, v3.14.0, v3.14.1 (enumerated from `git tag`)
 
 4.1. **Design doc**
   - Create or update before coding
@@ -545,15 +558,18 @@ The assessment has four parts: measurement, encoding lag, process learning, and 
 
   ```
   ### Encoding Lag (as of vX.Y.Z)
-  | Issue | Title | Design | Impl | Lag |
-  |-------|-------|--------|------|-----|
-  | #62   | RT Contract v2 | converged | branch exists | low |
-  | #73   | Extensions | converged | not started | growing |
+  | Issue | Title | Type | Design | Impl | Lag |
+  |-------|-------|------|--------|------|-----|
+  | #62   | RT Contract v2 | feature | converged | branch exists | low |
+  | #73   | Extensions | feature | converged | not started | growing |
+  | #97   | Review pre-flight | process | converged | not started | growing |
   ```
 
+  - **Type:** `feature` (design/code gap) or `process` (development method gap). Process issues enter the lag table and are subject to the same freeze triggers as feature issues
   - **Lag levels:** none (shipped), low (in progress), growing (design done, no impl), stale (design aging, impl not planned)
   - ❌ Release with 5 converged designs and no encoding lag report
-  - ✅ "Encoding lag: 2 growing, 1 low. MCI freeze recommended."
+  - ❌ Omit process issues from the encoding lag table
+  - ✅ "Encoding lag: 2 growing (1 feature, 1 process), 1 low. MCI freeze recommended."
 
 11.7. **MCI/MCA balance decision**
   - Based on the encoding lag report, decide the next move:
@@ -584,6 +600,26 @@ The assessment has four parts: measurement, encoding lag, process learning, and 
   - ❌ "We should fix the review process" (noted, not patched)
   - ✅ Commit skill patch in the same session as the post-mortem
 
+### Review Quality
+
+11.11. **Review quality metrics**
+  - Every post-release assessment MUST report review quality for all PRs in the release cycle:
+  - **Rounds per PR:** count of review iterations (comments requesting changes + fix commits) before merge. Target: ≤1 for docs PRs, ≤2 for code PRs.
+  - **Supersede rate:** count of PRs closed-not-merged and replaced by a successor PR. Target: 0.
+  - **Finding taxonomy:** tag each review finding as `mechanical` (automatable — stale cross-refs, missing scope items, wrong branch name) or `judgment` (design coherence, architecture trade-offs). Report the ratio.
+  - **Feedback loop:** if mechanical findings exceed 20% of total findings in any release cycle, file an issue to add the missing pre-flight check. This is a process bug, not a reviewer skill gap.
+  - ❌ Ship without reporting review round count or finding types
+  - ❌ Treat 3 superseded PRs as normal cost of doing business
+  - ✅ "5 PRs this cycle. Avg 1.2 rounds. 0 superseded. 2 mechanical findings (stale cross-refs) / 8 total → 25% mechanical → filed #97."
+
+11.12. **Process debt integration**
+  - Repeatable failure modes identified in §11.8–§11.11 MUST be filed as issues
+  - Process issues appear in the encoding lag table (§11.6) alongside feature issues with `type: process`
+  - Process issues are subject to the same MCI freeze triggers as feature issues (§11.7)
+  - The §9.11 release gate checks that P0 process findings from the previous assessment are addressed or explicitly deferred with rationale
+  - ❌ Identify a process failure, note it in the assessment, never file an issue
+  - ✅ "Stale cross-refs caught 3 times → filed #97 (process) → appears in lag table → addressed in v3.14.7"
+
 ---
 
 ## Orchestration
@@ -599,6 +635,7 @@ CDD is the main module. It owns the lifecycle from branch to observation and mea
 | Merge to main | `eng/ship/SKILL.md` |
 | Tag, changelog, GitHub release | `release/SKILL.md` |
 | Review protocol | `eng/review/SKILL.md` |
+| Cross-ref validation (file moves) | `eng/review/SKILL.md` §2.2.5 |
 | Post-release assessment | `ops/post-release/SKILL.md` |
 | Coherence scoring | `CHANGELOG.md` TSC table |
 
@@ -608,7 +645,7 @@ CDD defines what must happen and in what order. Sub-skills define how.
 
 ## Authority
 
-This skill is the **executable summary** of CDD. The **authoritative source** for the full artifact contract, pipeline table, frozen-snapshot rules, self-coherence report format, and governance detail is `docs/gamma/cdd/CDD.md`. When this skill and the canonical doc disagree, the canonical doc governs.
+This skill is the **executable summary** of CDD. The **authoritative source** for the full artifact contract, pipeline table, frozen-snapshot rules, self-coherence report format, and governance detail is `docs/gamma/cdd/CDD.md`. When this skill and the canonical doc disagree, the canonical doc governs — except for sections added in v3.14.7 (§1.5, §11.11, §11.12) which exist only in this skill pending canonical update. Until the canonical doc is updated to include these sections, this skill is authoritative for them.
 
 ---
 
