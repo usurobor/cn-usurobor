@@ -3,7 +3,8 @@
 | | |
 |---|---|
 | **Version** | 3.8.0 |
-| **Issue** | #81 (alpha bundle migration) |
+| **Date** | 2026-03-24 |
+| **Issue** | #50 (N-pass bind loop), #48 (Telegram typing indicators) |
 | **Status** | Frozen |
 
 ## Contents
