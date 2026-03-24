@@ -2,10 +2,15 @@
 (library
  (name cn_lib)
  (wrapped false)
- (modules cn_lib cn_json cn_sha256 cn_build_info)
+ (modules cn_lib cn_json cn_sha256 cn_build_info cn_version)
  (libraries inbox_lib))
 
 (rule
  (target cn_build_info.ml)
  (deps (universe))
  (action (bash "echo 'let cnos_commit = \"'$(git rev-parse --short HEAD 2>/dev/null || echo unknown)'\"' > %{target}")))
+
+(rule
+ (target cn_version.ml)
+ (deps ../../VERSION)
+ (action (bash "echo 'let version = \"'$(cat ../../VERSION | tr -d '\\n')'\"' > %{target}")))
