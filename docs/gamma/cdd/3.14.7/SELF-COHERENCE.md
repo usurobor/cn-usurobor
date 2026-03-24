@@ -2,7 +2,7 @@
 
 **Issue:** #97 — Reduce review round-trips: pre-flight checks + automated validation
 **Branch:** claude/3.14.7-97-review-preflight
-**Mode:** MCI — changes to development method text (CDD skill, review skill), no runtime code
+**Mode:** MCI — changes to development method text (CDD skill, review skill, post-release skill), no runtime code
 
 ## Pipeline Compliance
 
@@ -12,30 +12,41 @@
 | 1 | Branch | done | §1.5 pre-flight: v3.14.7 > v3.14.4 (latest tag), no existing branch for #97, no open PR for #97 |
 | 2 | Gap | done | PR body coherence contract |
 | 3 | Mode | done | MCI — process text only |
-| 4 | Artifacts | done | commit 2: CDD SKILL.md + review SKILL.md + package sync |
-| 5 | Self-coherence | done | this file |
-| 6 | Review | pending | — |
+| 4 | Artifacts | done | commit 2: CDD + review skills; commit 4: post-release skill + review taxonomy + authority fix |
+| 5 | Self-coherence | done | this file (updated after review round 1) |
+| 6 | Review | round 1 done | 5 findings, all addressed in commit 4 |
 | 7 | Gate | pending | — |
 
 ## Triadic Assessment
 
-- **α A** — All new sections follow existing CDD/review skill patterns (numbered subsections, ❌/✅ examples, clear rules). §11.11–§11.12 extend §11 naturally. §1.5 extends §1.4. §2.2.5 extends §2.2.x series.
-- **β A** — CDD skill and review skill are now aligned: CDD §orchestration names review skill §2.2.5 as cross-ref owner. §11.6 lag table template includes process issues. §11.12 wires process learning → issues → lag table → freeze triggers.
-- **γ A** — Each fix targets a specific observed failure mode (3 superseded PRs, stale cross-refs, coverage gaps). Metrics enable future self-correction via the 20% mechanical-finding threshold.
+- **α A** — All new sections follow existing skill patterns (numbered subsections, ❌/✅ examples). Finding taxonomy (§5.1) extends severity table naturally. Post-release template now has 5 sections matching 5 procedure steps.
+- **β A** — Three-skill alignment: CDD §11.11 defines metrics → review §5.1 defines taxonomy → post-release template + procedure captures both. Authority claim explicitly scoped for new sections pending canonical update.
+- **γ A** — Each fix targets an observed failure mode. Metrics enable future self-correction. Authority narrowing prevents future skill/canonical conflicts.
 
 ## AC Coverage (#97)
 
 | # | AC | Status | Evidence |
 |---|-----|--------|----------|
-| 1 | CDD §5.0/§5.1 branch pre-flight | Met | Added as §1.5 (§1.4 is where branch rules live in SKILL.md, not §5) |
-| 2 | Cross-ref validation in review skill | Met | §2.2.5 + checklist item |
+| 1 | CDD branch pre-flight | Met | §1.5: version, uniqueness, open PR, convention checks |
+| 2 | Cross-ref validation in review skill | Met | §2.2.5 + checklist item. Documented as mandatory mechanical step, not yet a script |
 | 3 | Scope enumeration in bootstrap | Met | §4.0 scope enumeration paragraph |
-| 4 | CDD §11 review quality metrics | Met | §11.11 |
-| 5 | Review skill automation owner named | Met | Orchestration table: `eng/review/SKILL.md §2.2.5` |
-| 6 | CDD §11.11 process debt integration | Met | §11.12 (§11.11 is review quality; §11.12 is process debt) |
-| 7 | Encoding lag table type column | Met | §11.6 template updated with Type column + process example |
+| 4 | CDD §11 review quality metrics | Met | §11.11 in CDD + §4 template + Step 5.5 in post-release skill |
+| 5 | Review skill finding taxonomy | Met | §5.1 mechanical vs judgment taxonomy with definition table + examples |
+| 6 | CDD §11.12 process debt integration | Met | §11.12 wires findings → issues → lag table → freeze |
+| 7 | Encoding lag table type column | Met | §11.6 + post-release §Step 3 template both include Type column |
+
+## Review Round 1 — Findings Addressed
+
+| # | Finding | Type | Fix |
+|---|---------|------|-----|
+| 1 | Post-release template missing review quality section | judgment | Added §4 Review Quality to template + Step 5.5 to procedure |
+| 2 | Review skill lacks mechanical/judgment taxonomy | judgment | Added §5.1 Finding Taxonomy |
+| 3 | Authority conflict: skill adds rules not in canonical | judgment | Narrowed authority claim with explicit v3.14.7 exception |
+| 4 | Snapshot manifest says source is canonical CDD.md | mechanical | Fixed to name actual source (SKILL.md) with note |
+| 5 | AC4/AC5 partial coverage | judgment | Addressed by fixes 1–2 above |
+
+1 mechanical / 4 judgment = 20% mechanical. At threshold but not over.
 
 ## Known Coherence Debt
 
-- Issue §97 AC references "§5.0/§5.1" but the SKILL.md has branch rules at §1.4. Pre-flight added as §1.5 — correct placement, AC numbering was off. No issue created (cosmetic).
-- Canonical CDD.md (`docs/gamma/cdd/CDD.md`) was NOT updated — it's a separate, longer document. The SKILL.md is the executable layer and was updated. If canonical CDD.md needs matching updates, that's a follow-up.
+- Canonical `docs/gamma/cdd/CDD.md` (v3.13.0) not updated with §1.5, §11.11, §11.12. Authority claim narrowed explicitly. Canonical update is follow-up work.

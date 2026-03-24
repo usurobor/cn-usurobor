@@ -222,6 +222,21 @@ Before submitting a review:
 | **B** | Improvement opportunity, no incoherence | APPROVED, note for author |
 | **A** | Polish | APPROVED |
 
+## 5.1. Finding Taxonomy
+
+Every finding MUST be tagged as one of two types. This taxonomy feeds CDD §11.11 review quality metrics.
+
+| Type | Definition | Examples |
+|------|-----------|----------|
+| **mechanical** | Automatable — could be caught by a grep, diff, or script without judgment | Stale cross-refs after file move, missing scope items, wrong branch name, snapshot/canonical mismatch, broken link |
+| **judgment** | Requires design reasoning, coherence assessment, or architectural context | Missing AC coverage, sibling incoherence, authority conflict, design trade-off, naming choice |
+
+Mechanical findings reaching review are **process bugs** — the pre-flight or author checklist should have caught them. If mechanical findings exceed 20% of total findings in a release cycle, file a process issue (CDD §11.12).
+
+- ❌ Report a finding without tagging it mechanical or judgment
+- ✅ "D (mechanical): stale cross-ref to `docs/gamma/RULES.md` in `ARCHITECTURE.md` L45"
+- ✅ "C (judgment): authority conflict — skill §1.5 adds rules not present in canonical CDD.md"
+
 ---
 
 ## 6. Output Format

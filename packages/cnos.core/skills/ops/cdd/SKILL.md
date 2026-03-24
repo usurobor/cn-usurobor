@@ -645,7 +645,7 @@ CDD defines what must happen and in what order. Sub-skills define how.
 
 ## Authority
 
-This skill is the **executable summary** of CDD. The **authoritative source** for the full artifact contract, pipeline table, frozen-snapshot rules, self-coherence report format, and governance detail is `docs/gamma/cdd/CDD.md`. When this skill and the canonical doc disagree, the canonical doc governs.
+This skill is the **executable summary** of CDD. The **authoritative source** for the full artifact contract, pipeline table, frozen-snapshot rules, self-coherence report format, and governance detail is `docs/gamma/cdd/CDD.md`. When this skill and the canonical doc disagree, the canonical doc governs — except for sections added in v3.14.7 (§1.5, §11.11, §11.12) which exist only in this skill pending canonical update. Until the canonical doc is updated to include these sections, this skill is authoritative for them.
 
 ---
 
