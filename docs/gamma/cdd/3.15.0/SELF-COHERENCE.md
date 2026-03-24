@@ -9,7 +9,7 @@
 | Step | Status | Evidence |
 |------|--------|----------|
 | §1.4 Branch | Done | `claude/review-agent-runtime-docs-LyUlu` (transport-assigned name) |
-| §1.5 Pre-flight | Done | Version 3.15.0 > latest tag v3.14.4, no branch/PR conflicts |
+| §1.5 Pre-flight | Done | Version 3.15.0 > latest tag v3.14.4 and > untagged release v3.14.7, no branch/PR conflicts |
 | §4.0 Bootstrap | Done | `docs/gamma/cdd/3.15.0/README.md` — first commit |
 | §4.1 Design doc | Done | Issue #22 body is the design (detailed 9-phase design) |
 | §4.2 Coherence contract | Done | PR description + README AC table |
@@ -45,8 +45,9 @@
 
 ## Known Coherence Debt
 
-- Branch name deviates from §1.4 convention (transport-assigned suffix) — cosmetic, no functional impact
+- Branch name deviates from §1.4 convention (transport-assigned suffix, should be `claude/3.15.0-22-version-coherence`) — cosmetic, no functional impact. Cannot rename with open PR.
 - `cn build --check` does not yet validate VERSION consistency (scripts/check-version-consistency.sh is standalone) — follow-up for #58
+- Package version extraction (`package_info.version`) relies on `@` separator in installed directory name. No fallback if convention changes — acceptable for v1, revisit if install layout changes.
 - CHANGELOG not yet frozen into version dir (canonical copy is authoritative)
 
 ## Checklist
