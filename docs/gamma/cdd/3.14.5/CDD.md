@@ -271,7 +271,7 @@ If a change is too small to warrant a version directory (e.g., a one-line fix, a
 
 ### 5.4 Relationship to AGILE-PROCESS.md
 
-The workflow states (Backlog → Claimed → In Progress → Review → Done) defined in `docs/gamma/AGILE-PROCESS.md` govern how work moves through the team. CDD governs what coherence means at each stage:
+The workflow states (Backlog → Claimed → In Progress → Review → Done) defined in `docs/gamma/cdd/AGILE-PROCESS.md` govern how work moves through the team. CDD governs what coherence means at each stage:
 
 | Agile state | CDD concern | Pipeline steps |
 |-------------|-------------|----------------|
@@ -349,8 +349,8 @@ Role: define first principles and normative boundaries.
 Role: define the structural system.
 
 ### 7.3 Process artifacts
-- `docs/gamma/AGILE-PROCESS.md`
-- `docs/gamma/RULES.md`
+- `docs/gamma/cdd/AGILE-PROCESS.md`
+- `docs/gamma/rules/RULES.md`
 - `CHANGELOG.md`
 
 Role: define workflow, governance, and release procedure.
