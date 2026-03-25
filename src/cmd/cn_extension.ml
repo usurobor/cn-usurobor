@@ -262,7 +262,7 @@ let check_op_conflicts entries =
     match entry.state with
     | Rejected _ -> entry
     | _ ->
-      let conflicts = entry.manifest.ops |> List.filter_map (fun op ->
+      let conflicts = entry.manifest.ops |> List.filter_map (fun (op : extension_op) ->
         match Hashtbl.find_opt op_owners op.kind with
         | Some owner ->
           Some (Printf.sprintf "op kind '%s' already provided by %s"
@@ -272,7 +272,7 @@ let check_op_conflicts entries =
       if conflicts <> [] then
         { entry with state = Rejected (String.concat "; " conflicts) }
       else begin
-        entry.manifest.ops |> List.iter (fun op ->
+        entry.manifest.ops |> List.iter (fun (op : extension_op) ->
           Hashtbl.replace op_owners op.kind entry.manifest.name);
         entry
       end
@@ -330,7 +330,7 @@ let build_registry ~hub_path ~runtime_version ?(disabled_extensions = []) () =
         ~event:"extension.loaded" ~severity:Info ~status:Ok_
         ~details:[
           "name", Cn_json.String entry.manifest.name;
-          "ops", Cn_json.Array (List.map (fun op ->
+          "ops", Cn_json.Array (List.map (fun (op : extension_op) ->
             Cn_json.String op.kind) entry.manifest.ops);
         ] ()
     | _ -> ());
@@ -339,7 +339,7 @@ let build_registry ~hub_path ~runtime_version ?(disabled_extensions = []) () =
   enabled |> List.iter (fun entry ->
     match entry.state with
     | Enabled ->
-      entry.manifest.ops |> List.iter (fun op ->
+      entry.manifest.ops |> List.iter (fun (op : extension_op) ->
         Hashtbl.replace op_index op.kind (entry, op))
     | _ -> ()
   );
@@ -383,7 +383,7 @@ let extension_to_json entry =
     "package", str entry.package_name;
     "backend", str entry.manifest.backend.kind;
     "state", str (string_of_lifecycle_state entry.state);
-    "ops", Cn_json.Array (List.map (fun op ->
+    "ops", Cn_json.Array (List.map (fun (op : extension_op) ->
       Cn_json.Object [
         "kind", str op.kind;
         "class", str op.op_class;

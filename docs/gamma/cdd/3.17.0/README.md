@@ -55,13 +55,16 @@ Agents remain network-blind. Future capabilities (API integrations, browser, dev
 | `src/cmd/cn_ext_host.ml` | New — subprocess host protocol |
 | `src/cmd/cn_shell.ml` | Open op registry, dispatch by registry lookup |
 | `src/cmd/cn_executor.ml` | Extension op dispatch to subprocess host |
+| `src/cmd/cn_orchestrator.ml` | Wire ext_registry through N-pass loop |
+| `src/cmd/cn_runtime.ml` | Build registry per cycle, wire through pipeline |
+| `src/cmd/cn_output.ml` | Wire ext_lookup into parse_ops_manifest |
+| `src/cmd/cn_context.ml` | Build registry at context-pack for Runtime Contract |
 | `src/cmd/cn_runtime_contract.ml` | Extensions in cognition + body layers |
 | `src/cmd/cn_capabilities.ml` | Extension ops in capability declarations |
 | `src/cmd/cn_trace.ml` | Extension event family |
-| `src/cmd/cn_system.ml` | Doctor extension checks |
+| `src/cmd/cn_system.ml` | Doctor extension + host health checks |
 | `src/agent/extensions/cnos.net.http/` | First reference extension source |
 | `test/cmd/cn_extension_test.ml` | Manifest, discovery, registry, dispatch tests |
-| `test/cmd/cn_ext_host_test.ml` | Subprocess host protocol tests |
 
 ---
 
