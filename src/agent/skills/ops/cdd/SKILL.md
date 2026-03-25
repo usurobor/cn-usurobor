@@ -124,7 +124,7 @@ State:
 - why it matters
 - what fails if skipped
 
-### 2.4 Choose mode
+### 2.4 Choose mode and active skills
 
 - MCA → change the system
 - MCI → change the model
@@ -132,6 +132,8 @@ State:
 - MCA first when coherent action is possible
 
 State why MCI is required if action is blocked.
+
+Name 2–3 skills as hard generation constraints for this change. All others are reference only. Fewer constraints deeply applied > many constraints lightly checked. (CDD §4.4)
 
 ### 2.5 Build artifacts in order
 

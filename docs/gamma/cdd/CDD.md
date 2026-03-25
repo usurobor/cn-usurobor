@@ -197,7 +197,7 @@ CDD owns the full arc from observation back to observation.
 | 2 | Branch | Create a dedicated branch | Valid branch name |
 | 3 | Bootstrap | Create snapshot skeleton | Version dir + stubs |
 | 4 | Gap | Name the incoherence precisely | Coherence contract draft |
-| 5 | Mode | Choose MCA, MCI, or both | Mode stated with rationale |
+| 5 | Mode | Choose MCA/MCI and governing skills | Mode + active skill set |
 | 6 | Artifacts | Design → contract → plan → tests → code → docs | Aligned implementation artifacts |
 | 7 | Self-coherence | Author checks own work against ACs and triad | Self-coherence report |
 | 8 | Review | CLP with another CA or human reviewer | Converged review outcome |
@@ -235,6 +235,21 @@ Before creating the branch, verify:
 - branch name matches the canonical format
 - current CI / main state is known
 - the intended scope is declared before implementation begins
+
+### 4.4 Skill selection
+
+At step 5 (Mode), the implementer must name the 2–3 skills that govern this change and load them as **hard generation constraints** — not post-hoc review checklists. All other skills remain available as reference but do not bind generation.
+
+Rationale: breadth without depth produces checklist engineering. Ten skills loaded at surface level means none are deeply internalized. Fewer constraints, deeply applied, prevent more defects than many constraints lightly checked.
+
+The selected skill set must be stated alongside mode. Example:
+
+```text
+Mode: MCA
+Active skills: ocaml, performance-reliability
+```
+
+Review (step 8) checks whether the implementation is consistent with the declared active skills. Findings that a loaded active skill would have prevented are process debt (§6.1).
 
 ---
 
