@@ -514,10 +514,18 @@ let get_latest_release () =
           match Cn_json.get_string "tag_name" json with
           | None -> None
           | Some tag ->
-              (* target_commitish is the full commit SHA the tag points to *)
+              (* target_commitish is the full commit SHA the tag points to.
+                 When a release is created manually, it may be a branch name
+                 like "main" instead of a SHA. Only use it if it looks like
+                 a hex SHA (length >= 40, all hex chars). *)
+              let is_hex_sha s =
+                String.length s >= 40 &&
+                String.to_seq s |> Seq.for_all (fun c ->
+                  (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
+              in
               let commit = match Cn_json.get_string "target_commitish" json with
-                | Some c -> String.sub c 0 (min 7 (String.length c))
-                | None -> "" in
+                | Some c when is_hex_sha c -> String.sub c 0 7
+                | _ -> "" in
               Some { tag = String.trim tag; commit }
 
 (* Backward-compat wrapper — callers that only need the tag *)
