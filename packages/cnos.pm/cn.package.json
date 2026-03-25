@@ -1,9 +1,9 @@
 {
   "schema": "cn.package.v1",
   "name": "cnos.pm",
-  "version": "3.15.1",
+  "version": "3.15.2",
   "kind": "package",
-  "engines": { "cnos": "3.15.1" },
+  "engines": { "cnos": "3.15.2" },
   "sources": {
     "skills": [
       "pm/follow-up",

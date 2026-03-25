@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.15.2 | A   | A           | A            | A                | Empty Telegram filter (#29), CDD v3.15.0 canonical rewrite (authority split resolved), review skill hardened (4 new checks from PR #103 comparison). |
 | v3.15.1 | A   | A           | A            | A-               | Fix #22 review blockers: re-exec after binary update (no stale in-process version), stamp-versions.sh derives manifests from VERSION, cn build --check + cn release gate version consistency, unified truth read in update_runtime. Process: reviewed before merge, CI green. |
 | v3.15.0 | A-  | A           | A-           | B+               | Version coherence (#22): VERSION→dune→cn_version.ml chain is sound (α A). β regressed: I1 CI check failed at merge, claim/reality gap on AC3+AC10. γ regressed: 0 review rounds (self-merged ~26min), merged with red CI, 3 fix commits post-implementation — first release after §11.11 review metrics bypassed review entirely. Manifests not yet stamped from VERSION (validate-only, not derive). Update path uses stale in-process version. Core architecture correct; contract partially closed. |
 | v3.14.7 | A   | A           | A            | A                | Reduce review round-trips (#97): branch pre-flight validation (§1.5), scope enumeration (§4.0), review quality metrics (§11.11), process debt integration (§11.12), encoding lag type column (§11.6), cross-ref validation in review skill (§2.2.5), finding taxonomy (§5.1). Post-release template updated with review quality section. |
@@ -60,6 +61,36 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 | v1.1.0  | B   | B+          | B            | B                | Template layout; git-CN naming; CLI added.   |
 | v1.0.0  | B−  | B−          | C+           | B−               | First public template; git-CN hub + self-cohere. |
 | v0.1.0  | C−  | C           | C−           | D+               | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## v3.15.2 (2026-03-25)
+
+**Empty Telegram filter (#29), CDD canonical rewrite, review skill hardening**
+
+Three concerns addressed in one release: a runtime bugfix, the CDD authority split, and review skill improvements.
+
+### Fixed
+
+- **Empty Telegram messages filtered before enqueuing (#29)** — photos, stickers, edits have `text=""` and caused Claude API 400 → infinite retry loop (#28). `drain_tg` now checks `String.trim msg.text = ""`, advances offset, emits trace event (`reason_code: empty_content`). Mirrors existing `rejected_user` pattern.
+
+### Changed
+
+- **CDD.md rewritten as canonical algorithm spec (v3.15.0)** — absorbs §0 selection, 14-step lifecycle, cycle-close, operational debt override, and all sections previously carried only by the skill. 12 sections: purpose, scope, inputs, selection function, lifecycle, artifact contract, mechanical/judgment boundary, review, gate, assessment, closure, related docs.
+- **CDD SKILL.md rewritten as executable summary** — clean DUR structure, canonical doc governs on disagreement, no authority exception blocks. Delegates to sub-skills.
+- **RATIONALE.md created** — companion document: why CDD is closed-loop, artifact-driven, and not fully mechanical. Absorbs the "why" that doesn't belong in spec or skill.
+- **README.md rewritten** — self-describing topic bundle with reading order and document map.
+- **AGILE-PROCESS.md demoted to reference profile** — explicitly one valid implementation of CDD, not the method itself.
+- **Review skill §2.0.5** — CDD artifact contract check: verify required CDD artifacts exist for the change class.
+- **Review skill §2.2.8** — authority-surface conflict: when multiple surfaces define the same thing, verify they agree.
+- **Review skill §2.3.6** — evidence depth: match evidence depth to claim strength (predicate ≠ integration).
+- **Review skill §3.7** — CI/release-gate state: don't issue merge instruction when required checks haven't run.
+
+### Process
+
+- **CDD §0 selection** — #29 selected via §0.6 operational infrastructure debt override.
+- **PR #103** — authored by usurobor via Claude Code session, reviewed by Sigma. Reset+cherry-pick after history rewrite (Test→usurobor authorship fix via git filter-repo).
+- **Git authorship fixed** — all historical `Test <test@test.local>` commits rewritten to `usurobor <usurobor@gmail.com>` via git filter-repo. Force-pushed.
 
 ---
 
