@@ -327,4 +327,13 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for full guidelines.
 
 ---
 
+## Support
+
+cnos is open source. Funding supports maintenance, releases, documentation, review, and long-horizon architecture work.
+
+- Individuals: [GitHub Sponsors](https://github.com/sponsors/usurobor)
+- Organizations: see [docs/beta/SUSTAINABILITY.md](./docs/beta/SUSTAINABILITY.md)
+
+---
+
 [Apache License 2.0](./LICENSE)
