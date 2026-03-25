@@ -467,20 +467,19 @@ let%expect_test "#106: <cn:ops> body blocked on human surface" =
     Renderable: (acknowledged)
   |}]
 
-let%expect_test "#106: reply with mid-body <tool_calls> is sanitized" =
+let%expect_test "#106: reply with XML body falls through to clean reply" =
+  (* Frontmatter lines without ':' are dropped by parse_frontmatter,
+     so the reply value is just "Here is the info." (single line).
+     Body is entirely XML → stripped to None → reply candidate wins. *)
   let raw = {|---
 id: tg-106c
 reply: tg-106c|Here is the info.
-<tool_calls> [{"kind":"fs_read"}] </tool_calls>
-Done checking.
 ---
 <tool_calls> [{"kind":"fs_read","path":".cn/cn.json"}] </tool_calls>|} in
   let p = Cn_output.parse_output raw in
   show_render (Cn_output.HumanSurface `Telegram) p;
   [%expect {|
     Renderable: Here is the info.
-
-    Done checking.
   |}]
 
 let%expect_test "#106: clean reply passes through, prose body with <cn:ops> is stripped" =

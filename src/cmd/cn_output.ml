@@ -207,13 +207,25 @@ let strip_xml_pseudo_tools s =
     let t = String.trim line in
     List.exists (fun prefix -> starts_with ~prefix t) xml_prefixes
   in
-  let has_close line =
+  (* Extract the tag name from a line matching an xml_prefix.
+     E.g. "<tool_calls> ..." → "tool_calls", "<cn:ops>..." → "cn:ops" *)
+  let extract_tag_name line =
     let t = String.trim line in
-    (* closing tag present: </…> — scan for </ at any position *)
-    let len = String.length t in
+    List.find_map (fun prefix ->
+      if starts_with ~prefix t then
+        (* prefix is "<tag_name>", extract between < and > *)
+        Some (String.sub prefix 1 (String.length prefix - 2))
+      else None
+    ) xml_prefixes
+  in
+  (* Check if a specific closing tag </tag_name> appears on this line *)
+  let has_matching_close tag_name line =
+    let close_tag = "</" ^ tag_name ^ ">" in
+    let clen = String.length close_tag in
+    let len = String.length line in
     let rec scan i =
-      if i + 1 >= len then false
-      else if t.[i] = '<' && t.[i + 1] = '/' then true
+      if i + clen > len then false
+      else if String.sub line i clen = close_tag then true
       else scan (i + 1)
     in
     scan 0
@@ -267,22 +279,26 @@ let strip_xml_pseudo_tools s =
     in
     scan 0
   in
-  (* Pass 1: block-level stripping *)
-  let rec walk acc in_block = function
+  (* Pass 1: block-level stripping with matched-tag tracking.
+     block_tag = None when outside a block, Some tag_name inside. *)
+  let rec walk acc block_tag = function
     | [] -> List.rev acc
     | line :: rest ->
-      if in_block then
-        (* Inside an XML block — skip until closing tag *)
-        if has_close line then walk acc false rest
-        else walk acc true rest
-      else if is_xml_open line then
-        (* Opening line — skip it; check if self-closing *)
-        if has_close line then walk acc false rest
-        else walk acc true rest
-      else
-        walk (line :: acc) false rest
+      match block_tag with
+      | Some tag ->
+        (* Inside an XML block — skip until matching </tag> *)
+        if has_matching_close tag line then walk acc None rest
+        else walk acc (Some tag) rest
+      | None ->
+        match extract_tag_name line with
+        | Some tag ->
+          (* Opening line — skip; check if self-closing *)
+          if has_matching_close tag line then walk acc None rest
+          else walk acc (Some tag) rest
+        | None ->
+          walk (line :: acc) None rest
   in
-  let after_blocks = walk [] false lines in
+  let after_blocks = walk [] None lines in
   (* Pass 2: inline stripping on surviving lines *)
   let after_inline = List.map strip_inline after_blocks in
   let filtered = after_inline |> String.concat "\n" |> String.trim in
