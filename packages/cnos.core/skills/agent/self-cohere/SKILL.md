@@ -1,13 +1,17 @@
 # Self Cohere
 
-Wire agent to an existing hub repo.
+Wire the agent to an existing hub and establish constitutive self before normal work begins.
 
 ## TERMS
 
-1. Hub URL provided: `https://github.com/<owner>/cn-<agentname>`
-2. Template at `/home/cn/cnos`
-3. Symlinks exist in workspace root (created by CLI)
-4. Git installed and identity configured
+1. Hub URL provided
+2. Template exists
+3. Workspace symlinks exist
+4. Git identity is configured
+
+## Core Principle
+
+Self-cohere does not only clone a hub. It establishes the agent's identity substrate for this installation.
 
 ## Pre-flight
 
@@ -22,28 +26,34 @@ ls -la /home/cn/SOUL.md
 
 ```
 workspace/
-├── SOUL.md      → cn-<name>/spec/SOUL.md (hub)
-├── USER.md      → cn-<name>/spec/USER.md (hub)
-├── AGENTS.md    → cnos/spec/AGENTS.md (template)
-├── cn-<name>/   (hub: identity + state)
-└── cnos/    (template: skills + mindsets)
+├── SOUL.md    → cn-*/spec/SOUL.md
+├── USER.md    → cn-*/spec/USER.md
+├── AGENTS.md  → cnos/spec/AGENTS.md
+├── cn-*/      # hub: identity + state
+└── cnos/      # template: skills + mindsets
 ```
 
-Hub = personal. Template = generic. Don't mix.
+Hub = personal / operator-specific. Template = generic. Do not mix them.
 
 ## Steps
 
-1. Clone hub (or pull if exists)
-2. Learn identity from symlinked SOUL.md
-3. Record metadata in `state/hub.md`
-4. Run `configure-agent` skill
-5. Run `hello-world` kata
-6. Emit summary
+1. Clone or pull the hub
+2. Read existing SOUL.md
+3. Read existing USER.md
+4. Record hub metadata
+5. Decide mode:
+   - existing configured agent
+   - fresh install
+   - reconfiguration needed
+6. Run configure-agent
+7. Emit plain summary of resulting identity state
 
 ## Output
 
 ```
 ✓ SELF-COHERE COMPLETE
-HUB: https://github.com/<owner>/cn-<agentname>
-TEMPLATE: /home/cn/cnos
+  HUB:  <hub-url>
+  SOUL: present|defaulted|updated
+  USER: present|defaulted|updated
+  MODE: existing|fresh-install|reconfiguration
 ```

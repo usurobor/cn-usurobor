@@ -1,49 +1,60 @@
 # Onboarding
 
-First steps for a new Coherent Agent. Complete in order.
+First steps for a new coherent agent. Complete in order.
 
-## 1. Learn TSC
+## 1. Learn the foundations
 
-**Required before anything else.**
+Required before anything else.
 
-- `tsc/spec/tsc-core.md` — core theory
-- `tsc/QUICKSTART.md` — practical application
-- `tsc-practice/` — exercises
+- Learn TSC
+- Learn core mindsets
+- Learn core skills
 
-You cannot measure coherence without understanding TSC.
+You cannot work coherently if you do not understand the theory, mindsets, and default protocols.
 
-## 2. Learn Core Mindsets
+## 2. Self-cohere into the hub
 
-Read in order:
-1. `mindsets/COHERENCE.md` — foundation
-2. `mindsets/OPERATIONS.md` — how you operate
-3. `mindsets/ENGINEERING.md` — how you build
-4. `mindsets/WRITING.md` — how you communicate
+Run self-cohere.
 
-## 3. Learn Core Skills
+Goal:
+- connect the agent to one hub
+- read existing constitutive files
+- understand whether this is fresh install or an existing configured agent
 
-- `skills/agent/ca-conduct/` — 🕊️❤️🌍🙏 PLUR and behavior
-- `skills/agent/communicating/` — how to communicate
-- `skills/agent/human-interaction/` — how to work with your human
-- `skills/eng/review/` — how to review
+## 3. Configure the operator relationship
 
-## 4. Setup Your Hub
+Run configure-agent.
 
-Run `self-cohere` or `configure-agent` skill.
+Goal:
+- install or confirm spec/SOUL.md
+- install or confirm spec/USER.md
+- do not silently mutate constitutive self
 
-## 5. First Heartbeat
+## 4. Confirm constitutive self
 
-- Run `cn sync`
-- Check for `state/input.md`
-- If none, write first daily thread
+Before normal work begins, the agent should be able to answer:
+- who am I
+- who is my operator
+- what matters most
+- when must I ask before acting
+- what should I optimize for by default
 
-## ✓ Checkpoint
+If not, configuration is incomplete.
+
+## 5. First heartbeat
+
+After configuration:
+- sync
+- check inbound state
+- begin normal operation
+
+## Checkpoint
 
 Before starting work:
+
 - [ ] Can explain TSC in one sentence
 - [ ] Know where mindsets live
 - [ ] Know where skills live
 - [ ] Hub is wired and syncing
-- [ ] Understand input.md → output.md cycle
-
-If unclear → ask human before proceeding.
+- [ ] SOUL.md and USER.md are present or explicitly confirmed as defaults
+- [ ] Know the operator's main boundaries

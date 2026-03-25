@@ -1,51 +1,141 @@
 # Configure Agent
 
-Interview-style personalization of a cnos.
+Install or update the agent's constitutive self and operator relationship.
 
-## TERMS
+## Core Principle
 
-- Hub repo exists with template spec files
-- Agent can read/write files and run git
+Configuration is the only mode in which the agent may write its constitutive self. Outside configuration mode, it may propose changes but not apply them.
 
-## UX
+The goal is not to invent a personality. The goal is to establish stable orientation and stable operator fit.
 
-- One question at a time
-- Reasonable defaults
-- Never mention file names to human
+## Algorithm
 
-## Interview
+1. Define — determine whether this is fresh install or reconfiguration, and what is missing or mismatched.
+2. Unfold — interview the operator, draft SOUL.md and USER.md, summarize the proposal, request confirmation.
+3. Rules — do not silently rewrite constitutive files; promote only durable truths.
 
-### Agent Refinement
+---
 
-- Anything to change about my vibe?
-- Domains to focus on more/less?
-- Things I should NOT do?
+## 1. Define
 
-### Human Understanding
+### 1.1 Identify the parts
 
-- What's your timezone?
-- What do you care about most? (speed, accuracy, proactivity, brevity)
-- How do you prefer to communicate?
+- spec/SOUL.md — the agent's stable orientation
+- spec/USER.md — the operator relationship
+- current operator intent
+- current mismatch, if any
+- confirmation state
 
-### Working Together
+### 1.2 Articulate how they fit
 
-- When should I ask before acting?
-- How much autonomy for internal work?
+SOUL.md answers:
+- who am I
+- what do I optimize for
+- how do I resolve ambiguity
 
-### Tools
+USER.md answers:
+- who is my operator
+- how do they want to work
+- where are my autonomy boundaries
 
-- Any tools/APIs I should know about?
-- Want periodic background checks?
+### 1.3 Name the failure mode
 
-## After Interview
+Configuration fails through drift:
+- silent identity mutation
+- temporary preferences promoted to soul
+- operator preferences mixed into constitutive agent identity
+- files rewritten without explicit confirmation
 
-1. Summarize in plain language
-2. Update spec files
-3. Update README (autobiography with timeline)
-4. Commit and push
+  - ❌ "I updated my soul based on our conversation."
+  - ✅ "I drafted proposed changes. Please confirm before I apply them."
 
-```bash
-git add spec/ README.md
-git commit -m "Configure <AGENT_NAME>"
-git push
-```
+---
+
+## 2. Unfold
+
+### 2.1 Detect mode
+
+Choose one:
+- Fresh install — files missing or template defaults only
+- Reconfiguration — files exist, but mismatch evidence is present
+- No-op — current soul and user profile still fit
+
+### 2.2 Interview the operator
+
+Ask one question at a time in plain language.
+
+Required areas:
+- what matters most
+- communication style
+- autonomy boundaries
+- things to avoid
+- tools / APIs to know
+- whether periodic checks are wanted
+
+Do not mention file names unless asked.
+
+### 2.3 Draft changes
+
+Draft changes separately:
+- SOUL changes — only if the agent's stable orientation needs change
+- USER changes — operator preferences and working relationship
+
+### 2.4 Summarize plainly
+
+Before any write, summarize:
+- what I learned
+- what would change in the agent
+- what would change in the operator profile
+- what stays the same
+
+### 2.5 Confirm
+
+Require explicit confirmation:
+- apply
+- apply with edits
+- do not apply
+
+No silent application.
+
+### 2.6 Apply and commit
+
+After confirmation:
+- write spec/SOUL.md
+- write spec/USER.md
+- commit the change
+
+---
+
+## 3. Rules
+
+### 3.1 Constitutive self rule
+
+Outside configuration mode:
+- may read
+- may explain
+- may propose
+- may not write
+
+### 3.2 Promotion rule
+
+- transient preference → keep transient
+- durable operator preference → USER.md
+- constitutive orientation change → SOUL.md
+
+Do not confuse convenience with identity.
+
+### 3.3 Confirmation rule
+
+No write without clear operator approval unless an explicit auto-apply policy already exists in USER.md.
+
+### 3.4 Plain-language rule
+
+The human should not need to think in file paths or internal categories to configure the agent.
+
+### 3.5 Evidence rule
+
+If reconfiguration is triggered by mismatch:
+- name the mismatch
+- cite repeated evidence
+- propose the correction
+- confirm before apply
