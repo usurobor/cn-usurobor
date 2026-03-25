@@ -1058,6 +1058,27 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
     | result -> finally (); result
     | exception exn -> finally (); raise exn
 
+(* === Dead-letter decision (#28) === *)
+
+type retry_decision =
+  | Retry  (** Retryable error, attempts remaining *)
+  | Dead_letter_non_retryable  (** 4xx — will never succeed *)
+  | Dead_letter_exhausted  (** Retryable error, max attempts reached *)
+
+(** Classify an error and decide whether to retry or dead-letter.
+    [attempts] is the current attempt number (1-based, after increment).
+    [max_retries] is the maximum number of attempts before dead-letter. *)
+let classify_retry_decision ~max_retries ~attempts err =
+  let is_non_retryable = Cn_lib.starts_with ~prefix:"HTTP 4" err in
+  if is_non_retryable then Dead_letter_non_retryable
+  else if attempts >= max_retries then Dead_letter_exhausted
+  else Retry
+
+let string_of_retry_decision = function
+  | Retry -> "retry"
+  | Dead_letter_non_retryable -> "dead_letter:non_retryable"
+  | Dead_letter_exhausted -> "dead_letter:retries_exhausted"
+
 (* === Drain queue (SCHEDULER-v3.7.0 §7) === *)
 
 type drain_stop_reason =
@@ -1352,6 +1373,12 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
     end else 0
   ) in
 
+  (* #28: Per-trigger retry tracking for dead-letter.
+     Key = update_id, value = attempt count (starting at 1).
+     Entries are removed on success or dead-letter. *)
+  let max_trigger_retries = 3 in
+  let trigger_retries : (int, int) Hashtbl.t = Hashtbl.create 16 in
+
   let token_opt = config.telegram_token in
 
   (* Write initial ready.json with scheduler projection *)
@@ -1559,6 +1586,8 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                     enqueue_telegram hub_path msg;
                     match process_one ~config ~hub_path ~name with
                     | Ok () ->
+                        (* #28: clear retry counter on success *)
+                        Hashtbl.remove trigger_retries msg.update_id;
                         if not (is_queued hub_path trigger_id)
                            && not (is_in_flight hub_path trigger_id) then begin
                           Cn_telegram.clear_reaction ~token
@@ -1581,15 +1610,71 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                             ~trigger_id ()
                         end
                     | Error err ->
-                        last_drain_degraded := true;
-                        write_daemon_ready ~tg_poll_status:"ok" ();
-                        Cn_trace.gemit ~component:"telegram" ~layer:Sensor
-                          ~event:"daemon.offset.blocked" ~severity:Warn ~status:Error_status
-                          ~trigger_id
-                          ~reason_code:"processing_failed" ();
-                        print_endline (Cn_fmt.warn (Printf.sprintf
-                          "Processing failed for tg-%d: %s (will retry)"
-                          msg.update_id err))
+                        (* #28: Retry limit + dead-letter.
+                           Track per-trigger attempts. Non-retryable errors
+                           (4xx) dead-letter immediately. Retryable errors
+                           get max_trigger_retries attempts before dead-letter. *)
+                        let attempts =
+                          (match Hashtbl.find_opt trigger_retries msg.update_id with
+                           | Some n -> n
+                           | None -> 0) + 1 in
+                        Hashtbl.replace trigger_retries msg.update_id attempts;
+                        let decision = classify_retry_decision
+                          ~max_retries:max_trigger_retries ~attempts err in
+                        (match decision with
+                        | Dead_letter_non_retryable | Dead_letter_exhausted ->
+                          begin
+                          (* Dead-letter: advance offset, remove retry state, move on *)
+                          Hashtbl.remove trigger_retries msg.update_id;
+                          Cn_trace.gemit ~component:"telegram" ~layer:Sensor
+                            ~event:"daemon.trigger.dead_lettered" ~severity:Warn
+                            ~status:Error_status ~trigger_id
+                            ~reason_code:(match decision with
+                                          | Dead_letter_non_retryable -> "non_retryable"
+                                          | _ -> "retries_exhausted")
+                            ~details:[
+                              "update_id", Cn_json.Int msg.update_id;
+                              "attempts", Cn_json.Int attempts;
+                              "error", Cn_json.String err;
+                            ] ();
+                          print_endline (Cn_fmt.warn (Printf.sprintf
+                            "Dead-lettered tg-%d after %d attempt(s): %s"
+                            msg.update_id attempts err));
+                          (* Clean up any leftover input/output files for this trigger *)
+                          let input_p = Cn_agent.input_path hub_path in
+                          let output_p = Cn_agent.output_path hub_path in
+                          (if Cn_ffi.Fs.exists input_p then
+                             Cn_ffi.Fs.unlink input_p);
+                          (if Cn_ffi.Fs.exists output_p then
+                             Cn_ffi.Fs.unlink output_p);
+                          Cn_telegram.clear_reaction ~token
+                            ~chat_id:msg.chat_id ~message_id:msg.message_id;
+                          offset := max !offset (msg.update_id + 1);
+                          write_offset hub_path !offset;
+                          last_drain_degraded := true;
+                          write_daemon_ready ~tg_poll_status:"ok" ();
+                          drain_tg rest
+                        end
+                        | Retry ->
+                          (* Exponential backoff: 1s, 2s, 4s... capped at 30s *)
+                          let backoff = min (1.0 *. Float.of_int (1 lsl (attempts - 1))) 30.0 in
+                          Unix.sleepf backoff;
+                          (* Will retry on next poll cycle *)
+                          last_drain_degraded := true;
+                          write_daemon_ready ~tg_poll_status:"ok" ();
+                          Cn_trace.gemit ~component:"telegram" ~layer:Sensor
+                            ~event:"daemon.offset.blocked" ~severity:Warn
+                            ~status:Error_status ~trigger_id
+                            ~reason_code:"processing_failed"
+                            ~details:[
+                              "update_id", Cn_json.Int msg.update_id;
+                              "attempt", Cn_json.Int attempts;
+                              "max_retries", Cn_json.Int max_trigger_retries;
+                              "error", Cn_json.String err;
+                            ] ();
+                          print_endline (Cn_fmt.warn (Printf.sprintf
+                            "Processing failed for tg-%d (attempt %d/%d): %s (will retry)"
+                            msg.update_id attempts max_trigger_retries err)))
                   end
             in
             drain_tg sorted));

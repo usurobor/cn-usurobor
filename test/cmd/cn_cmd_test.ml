@@ -1238,3 +1238,55 @@ let%expect_test "maintenance: cleanup_once cleans stale markers" =
   [%expect {|
     status=ok
     markers_remaining=0 |}]
+
+(* === Cn_runtime: retry decision classification (#28) === *)
+
+let%expect_test "retry: 4xx errors dead-letter immediately" =
+  let d = Cn_runtime.classify_retry_decision ~max_retries:3 ~attempts:1
+    "HTTP 400: invalid request body" in
+  Printf.printf "%s\n" (Cn_runtime.string_of_retry_decision d);
+  [%expect {| dead_letter:non_retryable |}]
+
+let%expect_test "retry: 4xx dead-letters even on first attempt" =
+  let d = Cn_runtime.classify_retry_decision ~max_retries:3 ~attempts:1
+    "HTTP 422: unprocessable entity" in
+  Printf.printf "%s\n" (Cn_runtime.string_of_retry_decision d);
+  [%expect {| dead_letter:non_retryable |}]
+
+let%expect_test "retry: 5xx retries when attempts < max" =
+  let d = Cn_runtime.classify_retry_decision ~max_retries:3 ~attempts:1
+    "HTTP 500 after 3 retries: internal server error" in
+  Printf.printf "%s\n" (Cn_runtime.string_of_retry_decision d);
+  [%expect {| retry |}]
+
+let%expect_test "retry: 5xx dead-letters when attempts exhausted" =
+  let d = Cn_runtime.classify_retry_decision ~max_retries:3 ~attempts:3
+    "HTTP 500 after 3 retries: internal server error" in
+  Printf.printf "%s\n" (Cn_runtime.string_of_retry_decision d);
+  [%expect {| dead_letter:retries_exhausted |}]
+
+let%expect_test "retry: network error retries when attempts < max" =
+  let d = Cn_runtime.classify_retry_decision ~max_retries:3 ~attempts:2
+    "curl: (7) Failed to connect" in
+  Printf.printf "%s\n" (Cn_runtime.string_of_retry_decision d);
+  [%expect {| retry |}]
+
+let%expect_test "retry: network error dead-letters when exhausted" =
+  let d = Cn_runtime.classify_retry_decision ~max_retries:3 ~attempts:3
+    "curl: (7) Failed to connect" in
+  Printf.printf "%s\n" (Cn_runtime.string_of_retry_decision d);
+  [%expect {| dead_letter:retries_exhausted |}]
+
+let%expect_test "retry: decision string roundtrip" =
+  Printf.printf "%s\n" (Cn_runtime.string_of_retry_decision Cn_runtime.Retry);
+  Printf.printf "%s\n" (Cn_runtime.string_of_retry_decision Cn_runtime.Dead_letter_non_retryable);
+  Printf.printf "%s\n" (Cn_runtime.string_of_retry_decision Cn_runtime.Dead_letter_exhausted);
+  [%expect {|
+    retry
+    dead_letter:non_retryable
+    dead_letter:retries_exhausted |}]
+
+let%expect_test "retry: backoff doubles per attempt" =
+  let backoff attempts = min (1.0 *. Float.of_int (1 lsl (attempts - 1))) 30.0 in
+  Printf.printf "%.0f %.0f %.0f %.0f\n" (backoff 1) (backoff 2) (backoff 3) (backoff 4);
+  [%expect {| 1 2 4 8 |}]
