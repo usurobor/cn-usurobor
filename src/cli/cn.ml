@@ -45,7 +45,7 @@ let () =
       print_endline help_text;
       Cn_ffi.Process.exit 1
   | Some Help -> print_endline help_text
-  | Some Version -> Printf.printf "cn %s\n" version
+  | Some Version -> Printf.printf "cn %s (%s)\n" version cnos_commit
   | Some Update ->
       (match Cn_hub.find_hub_path (Cn_ffi.Process.cwd ()) with
        | Some hub_path -> Cn_system.run_update_with_cron hub_path

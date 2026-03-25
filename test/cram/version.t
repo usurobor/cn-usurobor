@@ -4,11 +4,10 @@ Setup:
   $ CN="$(pwd)/cn.sh"
   $ CNOS_VERSION=$(cat ../../VERSION | tr -d '\n')
 
-Version command shows version derived from VERSION file:
+Version command shows version and commit derived from VERSION file:
 
   $ ACTUAL=$($CN --version)
-  $ EXPECTED="cn $CNOS_VERSION"
-  $ [ "$ACTUAL" = "$EXPECTED" ] && echo "version ok" || echo "MISMATCH: got '$ACTUAL' expected '$EXPECTED'"
+  $ echo "$ACTUAL" | grep -q "^cn $CNOS_VERSION " && echo "version ok" || echo "MISMATCH: got '$ACTUAL' expected 'cn $CNOS_VERSION (...)'"
   version ok
 
 Help shows usage:

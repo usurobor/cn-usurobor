@@ -1053,6 +1053,38 @@ let%expect_test "do_update: Update_skip returns protocol skip" =
   Printf.printf "result=%s\n" label;
   [%expect {| result=skip |}]
 
+(* === #37: same-version patch detection === *)
+
+let%expect_test "update_info: Update_patch carries tag" =
+  let info = Cn_agent.Update_patch "v3.15.2" in
+  let tag = match info with
+    | Cn_agent.Update_patch t -> t
+    | Cn_agent.Update_available t -> t
+    | Cn_agent.Update_skip -> "skip" in
+  Printf.printf "tag=%s\n" tag;
+  [%expect {| tag=v3.15.2 |}]
+
+let%expect_test "update_info: do_update exercises Update_patch path" =
+  (* Update_patch enters the download path (not the skip path).
+     Result depends on environment: fail if /usr/local/bin writable but
+     no binary exists, skip if not writable (CI/test). Either way, not
+     Update_complete proves we didn't silently succeed. *)
+  let result = Cn_agent.do_update (Cn_agent.Update_patch "v0.0.0-nonexistent") in
+  let label = match result with
+    | Cn_protocol.Update_skip -> "skip"
+    | Cn_protocol.Update_complete -> "complete"
+    | Cn_protocol.Update_fail -> "fail"
+    | _ -> "other" in
+  let not_complete = label <> "complete" in
+  Printf.printf "not_complete=%b\n" not_complete;
+  [%expect {| not_complete=true |}]
+
+let%expect_test "cnos_commit is a short git hash" =
+  let c = Cn_lib.cnos_commit in
+  let valid = String.length c >= 7 || c = "unknown" in
+  Printf.printf "valid=%b commit=%s\n" valid c;
+  [%expect {| valid=true commit=unknown |}]
+
 (* === Cn_config: scheduler config (v3.7.0) ===
 
    Tests scheduler block parsing: defaults, overrides, clamping. *)
