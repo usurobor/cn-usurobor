@@ -50,7 +50,7 @@ Replaces the flat `workspace` block with **zone-classified paths**:
 
 | Zone | Meaning | Paths |
 |------|---------|-------|
-| `constitutive_self` | Identity substrate — cannot be modified by agent | `spec/SOUL.md`, `spec/USER.md`, installed doctrine, installed mindsets |
+| `constitutive_self` | Identity substrate — cannot be modified during normal operation; may be modified only in explicit configuration mode with operator confirmation or an explicitly recorded auto-apply policy (see CONFIGURE-AGENT.md) | `spec/SOUL.md`, `spec/USER.md`, installed doctrine, installed mindsets |
 | `memory` | Temporal record — agent's reflections and conversation | `threads/reflections/`, `state/conversation.json` |
 | `private_body` | Runtime internals — opaque to agent | `.cn/`, `state/` (except conversation.json), `logs/` |
 | `work_medium` | Legitimate work surfaces | `src/`, `docs/`, `agent/` |

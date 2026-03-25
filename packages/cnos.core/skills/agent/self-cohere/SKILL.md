@@ -38,22 +38,28 @@ Hub = personal / operator-specific. Template = generic. Do not mix them.
 ## Steps
 
 1. Clone or pull the hub
-2. Read existing SOUL.md
-3. Read existing USER.md
-4. Record hub metadata
-5. Decide mode:
-   - existing configured agent
-   - fresh install
-   - reconfiguration needed
-6. Run configure-agent
-7. Emit plain summary of resulting identity state
+2. Read existing spec/SOUL.md
+3. Read existing spec/USER.md
+4. If either file is missing, copy template defaults from `cnos/spec/SOUL.md` and `cnos/spec/USER.md` into the hub's `spec/` directory. Identity must be materialized in the hub before first normal wake — the runtime packer has no fallback.
+5. Record hub metadata
+6. Decide mode:
+   - existing configured agent — both files present and populated
+   - fresh install — one or both files were missing or defaulted
+   - reconfiguration needed — files exist but mismatch evidence is present
+7. Run configure-agent
+8. Emit plain summary of resulting identity state
 
 ## Output
 
 ```
 ✓ SELF-COHERE COMPLETE
   HUB:  <hub-url>
-  SOUL: present|defaulted|updated
-  USER: present|defaulted|updated
+  SOUL: configured|defaulted|missing
+  USER: configured|defaulted|missing
   MODE: existing|fresh-install|reconfiguration
 ```
+
+Status meanings:
+- **configured** — file exists with operator-confirmed content
+- **defaulted** — file was missing, template materialized into hub
+- **missing** — file could not be created (error state)
