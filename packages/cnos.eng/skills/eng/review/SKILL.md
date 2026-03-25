@@ -73,6 +73,18 @@ Review code so that every verdict traces to evidence in the diff.
   - ❌ "Doctor checks for the key → AC met" (AC says validate against runtime state, not just key presence)
   - ✅ "AC says 'validates contract against hub/runtime state.' Doctor checks key presence only → C. Either strengthen or defer to #59."
 
+2.0.5. **CDD artifact contract**
+  - Determine the change class: bugfix, feature, governance/process, release hardening
+  - Verify the required CDD artifacts for that class exist in the diff or branch:
+    - substantial feature → design doc, coherence contract, plan, tests, code, docs, self-coherence
+    - bugfix → coherence contract (may be in commit/PR body), tests, code, self-coherence if substantial
+    - governance/process → self-coherence, frozen snapshot if versioned
+    - release hardening → changelog, release artifacts
+  - Missing required artifacts are findings. The CDD canonical spec (`docs/gamma/cdd/CDD.md` §5) defines the artifact contract.
+  - ❌ "Diff looks clean" (governance branch has no self-coherence report)
+  - ✅ "Substantial feature branch — design doc exists, self-coherence exists, bootstrap stubs present. Artifact contract satisfied."
+  - ✅ "Governance branch missing SELF-COHERENCE.md — CDD §5 requires it for substantial changes → C"
+
 ### 2.1 Diff — what changed
 
 Read the diff for internal coherence.
@@ -121,6 +133,19 @@ Check whether the change creates obligations on code it didn't touch.
   - ❌ Approve a file-move PR without grepping for old paths
   - ✅ `grep -r 'docs/gamma/RULES.md' docs/ src/ packages/ --include='*.md' | grep -v '/3.13.0/' | grep -v '/3.14.1/'` → zero matches → cross-refs clean
 
+2.2.8. **Authority-surface conflict**
+  - When multiple surfaces claim to define the same thing, verify they agree
+  - This is different from sibling consistency (§2.2.1) and multi-format parity (§2.2.3) — those check within a single authority. This checks across competing authorities.
+  - Common conflict sites:
+    - canonical doc vs executable skill
+    - runtime prompt-visible contract vs machine-readable JSON
+    - issue ACs vs narrower coherence contract in PR body
+    - branch summary vs actual branch state
+    - runtime defaults vs documented defaults
+  - ❌ "Skill looks correct" (didn't check whether canonical doc says something different)
+  - ✅ "CDD skill §2.7 says gate checks 'previous release assessed' — canonical CDD.md §8 agrees. Authority surfaces consistent."
+  - ✅ "C (judgment): skill §1.5 adds scope-declaration rule not present in canonical CDD.md — authority conflict"
+
 2.2.6. **Execution timeline for state-changing paths**
   - If code runs across a process boundary (binary replacement, daemon restart, re-exec), trace which process holds which values at each step
   - In-process constants (`Cn_lib.version`, module-level refs) reflect the *old* binary after replacement — they do not magically update
@@ -143,6 +168,15 @@ The verdict is a function of the worst named incoherence.
   - No "I feel like" or "this seems off" — point to a line, a commit, a behavior
   - ❌ "The security model seems weak"
   - ✅ "git_grep passes user input to -n without -e, allowing option injection (line 277)"
+
+2.3.6. **Evidence depth matches claim strength**
+  - When judging whether an AC is met, verify the evidence depth matches what the AC actually claims:
+    - structural claim (type exists, field present) → unit/schema test may suffice
+    - runtime behavior claim (message filtered, offset advanced) → integration or path-level proof required
+    - operator contract claim (output visible, state projected) → projection/output artifact required
+  - A predicate test that proves the filter logic is not the same as an integration test that proves the runtime path skips the message
+  - ❌ "4 predicate tests exist → AC1 (filter before enqueuing) met" (tests prove the predicate, not the path)
+  - ✅ "AC1 claims runtime filtering. Predicate tests prove the logic; no integration test proves drain_tg actually skips. Evidence depth: partial. Acceptable as known debt for this change class, but note it."
 
 2.3.2. **Validate fixes against upstream spec**
   - When a fix uses a library/tool behavior, confirm it against the tool's own documentation
@@ -200,7 +234,15 @@ The verdict is a function of the worst named incoherence.
   - ❌ Request changes on style preference with no incoherence
   - ✅ Note as B-level, approve
 
-3.7. **Merge instruction is explicit and scoped**
+3.7. **CI/release-gate state**
+  - If merge is requested, verify required CI/build checks are complete and green
+  - If checks are missing, stale, or red, approval is provisional — state this explicitly
+  - Do not issue a merge instruction when required checks have not run
+  - ❌ "APPROVED — merge PR #103" (CI shows 0 checks)
+  - ✅ "APPROVED — merge PR #103 after CI confirms green. CI has not run yet; approval is provisional."
+  - ✅ "APPROVED — CI green on all 3 platforms. Merge PR #103."
+
+3.8. **Merge instruction is explicit and scoped**
   - Approval names the exact branch, PR number, and action
   - ❌ "Looks good, merge it"
   - ✅ "Merge PR #32 on claude/syscall-surface-v3.8.0-ZCSiy"
@@ -222,6 +264,10 @@ Before submitting a review:
 - [ ] D-level findings include regression test pairs (positive + negative)
 - [ ] Prior-round fixes acknowledged by commit hash (multi-round only)
 - [ ] Approval explicitly closes the search space ("no remaining blocker in X contract")
+- [ ] Required CDD artifacts for this change class exist (§2.0.5)
+- [ ] Authority surfaces checked for conflict where multiple define the same thing (§2.2.8)
+- [ ] Evidence depth matches claim strength — not just "test exists" but "test proves the claimed path" (§2.3.6)
+- [ ] CI/build checks green, or approval explicitly marked provisional (§3.7)
 - [ ] Merge instruction names branch and PR number
 - [ ] Verdict stated first
 
