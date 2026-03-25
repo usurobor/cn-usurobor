@@ -30,7 +30,7 @@ cnos has many articulations — doctrine, specs, runtime modules, packages, trac
  doctrine   specs           method    plans
     |           |              |
  FOUNDATIONS  CAA.md         CDD.md
- COHERENCE-   AGENT-RUNTIME  AGILE-PROCESS
+ COHERENCE-   AGENT-RUNTIME  RATIONALE
   SYSTEM      PROTOCOL       checklists
  MANIFESTO    TRACEABILITY
               CAR
