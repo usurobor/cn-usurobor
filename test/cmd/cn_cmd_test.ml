@@ -975,6 +975,28 @@ let%expect_test "enqueue_telegram: skips when already in-flight" =
     Printf.printf "count=%d\n" (List.length files));
   [%expect {| count=0 |}]
 
+(* --- #29: empty content filter predicate --- *)
+
+let%expect_test "empty content filter: empty text is filtered" =
+  let text = "" in
+  Printf.printf "filtered=%b\n" (String.trim text = "");
+  [%expect {| filtered=true |}]
+
+let%expect_test "empty content filter: whitespace-only is filtered" =
+  let text = "   " in
+  Printf.printf "filtered=%b\n" (String.trim text = "");
+  [%expect {| filtered=true |}]
+
+let%expect_test "empty content filter: normal text passes" =
+  let text = "Hello" in
+  Printf.printf "filtered=%b\n" (String.trim text = "");
+  [%expect {| filtered=false |}]
+
+let%expect_test "empty content filter: emoji passes" =
+  let text = "\xF0\x9F\x98\x80" in
+  Printf.printf "filtered=%b\n" (String.trim text = "");
+  [%expect {| filtered=false |}]
+
 (* --- post-ack guard: combined predicate behavior --- *)
 
 let%expect_test "post-ack guard: queued → should NOT advance offset" =

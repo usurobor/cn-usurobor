@@ -1538,6 +1538,17 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                     offset := max !offset (msg.update_id + 1);
                     write_offset hub_path !offset;
                     drain_tg rest
+                  end else if String.trim msg.text = "" then begin
+                    (* #29: skip empty/whitespace-only messages — photos,
+                       stickers, edits have no text content and would cause
+                       Claude API 400 → infinite retry loop (#28). *)
+                    Cn_trace.gemit ~component:"telegram" ~layer:Sensor
+                      ~event:"daemon.offset.advanced" ~severity:Info ~status:Ok_
+                      ~reason_code:"empty_content"
+                      ~details:["update_id", Cn_json.Int msg.update_id] ();
+                    offset := max !offset (msg.update_id + 1);
+                    write_offset hub_path !offset;
+                    drain_tg rest
                   end else begin
                     let trigger_id = Printf.sprintf "tg-%d" msg.update_id in
                     (* Visual feedback: react to inbound + show typing *)
