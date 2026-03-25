@@ -696,7 +696,7 @@ let run_inbound hub_path name =
            (match Cn_protocol.actor_transition Cn_protocol.Idle Cn_protocol.Update_skip with
             | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "FSM error: %s" e))
             | Ok _ -> if feed_next_input hub_path then wake_agent hub_path)
-       | Update_available ver ->
+       | Update_patch ver | Update_available ver ->
            (* FSM: Idle + Update_available → Updating *)
            (match Cn_protocol.actor_transition Cn_protocol.Idle Cn_protocol.Update_available with
             | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "FSM error: %s" e))

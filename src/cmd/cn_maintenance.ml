@@ -194,7 +194,7 @@ let update_check_once ~hub_path =
            ~event:"update.check.ok" ~severity:Info ~status:Ok_
            ~reason_code:"up_to_date" ();
          Ok
-     | Cn_agent.Update_available ver ->
+     | Cn_agent.Update_patch ver | Cn_agent.Update_available ver ->
          print_endline (Cn_fmt.info
            (Printf.sprintf "Update available: %s -> %s" Cn_lib.version ver));
          Cn_hub.log_action hub_path "maintenance.update"

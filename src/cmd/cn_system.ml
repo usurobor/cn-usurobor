@@ -405,7 +405,7 @@ let run_update hub_path_opt =
                   rel.tag Cn_lib.cnos_commit rel.commit)
         else None
       in
-      match update_info with
+      (match update_info with
       | None ->
           print_endline (Cn_fmt.ok (Printf.sprintf "Already up to date (%s %s)"
             version Cn_lib.cnos_commit))
@@ -413,7 +413,7 @@ let run_update hub_path_opt =
         print_endline (Cn_fmt.info msg);
         print_endline (Cn_fmt.info "Downloading pre-built binary...");
         let result = Cn_agent.do_update info in
-        match result with
+        (match result with
         | Cn_protocol.Update_complete ->
             print_endline (Cn_fmt.ok (Printf.sprintf "Updated to %s" rel.tag));
             (* Re-exec into the new binary so reconciliation uses the correct
@@ -425,8 +425,7 @@ let run_update hub_path_opt =
                Cn_agent.re_exec ()
              | None -> ())
         | _ ->
-            print_endline (Cn_fmt.fail "Binary download failed. Check network and try again.")
-      end
+            print_endline (Cn_fmt.fail "Binary download failed. Check network and try again.")))
 
 let run_update_with_cron hub_path =
   run_update (Some hub_path);
