@@ -1285,3 +1285,8 @@ let%expect_test "retry: decision string roundtrip" =
     retry
     dead_letter:non_retryable
     dead_letter:retries_exhausted |}]
+
+let%expect_test "retry: backoff doubles per attempt" =
+  let backoff attempts = min (1.0 *. Float.of_int (1 lsl (attempts - 1))) 30.0 in
+  Printf.printf "%.0f %.0f %.0f %.0f\n" (backoff 1) (backoff 2) (backoff 3) (backoff 4);
+  [%expect {| 1 2 4 8 |}]

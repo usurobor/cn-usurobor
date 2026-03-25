@@ -33,7 +33,7 @@ Re-read issue #28 body. Found 3 expected behaviors: max retry count, dead-letter
 | AC1 | Max retry count (3–5 attempts), then dead-letter | Yes | **Met** | `max_trigger_retries = 3`, `classify_retry_decision` returns `Dead_letter_exhausted` when `attempts >= max_retries` |
 | AC2 | Dead-lettered items logged and skipped | Yes | **Met** | `daemon.trigger.dead_lettered` trace event with update_id, attempts, error. `drain_tg rest` called after dead-letter (continues processing). |
 | AC3 | Advance Telegram offset after dead-lettering | Yes | **Met** | `offset := max !offset (msg.update_id + 1); write_offset hub_path !offset` in dead-letter path |
-| AC4 | Retryable errors (5xx, timeout) retry with backoff | Partial | **Met at LLM layer** | `cn_llm.ml` already has 3 retries with exponential backoff for 5xx/network. Daemon-level retry uses poll interval as natural backoff. |
+| AC4 | Retryable errors (5xx, timeout) retry with backoff | Yes | **Met** | LLM-level: `cn_llm.ml` has 3 retries with exponential backoff. Daemon-level: exponential backoff (1s, 2s, 4s, capped 30s) in `Retry` branch of `drain_tg`. |
 | AC5 | Non-retryable errors (4xx) fail fast | Yes | **Met** | `classify_retry_decision` returns `Dead_letter_non_retryable` for "HTTP 4*" errors → dead-lettered on first attempt |
 
 ### Named Doc Coverage
@@ -41,7 +41,7 @@ Re-read issue #28 body. Found 3 expected behaviors: max retry count, dead-letter
 | Doc/File | In diff? | Status | Rationale |
 |----------|----------|--------|-----------|
 | `cn_runtime.ml` | Yes | Updated | `retry_decision` type, `classify_retry_decision`, `string_of_retry_decision`, retry counter in `run_daemon`, dead-letter path in `drain_tg` |
-| `cn_cmd_test.ml` | Yes | Updated | 7 new tests for retry classification |
+| `cn_cmd_test.ml` | Yes | Updated | 8 new tests for retry classification and backoff |
 | `cn_llm.ml` | No | Unchanged (correct) | Already has 3 retries with backoff for 5xx. No change needed. |
 
 ### §8.5.4 Spot-check

@@ -1656,6 +1656,9 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                           drain_tg rest
                         end
                         | Retry ->
+                          (* Exponential backoff: 1s, 2s, 4s... capped at 30s *)
+                          let backoff = min (1.0 *. Float.of_int (1 lsl (attempts - 1))) 30.0 in
+                          Unix.sleepf backoff;
                           (* Will retry on next poll cycle *)
                           last_drain_degraded := true;
                           write_daemon_ready ~tg_poll_status:"ok" ();
