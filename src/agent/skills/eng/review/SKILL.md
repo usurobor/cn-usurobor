@@ -362,4 +362,4 @@ The reviewer must have a different GitHub identity than the PR author so that:
 - Branch protection can enforce "approving review from non-author"
 - Review audit trail is platform-native, not comment-based
 
-If the reviewer shares the author's GitHub account, reviews degrade to comments and review state is unenforceable. This is a known gap (#108) — when it applies, note "posted as comment (shared identity)" in the review.
+If the reviewer shares the author's GitHub account, reviews degrade to comments and review state is unenforceable. This is a known gap (tracked in #45 migration queue) — when it applies, note "posted as comment (shared identity)" in the review.
