@@ -61,6 +61,19 @@ let control_key_prefixes = [
   "delegate:"; "defer:"; "delete:"; "surface:"; "mca:";
 ]
 
+(** XML pseudo-tool prefixes the LLM sometimes hallucinates.
+    Shared between is_control_plane_like (whole-body start check) and
+    strip_xml_pseudo_tools (mid-body block removal) so a new tag
+    added here protects both paths. *)
+let xml_prefixes = [
+  "<observe>"; "<fs_read>"; "<fs_list>"; "<fs_glob>";
+  "<git_status>"; "<git_diff>"; "<git_log>"; "<git_grep>";
+  "<fs_write>"; "<fs_patch>"; "<git_branch>"; "<git_commit>";
+  "<exec>"; "<tool_call>"; "<tool_calls>"; "<function_call>";
+  "<function_calls>"; "<tool_result>"; "<tool_results>";
+  "<invoke>"; "<invoke>"; "<thinking>";
+]
+
 (** Detect whether a candidate presentation string contains control-plane
     syntax that must not reach a human-facing sink.
 
@@ -80,17 +93,10 @@ let is_control_plane_like s =
   else if List.exists (fun prefix -> starts_with ~prefix trimmed) control_key_prefixes then
     Some Control_plane_leak
   (* XML pseudo-tool wrappers the LLM sometimes hallucinates *)
+  else if List.exists (fun prefix -> starts_with ~prefix trimmed) xml_prefixes then
+    Some Xml_tool_syntax
   else
-    let xml_prefixes = [
-      "<observe>"; "<fs_read>"; "<fs_list>"; "<fs_glob>";
-      "<git_status>"; "<git_diff>"; "<git_log>"; "<git_grep>";
-      "<fs_write>"; "<fs_patch>"; "<git_branch>"; "<git_commit>";
-      "<exec>"; "<tool_call>"; "<function_call>";
-    ] in
-    if List.exists (fun prefix -> starts_with ~prefix trimmed) xml_prefixes then
-      Some Xml_tool_syntax
-    else
-      None
+    None
 
 (* === Parsing === *)
 
@@ -187,6 +193,43 @@ let strip_embedded_frontmatter s =
   let cleaned = walk [] false [] lines |> String.concat "\n" |> String.trim in
   if cleaned = "" then None else Some cleaned
 
+(** Strip XML pseudo-tool blocks from mid-body text.
+    Removes lines starting with an xml_prefix and any continuation lines
+    up to and including the closing tag.  Analogous to
+    strip_embedded_frontmatter but for XML pseudo-tool hallucinations.
+
+    Returns None if stripping empties the body entirely. *)
+let strip_xml_pseudo_tools s =
+  let lines = String.split_on_char '\n' s in
+  let is_xml_open line =
+    let t = String.trim line in
+    List.exists (fun prefix -> starts_with ~prefix t) xml_prefixes
+  in
+  let has_close line =
+    let t = String.trim line in
+    (* closing tag present: </…> *)
+    try
+      let idx = String.index t '<' in
+      idx + 1 < String.length t && String.get t (idx + 1) = '/'
+    with Not_found -> false
+  in
+  let rec walk acc in_block = function
+    | [] -> List.rev acc
+    | line :: rest ->
+      if in_block then
+        (* Inside an XML block — skip until closing tag *)
+        if has_close line then walk acc false rest
+        else walk acc true rest
+      else if is_xml_open line then
+        (* Opening line — skip it; check if self-closing *)
+        if has_close line then walk acc false rest
+        else walk acc true rest
+      else
+        walk (line :: acc) false rest
+  in
+  let filtered = walk [] false lines |> String.concat "\n" |> String.trim in
+  if filtered = "" then None else Some filtered
+
 (** Find the first Reply payload from coordination ops. *)
 let first_reply_payload ops =
   ops |> List.find_map (fun (op : agent_op) ->
@@ -206,12 +249,16 @@ let render_human_facing parsed =
      still a valid presentation candidate. Dedup to avoid double-checking. *)
   let resolved_reply = first_reply_payload parsed.coordination_ops in
   let raw_reply = first_reply_payload parsed.raw_coordination_ops in
-  (* Strip any embedded frontmatter blocks from the body before
-     considering it as a human-facing candidate. This catches the
-     mid-body ops pattern that is_control_plane_like misses because
-     the body starts with normal prose. *)
+  (* Strip any embedded frontmatter blocks and XML pseudo-tool blocks
+     from the body before considering it as a human-facing candidate.
+     This catches mid-body control-plane patterns that
+     is_control_plane_like misses because the body starts with
+     normal prose. *)
   let sanitized_body = match parsed.body with
-    | Some b -> strip_embedded_frontmatter b
+    | Some b ->
+      let b = match strip_embedded_frontmatter b with Some s -> s | None -> "" in
+      if b = "" then None
+      else strip_xml_pseudo_tools b
     | None -> None
   in
   let real_candidates =

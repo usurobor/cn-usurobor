@@ -224,7 +224,9 @@ let render_markdown (c : runtime_contract) =
   Buffer.add_string buf "**Authority:** This contract is the authoritative source for identity, \
 cognition, body, and medium. It is emitted fresh at every wake. \
 If conversation history contains contradictory claims (e.g. a directory that \
-was absent in a prior session), this contract supersedes them.\n\n";
+was absent in a prior session), this contract supersedes them. \
+Do not read cn.json or any manifest file to determine your own version — \
+use the cn_version field below.\n\n";
 
   (* Identity — who am I? *)
   Buffer.add_string buf "### Identity\n";

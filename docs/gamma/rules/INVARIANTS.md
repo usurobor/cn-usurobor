@@ -144,6 +144,24 @@ Given a canonical packed context with doctrine + capabilities + skills, the agen
 
 ---
 
+### I5. Two-Membrane Projection Integrity
+
+Human surfaces never receive control-plane syntax. Agent self-knowledge comes from runtime identity, not filesystem probing.
+
+**Requirement:**
+
+Two invariants must hold simultaneously:
+
+1. **Presentation membrane.** All human-facing projection (Telegram, future messaging sinks, conversation history) passes through `Cn_output.render_for_sink`. No path may bypass this module to send raw `output.md`, raw body text, or raw Reply payloads to a human surface. `Cn_output` must treat frontmatter, embedded control blocks, XML pseudo-tool syntax, and op-like leak lines as control-plane content regardless of position (start, mid-body, inside reply). If no safe payload remains after filtering, a safe fallback is emitted with a trace event — never leaked control text.
+
+2. **Self-knowledge membrane.** The agent's self-version comes from `identity.cn_version` (sourced from `Cn_lib.version`) in the Runtime Contract, which `Cn_context.pack` includes in every system block. Reads of `.cn/cn.json` or other package manifests for self-knowledge are a contract violation. `Cn_sandbox` enforces this by denying all `.cn/` reads. The Runtime Contract classifies `.cn/` as `private_body`.
+
+**Why:** Internal markup on a human surface is a P0 coherence failure. Agent self-probing via filesystem creates stale version reports and bypasses the authoritative runtime identity.
+
+**Enforcement:** Blocking PR CI via `cn_output_test` expect tests (I4 XML variants, #106 membrane tests). Sandbox denylist tests (`cn_sandbox_test`) verify `.cn/` rejection.
+
+---
+
 ## 3. Required Check Types
 
 ### 3.1 Deterministic structural checks (blocking)
@@ -169,6 +187,7 @@ Behavioral checks become blocking only after they are stable and trusted.
 
 **Non-blocking initially:**
 4. `agent-behavioral-eval` — output grammar / surface integrity
+5. `two-membrane-check` — projection membrane + self-knowledge membrane (I5)
 
 ---
 
