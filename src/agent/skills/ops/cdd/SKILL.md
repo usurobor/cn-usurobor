@@ -35,7 +35,7 @@ CDD owns the full arc from observation to observation:
 Step 13 feeds back to step 0. The cycle closes when:
 
 - **Immediate MCAs** are executed — small fixes that can be done now: CHANGELOG corrections, skill patches, tag fixes, missing documentation. These close within the current cycle.
-- **Committed MCAs** are named — substantial work that becomes the next cycle's §0.14 default selection. These are committed, not executed. The commitment is recorded in the assessment's "Next Move" section.
+- **Committed MCAs** are named — substantial work that becomes the next cycle's §0.14 default selection. These are committed, not executed. The commitment must be concrete: issue number, owner (if known), target branch name, first AC, and MCI freeze/resume state. Recorded in the assessment's "Next Move" section.
 - **MCIs** are captured — in an adhoc thread with status per learning.
 - **Issues** are filed or updated per §11.12.
 
@@ -152,8 +152,9 @@ Given the four inputs, select the next gap:
   - **Branch uniqueness:** no existing remote branch may claim the same issue number (`git branch -r | grep '{issue}'`). A second branch for the same issue means either the first should be deleted or the work is a duplicate.
   - **Open PR check:** no open PR may already cover the same issue (`gh pr list --state open` or equivalent). Starting work that duplicates an open PR wastes an entire cycle.
   - **Convention check:** branch name matches `{agent}/{version}-{issue}-{scope}` or `{agent}/{issue}-{scope}` per §1.4. Deviations cause superseded PRs when renamed later.
-  - **Scope declaration:** the bootstrap README MUST list which files the branch will modify. Files outside this list MUST NOT be touched without updating the scope declaration. This prevents background agents from regressing files outside their issue's domain.
   - **CI status check:** if any CI check is currently red on main for a domain this branch touches, document it in the PR body with the issue number (e.g., "I1 failing — known #58"). Do not silently merge red CI on your domain.
+
+  Note: **scope declaration** (listing which files the branch will modify) is a bootstrap obligation, not a pre-branch check. It belongs in the bootstrap README created in §4.0, not in pre-flight. Pre-flight validates the branch can be created; bootstrap declares what the branch will do.
   - ❌ Pick version `3.14.1`, do all the work, discover the tag already exists → entire PR superseded
   - ❌ Create branch for #81 when another branch already targets #81 → duplicate work
   - ❌ Modify the design skill from a version-coherence branch (out of declared scope)
@@ -215,7 +216,7 @@ Follow the pipeline. Each step feeds the next.
 
 4.0. **Bootstrap — version directory**
   - The first diff on the branch MUST create a version directory with stub files for every artifact the **target bundle** will produce for this version
-  - The directory lives at `docs/{tier}/{bundle}/vX.Y.Z/` and MUST contain a `README.md` (snapshot manifest)
+  - The directory lives at `docs/{tier}/{bundle}/X.Y.Z/` and MUST contain a `README.md` (snapshot manifest)
   - If the branch touches multiple bundles, each bundle that will receive a frozen snapshot gets its own version directory
   - Artifacts outside version directories (PR body files, navigation docs, bundle READMEs) are not enumerated as stubs
   - Version directories are **frozen by repository policy** — after creation, their contents MUST NOT be modified in later commits. When the canonical doc changes during the branch, **re-freeze**: copy the current canonical into the version directory before requesting review
@@ -224,7 +225,7 @@ Follow the pipeline. Each step feeds the next.
   - ❌ Start coding before naming the version or enumerating deliverables
   - ❌ Leave a stale snapshot that doesn't match the canonical
   - ❌ Write an epoch assessment for "v3.12–v3.14" without listing every tag in that range
-  - ✅ First commit: `docs/gamma/cdd/v3.13.0/README.md` + `CDD.md` stub
+  - ✅ First commit: `docs/gamma/cdd/3.13.0/README.md` + `CDD.md` stub
   - ✅ Before review: verify `diff canonical frozen` = zero
   - ✅ Bootstrap README for epoch assessment lists: v3.12.0, v3.12.1, v3.12.2, v3.14.0, v3.14.1 (enumerated from `git tag`)
 
@@ -292,7 +293,7 @@ Follow the pipeline. Each step feeds the next.
   - Every substantial release SHOULD include a `SELF-COHERENCE.md` in its version directory
   - Records the branch author's own CDD-compliance assessment before requesting review
   - Required sections: pipeline compliance table, triadic assessment (α/β/γ scores with rationale), checklist pass, known coherence debt, reviewer notes
-  - Placement: `docs/{tier}/{bundle}/vX.Y.Z/SELF-COHERENCE.md`
+  - Placement: `docs/{tier}/{bundle}/X.Y.Z/SELF-COHERENCE.md`
   - Small changes covered by §1.2 do not require a self-coherence report
   - See `docs/gamma/cdd/CDD.md` §7.8 for the full format template
   - ❌ Request review without recording your own compliance assessment
@@ -315,11 +316,11 @@ Follow the pipeline. Each step feeds the next.
   - ✅ `docs/alpha/CAR-v3.4.md`
 
 5.3. **Implementation plan**
-  - Feature/release scoped: `docs/gamma/plans/PLAN-vX.Y.Z.md` (e.g. `PLAN-v3.6.0.md`)
+  - Feature/release scoped: `docs/gamma/plans/PLAN-X.Y.Z.md` (e.g. `PLAN-3.6.0.md`)
   - Subsystem scoped: `docs/gamma/plans/NAME-implementation-plan.md` (e.g. `CAR-implementation-plan.md`)
   - ❌ Plan buried in a thread or issue comment
   - ✅ `docs/gamma/plans/CAR-implementation-plan.md`
-  - ✅ `docs/gamma/plans/PLAN-v3.6.0.md`
+  - ✅ `docs/gamma/plans/PLAN-3.6.0.md`
 
 5.4. **Tests mirror module location**
   - Pure logic: `test/lib/...`
@@ -640,7 +641,7 @@ The assessment has four parts: measurement, encoding lag, process learning, and 
   - This is the system-level health check — is the model outpacing the body?
 
   ```
-  ### Encoding Lag (as of vX.Y.Z)
+  ### Encoding Lag (as of X.Y.Z)
   | Issue | Title | Type | Design | Impl | Lag |
   |-------|-------|------|--------|------|-----|
   | #62   | RT Contract v2 | feature | converged | branch exists | low |
@@ -728,7 +729,15 @@ CDD defines what must happen and in what order. Sub-skills define how.
 
 ## Authority
 
-This skill is the **executable summary** of CDD. The **authoritative source** for the full artifact contract, pipeline table, frozen-snapshot rules, self-coherence report format, and governance detail is `docs/gamma/cdd/CDD.md`. When this skill and the canonical doc disagree, the canonical doc governs — except for sections added in v3.14.7 (§1.5, §11.11, §11.12) which exist only in this skill pending canonical update. Until the canonical doc is updated to include these sections, this skill is authoritative for them.
+This skill is the **executable summary** of CDD. The **authoritative source** for the full artifact contract, pipeline table, frozen-snapshot rules, self-coherence report format, and governance detail is `docs/gamma/cdd/CDD.md`. When this skill and the canonical doc disagree, the canonical doc governs — except for the following sections which exist only in this skill pending canonical update:
+
+- **§0** — Observe and Select (selection algorithm, inputs, base cases)
+- **Lifecycle** — closed-loop semantics (steps 0–13, cycle-close with immediate/committed MCA distinction)
+- **§1.5** — branch pre-flight validation (version, uniqueness, open PR, CI status)
+- **§11.11** — review quality metrics
+- **§11.12** — process debt integration
+
+Until `docs/gamma/cdd/CDD.md` is updated to carry these sections, this skill is authoritative for them. Updating the canonical doc is tracked as follow-up work.
 
 ---
 
