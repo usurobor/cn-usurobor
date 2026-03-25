@@ -32,7 +32,14 @@ CDD owns the full arc from observation to observation:
 12. **Assess** — post-release assessment: measure, encoding lag, process learning (§11)
 13. **Close** — execute MCAs, capture MCIs, file issues, patch skills (§11)
 
-Step 13 feeds back to step 0. The cycle closes when all assessment outputs are executed. Then you observe again.
+Step 13 feeds back to step 0. The cycle closes when:
+
+- **Immediate MCAs** are executed — small fixes that can be done now: CHANGELOG corrections, skill patches, tag fixes, missing documentation. These close within the current cycle.
+- **Committed MCAs** are named — substantial work that becomes the next cycle's §0.14 default selection. These are committed, not executed. The commitment is recorded in the assessment's "Next Move" section.
+- **MCIs** are captured — in an adhoc thread with status per learning.
+- **Issues** are filed or updated per §11.12.
+
+The distinction: immediate MCAs close *in* the cycle. Committed MCAs close *the cycle* by naming the next one. A cycle that produces only committed MCAs (no immediate fixes) is still closed — the commitment is the closure.
 
 ---
 
@@ -89,6 +96,17 @@ Given the four inputs, select the next gap:
   - ❌ "Let's do #94 (large) because it's exciting" when #73 (medium) unblocks 3 stale issues
   - ❌ Start #73 when Pi is crash-looping (P0 override)
   - ✅ "Observation: γ at B+ (lowest), lag table has 3 stale issues, #73 unblocks 2 of them. Doctor clean. Select #73."
+
+0.12. **No prior assessment** — if no post-release assessment exists yet (first cycle, fresh system), skip §0.4 and rely on §0.1–§0.3 alone. The lag table starts empty; doctor and CHANGELOG are sufficient to select.
+
+0.13. **No gap found** — if no lag item, P0, or operational debt exists, and all axes are healthy or tied, do not start a new substantial CDD cycle. Remain in observation or choose a small-change path (§1.3). The algorithm may select nothing.
+  - ❌ Force-start a substantial cycle because "we should always be shipping"
+  - ✅ "All axes A, lag table clean, doctor green. No substantial gap. Small-change path or observe."
+
+0.14. **Assessment commitment as default** — if the last assessment named a "Next MCA" and no stronger override fires (§0.5 P0, §0.6 operational debt), that committed MCA is selected. The assessment commitment is the default; observation can override it but must state why.
+  - ❌ Ignore the committed next MCA without rationale
+  - ✅ "Assessment committed #73. Observation confirms: still stale, still highest leverage. Select #73."
+  - ✅ "Assessment committed #73, but §0.6 fires: cn update broken. Override with rationale: operational debt before feature work."
 
 ---
 
