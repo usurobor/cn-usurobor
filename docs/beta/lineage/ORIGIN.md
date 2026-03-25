@@ -83,13 +83,13 @@ CNOS looks the way it does for that reason. Not because I wanted to write poetry
 
 ## References
 
-[1]: https://x.com/Plinz/status/1832339389118333003
-[2]: https://x.com/usurobor/status/1832486956887863328
-[3]: https://x.com/Plinz/status/1832503368771891302
-[4]: https://x.com/usurobor/status/1832511108113985633
-[5]: https://github.com/usurobor/tsc
-[6]: https://x.com/usurobor/status/1856761492067975246
-[7]: https://github.com/usurobor/cnos
+1. https://x.com/Plinz/status/1832339389118333003
+2. https://x.com/usurobor/status/1832486956887863328
+3. https://x.com/Plinz/status/1832503368771891302
+4. https://x.com/usurobor/status/1832511108113985633
+5. https://github.com/usurobor/tsc
+6. https://x.com/usurobor/status/1856761492067975246
+7. https://github.com/usurobor/cnos
 
 ---
 

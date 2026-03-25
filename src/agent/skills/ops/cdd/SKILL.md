@@ -70,17 +70,21 @@ Read these four surfaces before selecting work:
 
 Given the four inputs, select the next gap:
 
-0.5. **P0 override** — if doctor/status shows a P0 bug, that's the gap. No further analysis needed.
+0.5. **P0 override** — if doctor/status shows a P0 bug (crash, data loss, silent failure), that's the gap. No further analysis needed.
 
-0.6. **MCI freeze check** — if the lag table has stale issues (zero progress across ≥2 assessments), the next MCA MUST come from the stale set. New design work is frozen until at least one stale issue ships.
+0.6. **Operational infrastructure debt** — if core operational paths are broken (self-update, logging, health checks, deploy pipeline), fix them regardless of MCI freeze. These are not new features — they are the system's ability to run, observe, and maintain itself. A system that can't self-update, can't be observed, or retries forever is not a healthy base for feature work.
+  - ❌ "MCI freeze says pick from stale set" while `cn update` 404s and logs are a black hole
+  - ✅ "Self-update, logging, and health are operational prerequisites. Fix them, then resume the stale backlog."
 
-0.7. **Lowest axis** — select work that addresses the weakest TSC axis. If α is lowest, pick structural/consistency work. If β is lowest, pick alignment/integration work. If γ is lowest, pick process/evolution work.
+0.7. **MCI freeze check** — if the lag table has stale issues (zero progress across ≥2 assessments), the next MCA MUST come from the stale set. New design work is frozen until at least one stale issue ships.
 
-0.8. **Maximum leverage** — among candidates that address the weakest axis, pick the one that moves the most lag table entries. If #73 unblocks #65 and #67, it moves 3 entries for 1 MCA. That's higher leverage than a standalone issue.
+0.8. **Lowest axis** — select work that addresses the weakest TSC axis. If α is lowest, pick structural/consistency work. If β is lowest, pick alignment/integration work. If γ is lowest, pick process/evolution work.
 
-0.9. **Dependency order** — if A blocks B blocks C, pick A regardless of individual priority. The chain won't move otherwise.
+0.9. **Maximum leverage** — among candidates that address the weakest axis, pick the one that moves the most lag table entries. If #73 unblocks #65 and #67, it moves 3 entries for 1 MCA. That's higher leverage than a standalone issue.
 
-0.10. **Effort-adjusted** — between candidates with equal leverage and axis impact, pick the smaller one. Ship sooner, observe sooner, correct sooner.
+0.10. **Dependency order** — if A blocks B blocks C, pick A regardless of individual priority. The chain won't move otherwise.
+
+0.11. **Effort-adjusted** — between candidates with equal leverage and axis impact, pick the smaller one. Ship sooner, observe sooner, correct sooner.
 
   - ❌ "Let's do #94 (large) because it's exciting" when #73 (medium) unblocks 3 stale issues
   - ❌ Start #73 when Pi is crash-looping (P0 override)
