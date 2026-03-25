@@ -1081,9 +1081,11 @@ let%expect_test "update_info: do_update exercises Update_patch path" =
 
 let%expect_test "cnos_commit is a short git hash" =
   let c = Cn_lib.cnos_commit in
-  let valid = String.length c >= 7 || c = "unknown" in
-  Printf.printf "valid=%b commit=%s\n" valid c;
-  [%expect {| valid=true commit=unknown |}]
+  let is_hex s = String.to_seq s |> Seq.for_all (fun ch ->
+    (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f')) in
+  let valid = (String.length c >= 7 && is_hex c) || c = "unknown" in
+  Printf.printf "valid=%b\n" valid;
+  [%expect {| valid=true |}]
 
 (* === Cn_config: scheduler config (v3.7.0) ===
 
