@@ -9,17 +9,15 @@
 
 | Step | Status | Evidence |
 |------|--------|----------|
-| 0. Observe | done | v3.16.1 assessment committed #106 as next MCA (§3.1 P0 override) |
-| 1. Select | done | §3.1 P0: user-visible coherence failure |
-| 2. Branch | done | `claude/review-agent-runtime-docs-LyUlu`, pre-flight passed |
-| 3. Bootstrap | done | `docs/gamma/cdd/3.16.2/README.md` created as first diff |
-| 4. Gap | done | Root cause identified; two-membrane design from senior eng review |
-| 5. Mode | done | MCA — code must change |
-| 6. Design | done | Two-membrane architecture per issue spec |
-| 7. Tests | done | I4 expanded (7 variants), 6 new #106 tests, membrane integration tests |
-| 8. Code | done | `cn_output.ml`, `cn_runtime_contract.ml`, `INVARIANTS.md` |
-| 9. Pre-flight | this step |
-| 10. Self-coherence | this file |
+| 0. Observe | done | Read CHANGELOG TSC (v3.16.1: A/A/A/A), encoding lag (16 issues, #106 new P0), doctor (n/a — #59 partial), last assessment (v3.16.1: committed #106 as next MCA via §3.1 P0 override) |
+| 1. Select | done | §3.1 P0: user-visible coherence failure. v3.16.1 assessment committed #106. MCI freeze holds. |
+| 2. Branch | done | `claude/review-agent-runtime-docs-LyUlu`. Pre-flight: v3.16.2 > v3.16.1 ✓, no duplicate branch ✓, no duplicate PR ✓, scope declared ✓ |
+| 3. Bootstrap | done | `docs/gamma/cdd/3.16.2/README.md` with observation inputs, gap, mode, scope, frozen artifact table |
+| 4. Gap | done | Root cause: prefix match bug + mid-body bypass + missing anti-probe. Two-membrane design from senior eng review. |
+| 5. Mode | done | MCA — blocklist is wrong, mid-body stripping missing, anti-probe absent |
+| 6. Artifacts | done | Design (issue #106 spec) → tests (I4 expanded + 9 new) → code (cn_output.ml, cn_runtime_contract.ml) → docs (I5 in INVARIANTS.md) |
+| 7. Self-coherence | this file |
+| 8. Review | in progress | Round 1: 7 findings (5D, 2C), all addressed. Awaiting round 2. |
 
 ## §4 Root Cause Analysis
 
@@ -87,7 +85,7 @@ All 7/7 ACs accounted for. Pre-flight passed.
 
 ### A. Harden Cn_output
 - [x] Add stripping/blocking for `<tool_calls>` and equivalent wrappers
-- [x] Apply to every candidate source (body via `strip_xml_pseudo_tools`, reply via `is_control_plane_like`)
+- [x] Apply to every candidate source (body + reply via shared `sanitize` helper: `strip_embedded_frontmatter` + `strip_xml_pseudo_tools` + `is_control_plane_like`)
 - [x] One module owns invariant (Cn_output — no per-sink sanitizers)
 
 ### B. Invariant tests
