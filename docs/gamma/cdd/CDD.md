@@ -416,15 +416,11 @@ That is the handoff from step 13 back to step 0.
 
 ## 11. Related documents
 
-### 11.1 Reference profile
-
-AGILE-PROCESS.md is a reference workflow profile for a small async agent team. CDD is normative. AGILE-PROCESS is one valid implementation profile.
-
-### 11.2 Executable summary
+### 11.1 Executable summary
 
 `src/agent/skills/ops/cdd/SKILL.md` is the executable summary of this spec.
 
-### 11.3 Companion rationale
+### 11.2 Companion rationale
 
 RATIONALE.md explains why CDD takes this shape.
 

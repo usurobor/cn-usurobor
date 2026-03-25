@@ -28,8 +28,7 @@ Read this bundle when you need to know:
 
 1. [`CDD.md`](./CDD.md) — canonical algorithm spec
 2. [`RATIONALE.md`](./RATIONALE.md) — why the method takes this shape
-3. [`AGILE-PROCESS.md`](./AGILE-PROCESS.md) — reference workflow profile for a small async team
-4. epoch assessments — release-scale measurement history
+3. epoch assessments — release-scale measurement history
 
 ---
 
@@ -39,7 +38,6 @@ Read this bundle when you need to know:
 |----------|-------|-------------|
 | [CDD.md](./CDD.md) | Canonical spec | Normative CDD algorithm: observe → select → execute → assess → close |
 | [RATIONALE.md](./RATIONALE.md) | Companion rationale | Why CDD is closed-loop, artifact-driven, and not fully mechanical |
-| [AGILE-PROCESS.md](./AGILE-PROCESS.md) | Reference profile | Small-team async workflow profile compatible with CDD |
 | [POST-RELEASE-EPOCH-v3.12.md](./POST-RELEASE-EPOCH-v3.12.md) | Assessment | Epoch assessment: v3.12.0–v3.12.2 |
 | [POST-RELEASE-EPOCH-v3.14.md](./POST-RELEASE-EPOCH-v3.14.md) | Assessment | Epoch assessment: v3.14.0–v3.14.5 |
 

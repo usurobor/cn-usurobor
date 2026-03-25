@@ -275,7 +275,6 @@ If this skill and the canonical doc disagree, the canonical doc governs.
 
 - canonical spec: `docs/gamma/cdd/CDD.md`
 - rationale: `docs/gamma/cdd/RATIONALE.md`
-- reference workflow profile: `docs/gamma/cdd/AGILE-PROCESS.md`
 - post-release assessment: `ops/post-release/SKILL.md`
 - review protocol: `eng/review/SKILL.md`
 - design protocol: `eng/design/SKILL.md`

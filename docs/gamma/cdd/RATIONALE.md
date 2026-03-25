@@ -197,10 +197,6 @@ CDD.md is the normative algorithm.
 
 `src/agent/skills/ops/cdd/SKILL.md` is the operational summary for agents.
 
-### Reference workflow profile
-
-AGILE-PROCESS.md is one implementation profile for a small async team. It is not the method itself.
-
 ### Supporting skills
 
 Review, design, release, and post-release each own their detailed execution surface. CDD owns the order and the closure logic.

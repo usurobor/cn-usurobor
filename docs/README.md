@@ -17,7 +17,7 @@ Then choose your path:
 |----------------|------------|
 | Understand what cnos is | [THESIS.md](./THESIS.md) → [COHERENCE-SYSTEM.md](./alpha/doctrine/COHERENCE-SYSTEM.md) → [FOUNDATIONS.md](./alpha/doctrine/FOUNDATIONS.md) |
 | Build or run a cnos agent | [AGENT-RUNTIME.md](./alpha/agent-runtime/AGENT-RUNTIME.md) → [CLI.md](./alpha/cli/CLI.md) → [HANDSHAKE.md](./beta/guides/HANDSHAKE.md) |
-| Contribute code | [CDD.md](./gamma/cdd/CDD.md) → [AGILE-PROCESS.md](./gamma/cdd/AGILE-PROCESS.md) → [ARCHITECTURE.md](./beta/architecture/ARCHITECTURE.md) |
+| Contribute code | [CDD.md](./gamma/cdd/CDD.md) → [ARCHITECTURE.md](./beta/architecture/ARCHITECTURE.md) |
 | Understand the runtime extensions model | [RUNTIME-EXTENSIONS.md](./alpha/runtime-extensions/RUNTIME-EXTENSIONS.md) → [runtime-extensions bundle](./alpha/runtime-extensions/) |
 | Write or modify a skill | [WRITE-A-SKILL.md](./beta/guides/WRITE-A-SKILL.md) → [COGNITIVE-SUBSTRATE.md](./alpha/cognitive-substrate/COGNITIVE-SUBSTRATE.md) |
 | Do a release | [release skill](../packages/cnos.core/skills/release/SKILL.md) → [BUILD-RELEASE.md](./beta/guides/BUILD-RELEASE.md) |
@@ -193,7 +193,7 @@ docs/
     ├── cdd/                           # CDD method, agile process
     │   ├── README.md
     │   ├── CDD.md
-    │   ├── AGILE-PROCESS.md
+    │   ├── RATIONALE.md
     │   └── 3.x.x/                    # Frozen snapshots
     ├── rules/                         # Project rules, invariants
     │   ├── RULES.md, INVARIANTS.md
