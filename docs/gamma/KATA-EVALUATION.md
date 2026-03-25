@@ -216,7 +216,7 @@ Use a 0–4 scale for each dimension.
 
 ### Example interpretation
 
-- α=4, β=1, γ=3 means technically good local work that breaks cross-surface/system relation
+- α=4, β=1, γ=2 means technically good local work that breaks cross-surface/system relation
 - α=2, β=3, γ=4 means imperfect local execution but good architectural/process direction
 
 ---
