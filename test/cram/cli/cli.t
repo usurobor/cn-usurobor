@@ -20,8 +20,7 @@ Help:
 Version (derived from VERSION file, not hardcoded):
 
   $ ACTUAL=$($CN --version)
-  $ EXPECTED="cn $CNOS_VERSION"
-  $ [ "$ACTUAL" = "$EXPECTED" ] && echo "version ok" || echo "MISMATCH: got '$ACTUAL' expected '$EXPECTED'"
+  $ echo "$ACTUAL" | grep -q "^cn $CNOS_VERSION " && echo "version ok" || echo "MISMATCH: got '$ACTUAL' expected 'cn $CNOS_VERSION (...)'"
   version ok
 
 Init - create a new hub:
