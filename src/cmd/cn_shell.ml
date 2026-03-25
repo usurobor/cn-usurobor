@@ -33,6 +33,7 @@ type effect_kind =
 type op_kind =
   | Observe of observe_kind
   | Effect of effect_kind
+  | Extension of string * string  (* kind_name, class: "observe"|"effect" *)
 
 type op_phase =
   | Observe_phase
@@ -142,10 +143,12 @@ let string_of_effect_kind = function
 let string_of_op_kind = function
   | Observe k -> string_of_observe_kind k
   | Effect k  -> string_of_effect_kind k
+  | Extension (name, _) -> name
 
 let is_effect = function
   | Effect _ -> true
-  | Observe _ -> false
+  | Extension (_, "effect") -> true
+  | Observe _ | Extension _ -> false
 
 let phase_of_string = function
   | "observe" -> Some Observe_phase
@@ -180,8 +183,11 @@ let assign_observe_id obs_counter =
   obs_counter := !obs_counter + 1;
   Printf.sprintf "obs-%02d" !obs_counter
 
-(** Parse a single op JSON object into a typed_op or a denial receipt. *)
-let parse_single_op ~obs_counter json =
+(** Parse a single op JSON object into a typed_op or a denial receipt.
+    ~ext_lookup: optional function to resolve extension op kinds.
+    Given a kind string, returns Some (kind_name, class) if the kind
+    is provided by an enabled extension. *)
+let parse_single_op ~obs_counter ?(ext_lookup = fun _ -> None) json =
   match Cn_json.get_string "kind" json with
   | None ->
     Error (make_receipt ~pass:"A" ~op_id:None ~kind:"unknown"
@@ -196,7 +202,15 @@ let parse_single_op ~obs_counter json =
         ) pairs
       | _ -> []
     in
-    match op_kind_of_string kind_str with
+    let resolved_kind = match op_kind_of_string kind_str with
+      | Some k -> Some k
+      | None ->
+        (* Try extension registry for unknown built-in kinds *)
+        match ext_lookup kind_str with
+        | Some (name, cls) -> Some (Extension (name, cls))
+        | None -> None
+    in
+    match resolved_kind with
     | None ->
       Error (make_receipt ~pass:"A" ~op_id ~kind:kind_str
                ~status:Denied ~reason:"unknown_op_kind")
@@ -220,13 +234,16 @@ let parse_single_op ~obs_counter json =
         | Effect _ when op_id = None ->
           Error (make_receipt ~pass:"A" ~op_id:None ~kind:kind_str
                    ~status:Denied ~reason:"missing_op_id")
-        | Observe _ ->
+        | Extension (_, "effect") when op_id = None ->
+          Error (make_receipt ~pass:"A" ~op_id:None ~kind:kind_str
+                   ~status:Denied ~reason:"missing_op_id")
+        | Observe _ | Extension (_, "observe") ->
           let resolved_id = match op_id with
             | Some id -> id
             | None -> assign_observe_id obs_counter
           in
           Ok { kind; op_id = Some resolved_id; fields }
-        | Effect _ ->
+        | Effect _ | Extension _ ->
           Ok { kind; op_id; fields }
 
 (** Check for duplicate op_ids within a manifest.
@@ -251,8 +268,9 @@ let check_duplicates results =
   ) results
 
 (** Parse ops: manifest string into typed ops and denial receipts.
+    ~ext_lookup: optional extension op resolver (see parse_single_op).
     Returns (valid_ops, denial_receipts). *)
-let parse_ops_manifest raw_value =
+let parse_ops_manifest ?(ext_lookup = fun _ -> None) raw_value =
   if not (is_single_line raw_value) then
     ([], [make_receipt ~pass:"A" ~op_id:None ~kind:"manifest"
             ~status:Denied ~reason:"ops_not_single_line"])
@@ -263,7 +281,7 @@ let parse_ops_manifest raw_value =
               ~status:Denied ~reason:(Printf.sprintf "parse_error: %s" msg)])
     | Ok (Cn_json.Array items) ->
       let obs_counter = ref 0 in
-      let results = List.map (parse_single_op ~obs_counter) items in
+      let results = List.map (parse_single_op ~obs_counter ~ext_lookup) items in
       let results = check_duplicates results in
       let ops = List.filter_map (function Ok op -> Some op | Error _ -> None) results in
       let receipts = List.filter_map (function Error r -> Some r | Ok _ -> None) results in

@@ -724,7 +724,63 @@ let execute_exec ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
 
 (** Execute a single typed op. Returns a receipt (pass field left blank —
     the orchestrator fills it in based on which pass is running). *)
-let execute_op ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
+let execute_extension_op ~hub_path ~trigger_id ~config ~ext_registry
+    (op : Cn_shell.typed_op) kind_name =
+  let start = now_iso () in
+  Cn_trace.gemit ~component:"extension" ~layer:Body
+    ~event:"extension.op.start" ~severity:Info ~status:Ok_
+    ~trigger_id
+    ~details:[
+      "kind", Cn_json.String kind_name;
+      "op_id", (match op.op_id with Some id -> Cn_json.String id | None -> Cn_json.Null);
+    ] ();
+  match Cn_extension.lookup_op ext_registry kind_name with
+  | None ->
+    Cn_trace.gemit ~component:"extension" ~layer:Body
+      ~event:"extension.op.error" ~severity:Warn ~status:Error_status
+      ~trigger_id ~reason_code:"extension_not_found"
+      ~details:["kind", Cn_json.String kind_name] ();
+    { Cn_shell.pass = ""; op_id = op.op_id; kind = kind_name;
+      status = Cn_shell.Denied; reason = "extension_not_found";
+      start_time = start; end_time = now_iso (); artifacts = [] }
+  | Some (entry, _ext_op) ->
+    let command = entry.manifest.backend.command in
+    let arguments = op.Cn_shell.fields in
+    let result =
+      Cn_ext_host.execute_extension_op ~command ~op_kind:kind_name
+        ~arguments ()
+    in
+    match result with
+    | Ok (_status, content) ->
+      let op_id_str = match op.op_id with Some id -> id | None -> "unknown" in
+      let artifact = write_artifact ~hub_path ~trigger_id ~op_id:op_id_str
+                       ~ext:"txt" ~content
+                       ~max_bytes:config.Cn_shell.max_artifact_bytes_per_op in
+      Cn_trace.gemit ~component:"extension" ~layer:Body
+        ~event:"extension.op.ok" ~severity:Info ~status:Ok_
+        ~trigger_id
+        ~details:[
+          "kind", Cn_json.String kind_name;
+          "provider", Cn_json.String entry.manifest.name;
+        ] ();
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = kind_name;
+        status = Cn_shell.Ok_status; reason = "";
+        start_time = start; end_time = now_iso (); artifacts = [artifact] }
+    | Error reason ->
+      Cn_trace.gemit ~component:"extension" ~layer:Body
+        ~event:"extension.op.error" ~severity:Warn ~status:Error_status
+        ~trigger_id ~reason_code:reason
+        ~details:[
+          "kind", Cn_json.String kind_name;
+          "provider", Cn_json.String entry.manifest.name;
+        ] ();
+      { Cn_shell.pass = ""; op_id = op.op_id; kind = kind_name;
+        status = Cn_shell.Error_status; reason;
+        start_time = start; end_time = now_iso (); artifacts = [] }
+
+let execute_op ~hub_path ~trigger_id ~config
+    ?(ext_registry = Cn_extension.empty_registry ())
+    (op : Cn_shell.typed_op) =
   match op.Cn_shell.kind with
   (* Observe ops *)
   | Observe Fs_read -> execute_fs_read ~hub_path ~trigger_id ~config op
@@ -741,6 +797,10 @@ let execute_op ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
   | Effect Git_stage -> execute_git_stage ~hub_path ~config op
   | Effect Git_commit -> execute_git_commit ~hub_path ~config op
   | Effect Exec -> execute_exec ~hub_path ~trigger_id ~config op
+  (* Extension ops — dispatched to subprocess host *)
+  | Extension (kind_name, _class) ->
+    execute_extension_op ~hub_path ~trigger_id ~config ~ext_registry
+      op kind_name
 
 (* === Receipt I/O === *)
 

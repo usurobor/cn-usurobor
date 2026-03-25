@@ -222,6 +222,29 @@ let run_doctor hub_path =
      else
        { name = "version coherence"; passed = false;
          value = Printf.sprintf "drift: %s" (String.concat ", " mismatched) });
+
+    (* v3.17: Extension health — discover, check compatibility, report conflicts *)
+    (let reg = Cn_extension.build_registry ~hub_path
+       ~runtime_version:version () in
+     let entries = Cn_extension.all_entries reg in
+     let total = List.length entries in
+     let enabled = entries |> List.filter (fun e ->
+       e.Cn_extension.state = Cn_extension.Enabled) |> List.length in
+     let rejected = entries |> List.filter (fun e ->
+       match e.Cn_extension.state with
+       | Cn_extension.Rejected _ -> true | _ -> false) |> List.length in
+     let disabled = entries |> List.filter (fun e ->
+       e.Cn_extension.state = Cn_extension.Disabled) |> List.length in
+     if total = 0 then
+       { name = "extensions"; passed = true; value = "none installed" }
+     else if rejected > 0 then
+       { name = "extensions"; passed = false;
+         value = Printf.sprintf "%d installed, %d enabled, %d rejected, %d disabled"
+           total enabled rejected disabled }
+     else
+       { name = "extensions"; passed = true;
+         value = Printf.sprintf "%d installed, %d enabled, %d disabled"
+           total enabled disabled });
   ] in
 
   let width = 22 in
