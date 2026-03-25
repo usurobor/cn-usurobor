@@ -67,10 +67,9 @@ let parse_response json =
     Spawns the process, sends the request on stdin, reads response from stdout.
     Returns structured result. *)
 let execute_subprocess ~command request =
-  if command = [] then HostError "empty command"
-  else
-    let prog = List.hd command in
-    let args = List.tl command in
+  match command with
+  | [] -> HostError "empty command"
+  | prog :: args ->
     let request_json = Cn_json.to_string (request_to_json request) ^ "\n" in
     let code, output =
       Cn_ffi.Process.exec_args ~prog ~args

@@ -161,10 +161,10 @@ let check_version_constraint ~runtime_version constraint_str =
     match String.split_on_char '.' v with
     | [maj; min; pat] ->
       (try Some (int_of_string maj, int_of_string min, int_of_string pat)
-       with _ -> None)
+       with Failure _ -> None)
     | [maj; min] ->
       (try Some (int_of_string maj, int_of_string min, 0)
-       with _ -> None)
+       with Failure _ -> None)
     | _ -> None
   in
   let compare_versions (a1, a2, a3) (b1, b2, b3) =
@@ -212,13 +212,13 @@ let discover ~hub_path =
   let vendor_dir = Cn_ffi.Path.join hub_path ".cn/vendor/packages" in
   if not (Cn_ffi.Fs.exists vendor_dir) then []
   else
-    let pkg_dirs = try Cn_ffi.Fs.readdir vendor_dir with _ -> [] in
+    let pkg_dirs = try Cn_ffi.Fs.readdir vendor_dir with Sys_error _ -> [] in
     List.concat_map (fun pkg_dir ->
       let pkg_path = Cn_ffi.Path.join vendor_dir pkg_dir in
       let ext_root = Cn_ffi.Path.join pkg_path "extensions" in
       if not (Cn_ffi.Fs.exists ext_root) || not (Sys.is_directory ext_root) then []
       else
-        let ext_dirs = try Cn_ffi.Fs.readdir ext_root with _ -> [] in
+        let ext_dirs = try Cn_ffi.Fs.readdir ext_root with Sys_error _ -> [] in
         List.filter_map (fun ext_dir ->
           let ext_path = Cn_ffi.Path.join ext_root ext_dir in
           let manifest_path = Cn_ffi.Path.join ext_path "cn.extension.json" in
