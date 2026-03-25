@@ -233,6 +233,7 @@ List every file that needs to change, grouped by action.
 **Issue:** #NN
 **Version:** X.Y.Z
 **Mode:** MCA / MCI
+**Active Skills:** [2–3 governing skills for this change]
 
 ## Problem
 [Named incoherence with evidence]

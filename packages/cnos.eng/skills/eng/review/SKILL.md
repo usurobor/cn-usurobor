@@ -100,6 +100,25 @@ Review fails via **surface reading** — checking only what changed, missing wha
   - ❌ "Diff looks clean" (governance branch has no self-coherence report)
   - ✅ "Substantial feature branch — design doc exists, self-coherence exists, bootstrap stubs present"
 
+2.0.6. **Process economics check**
+  - If the diff adds or changes process, governance, artifacts, or gates, verify:
+    - the failure class being prevented is named
+    - the consumer of the new artifact/gate is named
+    - a lighter alternative was considered
+    - the process burden is proportionate to the failure class
+    - an automation boundary or sunset/review criterion is stated where appropriate
+  - ❌ "Added a new required artifact for rigor"
+  - ✅ "SELF-COHERENCE.md is required for governance branches because reviewer and releaser need branch-local proof of process conformance"
+  - ✅ "This stale-path check should be a script, not a repeated reviewer burden"
+
+2.0.7. **Active skill consistency (CDD §4.4)**
+  - If the design/contract artifact declares active skills, verify:
+    - the declared skills are present in the branch or loaded context
+    - the implementation is consistent with them
+    - findings that a declared active skill would have prevented are process debt (§6.1 / mechanical)
+  - ❌ "Active skills: ocaml" but code has `List.hd` and bare `with _ ->` (OCaml skill §3.1 violations)
+  - ✅ "Active skills: ocaml, performance-reliability — implementation consistent with both"
+
 ---
 
 ### 2.1. Diff — what changed
@@ -186,6 +205,24 @@ Check whether the change creates obligations on code it did not touch.
   - ❌ "Skill looks correct" (didn't compare with canonical doc)
   - ✅ "Canonical doc and executable skill agree on artifact contract"
 
+2.2.9. **Architecture leverage check**
+  - Ask explicitly whether the diff merely improves the current architecture or misses a higher-leverage boundary move.
+  - Useful prompts:
+    - Is this repeated pressure being treated as a one-off patch?
+    - Is the right abstraction being introduced at the right layer?
+    - Should this become a primitive, package, extension, config rule, or be deleted instead?
+  - ❌ "The local fix is correct" (never asked whether the architecture assumption should change)
+  - ✅ "This fix is coherent locally, but the repeated capability-growth pressure suggests an extension architecture instead of another built-in"
+
+2.2.10. **Process overhead check**
+  - If the diff adds new docs, artifacts, gates, or procedures, ask:
+    - What exact failure does this prevent?
+    - Who uses the new artifact?
+    - Could this be automated instead?
+    - Is this branch class carrying the right amount of ceremony?
+  - ❌ "More governance is always safer"
+  - ✅ "This new step catches stale artifact references, but the check is mechanical and should move to CI/lint"
+
 ---
 
 ### 2.3. Verdict — the judgment
@@ -228,6 +265,12 @@ The verdict is a function of the worst named incoherence.
   - ❌ "Predicate tests exist → runtime filtering AC met"
   - ✅ "Predicate tests prove the predicate; no integration test proves the queue/offset path"
 
+2.3.7. **Higher-leverage alternative check**
+  - A diff may be locally correct and still miss the more coherent system move.
+  - Name that explicitly as a review note or finding when appropriate.
+  - ❌ "Looks correct, approved" when the change repeats a known architectural pressure
+  - ✅ "Locally correct, but repeated pressure suggests a higher-leverage architecture move; approve with note / request changes depending on scope"
+
 ---
 
 ## 3. Rules
@@ -267,12 +310,16 @@ Before submitting a review:
 - [ ] Every issue AC verified (met, partial, missing, or deferred)
 - [ ] Required named docs/files checked
 - [ ] Required CDD artifacts for this change class exist and are internally consistent
+- [ ] New governance/process artifacts earn their cost and name their consumer
+- [ ] Declared active skills verified: present, implementation consistent, violations are process debt
 - [ ] Mechanical diff scan: duplicates in lists, branch name convention, expect-test plausibility
 - [ ] Every claim traces to evidence
 - [ ] Severity assigned to every finding
 - [ ] Type assigned to every finding (mechanical / judgment)
 - [ ] Multi-format outputs checked for semantic parity
 - [ ] Authority surfaces checked for conflict where multiple define the same thing
+- [ ] Higher-leverage architecture move considered where repeated pressure is visible
+- [ ] Added process burden checked for lighter alternatives / automation boundary
 - [ ] Unchanged siblings checked for new incoherence
 - [ ] For filters/sanitizers/validators: all input sources enumerated, full pipeline verified on each
 - [ ] File-move cross-refs validated by grep where applicable

@@ -111,6 +111,14 @@ Review fails via **surface reading** — checking only what changed, missing wha
   - ✅ "SELF-COHERENCE.md is required for governance branches because reviewer and releaser need branch-local proof of process conformance"
   - ✅ "This stale-path check should be a script, not a repeated reviewer burden"
 
+2.0.7. **Active skill consistency (CDD §4.4)**
+  - If the design/contract artifact declares active skills, verify:
+    - the declared skills are present in the branch or loaded context
+    - the implementation is consistent with them
+    - findings that a declared active skill would have prevented are process debt (§6.1 / mechanical)
+  - ❌ "Active skills: ocaml" but code has `List.hd` and bare `with _ ->` (OCaml skill §3.1 violations)
+  - ✅ "Active skills: ocaml, performance-reliability — implementation consistent with both"
+
 ---
 
 ### 2.1. Diff — what changed
@@ -303,6 +311,7 @@ Before submitting a review:
 - [ ] Required named docs/files checked
 - [ ] Required CDD artifacts for this change class exist and are internally consistent
 - [ ] New governance/process artifacts earn their cost and name their consumer
+- [ ] Declared active skills verified: present, implementation consistent, violations are process debt
 - [ ] Mechanical diff scan: duplicates in lists, branch name convention, expect-test plausibility
 - [ ] Every claim traces to evidence
 - [ ] Severity assigned to every finding
