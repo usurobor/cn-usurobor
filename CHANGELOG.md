@@ -11,6 +11,7 @@ These are intuition-level ratings, not outputs from a running TSC engine (formal
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|----------------------------------------|
+| v3.16.0 | A   | A           | A            | A                | End-to-end self-update (#37): same-version patch detection, ARM binary in CI, bare version tag trigger, `target_commitish` SHA validation. CDD OVERVIEW.md. AGILE-PROCESS.md deleted (CDD supersedes). |
 | v3.15.2 | A   | A           | A            | A                | Empty Telegram filter (#29), CDD v3.15.0 canonical rewrite (authority split resolved), review skill hardened (4 new checks from PR #103 comparison). |
 | v3.15.1 | A   | A           | A            | A-               | Fix #22 review blockers: re-exec after binary update (no stale in-process version), stamp-versions.sh derives manifests from VERSION, cn build --check + cn release gate version consistency, unified truth read in update_runtime. Process: reviewed before merge, CI green. |
 | v3.15.0 | A-  | A           | A-           | B+               | Version coherence (#22): VERSION→dune→cn_version.ml chain is sound (α A). β regressed: I1 CI check failed at merge, claim/reality gap on AC3+AC10. γ regressed: 0 review rounds (self-merged ~26min), merged with red CI, 3 fix commits post-implementation — first release after §11.11 review metrics bypassed review entirely. Manifests not yet stamped from VERSION (validate-only, not derive). Update path uses stale in-process version. Core architecture correct; contract partially closed. |
@@ -91,6 +92,42 @@ Three concerns addressed in one release: a runtime bugfix, the CDD authority spl
 - **CDD §0 selection** — #29 selected via §0.6 operational infrastructure debt override.
 - **PR #103** — authored by usurobor via Claude Code session, reviewed by Sigma. Reset+cherry-pick after history rewrite (Test→usurobor authorship fix via git filter-repo).
 - **Git authorship fixed** — all historical `Test <test@test.local>` commits rewritten to `usurobor <usurobor@gmail.com>` via git filter-repo. Force-pushed.
+
+---
+
+## v3.16.0 (2026-03-25)
+
+**End-to-end self-update (#37), CDD OVERVIEW, AGILE-PROCESS deletion**
+
+### Fixed
+
+- **`cn update` end-to-end self-update (#37)** — three independent failures fixed:
+  1. Same-version patch detection via commit hash comparison (`Update_patch` variant, `release_info` record, `get_latest_release()` with `Cn_json` parsing)
+  2. ARM binary in CI release matrix (`ubuntu-24.04-arm` → `cn-linux-arm64`)
+  3. Release workflow triggers on bare version tags (`[0-9]*.[0-9]*.[0-9]*`) in addition to `v*`
+  4. `target_commitish` validated as hex SHA before patch comparison — branch names like "main" no longer cause false `Update_patch`
+- **`cn --version` shows commit hash** — `cn 3.16.0 (abc1234)` for operator diagnostics
+- **Cram tests use prefix match** — `version.t` and `cli.t` handle dynamic commit suffix
+
+### Added
+
+- **CDD OVERVIEW.md** — plain-language introduction: what CDD is, why it exists when agents can write code, what one cycle looks like, what stays mechanical vs judgment-bearing
+- **CDD §12 retro-packaging rule** — substantial direct-to-main changes must be followed by retro-snapshot + self-coherence + version-history entry
+- **Post-release §5 closure evidence** — template now requires explicit immediate/deferred output accounting
+
+### Changed
+
+- **AGILE-PROCESS.md deleted** — CDD §4.1 lifecycle table supersedes the workflow states. P0–P3 priority bands implied by §3 selection function. One less surface to maintain.
+- **CDD bundle reading order** — OVERVIEW → CDD → RATIONALE → epoch assessments
+- **Review skill output format** — now includes CI state, merge instruction, and finding type column (closes self-contradiction where rules required them but template omitted them)
+- **Release skill §2.3** — VERSION-first flow: `echo X.Y.Z > VERSION` → `stamp-versions.sh` → `check-version-consistency.sh`. Old manual locations removed.
+- **Live AGILE-PROCESS refs updated** — ARCHITECTURE.md diagram, AUDIT.md inventory
+
+### Process
+
+- **PR #104** — 4 review rounds (3 D-level blockers found and fixed: syntax error, FSM exhaustive match, bare tag trigger, `target_commitish` validation, `cli.t` prefix match). Authored by usurobor via Claude Code, reviewed by Sigma.
+- **Git authorship fixed** — all historical `Test <test@test.local>` commits rewritten to `usurobor <usurobor@gmail.com>` via git filter-repo.
+- **CDD retro-packaged** — frozen CDD snapshot in `3.15.2/`, self-coherence report for the canonical rewrite.
 
 ---
 
