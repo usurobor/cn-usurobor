@@ -116,6 +116,15 @@ Read the diff for internal coherence.
   - ❌ Commit 3 silently undoes commit 1
   - ✅ Fix commits narrow the remaining blockers and reference what they fix
 
+2.1.3. **Mechanical diff scan**
+  - Before judgment checks, run mechanical scans on the diff itself:
+    - Grep for duplicate entries in any list/array literal added or modified
+    - Verify branch name matches project convention (e.g. CDD branch format)
+    - If tests are in the diff, verify expect-test outputs are plausible (exact strings, whitespace)
+  - These are deterministic — two reviewers running the same grep must find the same results.
+  - ❌ Read the diff for logic only
+  - ✅ "L74: `<invoke>` appears twice in `xml_prefixes` — duplicate entry"
+
 ---
 
 ### 2.2. Context — unchanged siblings
@@ -126,6 +135,12 @@ Check whether the change creates obligations on code it did not touch.
   - If you harden 3 of 4 peers at the same level, the 4th is now incoherent.
   - ❌ "All changed ops look good"
   - ✅ "Three observe ops use exclusions; git_status still doesn't"
+
+2.2.1a. **Input-source enumeration for filters/sanitizers/validators**
+  - When the diff adds or modifies a function that filters, sanitizes, or validates, enumerate every input source (caller/call site) that feeds it. Verify each input gets the full pipeline.
+  - This is mandatory for security-relevant paths (sanitization, auth, access control).
+  - ❌ "Body goes through the stripper — looks good"
+  - ✅ "Body goes through strip_xml + strip_frontmatter. Reply goes through is_control_plane_like only. Reply is missing strip_xml — sibling gap."
 
 2.2.2. **Cross-module leakage**
   - Follow what the changed code writes/produces and inspect what reads/exposes it.
@@ -250,12 +265,14 @@ Before submitting a review:
 - [ ] Every issue AC verified (met, partial, missing, or deferred)
 - [ ] Required named docs/files checked
 - [ ] Required CDD artifacts for this change class exist and are internally consistent
+- [ ] Mechanical diff scan: duplicates in lists, branch name convention, expect-test plausibility
 - [ ] Every claim traces to evidence
 - [ ] Severity assigned to every finding
 - [ ] Type assigned to every finding (mechanical / judgment)
 - [ ] Multi-format outputs checked for semantic parity
 - [ ] Authority surfaces checked for conflict where multiple define the same thing
 - [ ] Unchanged siblings checked for new incoherence
+- [ ] For filters/sanitizers/validators: all input sources enumerated, full pipeline verified on each
 - [ ] File-move cross-refs validated by grep where applicable
 - [ ] System writes traced to system reads
 - [ ] Evidence depth matches claim strength
