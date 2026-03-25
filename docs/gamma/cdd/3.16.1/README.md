@@ -10,4 +10,4 @@
 | Artifact | File | Status |
 |----------|------|--------|
 | Snapshot manifest | `README.md` (this file) | complete |
-| Self-coherence report | `SELF-COHERENCE.md` | stub |
+| Self-coherence report | `SELF-COHERENCE.md` | complete |
