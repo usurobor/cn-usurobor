@@ -61,6 +61,19 @@ let control_key_prefixes = [
   "delegate:"; "defer:"; "delete:"; "surface:"; "mca:";
 ]
 
+(** XML pseudo-tool prefixes the LLM sometimes hallucinates.
+    Shared between is_control_plane_like (whole-body start check) and
+    strip_xml_pseudo_tools (mid-body block removal) so a new tag
+    added here protects both paths. *)
+let xml_prefixes = [
+  "<observe>"; "<fs_read>"; "<fs_list>"; "<fs_glob>";
+  "<git_status>"; "<git_diff>"; "<git_log>"; "<git_grep>";
+  "<fs_write>"; "<fs_patch>"; "<git_branch>"; "<git_commit>";
+  "<exec>"; "<tool_call>"; "<tool_calls>"; "<function_call>";
+  "<function_calls>"; "<tool_result>"; "<tool_results>";
+  "<invoke>"; "<thinking>"; "<cn:ops>";
+]
+
 (** Detect whether a candidate presentation string contains control-plane
     syntax that must not reach a human-facing sink.
 
@@ -80,17 +93,10 @@ let is_control_plane_like s =
   else if List.exists (fun prefix -> starts_with ~prefix trimmed) control_key_prefixes then
     Some Control_plane_leak
   (* XML pseudo-tool wrappers the LLM sometimes hallucinates *)
+  else if List.exists (fun prefix -> starts_with ~prefix trimmed) xml_prefixes then
+    Some Xml_tool_syntax
   else
-    let xml_prefixes = [
-      "<observe>"; "<fs_read>"; "<fs_list>"; "<fs_glob>";
-      "<git_status>"; "<git_diff>"; "<git_log>"; "<git_grep>";
-      "<fs_write>"; "<fs_patch>"; "<git_branch>"; "<git_commit>";
-      "<exec>"; "<tool_call>"; "<function_call>";
-    ] in
-    if List.exists (fun prefix -> starts_with ~prefix trimmed) xml_prefixes then
-      Some Xml_tool_syntax
-    else
-      None
+    None
 
 (* === Parsing === *)
 
@@ -187,6 +193,113 @@ let strip_embedded_frontmatter s =
   let cleaned = walk [] false [] lines |> String.concat "\n" |> String.trim in
   if cleaned = "" then None else Some cleaned
 
+(** Strip XML pseudo-tool blocks from mid-body text.
+    Removes lines starting with an xml_prefix and any continuation lines
+    up to and including the closing tag.  Also removes inline same-line
+    XML spans (e.g. "Hello <cn:ops>…</cn:ops> world" → "Hello  world").
+    Analogous to strip_embedded_frontmatter but for XML pseudo-tool
+    hallucinations.
+
+    Returns None if stripping empties the body entirely. *)
+let strip_xml_pseudo_tools s =
+  let lines = String.split_on_char '\n' s in
+  (* Extract the tag name from a line matching an xml_prefix.
+     E.g. "<tool_calls> ..." → "tool_calls", "<cn:ops>..." → "cn:ops" *)
+  let extract_tag_name line =
+    let t = String.trim line in
+    List.find_map (fun prefix ->
+      if starts_with ~prefix t then
+        (* prefix is "<tag_name>", extract between < and > *)
+        Some (String.sub prefix 1 (String.length prefix - 2))
+      else None
+    ) xml_prefixes
+  in
+  (* Check if a specific closing tag </tag_name> appears on this line *)
+  let has_matching_close tag_name line =
+    let close_tag = "</" ^ tag_name ^ ">" in
+    let clen = String.length close_tag in
+    let len = String.length line in
+    let rec scan i =
+      if i + clen > len then false
+      else if String.sub line i clen = close_tag then true
+      else scan (i + 1)
+    in
+    scan 0
+  in
+  (* Remove inline XML spans: find <prefix> ... </...> within a line *)
+  let strip_inline line =
+    let find_prefix_at line pos =
+      List.find_opt (fun prefix ->
+        let plen = String.length prefix in
+        pos + plen <= String.length line
+        && String.sub line pos plen = prefix
+      ) xml_prefixes
+    in
+    let find_close_from line pos =
+      (* Find next </...> starting from pos *)
+      let len = String.length line in
+      let rec scan i =
+        if i + 1 >= len then None
+        else if line.[i] = '<' && line.[i + 1] = '/' then
+          (* Find the matching > *)
+          let rec find_gt j =
+            if j >= len then None
+            else if line.[j] = '>' then Some (j + 1)
+            else find_gt (j + 1)
+          in
+          find_gt (i + 2)
+        else scan (i + 1)
+      in
+      scan pos
+    in
+    let len = String.length line in
+    let buf = Buffer.create len in
+    let rec scan i =
+      if i >= len then Buffer.contents buf
+      else if line.[i] = '<' then
+        match find_prefix_at line i with
+        | Some _ ->
+          (* Found an XML prefix — find matching close *)
+          (match find_close_from line i with
+           | Some end_pos -> scan end_pos  (* skip the span *)
+           | None ->
+             (* No close found — strip from here to end of line *)
+             Buffer.contents buf)
+        | None ->
+          Buffer.add_char buf line.[i];
+          scan (i + 1)
+      else begin
+        Buffer.add_char buf line.[i];
+        scan (i + 1)
+      end
+    in
+    scan 0
+  in
+  (* Pass 1: block-level stripping with matched-tag tracking.
+     block_tag = None when outside a block, Some tag_name inside. *)
+  let rec walk acc block_tag = function
+    | [] -> List.rev acc
+    | line :: rest ->
+      match block_tag with
+      | Some tag ->
+        (* Inside an XML block — skip until matching </tag> *)
+        if has_matching_close tag line then walk acc None rest
+        else walk acc (Some tag) rest
+      | None ->
+        match extract_tag_name line with
+        | Some tag ->
+          (* Opening line — skip; check if self-closing *)
+          if has_matching_close tag line then walk acc None rest
+          else walk acc (Some tag) rest
+        | None ->
+          walk (line :: acc) None rest
+  in
+  let after_blocks = walk [] None lines in
+  (* Pass 2: inline stripping on surviving lines *)
+  let after_inline = List.map strip_inline after_blocks in
+  let filtered = after_inline |> String.concat "\n" |> String.trim in
+  if filtered = "" then None else Some filtered
+
 (** Find the first Reply payload from coordination ops. *)
 let first_reply_payload ops =
   ops |> List.find_map (fun (op : agent_op) ->
@@ -206,20 +319,33 @@ let render_human_facing parsed =
      still a valid presentation candidate. Dedup to avoid double-checking. *)
   let resolved_reply = first_reply_payload parsed.coordination_ops in
   let raw_reply = first_reply_payload parsed.raw_coordination_ops in
-  (* Strip any embedded frontmatter blocks from the body before
-     considering it as a human-facing candidate. This catches the
-     mid-body ops pattern that is_control_plane_like misses because
-     the body starts with normal prose. *)
+  (* Sanitize candidates: strip embedded frontmatter blocks and XML
+     pseudo-tool blocks.  Applied uniformly to body AND reply payloads
+     so mid-body control-plane patterns are caught regardless of which
+     candidate source they appear in.  is_control_plane_like (applied
+     later) only checks the start of the string — these strippers
+     handle mid-string and multi-line patterns. *)
+  let sanitize s =
+    let s = match strip_embedded_frontmatter s with Some v -> v | None -> "" in
+    if s = "" then None
+    else strip_xml_pseudo_tools s
+  in
   let sanitized_body = match parsed.body with
-    | Some b -> strip_embedded_frontmatter b
+    | Some b -> sanitize b
     | None -> None
+  in
+  let sanitized_reply = match resolved_reply with
+    | Some r -> sanitize r
+    | None -> None
+  in
+  let sanitized_raw_reply = match raw_reply with
+    | Some r when raw_reply <> resolved_reply -> sanitize r
+    | _ -> None
   in
   let real_candidates =
     (match sanitized_body with Some b -> [b] | None -> [])
-    @ (match resolved_reply with Some msg -> [msg] | None -> [])
-    @ (match raw_reply with
-       | Some msg when raw_reply <> resolved_reply -> [msg]
-       | _ -> [])
+    @ (match sanitized_reply with Some msg -> [msg] | None -> [])
+    @ (match sanitized_raw_reply with Some msg -> [msg] | None -> [])
   in
   let rec try_candidates ~first_block = function
     | [] ->

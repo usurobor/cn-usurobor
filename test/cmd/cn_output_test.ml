@@ -311,7 +311,14 @@ let%expect_test "I4: all XML pseudo-tool variants blocked" =
     "<git_commit>x</git_commit>";
     "<exec>x</exec>";
     "<tool_call>x</tool_call>";
+    "<tool_calls>[{\"kind\":\"fs_read\"}]</tool_calls>";
     "<function_call>x</function_call>";
+    "<function_calls>x</function_calls>";
+    "<tool_result>x</tool_result>";
+    "<tool_results>x</tool_results>";
+    "<invoke>x</invoke>";
+    "<thinking>internal reasoning</thinking>";
+    "<cn:ops>[{\"kind\":\"fs_read\"}]</cn:ops>";
   ] in
   List.iter (fun input ->
     match Cn_output.is_control_plane_like input with
@@ -333,7 +340,14 @@ let%expect_test "I4: all XML pseudo-tool variants blocked" =
     blocked: <git_commit>x</git_c
     blocked: <exec>x</exec>
     blocked: <tool_call>x</tool_c
+    blocked: <tool_calls>[{"kind"
     blocked: <function_call>x</fu
+    blocked: <function_calls>x</f
+    blocked: <tool_result>x</tool
+    blocked: <tool_results>x</too
+    blocked: <invoke>x</invoke>
+    blocked: <thinking>internal r
+    blocked: <cn:ops>[{"kind":"fs
   |}]
 
 let%expect_test "I4: all legacy coordination op prefixes blocked on human surface" =
@@ -369,6 +383,165 @@ let%expect_test "I4: all legacy coordination op prefixes blocked on human surfac
     blocked: surface: desc
     blocked: mca: desc
   |}]
+
+(* === #106: two-membrane invariant — all human sinks use same membrane === *)
+
+let%expect_test "#106: Telegram and ConversationStore block <tool_calls> identically" =
+  (* The exact leak pattern from issue #106 *)
+  let raw = "<tool_calls> [{\"kind\":\"fs_read\",\"path\":\".cn/cn.json\"}] </tool_calls>" in
+  let p = Cn_output.parse_output raw in
+  let tg = Cn_output.render_for_sink (Cn_output.HumanSurface `Telegram) p in
+  let cs = Cn_output.render_for_sink Cn_output.ConversationStore p in
+  let show label r = match r with
+    | Cn_output.Renderable s -> Printf.printf "%s: Renderable: %s\n" label s
+    | Cn_output.Fallback (text, reason) ->
+        Printf.printf "%s: Fallback: %s (reason: %s)\n" label text
+          (Cn_output.string_of_render_reason reason)
+    | Cn_output.Invalid reason ->
+        Printf.printf "%s: Invalid: %s\n" label (Cn_output.string_of_render_reason reason)
+    | Cn_output.Skipped -> Printf.printf "%s: Skipped\n" label
+  in
+  show "telegram" tg;
+  show "conversation" cs;
+  (* Both must produce safe fallback — single membrane *)
+  [%expect {|
+    telegram: Renderable: (acknowledged)
+    conversation: Renderable: (acknowledged)
+  |}]
+
+let%expect_test "#106: mixed prose + <tool_calls> mid-body stripped on all human sinks" =
+  let raw = {|---
+id: tg-106
+reply: tg-106|I'll check that for you.
+---
+I'll check that for you.
+
+<tool_calls> [{"kind":"fs_read","path":".cn/cn.json"}] </tool_calls>|} in
+  let p = Cn_output.parse_output raw in
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  show_render Cn_output.ConversationStore p;
+  [%expect {|
+    Renderable: I'll check that for you.
+    Renderable: I'll check that for you.
+  |}]
+
+let%expect_test "#106: reply payload containing <tool_calls> falls back" =
+  let raw = {|---
+id: tg-106b
+reply: tg-106b|<tool_calls> [{"kind":"fs_read"}] </tool_calls>
+---
+<tool_calls> [{"kind":"fs_read","path":".cn/cn.json"}] </tool_calls>|} in
+  let p = Cn_output.parse_output raw in
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  [%expect {|
+    Renderable: (acknowledged)
+  |}]
+
+let%expect_test "#106: strip_xml_pseudo_tools removes single-line block" =
+  let input = "Hello world.\n\n<tool_calls> [{\"kind\":\"fs_read\"}] </tool_calls>\n\nGoodbye." in
+  let result = Cn_output.strip_xml_pseudo_tools input in
+  Printf.printf "%s\n"
+    (match result with Some s -> s | None -> "(empty)");
+  [%expect {|
+    Hello world.
+
+
+    Goodbye. |}]
+
+let%expect_test "#106: strip_xml_pseudo_tools removes multi-line block" =
+  let input = "Prose before.\n\n<tool_calls>\n[{\"kind\":\"fs_read\"}]\n</tool_calls>\n\nProse after." in
+  let result = Cn_output.strip_xml_pseudo_tools input in
+  Printf.printf "%s\n"
+    (match result with Some s -> s | None -> "(empty)");
+  [%expect {|
+    Prose before.
+
+
+    Prose after. |}]
+
+let%expect_test "#106: <cn:ops> body blocked on human surface" =
+  let raw = "<cn:ops>[{\"kind\":\"fs_read\",\"path\":\"README.md\"}]</cn:ops>" in
+  let p = Cn_output.parse_output raw in
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  [%expect {|
+    Renderable: (acknowledged)
+  |}]
+
+let%expect_test "#106: reply with XML body falls through to clean reply" =
+  (* Frontmatter lines without ':' are dropped by parse_frontmatter,
+     so the reply value is just "Here is the info." (single line).
+     Body is entirely XML → stripped to None → reply candidate wins. *)
+  let raw = {|---
+id: tg-106c
+reply: tg-106c|Here is the info.
+---
+<tool_calls> [{"kind":"fs_read","path":".cn/cn.json"}] </tool_calls>|} in
+  let p = Cn_output.parse_output raw in
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  [%expect {|
+    Renderable: Here is the info.
+  |}]
+
+let%expect_test "#106: clean reply passes through, prose body with <cn:ops> is stripped" =
+  let raw = {|---
+id: tg-106d
+reply: tg-106d|All good.
+---
+All good.
+
+<cn:ops>[{"kind":"fs_read","path":"README.md"}]</cn:ops>|} in
+  let p = Cn_output.parse_output raw in
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  show_render Cn_output.ConversationStore p;
+  [%expect {|
+    Renderable: All good.
+    Renderable: All good.
+  |}]
+
+let%expect_test "#106: strip_xml_pseudo_tools returns None when body is entirely XML" =
+  let input = "<tool_calls> [{\"kind\":\"fs_read\",\"path\":\".cn/cn.json\"}] </tool_calls>" in
+  let result = Cn_output.strip_xml_pseudo_tools input in
+  Printf.printf "%s\n"
+    (match result with Some s -> s | None -> "(empty)");
+  [%expect {| (empty) |}]
+
+let%expect_test "#106: inline same-line <cn:ops> stripped from prose" =
+  let input = "Hello <cn:ops>[{\"kind\":\"fs_read\"}]</cn:ops> world." in
+  let result = Cn_output.strip_xml_pseudo_tools input in
+  Printf.printf "%s\n"
+    (match result with Some s -> s | None -> "(empty)");
+  [%expect {| Hello  world. |}]
+
+let%expect_test "#106: inline same-line <tool_calls> stripped from body candidate" =
+  let raw = {|---
+id: tg-106e
+reply: tg-106e|Version check done.
+---
+I checked and <tool_calls>[{"kind":"fs_read","path":".cn/cn.json"}]</tool_calls> found version 3.16.1.|} in
+  let p = Cn_output.parse_output raw in
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  [%expect {|
+    Renderable: I checked and  found version 3.16.1.
+  |}]
+
+let%expect_test "#106: inline same-line XML in reply payload stripped" =
+  let raw = {|---
+id: tg-106f
+reply: tg-106f|Here is info <cn:ops>[{"kind":"fs_read"}]</cn:ops> all done.
+---
+<tool_calls>[{"kind":"fs_read"}]</tool_calls>|} in
+  let p = Cn_output.parse_output raw in
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  [%expect {|
+    Renderable: Here is info  all done.
+  |}]
+
+let%expect_test "#106: normal prose with harmless angle brackets preserved" =
+  let input = "The value x < 10 and y > 5 is valid. Also a <b>bold</b> tag." in
+  let result = Cn_output.strip_xml_pseudo_tools input in
+  Printf.printf "%s\n"
+    (match result with Some s -> s | None -> "(empty)");
+  [%expect {| The value x < 10 and y > 5 is valid. Also a <b>bold</b> tag. |}]
 
 (* === v3.7.2: ops-in-body detection === *)
 
