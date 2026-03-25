@@ -222,6 +222,41 @@ let run_doctor hub_path =
      else
        { name = "version coherence"; passed = false;
          value = Printf.sprintf "drift: %s" (String.concat ", " mismatched) });
+
+    (* v3.17: Extension health — discover, check compatibility, host health *)
+    (let reg = Cn_extension.build_registry ~hub_path
+       ~runtime_version:version () in
+     let entries = Cn_extension.all_entries reg in
+     let total = List.length entries in
+     let enabled_entries = entries |> List.filter (fun e ->
+       e.Cn_extension.state = Cn_extension.Enabled) in
+     let enabled = List.length enabled_entries in
+     let rejected = entries |> List.filter (fun e ->
+       match e.Cn_extension.state with
+       | Cn_extension.Rejected _ -> true | _ -> false) |> List.length in
+     let disabled = entries |> List.filter (fun e ->
+       e.Cn_extension.state = Cn_extension.Disabled) |> List.length in
+     (* Check host health for enabled extensions *)
+     let unhealthy = enabled_entries |> List.filter_map (fun e ->
+       let cmd = e.Cn_extension.manifest.Cn_extension.backend.Cn_extension.command in
+       match Cn_ext_host.check_health ~command:cmd () with
+       | Ok () -> None
+       | Error msg -> Some (Printf.sprintf "%s: %s" e.manifest.name msg)
+     ) in
+     if total = 0 then
+       { name = "extensions"; passed = true; value = "none installed" }
+     else if rejected > 0 then
+       { name = "extensions"; passed = false;
+         value = Printf.sprintf "%d installed, %d enabled, %d rejected, %d disabled"
+           total enabled rejected disabled }
+     else if unhealthy <> [] then
+       { name = "extensions"; passed = false;
+         value = Printf.sprintf "%d installed, %d enabled (%d unhealthy: %s)"
+           total enabled (List.length unhealthy) (String.concat "; " unhealthy) }
+     else
+       { name = "extensions"; passed = true;
+         value = Printf.sprintf "%d installed, %d enabled, %d disabled"
+           total enabled disabled });
   ] in
 
   let width = 22 in

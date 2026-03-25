@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["url"],
+  "properties": {
+    "url": {
+      "type": "string",
+      "description": "The URL to fetch via HTTP GET"
+    },
+    "headers": {
+      "type": "object",
+      "description": "Optional HTTP headers",
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "additionalProperties": false
+}

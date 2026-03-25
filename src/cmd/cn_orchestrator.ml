@@ -102,7 +102,9 @@ let pass_label_of_index i = string_of_int (i + 1)
     If n_pass=auto and observe ops present: observe ops execute, effects deferred.
     If n_pass=off or no observe ops: all ops execute.
     Returns (receipts, effects_deferred). *)
-let run_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
+let run_pass ~hub_path ~trigger_id ~config
+    ?(ext_registry = Cn_extension.empty_registry ())
+    ~pass_label typed_ops =
   let has_continuation = Cn_shell.needs_continuation
       ~n_pass_mode:config.Cn_shell.n_pass typed_ops in
 
@@ -124,7 +126,7 @@ let run_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
   let receipts =
     if not has_continuation then
       List.map (fun (op : Cn_shell.typed_op) ->
-        let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config op in
+        let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config ~ext_registry op in
         { r with Cn_shell.pass = pass_label }
       ) typed_ops
     else
@@ -141,7 +143,7 @@ let run_pass ~hub_path ~trigger_id ~config ~pass_label typed_ops =
                ~status:Skipped ~reason:"observe_pass_requires_followup")
             with start_time = now; end_time = now }
         end else
-          let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config op in
+          let r = Cn_executor.execute_op ~hub_path ~trigger_id ~config ~ext_registry op in
           { r with Cn_shell.pass = pass_label }
       ) typed_ops
   in
@@ -314,11 +316,17 @@ type n_pass_result = {
     - fatal runtime failure (LLM error)
     - misplaced ops correction failed *)
 let run_n_pass ~hub_path ~trigger_id ~config
+      ?(ext_registry = Cn_extension.empty_registry ())
       ~llm_call ?indicator ?correction_message typed_ops =
   let max_passes = config.Cn_shell.max_passes in
   let max_total_ops = config.Cn_shell.max_total_ops in
   let total_ops = ref 0 in
   let all_receipts = ref [] in
+  let ext_lookup kind_str =
+    match Cn_extension.lookup_op ext_registry kind_str with
+    | Some (_entry, op) -> Some (op.Cn_extension.op_kind, op.Cn_extension.op_class)
+    | None -> None
+  in
 
   (* Helper: build terminal result *)
   let make_terminal ~pass_index ~stop_reason ~last_parsed ~effect_receipts =
@@ -361,7 +369,7 @@ let run_n_pass ~hub_path ~trigger_id ~config
         ~event:"pass.N.llm.ok" ~severity:Info ~status:Ok_
         ~trigger_id ~pass:pass_label ();
 
-      let parsed = Cn_output.parse_output raw_output in
+      let parsed = Cn_output.parse_output ~ext_lookup raw_output in
 
       if parsed.typed_ops = [] then begin
         (* No more ops — terminal pass *)
@@ -405,7 +413,7 @@ let run_n_pass ~hub_path ~trigger_id ~config
     (* Execute pass via run_pass (handles both observe-deferred
        and all-execute cases based on op classification) *)
     let (receipts, effects_deferred) = run_pass ~hub_path ~trigger_id
-        ~config ~pass_label current_ops in
+        ~config ~ext_registry ~pass_label current_ops in
     all_receipts := !all_receipts @ receipts;
     total_ops := !total_ops + List.length current_ops;
 
@@ -536,7 +544,7 @@ let run_n_pass ~hub_path ~trigger_id ~config
             ~event:"pass.N.llm.ok" ~severity:Info ~status:Ok_
             ~trigger_id ~pass:"0" ();
 
-          let corrected = Cn_output.parse_output raw_output in
+          let corrected = Cn_output.parse_output ~ext_lookup raw_output in
 
           if corrected.typed_ops <> [] then begin
             (* Typed ops recovered — continue with normal loop from pass 1 *)

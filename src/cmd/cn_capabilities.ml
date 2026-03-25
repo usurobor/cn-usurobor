@@ -30,8 +30,10 @@ let effect_kinds_base =
 
 (** Render the capabilities block as a markdown string.
     Pure function: config in, string out.
-    v3.4: optional asset summary appended for cognitive substrate awareness. *)
-let render ?(assets : Cn_assets.asset_summary option) ?(peers : string list = []) (config : Cn_shell.shell_config) =
+    v3.4: optional asset summary appended for cognitive substrate awareness.
+    v3.17: optional extension registry appends extension ops. *)
+let render ?(assets : Cn_assets.asset_summary option) ?(peers : string list = [])
+    ?(ext_registry : Cn_extension.registry option) (config : Cn_shell.shell_config) =
   let buf = Buffer.create 512 in
   Buffer.add_string buf "## CN Shell Capabilities\n\n";
 
@@ -102,6 +104,35 @@ let render ?(assets : Cn_assets.asset_summary option) ?(peers : string list = []
     Buffer.add_string buf (Printf.sprintf "known_peers: %s\n"
       (String.concat ", " peers))
   end;
+
+  (* v3.17: Extension-provided ops *)
+  (match ext_registry with
+   | None -> ()
+   | Some reg ->
+     let ext_ops = Cn_extension.enabled_ops reg in
+     if ext_ops <> [] then begin
+       Buffer.add_string buf "\n### Extension Ops\n";
+       let observe_ext = List.filter (fun (_, op) ->
+         op.Cn_extension.op_class = "observe") ext_ops in
+       let effect_ext = List.filter (fun (_, op) ->
+         op.Cn_extension.op_class = "effect") ext_ops in
+       if observe_ext <> [] then begin
+         Buffer.add_string buf "extension_observe: ";
+         Buffer.add_string buf (String.concat ", "
+           (List.map (fun (_, op) -> op.Cn_extension.op_kind) observe_ext));
+         Buffer.add_char buf '\n'
+       end;
+       if effect_ext <> [] then begin
+         Buffer.add_string buf "extension_effect: ";
+         Buffer.add_string buf (String.concat ", "
+           (List.map (fun (_, op) -> op.Cn_extension.op_kind) effect_ext));
+         Buffer.add_char buf '\n'
+       end;
+       (* Show provider for each extension op *)
+       ext_ops |> List.iter (fun (provider, op) ->
+         Buffer.add_string buf (Printf.sprintf "  %s (%s, provider: %s)\n"
+           op.Cn_extension.op_kind op.Cn_extension.op_class provider))
+     end);
 
   (* v3.5: Cognitive asset summary — unified package model *)
   (match assets with

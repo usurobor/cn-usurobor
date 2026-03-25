@@ -26,6 +26,7 @@ let%expect_test "op_kind_of_string: observe kinds" =
     match Cn_shell.op_kind_of_string s with
     | Some (Cn_shell.Observe _) -> Printf.printf "%s -> observe\n" s
     | Some (Cn_shell.Effect _) -> Printf.printf "%s -> effect (wrong!)\n" s
+    | Some (Cn_shell.Extension _) -> Printf.printf "%s -> extension (wrong!)\n" s
     | None -> Printf.printf "%s -> unknown (wrong!)\n" s);
   [%expect {|
     fs_read -> observe
@@ -43,6 +44,7 @@ let%expect_test "op_kind_of_string: effect kinds" =
     match Cn_shell.op_kind_of_string s with
     | Some (Cn_shell.Effect _) -> Printf.printf "%s -> effect\n" s
     | Some (Cn_shell.Observe _) -> Printf.printf "%s -> observe (wrong!)\n" s
+    | Some (Cn_shell.Extension _) -> Printf.printf "%s -> extension (wrong!)\n" s
     | None -> Printf.printf "%s -> unknown (wrong!)\n" s);
   [%expect {|
     fs_write -> effect

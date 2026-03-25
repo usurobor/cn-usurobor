@@ -46,14 +46,25 @@ type identity = {
   profile : string;
 }
 
+type extension_contract_info = {
+  ext_name : string;
+  ext_version : string;
+  ext_package : string;
+  ext_backend : string;
+  ext_state : string;
+  ext_ops : string list;
+}
+
 type cognition = {
   packages : package_info list;
   overrides : override_info;
+  extensions_installed : extension_contract_info list;
 }
 
 type body_contract = {
   capabilities_text : string;
   peers : string list;
+  extensions_active : extension_contract_info list;
 }
 
 type runtime_contract = {
@@ -121,9 +132,23 @@ let list_skill_overrides ~hub_path dir =
     Cn_assets.walk_skills full
     |> List.map (fun (rel, _content) -> dir ^ "/" ^ rel ^ "/SKILL.md")
 
+(** Build extension contract info from registry entries. *)
+let extensions_from_registry registry =
+  Cn_extension.all_entries registry
+  |> List.map (fun (entry : Cn_extension.extension_entry) ->
+    {
+      ext_name = entry.manifest.name;
+      ext_version = entry.manifest.version;
+      ext_package = entry.package_name;
+      ext_backend = entry.manifest.backend.backend_kind;
+      ext_state = Cn_extension.string_of_lifecycle_state entry.state;
+      ext_ops = List.map (fun op -> op.Cn_extension.op_kind) entry.manifest.ops;
+    })
+
 (** Build the runtime contract from current hub state. *)
 let gather ~hub_path ~(shell_config : Cn_shell.shell_config)
-      ~(assets : Cn_assets.asset_summary) ~peers =
+      ~(assets : Cn_assets.asset_summary) ~peers
+      ?(ext_registry = Cn_extension.empty_registry ()) () =
   let hub_name = Filename.basename hub_path in
 
   (* Package info: walk installed packages for detail *)
@@ -183,8 +208,12 @@ let gather ~hub_path ~(shell_config : Cn_shell.shell_config)
   in
 
   let capabilities_text =
-    Cn_capabilities.render ~assets ~peers shell_config
+    Cn_capabilities.render ~assets ~peers ~ext_registry shell_config
   in
+
+  let all_ext_info = extensions_from_registry ext_registry in
+  let active_ext_info = List.filter (fun e ->
+    e.ext_state = "enabled") all_ext_info in
 
   let medium = classify_zones ~hub_path in
 
@@ -201,10 +230,12 @@ let gather ~hub_path ~(shell_config : Cn_shell.shell_config)
         mindsets = mindset_overrides;
         skills = skill_overrides;
       };
+      extensions_installed = all_ext_info;
     };
     body = {
       capabilities_text;
       peers;
+      extensions_active = active_ext_info;
     };
     medium;
   }
@@ -244,6 +275,16 @@ use the cn_version field below.\n\n";
       Buffer.add_string buf (Printf.sprintf "  - %s@%s (%d doctrine, %d mindsets, %d skills)\n"
         p.name p.version p.doctrine_count p.mindset_count p.skill_count)
     ) c.cognition.packages
+  end;
+
+  (* Extensions installed *)
+  if c.cognition.extensions_installed <> [] then begin
+    Buffer.add_string buf "extensions_installed:\n";
+    List.iter (fun e ->
+      Buffer.add_string buf (Printf.sprintf "  - %s@%s (%s, %s, ops: %s)\n"
+        e.ext_name e.ext_version e.ext_backend e.ext_state
+        (String.concat ", " e.ext_ops))
+    ) c.cognition.extensions_installed
   end;
 
   let ov = c.cognition.overrides in
@@ -322,6 +363,15 @@ let to_json ~(shell_config : Cn_shell.shell_config) (c : runtime_contract) =
         "mindsets", Cn_json.Array (List.map str c.cognition.overrides.mindsets);
         "skills", Cn_json.Array (List.map str c.cognition.overrides.skills);
       ];
+      "extensions_installed", Cn_json.Array (List.map (fun e ->
+        Cn_json.Object [
+          "name", str e.ext_name;
+          "version", str e.ext_version;
+          "package", str e.ext_package;
+          "backend", str e.ext_backend;
+          "state", str e.ext_state;
+          "ops", Cn_json.Array (List.map str e.ext_ops);
+        ]) c.cognition.extensions_installed);
     ];
     "body", Cn_json.Object ([
       "capabilities", Cn_json.Object ([
@@ -341,6 +391,11 @@ let to_json ~(shell_config : Cn_shell.shell_config) (c : runtime_contract) =
         ["exec_allowlist", Cn_json.Array (List.map str shell_config.exec_allowlist)]
       else []));
       "peers", Cn_json.Array (List.map str c.body.peers);
+      "extensions_active", Cn_json.Array (List.map (fun e ->
+        Cn_json.Object [
+          "name", str e.ext_name;
+          "ops", Cn_json.Array (List.map str e.ext_ops);
+        ]) c.body.extensions_active);
     ]);
     "medium", Cn_json.Object [
       "zones", Cn_json.Array (List.map (fun (e : zone_entry) ->

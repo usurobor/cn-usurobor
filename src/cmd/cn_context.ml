@@ -236,7 +236,9 @@ let pack ~hub_path ~trigger_id ~message ~from ?shell_config () =
              else None)
          else []
        in
-       let contract = Cn_runtime_contract.gather ~hub_path ~shell_config:sc ~assets ~peers in
+       let ext_registry = Cn_extension.build_registry ~hub_path
+           ~runtime_version:Cn_lib.version () in
+       let contract = Cn_runtime_contract.gather ~hub_path ~shell_config:sc ~assets ~peers ~ext_registry () in
        Buffer.add_string dynamic_buf (Cn_runtime_contract.render_markdown contract);
        (* Persist contract to disk for operator inspection *)
        (try Cn_runtime_contract.write ~hub_path ~shell_config:sc contract with _ -> ())

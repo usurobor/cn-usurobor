@@ -483,8 +483,17 @@ let rec finalize ~(config : Cn_config.config) ~hub_path ~name
   (* 1. Archive raw BEFORE effects *)
   archive_raw hub_path ~trigger_id;
 
+  (* Build extension registry once per cycle for dispatch + parsing *)
+  let ext_registry = Cn_extension.build_registry ~hub_path
+      ~runtime_version:Cn_lib.version () in
+  let ext_lookup kind_str =
+    match Cn_extension.lookup_op ext_registry kind_str with
+    | Some (_entry, op) -> Some (op.Cn_extension.op_kind, op.Cn_extension.op_class)
+    | None -> None
+  in
+
   (* 2. Parse initial output via output plane separation *)
-  let parsed = Cn_output.parse_output output_content in
+  let parsed = Cn_output.parse_output ~ext_lookup output_content in
   let initial_coord_ops = parsed.coordination_ops in
 
   (* 3. Execute operations (skipped on recovery if already done).
@@ -598,7 +607,8 @@ let rec finalize ~(config : Cn_config.config) ~hub_path ~name
           Ok response.content
       in
       Cn_orchestrator.run_n_pass ~hub_path ~trigger_id
-        ~config:config.shell ~llm_call ?indicator ?correction_message typed_ops
+        ~config:config.shell ~ext_registry
+        ~llm_call ?indicator ?correction_message typed_ops
     in
     let write_denials denials =
       Cn_orchestrator.write_denial_receipts ~hub_path ~trigger_id

@@ -92,7 +92,7 @@ let%expect_test "gather: produces contract with four layers" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
-              ~shell_config:default_shell_config ~assets ~peers:["sigma"] in
+              ~shell_config:default_shell_config ~assets ~peers:["sigma"] () in
     Printf.printf "cn_version_matches: %b\n" (c.identity.cn_version = Cn_lib.version);
     Printf.printf "hub_name_present: %b\n" (c.identity.hub_name <> "");
     Printf.printf "profile: %s\n" c.identity.profile;
@@ -111,7 +111,7 @@ let%expect_test "gather: package info has correct counts" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
-              ~shell_config:default_shell_config ~assets ~peers:[] in
+              ~shell_config:default_shell_config ~assets ~peers:[] () in
     List.iter (fun (p : Cn_runtime_contract.package_info) ->
       Printf.printf "%s: %d doctrine, %d mindsets, %d skills\n"
         p.name p.doctrine_count p.mindset_count p.skill_count
@@ -124,7 +124,7 @@ let%expect_test "gather: zone classification covers all five types" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
-              ~shell_config:default_shell_config ~assets ~peers:[] in
+              ~shell_config:default_shell_config ~assets ~peers:[] () in
     let has_zone z = List.exists (fun (e : Cn_runtime_contract.zone_entry) ->
       e.zone = z) c.medium in
     Printf.printf "constitutive_self: %b\n" (has_zone Constitutive_self);
@@ -147,7 +147,7 @@ let%expect_test "render_markdown: contains all four layers" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
-              ~shell_config:default_shell_config ~assets ~peers:["sigma"] in
+              ~shell_config:default_shell_config ~assets ~peers:["sigma"] () in
     let md = Cn_runtime_contract.render_markdown c in
     let has sec = if Cn_orchestrator.contains_sub md sec then "yes" else "no" in
     Printf.printf "Runtime Contract: %s\n" (has "## Runtime Contract");
@@ -168,7 +168,7 @@ let%expect_test "render_markdown: medium shows zone classifications" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
-              ~shell_config:default_shell_config ~assets ~peers:[] in
+              ~shell_config:default_shell_config ~assets ~peers:[] () in
     let md = Cn_runtime_contract.render_markdown c in
     let has sec = if Cn_orchestrator.contains_sub md sec then "yes" else "no" in
     Printf.printf "constitutive_self: %s\n" (has "constitutive_self:");
@@ -187,7 +187,7 @@ let%expect_test "render_markdown: no absolute paths" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
-              ~shell_config:default_shell_config ~assets ~peers:[] in
+              ~shell_config:default_shell_config ~assets ~peers:[] () in
     let md = Cn_runtime_contract.render_markdown c in
     let has_abs = Cn_orchestrator.contains_sub md hub in
     Printf.printf "contains_absolute_path: %b\n" has_abs);
@@ -197,7 +197,7 @@ let%expect_test "render_markdown: contains authority preamble (issue #63)" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
-              ~shell_config:default_shell_config ~assets ~peers:[] in
+              ~shell_config:default_shell_config ~assets ~peers:[] () in
     let md = Cn_runtime_contract.render_markdown c in
     let has s = if Cn_orchestrator.contains_sub md s then "yes" else "no" in
     Printf.printf "Authority: %s\n" (has "**Authority:**");
@@ -212,7 +212,7 @@ let%expect_test "render_markdown: deterministic (two calls identical)" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
-              ~shell_config:default_shell_config ~assets ~peers:[] in
+              ~shell_config:default_shell_config ~assets ~peers:[] () in
     let md1 = Cn_runtime_contract.render_markdown c in
     let md2 = Cn_runtime_contract.render_markdown c in
     Printf.printf "deterministic: %b\n" (md1 = md2));
@@ -226,7 +226,7 @@ let%expect_test "to_json: v2 schema with four layers" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
-              ~shell_config:default_shell_config ~assets ~peers:["sigma"] in
+              ~shell_config:default_shell_config ~assets ~peers:["sigma"] () in
     let json = Cn_runtime_contract.to_json ~shell_config:default_shell_config c in
     let has key = Cn_json.get key json <> None in
     Printf.printf "schema: %b\n" (has "schema");
@@ -250,7 +250,7 @@ let%expect_test "to_json: identity has version" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
-              ~shell_config:default_shell_config ~assets ~peers:[] in
+              ~shell_config:default_shell_config ~assets ~peers:[] () in
     let json = Cn_runtime_contract.to_json ~shell_config:default_shell_config c in
     match Cn_json.get "identity" json with
     | None -> print_endline "missing identity"
@@ -267,7 +267,7 @@ let%expect_test "to_json: body.capabilities match Cn_capabilities (single source
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
-              ~shell_config:default_shell_config ~assets ~peers:[] in
+              ~shell_config:default_shell_config ~assets ~peers:[] () in
     let json = Cn_runtime_contract.to_json ~shell_config:default_shell_config c in
     match Cn_json.get "body" json with
     | None -> print_endline "missing body"
@@ -303,7 +303,7 @@ let%expect_test "to_json: medium contains zone entries" =
   with_test_hub (fun hub ->
     let assets = Cn_assets.summarize ~hub_path:hub in
     let c = Cn_runtime_contract.gather ~hub_path:hub
-              ~shell_config:default_shell_config ~assets ~peers:[] in
+              ~shell_config:default_shell_config ~assets ~peers:[] () in
     let json = Cn_runtime_contract.to_json ~shell_config:default_shell_config c in
     match Cn_json.get "medium" json with
     | None -> print_endline "missing medium"
@@ -334,7 +334,7 @@ let%expect_test "to_json: exec_enabled reflects shell_config" =
       exec_enabled = true;
       exec_allowlist = ["make"; "dune"] } in
     let c = Cn_runtime_contract.gather ~hub_path:hub
-              ~shell_config:exec_config ~assets ~peers:[] in
+              ~shell_config:exec_config ~assets ~peers:[] () in
     let json = Cn_runtime_contract.to_json ~shell_config:exec_config c in
     match Cn_json.get "body" json with
     | None -> print_endline "missing body"

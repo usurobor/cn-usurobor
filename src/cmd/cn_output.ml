@@ -103,7 +103,7 @@ let is_control_plane_like s =
 (** Parse output content into a structured parsed_output.
     Extracts frontmatter, body, coordination ops, typed ops, and receipts
     in a single pass over the raw output string. *)
-let parse_output raw_output =
+let parse_output ?(ext_lookup = fun _ -> None) raw_output =
   let fm = parse_frontmatter raw_output in
   let id = fm |> List.find_map (fun (k, v) ->
     if k = "id" then Some v else None) in
@@ -117,7 +117,7 @@ let parse_output raw_output =
     if k = "ops" then Some v else None) in
   let typed_ops, ops_receipts = match ops_raw with
     | None -> ([], [])
-    | Some raw_value -> Cn_shell.parse_ops_manifest raw_value
+    | Some raw_value -> Cn_shell.parse_ops_manifest ~ext_lookup raw_value
   in
   (* Detect coordination ops or typed ops leaked into body text *)
   let has_misplaced_ops = match body with
