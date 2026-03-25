@@ -354,3 +354,12 @@ Mechanical findings reaching review are **process bugs**. If mechanical findings
 
 - **Approved:** Reviewer merges (or signals merge-ready per repo workflow), branch cleaned up
 - **Changes requested:** Author fixes, re-requests; reviewer narrows on the next round
+
+### 7.1. Review identity
+
+The reviewer must have a different GitHub identity than the PR author so that:
+- `gh pr review --request-changes` and `--approve` use native GitHub review state
+- Branch protection can enforce "approving review from non-author"
+- Review audit trail is platform-native, not comment-based
+
+If the reviewer shares the author's GitHub account, reviews degrade to comments and review state is unenforceable. This is a known gap (#108) — when it applies, note "posted as comment (shared identity)" in the review.
