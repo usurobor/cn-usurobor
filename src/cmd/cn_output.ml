@@ -195,8 +195,10 @@ let strip_embedded_frontmatter s =
 
 (** Strip XML pseudo-tool blocks from mid-body text.
     Removes lines starting with an xml_prefix and any continuation lines
-    up to and including the closing tag.  Analogous to
-    strip_embedded_frontmatter but for XML pseudo-tool hallucinations.
+    up to and including the closing tag.  Also removes inline same-line
+    XML spans (e.g. "Hello <cn:ops>…</cn:ops> world" → "Hello  world").
+    Analogous to strip_embedded_frontmatter but for XML pseudo-tool
+    hallucinations.
 
     Returns None if stripping empties the body entirely. *)
 let strip_xml_pseudo_tools s =
@@ -216,6 +218,56 @@ let strip_xml_pseudo_tools s =
     in
     scan 0
   in
+  (* Remove inline XML spans: find <prefix> ... </...> within a line *)
+  let strip_inline line =
+    let find_prefix_at line pos =
+      List.find_opt (fun prefix ->
+        let plen = String.length prefix in
+        pos + plen <= String.length line
+        && String.sub line pos plen = prefix
+      ) xml_prefixes
+    in
+    let find_close_from line pos =
+      (* Find next </...> starting from pos *)
+      let len = String.length line in
+      let rec scan i =
+        if i + 1 >= len then None
+        else if line.[i] = '<' && line.[i + 1] = '/' then
+          (* Find the matching > *)
+          let rec find_gt j =
+            if j >= len then None
+            else if line.[j] = '>' then Some (j + 1)
+            else find_gt (j + 1)
+          in
+          find_gt (i + 2)
+        else scan (i + 1)
+      in
+      scan pos
+    in
+    let len = String.length line in
+    let buf = Buffer.create len in
+    let rec scan i =
+      if i >= len then Buffer.contents buf
+      else if line.[i] = '<' then
+        match find_prefix_at line i with
+        | Some _ ->
+          (* Found an XML prefix — find matching close *)
+          (match find_close_from line i with
+           | Some end_pos -> scan end_pos  (* skip the span *)
+           | None ->
+             (* No close found — strip from here to end of line *)
+             Buffer.contents buf)
+        | None ->
+          Buffer.add_char buf line.[i];
+          scan (i + 1)
+      else begin
+        Buffer.add_char buf line.[i];
+        scan (i + 1)
+      end
+    in
+    scan 0
+  in
+  (* Pass 1: block-level stripping *)
   let rec walk acc in_block = function
     | [] -> List.rev acc
     | line :: rest ->
@@ -230,7 +282,10 @@ let strip_xml_pseudo_tools s =
       else
         walk (line :: acc) false rest
   in
-  let filtered = walk [] false lines |> String.concat "\n" |> String.trim in
+  let after_blocks = walk [] false lines in
+  (* Pass 2: inline stripping on surviving lines *)
+  let after_inline = List.map strip_inline after_blocks in
+  let filtered = after_inline |> String.concat "\n" |> String.trim in
   if filtered = "" then None else Some filtered
 
 (** Find the first Reply payload from coordination ops. *)

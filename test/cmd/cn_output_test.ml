@@ -506,6 +506,44 @@ let%expect_test "#106: strip_xml_pseudo_tools returns None when body is entirely
     (match result with Some s -> s | None -> "(empty)");
   [%expect {| (empty) |}]
 
+let%expect_test "#106: inline same-line <cn:ops> stripped from prose" =
+  let input = "Hello <cn:ops>[{\"kind\":\"fs_read\"}]</cn:ops> world." in
+  let result = Cn_output.strip_xml_pseudo_tools input in
+  Printf.printf "%s\n"
+    (match result with Some s -> s | None -> "(empty)");
+  [%expect {| Hello  world. |}]
+
+let%expect_test "#106: inline same-line <tool_calls> stripped from body candidate" =
+  let raw = {|---
+id: tg-106e
+reply: tg-106e|Version check done.
+---
+I checked and <tool_calls>[{"kind":"fs_read","path":".cn/cn.json"}]</tool_calls> found version 3.16.1.|} in
+  let p = Cn_output.parse_output raw in
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  [%expect {|
+    Renderable: I checked and  found version 3.16.1.
+  |}]
+
+let%expect_test "#106: inline same-line XML in reply payload stripped" =
+  let raw = {|---
+id: tg-106f
+reply: tg-106f|Here is info <cn:ops>[{"kind":"fs_read"}]</cn:ops> all done.
+---
+<tool_calls>[{"kind":"fs_read"}]</tool_calls>|} in
+  let p = Cn_output.parse_output raw in
+  show_render (Cn_output.HumanSurface `Telegram) p;
+  [%expect {|
+    Renderable: Here is info  all done.
+  |}]
+
+let%expect_test "#106: normal prose with harmless angle brackets preserved" =
+  let input = "The value x < 10 and y > 5 is valid. Also a <b>bold</b> tag." in
+  let result = Cn_output.strip_xml_pseudo_tools input in
+  Printf.printf "%s\n"
+    (match result with Some s -> s | None -> "(empty)");
+  [%expect {| The value x < 10 and y > 5 is valid. Also a <b>bold</b> tag. |}]
+
 (* === v3.7.2: ops-in-body detection === *)
 
 let%expect_test "parse_output: detects coordination ops leaked into body" =

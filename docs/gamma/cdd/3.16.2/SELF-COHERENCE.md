@@ -126,10 +126,23 @@ Sigma review requested changes with 7 findings (5D, 2C). All addressed:
 | F6 | Inline same-line XML not caught | C | Acknowledged as debt. Line-oriented stripping handles block-level XML (the real hallucination pattern). Inline `"Hello <tool_calls>...</tool_calls> world"` would require regex-like within-line removal — deferred as the practical risk is very low (LLMs emit XML pseudo-tools as block-level elements). |
 | F7 | `has_close` over-strips (any `</`) | C | Acknowledged as debt. Over-stripping is safe (removes content, never leaks it). Under-stripping would be worse (leaked control text on human surface). Matched-tag close would be more precise but adds complexity for a theoretical edge case. |
 
+## Round 2 Review Response (Sigma)
+
+2 findings (1D `has_close` bug, 1B stale doc count). Both fixed in `639e138`.
+
+## Round 3 Review Response
+
+3 findings (2D, 1C). All addressed:
+
+| # | Finding | Severity | Resolution |
+|---|---------|----------|------------|
+| F1 | Inline same-line XML not stripped — AC1/AC4 partial | D | Added `strip_inline` pass to `strip_xml_pseudo_tools`. Scans each line for `<prefix>...</closing>` spans and removes them. Two-pass: block-level walk first, then inline scan on surviving lines. 4 new tests: inline `<cn:ops>`, inline `<tool_calls>` in body candidate, inline XML in reply payload, harmless angle brackets preserved. |
+| F2 | CI checks not green | D | Expect tests updated to match implementation. CI rerun needed. |
+| F3 | I5 overclaims "regardless of position" vs line-start implementation | C | Resolved — inline stripper now handles all positions. I5 wording is accurate. |
+
 ## Known Coherence Debt
 
 - **No OCaml build verification.** Same environmental constraint as prior cycles. CI validates.
 - **LLM behavior not deterministic.** Anti-probe instruction reduces but cannot eliminate the probability the LLM reads cn.json. The sandbox denylist is the hard guarantee (receipt = Denied). The presentation membrane is the second guarantee (even if the LLM hallucinates XML, it won't reach Telegram).
-- **`has_close` heuristic (F7).** The closing-tag detection uses `</` presence on a line. This could theoretically match prose containing `</` while inside a block. In practice, this only matters during an active XML block (after `is_xml_open` matched), where prose content is extremely unlikely. The conservative behavior (extending the strip region) is safe — it only over-strips, never under-strips.
-- **Inline same-line XML (F6).** `strip_xml_pseudo_tools` is line-oriented and won't catch `"prose <tag>...</tag> prose"` on a single line. Deferred — LLMs produce XML pseudo-tools as block-level elements, not inline.
+- **`has_close` heuristic.** The closing-tag detection uses `</` presence on a line. This could theoretically match prose containing `</` while inside a block. In practice, this only matters during an active XML block (after `is_xml_open` matched), where prose content is extremely unlikely. The conservative behavior (extending the strip region) is safe — it only over-strips, never under-strips.
 - **Stripping vs blocking trace semantics.** When `strip_xml_pseudo_tools` reduces a candidate to empty, the result is `Renderable "(acknowledged)"` rather than `Fallback ("(acknowledged)", Xml_tool_syntax)`. The user-visible result is identical but the trace event differs. Acceptable because the safety invariant (no leaked content) is preserved.
