@@ -1,12 +1,35 @@
-# CDD — Feature Bundle
+# CDD — Topic Bundle
 
-Coherence-Driven Development: the method used to evolve cnos coherently.
+How cnos develops itself coherently.
+
+**Version:** 3.15.0
+**Status:** Draft
+**Doc-Class:** topic-bundle
+**Canonical-Path:** `docs/gamma/cdd/README.md`
+**Owns:** the development method, its rationale, its reference workflow profile, and post-release assessment history
+**Does-Not-Own:** runtime doctrine, feature design specs, release mechanics in detail
 
 ---
 
-## Canonical Spec
+## Purpose
 
-**[CDD.md](./CDD.md)** — the single source of truth for the CDD method.
+This bundle owns Coherence-Driven Development as a method.
+
+Read this bundle when you need to know:
+
+- how work is selected
+- what artifacts a substantial change must produce
+- what is mechanical vs judgment-bearing
+- how release feeds back into assessment and the next cycle
+
+---
+
+## Reading Order
+
+1. [`CDD.md`](./CDD.md) — canonical algorithm spec
+2. [`RATIONALE.md`](./RATIONALE.md) — why the method takes this shape
+3. [`AGILE-PROCESS.md`](./AGILE-PROCESS.md) — reference workflow profile for a small async team
+4. epoch assessments — release-scale measurement history
 
 ---
 
@@ -14,26 +37,28 @@ Coherence-Driven Development: the method used to evolve cnos coherently.
 
 | Document | Class | Description |
 |----------|-------|-------------|
-| [CDD.md](./CDD.md) | Canonical spec | Full CDD method: gap → mode → artifacts → review → gate → release → assess |
-| [AGILE-PROCESS.md](./AGILE-PROCESS.md) | Reference | Lightweight agile process for async agent collaboration |
-| [POST-RELEASE-EPOCH-v3.12.md](./POST-RELEASE-EPOCH-v3.12.md) | Assessment | Epoch assessment: v3.12.0–v3.12.2 (Runtime Contract v1 + authority hardening) |
-| [POST-RELEASE-EPOCH-v3.14.md](./POST-RELEASE-EPOCH-v3.14.md) | Assessment | Epoch assessment: v3.14.0–v3.14.5 (RT v2 + CDD governance + bundle migration) |
+| [CDD.md](./CDD.md) | Canonical spec | Normative CDD algorithm: observe → select → execute → assess → close |
+| [RATIONALE.md](./RATIONALE.md) | Companion rationale | Why CDD is closed-loop, artifact-driven, and not fully mechanical |
+| [AGILE-PROCESS.md](./AGILE-PROCESS.md) | Reference profile | Small-team async workflow profile compatible with CDD |
+| [POST-RELEASE-EPOCH-v3.12.md](./POST-RELEASE-EPOCH-v3.12.md) | Assessment | Epoch assessment: v3.12.0–v3.12.2 |
+| [POST-RELEASE-EPOCH-v3.14.md](./POST-RELEASE-EPOCH-v3.14.md) | Assessment | Epoch assessment: v3.14.0–v3.14.5 |
 
 ---
 
-## Reading Order
+## Related operational docs
 
-1. **[CDD.md](./CDD.md)** — the development method
-2. **[AGILE-PROCESS.md](./AGILE-PROCESS.md)** — how sprints and backlog work
+- `src/agent/skills/ops/cdd/SKILL.md` — executable summary
+- `src/agent/skills/ops/post-release/SKILL.md` — assessment procedure
+- `src/agent/skills/eng/review/SKILL.md` — review protocol
+- `src/agent/skills/eng/design/SKILL.md` — design protocol
+- `src/agent/skills/release/SKILL.md` — release procedure
 
 ---
 
 ## Version History
 
 | Version | Directory | Highlights |
-|---------|-----------|-----------|
-| v3.14.6 | [3.14.6/](3.14.6/) | Epoch 2 addendum: v3.14.3–v3.14.5 coverage (#85). |
-| v3.14.5 | [3.14.5/](3.14.5/) | Gamma root migration (#91). AGILE-PROCESS.md joins CDD bundle. |
-| v3.14.4 | [3.14.4/](3.14.4/) | Beta reorg (#89). CDD §5.1 freeze semantics note. |
-| v3.14.1 | [3.14.1/](3.14.1/) | CDD post-release tightening (#78). |
-| v3.13.0 | [3.13.0/](3.13.0/) | §5 rewrite — branch rule, per-step deliverables, cnos-aligned versioning. |
+|---------|-----------|------------|
+| v3.14.6 | [3.14.6/](3.14.6/) | Epoch 2 addendum: v3.14.3–v3.14.5 coverage |
+| v3.14.5 | [3.14.5/](3.14.5/) | Gamma root migration; AGILE-PROCESS joins the bundle |
+| v3.14.4 | [3.14.4/](3.14.4/) | Beta reorg and freeze-semantics note |
