@@ -84,6 +84,12 @@ Identify what governs before proposing what changes.
   - ❌ Proposal silently breaks an existing interface
   - ✅ "Lockfile format is consumed by `cn deps restore` — schema stays, population changes"
 
+3.4. **Name the architecture assumption you are challenging**
+  - State which existing boundary, ownership model, or system assumption is no longer serving the system.
+  - ❌ "We need a cleaner design"
+  - ✅ "This change challenges the assumption that every new capability family must be hardcoded in trusted core"
+  - ✅ "This change challenges the assumption that communication is just a capability rather than a body/medium subsystem"
+
 ---
 
 ### 2.3. Impact Graph
@@ -143,12 +149,37 @@ The minimum change that closes the gap.
   - ❌ "Tool scores α/β/γ for the author"
   - ✅ "Tool checks branch naming, artifact presence, snapshot integrity. Scoring stays human."
 
-5.5. **Simplest thing that closes all failure modes**
+5.5. **Name the leverage**
+  - Name what future work becomes easier, safer, or unnecessary if this proposal lands.
+  - ❌ "This helps later"
+  - ✅ "Future capability families become package-installed extensions instead of repeated core runtime edits"
+  - ✅ "Future wake-time self-model changes fit into body/medium without redesign"
+
+5.6. **Name the negative leverage**
+  - Name what this proposal makes harder, heavier, or more complex.
+  - ❌ "No downsides"
+  - ✅ "This removes core accretion, but adds manifest, registry, doctor, and traceability complexity"
+  - ✅ "This strengthens runtime contract truth, but increases versioned frozen-artifact discipline"
+
+5.7. **Price any new process overhead**
+  - If the proposal adds artifacts, gates, or process, state:
+    - who must produce them
+    - who consumes them
+    - why a lighter alternative is insufficient
+  - ❌ "Require another artifact for rigor"
+  - ✅ "Require SELF-COHERENCE.md for governance branches because reviewer and releaser need branch-local proof that the branch followed the process it defines"
+
+5.8. **State the automation boundary**
+  - Say what should remain human judgment and what should become script/CI/lint.
+  - ❌ "Reviewers will keep checking stale paths manually"
+  - ✅ "Artifact presence, placeholder rendering, and stale path refs should be automated; α/β/γ judgment remains human"
+
+5.9. **Simplest thing that closes all failure modes**
   - KISS/YAGNI, but don't confuse "simple" with "incomplete"
   - ❌ "Fix version comparison" (1 of 3 failure modes — CI upload and naming still broken)
   - ✅ "Three failures, three fixes: CI uploads assets, naming made consistent, comparison includes commit hash"
 
-5.6. **Name what you're not doing**
+5.10. **Name what you're not doing**
   - ❌ Non-goals absent
   - ✅ "V1 does not: score α/β/γ semantically, decide MCA vs MCI correctness, replace review dialogue"
 
@@ -209,14 +240,26 @@ List every file that needs to change, grouped by action.
 ## Constraints
 [Existing contracts, abstraction levels, what can't change]
 
+## Challenged Assumption
+[Which boundary / ownership model / architecture assumption is being replaced]
+
 ## Impact Graph
 [Downstream consumers, upstream producers, copies, authority relationships]
 
 ## Proposal
 [Types → interface → workflow, with design principles governing trade-offs]
 
+## Leverage
+[What future work becomes easier / unnecessary / safer]
+
+## Negative Leverage
+[What gets heavier, riskier, or more complex]
+
 ## Alternatives Considered
 | Option | Pros | Cons | Decision |
+
+## Process Cost / Automation Boundary
+[If this adds process/artifacts/gates: who pays, who consumes, what should be automated]
 
 ## Non-goals
 [What V1 deliberately excludes]
@@ -242,11 +285,15 @@ Before requesting review:
 - [ ] All failure modes enumerated (not just the first one found)
 - [ ] Constraints from existing contracts identified
 - [ ] Abstraction level of the solution matches the scope of the problem
+- [ ] Challenged architecture assumption named explicitly
 - [ ] Impact graph complete: consumers, producers, copies, authority
 - [ ] Proposal starts from types/model, not from interface
 - [ ] One source of truth identified for any duplicated information
 - [ ] State derived from artifacts, not parallel bookkeeping (where applicable)
 - [ ] Mechanical vs judgment boundary drawn explicitly
+- [ ] Leverage and negative leverage both stated
+- [ ] Added process/artifact overhead priced and justified (if applicable)
+- [ ] Automation boundary stated for any new mechanical checks
 - [ ] ACs map to specific files with specific checks
 - [ ] ACs cover the impact graph, not just the proposal
 - [ ] Non-goals stated
