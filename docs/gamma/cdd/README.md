@@ -26,9 +26,10 @@ Read this bundle when you need to know:
 
 ## Reading Order
 
-1. [`CDD.md`](./CDD.md) — canonical algorithm spec
-2. [`RATIONALE.md`](./RATIONALE.md) — why the method takes this shape
-3. epoch assessments — release-scale measurement history
+1. [`OVERVIEW.md`](./OVERVIEW.md) — plain-language introduction: what CDD is, why it exists, what one cycle looks like
+2. [`CDD.md`](./CDD.md) — canonical algorithm spec
+3. [`RATIONALE.md`](./RATIONALE.md) — why the method takes this shape
+4. epoch assessments — release-scale measurement history
 
 ---
 
@@ -36,6 +37,7 @@ Read this bundle when you need to know:
 
 | Document | Class | Description |
 |----------|-------|-------------|
+| [OVERVIEW.md](./OVERVIEW.md) | Introduction | Plain-language explanation of CDD for humans new to the method |
 | [CDD.md](./CDD.md) | Canonical spec | Normative CDD algorithm: observe → select → execute → assess → close |
 | [RATIONALE.md](./RATIONALE.md) | Companion rationale | Why CDD is closed-loop, artifact-driven, and not fully mechanical |
 | [POST-RELEASE-EPOCH-v3.12.md](./POST-RELEASE-EPOCH-v3.12.md) | Assessment | Epoch assessment: v3.12.0–v3.12.2 |
