@@ -15,28 +15,76 @@ Incoherence not named is incoherence not reduced. Artifacts not aligned are drif
 
 ## Lifecycle
 
-CDD owns the full arc from branch to observation:
+CDD owns the full arc from observation to observation:
 
-1. **Branch** — create the branch (§1.4)
-2. **Bootstrap** — create version directory with stub files for each deliverable artifact (§4.0)
-3. **Gap** — name the incoherence (§2)
-4. **Mode** — choose MCA or MCI (§3)
-5. **Artifacts** — design → contract → plan → tests → code → docs (§4)
-6. **Self-coherence** — write `SELF-COHERENCE.md` in the version directory (§4.8)
-7. **Review** — CLP with another CA until convergence (§7)
-8. **Gate** — verify the release checklist (§9)
-9. **Release** — version, tag, CI, merge, announce (§10)
-10. **Observe** — confirm runtime matches design (§10.7)
-11. **Assess** — post-release assessment: measure, encoding lag, process learning, next move commitment (§11)
+0. **Observe** — read the system's coherence state (§0)
+1. **Select** — pick the next gap to address from the observation (§0)
+2. **Branch** — create the branch (§1.4)
+3. **Bootstrap** — create version directory with stub files for each deliverable artifact (§4.0)
+4. **Gap** — name the incoherence precisely (§2)
+5. **Mode** — choose MCA or MCI (§3)
+6. **Artifacts** — design → contract → plan → tests → code → docs (§4)
+7. **Self-coherence** — write `SELF-COHERENCE.md` in the version directory (§4.8)
+8. **Review** — CLP with another CA until convergence (§7)
+9. **Gate** — verify the release checklist (§9)
+10. **Release** — version, tag, CI, merge, announce (§10)
+11. **Observe** — confirm runtime matches design (§10.7)
+12. **Assess** — post-release assessment: measure, encoding lag, process learning (§11)
+13. **Close** — execute MCAs, capture MCIs, file issues, patch skills (§11)
 
-Start at step 1. The process is complete when the post-release assessment is done **and its outputs are executed**:
+Step 13 feeds back to step 0. The cycle closes when all assessment outputs are executed. Then you observe again.
 
-- **MCAs** identified by the assessment are executed immediately (CHANGELOG corrections, skill patches, tag fixes)
-- **MCIs** are captured in an adhoc thread with status per learning
-- **Issues** are filed or updated per §11.12 (process debt integration)
-- **Skill/CDD patches** are committed if the assessment surfaces a missing rule
+---
 
-The cycle closes when all MCAs are done, all MCIs are captured, and all issues are filed. Not before.
+## 0. Observe and Select
+
+CDD does not start with "pick an issue from the backlog." It starts with **observing the system's coherence state** and selecting the gap that most needs closing.
+
+### Inputs
+
+Read these four surfaces before selecting work:
+
+0.1. **CHANGELOG TSC table** — which axis (α, β, γ) is lowest?
+  - The lowest axis is where coherence is weakest. That's the direction.
+  - ❌ Pick work because it's interesting or next on a list
+  - ✅ "γ dropped to B+ last release (process regressions). Next work should address γ."
+
+0.2. **Encoding lag table** — what's stale, what's growing?
+  - Stale = named incoherence with zero progress across multiple assessments. This is the system lying to itself.
+  - Growing = gap widening as the system evolves. Eventual blocker.
+  - ❌ Ignore the lag table and start new design work
+  - ✅ "#73, #65, #67 stale across 3 assessment cycles. #73 is the root — pick it."
+
+0.3. **Doctor / status** — is the running system healthy?
+  - P0 bugs (crash, data loss, silent failure) override all selection criteria
+  - ❌ Start a feature while the daemon is crash-looping
+  - ✅ "Doctor shows version drift on Pi — fix deployment before starting new work"
+
+0.4. **Last post-release assessment** — what did the previous cycle surface?
+  - Unresolved MCIs from the last assessment are candidate gaps
+  - "Next MCA" commitment from the assessment is the default selection unless observation overrides it
+  - ❌ Ignore the previous assessment's recommendation without rationale
+  - ✅ "Assessment committed to #73 as next MCA. Observation confirms: still stale, still highest leverage."
+
+### Selection algorithm
+
+Given the four inputs, select the next gap:
+
+0.5. **P0 override** — if doctor/status shows a P0 bug, that's the gap. No further analysis needed.
+
+0.6. **MCI freeze check** — if the lag table has stale issues (zero progress across ≥2 assessments), the next MCA MUST come from the stale set. New design work is frozen until at least one stale issue ships.
+
+0.7. **Lowest axis** — select work that addresses the weakest TSC axis. If α is lowest, pick structural/consistency work. If β is lowest, pick alignment/integration work. If γ is lowest, pick process/evolution work.
+
+0.8. **Maximum leverage** — among candidates that address the weakest axis, pick the one that moves the most lag table entries. If #73 unblocks #65 and #67, it moves 3 entries for 1 MCA. That's higher leverage than a standalone issue.
+
+0.9. **Dependency order** — if A blocks B blocks C, pick A regardless of individual priority. The chain won't move otherwise.
+
+0.10. **Effort-adjusted** — between candidates with equal leverage and axis impact, pick the smaller one. Ship sooner, observe sooner, correct sooner.
+
+  - ❌ "Let's do #94 (large) because it's exciting" when #73 (medium) unblocks 3 stale issues
+  - ❌ Start #73 when Pi is crash-looping (P0 override)
+  - ✅ "Observation: γ at B+ (lowest), lag table has 3 stale issues, #73 unblocks 2 of them. Doctor clean. Select #73."
 
 ---
 
