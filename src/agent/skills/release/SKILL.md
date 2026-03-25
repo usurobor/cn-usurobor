@@ -48,13 +48,16 @@ Failure mode: version drift — tag says X, binary says Y, agent reports Z. Or: 
   - ❌ Patch for a new runtime feature (undersells the change)
   - ✅ Minor for new `Cn_shell.execute` entry point; patch for CI fix
 
-2.3. **Version bump — all locations**
-  - `cn.json` → `"version": "X.Y.Z"`
-  - `src/lib/cn_lib.ml` → `let version = "X.Y.Z"`
-  - `test/cram/version.t` → `cn X.Y.Z`
-  - `test/cram/cli/cli.t` → `cn X.Y.Z` and `cn vX.Y.Z`
-  - ❌ Update cn.json but forget cram tests (CI fails)
-  - ✅ `grep -rn 'old_version'` to find all locations before committing
+2.3. **Version bump — VERSION-first flow**
+  - `VERSION` file at repo root is the single source of truth
+  - Edit `VERSION` to the new version string (bare, no `v` prefix)
+  - Run `scripts/stamp-versions.sh` — derives all manifests (`cn.json`, package `cn.package.json` files) from VERSION
+  - Run `scripts/check-version-consistency.sh` — validates all version-stamped files agree
+  - `cn_lib.ml` reads version from a dune-generated module at build time — no manual edit needed
+  - Cram tests read version dynamically — no manual edit needed
+  - ❌ Edit cn.json or cn_lib.ml by hand (bypasses single source of truth)
+  - ❌ Skip stamp-versions.sh ("I'll update the manifests manually")
+  - ✅ `echo "X.Y.Z" > VERSION && scripts/stamp-versions.sh && scripts/check-version-consistency.sh`
 
 2.4. **CHANGELOG**
   - Add row to version table with TSC grades
@@ -95,9 +98,10 @@ Failure mode: version drift — tag says X, binary says Y, agent reports Z. Or: 
 ## 3. Rules
 
 3.1. **All version strings must agree**
-  - cn.json, cn_lib.ml, cram tests, tag, binary output, CHANGELOG
-  - ❌ Tag is v3.9.1 but `cn --version` says 3.9.0
-  - ✅ `grep -rn 'old_version' src/ test/ cn.json` returns nothing after bump
+  - VERSION, cn.json, package manifests, tag, binary output, CHANGELOG
+  - `scripts/check-version-consistency.sh` validates this mechanically
+  - ❌ Tag is 3.15.1 but VERSION says 3.15.2 (forgot to commit before tagging)
+  - ✅ `scripts/check-version-consistency.sh` passes before commit
 
 3.2. **CI must pass before tag**
   - If CI fails after tag, fix and force-push tag (amend release commit)
