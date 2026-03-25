@@ -65,8 +65,8 @@ Read, in order:
 
 Selection rules:
 
-- P0 override first
-- operational infrastructure debt second
+- P0 override first — but only if the P0 is new since the last assessment or has escalated. Known P0s that were weighed and deferred are not overrides.
+- operational infrastructure debt second — but size it first: if the fix is minutes of work, execute as immediate output and continue to §3.3. Only select as cycle gap when it requires design/tests/review.
 - last assessment's Next MCA is the default unless overridden
 - stale lag set freezes new design work
 - then weakest axis

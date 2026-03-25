@@ -118,6 +118,8 @@ CDD selection is coherence-driven. The next substantial gap is selected by the f
 
 If doctor/status shows a P0 bug such as crash, data loss, or silent failure, that is the gap. No further selection logic applies until it is addressed.
 
+**New-vs-known rule:** If the P0 was already visible when the last assessment was written and the assessment committed a different next MCA, the assessment decision governs unless the P0 has escalated (e.g. now causing active data loss or blocking all development). A known P0 that was weighed and deferred is not an override — it is a prioritized backlog item.
+
 ### 3.2 Operational infrastructure override
 
 If core operational paths are broken, fix them before feature work. Examples:
@@ -129,6 +131,8 @@ If core operational paths are broken, fix them before feature work. Examples:
 - system cannot observe or maintain itself
 
 These are not "nice to have." They are preconditions for coherent development.
+
+**Sizing rule:** Before selecting infrastructure debt as a full cycle, ask whether the fix is cycle-sized or immediate-output-sized. If the fix is executable in minutes (a script, a hook, a one-line config change), execute it as an immediate output (§10.1) and continue to §3.3. Only select infrastructure debt as the cycle gap when the fix requires design, multiple files, tests, or review.
 
 ### 3.3 Assessment commitment default
 
