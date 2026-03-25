@@ -20,7 +20,7 @@
 | **WHITEPAPER.md** | Moved | Current | CN protocol spec (v3.0.0). §10 rewritten as relationship table. System thesis in `docs/THESIS.md`. |
 | **WHITEPAPER-v2.0.3.pdf** | Current | Keep | PDF companion to whitepaper. |
 | **PROTOCOL.md** | Current | Keep | FSM design spec. Matches `cn_protocol.ml` implementation exactly. |
-| **AGILE-PROCESS.md** | Current | Keep | Team process doc, not technical spec. |
+| **AGILE-PROCESS.md** | Deleted (v3.15.2) | Removed | CDD supersedes; see CDD.md §4.1 lifecycle. |
 | **EXECUTABLE-SKILLS.md** | Current | Keep | Vision paper (aspirational). Companion to whitepaper. |
 | **CLI.md** | Partially current | Keep, update later | Command list partly matches implementation. Some commands unimplemented. |
 | **DAEMON.md** | Current | Keep | Explicitly aspirational/future. |
@@ -95,7 +95,7 @@ docs/
  |    +-- WHITEPAPER.md        Moved → explanation/WHITEPAPER.md
  |    +-- WHITEPAPER-v2.0.3.pdf Keep (companion to protocol paper)
  |    +-- PROTOCOL.md         Keep (matches implementation)
- |    +-- AGILE-PROCESS.md        Keep
+ |    +-- AGILE-PROCESS.md        Deleted (CDD supersedes)
  |    +-- EXECUTABLE-SKILLS.md Keep
  |    +-- CLI.md               Keep (update later)
  |    +-- DAEMON.md            Keep
