@@ -207,11 +207,14 @@ let strip_xml_pseudo_tools s =
   in
   let has_close line =
     let t = String.trim line in
-    (* closing tag present: </…> *)
-    try
-      let idx = String.index t '<' in
-      idx + 1 < String.length t && String.get t (idx + 1) = '/'
-    with Not_found -> false
+    (* closing tag present: </…> — scan for </ at any position *)
+    let len = String.length t in
+    let rec scan i =
+      if i + 1 >= len then false
+      else if t.[i] = '<' && t.[i + 1] = '/' then true
+      else scan (i + 1)
+    in
+    scan 0
   in
   let rec walk acc in_block = function
     | [] -> List.rev acc

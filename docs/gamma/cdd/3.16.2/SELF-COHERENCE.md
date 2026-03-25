@@ -33,7 +33,7 @@ Two-membrane architecture per issue #106 / senior eng review:
 
 **Membrane 1 — Presentation (Cn_output):**
 - Lift `xml_prefixes` to module level (shared between `is_control_plane_like` and new `strip_xml_pseudo_tools`)
-- Add 7 missing XML variants: `<tool_calls>`, `<function_calls>`, `<tool_result>`, `<tool_results>`, `<invoke>`, `<invoke>`, `<thinking>`
+- Add 8 missing XML variants: `<tool_calls>`, `<function_calls>`, `<tool_result>`, `<tool_results>`, `<invoke>`, `<thinking>`, `<cn:ops>`
 - Add `strip_xml_pseudo_tools` function (state machine for `<tag>...</tag>` block removal)
 - Apply in `render_human_facing` after `strip_embedded_frontmatter` — catches mid-body XML just as `strip_embedded_frontmatter` catches mid-body `---` blocks
 
