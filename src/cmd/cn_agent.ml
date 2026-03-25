@@ -479,7 +479,8 @@ let update_cooldown_sec = 3600.0  (* 1 hour between update checks *)
 (* Update info returned from check, passed to do_update — avoids mutable ref *)
 type update_info =
   | Update_skip
-  | Update_available of string  (* release tag *)
+  | Update_available of string  (* release tag — newer version *)
+  | Update_patch of string      (* release tag — same version, different commit (#37) *)
 
 (* Cooldown: don't check more than once per hour.
    Uses mtime of state/.last-update-check as the timestamp. *)
@@ -496,11 +497,33 @@ let touch_update_check hub_path =
   let path = update_check_path hub_path in
   Cn_ffi.Fs.write path (Cn_fmt.now_iso ())
 
-(* Get latest release tag from GitHub API *)
-let get_latest_release_tag () =
-  let cmd = Printf.sprintf "curl -fsSL 'https://api.github.com/repos/%s/releases/latest' 2>/dev/null | grep '\"tag_name\"' | sed -E 's/.*\"([^\"]+)\".*/\\1/'" repo in
+(* Release info from GitHub API: tag + commit SHA *)
+type release_info = { tag : string; commit : string }
+
+(* Get latest release tag and commit from GitHub API.
+   Uses Cn_json for reliable parsing instead of grep/sed (#37). *)
+let get_latest_release () =
+  let url = Printf.sprintf "https://api.github.com/repos/%s/releases/latest" repo in
+  let cmd = Printf.sprintf "curl -fsSL '%s' 2>/dev/null" url in
   match Cn_ffi.Child_process.exec cmd with
-  | Some tag -> Some (String.trim tag)
+  | None -> None
+  | Some body ->
+      match Cn_json.parse body with
+      | Error _ -> None
+      | Ok json ->
+          match Cn_json.get_string "tag_name" json with
+          | None -> None
+          | Some tag ->
+              (* target_commitish is the full commit SHA the tag points to *)
+              let commit = match Cn_json.get_string "target_commitish" json with
+                | Some c -> String.sub c 0 (min 7 (String.length c))
+                | None -> "" in
+              Some { tag = String.trim tag; commit }
+
+(* Backward-compat wrapper — callers that only need the tag *)
+let get_latest_release_tag () =
+  match get_latest_release () with
+  | Some r -> Some r.tag
   | None -> None
 
 (* Semantic version comparison — defined in cn_lib, re-exported for tests *)
@@ -522,25 +545,32 @@ let get_platform_binary () =
 
 (* Check for updates — returns update_info for do_update.
    Respects cooldown: skips if checked within the last hour.
-   Always uses GitHub Releases (pre-built binaries). *)
+   Always uses GitHub Releases (pre-built binaries).
+   #37: detects same-version patches via commit hash comparison. *)
 let check_for_update hub_path =
   if not (auto_update_enabled ()) then Update_skip
   else if not (should_check_update hub_path) then Update_skip
   else begin
     touch_update_check hub_path;
-    match get_latest_release_tag () with
+    match get_latest_release () with
     | None -> Update_skip
-    | Some tag ->
-        if is_newer_version tag Cn_lib.version then Update_available tag
-        else Update_skip
+    | Some rel ->
+        if is_newer_version rel.tag Cn_lib.version then
+          Update_available rel.tag
+        else if rel.commit <> "" && rel.commit <> Cn_lib.cnos_commit then
+          (* Same version, different commit — patch available (#37) *)
+          Update_patch rel.tag
+        else
+          Update_skip
   end
 
 (* Perform update — downloads pre-built binary from GitHub Releases.
-   Workflow: detect platform → download → validate → atomic replace. *)
+   Workflow: detect platform → download → validate → atomic replace.
+   #37: handles both version bumps and same-version patches. *)
 let do_update info =
   match info with
   | Update_skip -> Cn_protocol.Update_skip
-  | Update_available tag ->
+  | Update_patch tag | Update_available tag ->
       (* Skip update if binary path is not writable (e.g. non-root daemon) *)
       let bin_dir = Filename.dirname bin_path in
       let writable = try Unix.access bin_dir [Unix.W_OK]; true

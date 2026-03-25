@@ -388,21 +388,34 @@ let run_update hub_path_opt =
   print_endline (Printf.sprintf "Current version: %s" version);
 
   (* One update path: pre-built binaries from GitHub Releases.
-     Mirrors install.sh — no git clone, no OCaml toolchain required. *)
-  match Cn_agent.get_latest_release_tag () with
+     Mirrors install.sh — no git clone, no OCaml toolchain required.
+     #37: detects same-version patches via commit hash comparison. *)
+  match Cn_agent.get_latest_release () with
   | None ->
       print_endline (Cn_fmt.fail "Could not check for updates (GitHub API unreachable)");
       Cn_ffi.Process.exit 1
-  | Some tag ->
-      if not (Cn_lib.is_newer_version tag version) then
-        print_endline (Cn_fmt.ok "Already up to date")
-      else begin
-        print_endline (Cn_fmt.info (Printf.sprintf "New version available: %s" tag));
+  | Some rel ->
+      let update_info =
+        if Cn_lib.is_newer_version rel.tag version then
+          Some (Cn_agent.Update_available rel.tag,
+                Printf.sprintf "New version available: %s" rel.tag)
+        else if rel.commit <> "" && rel.commit <> Cn_lib.cnos_commit then
+          Some (Cn_agent.Update_patch rel.tag,
+                Printf.sprintf "Patch available: %s (commit %s → %s)"
+                  rel.tag Cn_lib.cnos_commit rel.commit)
+        else None
+      in
+      match update_info with
+      | None ->
+          print_endline (Cn_fmt.ok (Printf.sprintf "Already up to date (%s %s)"
+            version Cn_lib.cnos_commit))
+      | Some (info, msg) ->
+        print_endline (Cn_fmt.info msg);
         print_endline (Cn_fmt.info "Downloading pre-built binary...");
-        let result = Cn_agent.do_update (Cn_agent.Update_available tag) in
+        let result = Cn_agent.do_update info in
         match result with
         | Cn_protocol.Update_complete ->
-            print_endline (Cn_fmt.ok (Printf.sprintf "Updated to %s" tag));
+            print_endline (Cn_fmt.ok (Printf.sprintf "Updated to %s" rel.tag));
             (* Re-exec into the new binary so reconciliation uses the correct
                version/commit constants. The new process detects CN_RECONCILE_HUB
                and reconciles before proceeding with its normal update check. *)
@@ -450,19 +463,31 @@ let self_update_check () =
   ) args in
   if is_skip_cmd then ()
   else
-    match Cn_agent.get_latest_release_tag () with
+    match Cn_agent.get_latest_release () with
     | None -> ()
-    | Some tag ->
-        if Cn_lib.is_newer_version tag version then begin
-          print_endline (Cn_fmt.info (Printf.sprintf "Updating cn %s → %s..." version tag));
-          let result = Cn_agent.do_update (Cn_agent.Update_available tag) in
-          match result with
-          | Cn_protocol.Update_complete ->
-              print_endline (Cn_fmt.ok (Printf.sprintf "Updated to cn %s" tag));
-              Cn_agent.re_exec ()
-          | _ ->
-              print_endline (Cn_fmt.warn "Self-update failed - continuing with current version")
-        end
+    | Some rel ->
+        let info =
+          if Cn_lib.is_newer_version rel.tag version then
+            Some (Cn_agent.Update_available rel.tag,
+                  Printf.sprintf "Updating cn %s → %s..." version rel.tag)
+          else if rel.commit <> "" && rel.commit <> Cn_lib.cnos_commit then
+            Some (Cn_agent.Update_patch rel.tag,
+                  Printf.sprintf "Patch available: %s (%s → %s)"
+                    rel.tag Cn_lib.cnos_commit rel.commit)
+          else None
+        in
+        match info with
+        | None -> ()
+        | Some (update_info, msg) ->
+            print_endline (Cn_fmt.info msg);
+            let result = Cn_agent.do_update update_info in
+            match result with
+            | Cn_protocol.Update_complete ->
+                print_endline (Cn_fmt.ok (Printf.sprintf "Updated to cn %s (%s)"
+                  rel.tag rel.commit));
+                Cn_agent.re_exec ()
+            | _ ->
+                print_endline (Cn_fmt.warn "Self-update failed - continuing with current version")
 
 (* === Release === *)
 
