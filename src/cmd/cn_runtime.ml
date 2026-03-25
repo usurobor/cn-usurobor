@@ -1644,9 +1644,9 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                           let input_p = Cn_agent.input_path hub_path in
                           let output_p = Cn_agent.output_path hub_path in
                           (if Cn_ffi.Fs.exists input_p then
-                             Cn_ffi.Fs.remove input_p);
+                             Cn_ffi.Fs.unlink input_p);
                           (if Cn_ffi.Fs.exists output_p then
-                             Cn_ffi.Fs.remove output_p);
+                             Cn_ffi.Fs.unlink output_p);
                           Cn_telegram.clear_reaction ~token
                             ~chat_id:msg.chat_id ~message_id:msg.message_id;
                           offset := max !offset (msg.update_id + 1);
