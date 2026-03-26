@@ -272,7 +272,17 @@ The verdict is a function of the worst named incoherence.
   - ❌ "Predicate tests exist → runtime filtering AC met"
   - ✅ "Predicate tests prove the predicate; no integration test proves the queue/offset path"
 
-2.3.7. **Higher-leverage alternative check**
+2.3.7. **Review divergence is a review-skill gap**
+  - When two reviewers review the same PR and one catches findings the other missed, the divergence is a gap in this skill — not in the reviewer who missed it.
+  - After identifying the divergence:
+    1. Name which review-skill step, if followed, would have caught the missed finding
+    2. If no step covers it, add one
+    3. If a step exists but is too vague, sharpen it
+  - The fix is always a patch to this skill. Never "reviewer should have been more careful."
+  - ❌ "I missed the stale cnos.pm reference — I'll look harder next time"
+  - ✅ "I missed it because no review-skill step says to scan the full touched module for same-kind assumptions. Added §2.2.9 (module-truth audit)."
+
+2.3.8. **Higher-leverage alternative check**
   - A diff may be locally correct and still miss the more coherent system move.
   - Name that explicitly as a review note or finding when appropriate.
   - ❌ "Looks correct, approved" when the change repeats a known architectural pressure
