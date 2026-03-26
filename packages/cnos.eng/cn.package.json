@@ -6,13 +6,17 @@
   "engines": { "cnos": "3.17.0" },
   "sources": {
     "skills": [
+      "eng/architecture-evolution",
       "eng/coding",
-      "eng/design",
+      "eng/documenting",
+      "eng/follow-up",
       "eng/functional",
       "eng/ocaml",
+      "eng/performance-reliability",
+      "eng/process-economics",
       "eng/rca",
-      "eng/review",
       "eng/ship",
+      "eng/skill",
       "eng/testing",
       "eng/tool-writing",
       "eng/ux-cli"

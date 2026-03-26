@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["hostname"],
+  "properties": {
+    "hostname": {
+      "type": "string",
+      "description": "The hostname to resolve via DNS"
+    },
+    "record_type": {
+      "type": "string",
+      "enum": ["A", "AAAA", "CNAME", "MX", "TXT"],
+      "default": "A",
+      "description": "DNS record type to query"
+    }
+  },
+  "additionalProperties": false
+}

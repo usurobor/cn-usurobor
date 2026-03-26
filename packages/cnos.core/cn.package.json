@@ -23,6 +23,10 @@
     ],
     "skills": [
       "agent/agent-ops",
+      "agent/ca-conduct",
+      "agent/cap",
+      "agent/cbp",
+      "agent/clp",
       "agent/coherence-test",
       "agent/coherent",
       "agent/communicating",
@@ -34,15 +38,19 @@
       "agent/onboarding",
       "agent/reflect",
       "agent/self-cohere",
+      "cdd/design",
+      "cdd/issue",
+      "cdd/plan",
+      "cdd/post-release",
+      "cdd/release",
+      "cdd/review",
       "ops/adhoc-thread",
-      "ops/cdd",
       "ops/inbox",
       "ops/peer",
-      "ops/star-sync",
-      "documenting",
-      "release",
-      "skill",
-      "testing"
+      "ops/star-sync"
+    ],
+    "extensions": [
+      "cnos.net.http"
     ]
   }
 }

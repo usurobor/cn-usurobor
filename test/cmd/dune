@@ -144,10 +144,19 @@
  (inline_tests)
  (preprocess (pps ppx_expect)))
 
+; cn_deps tests (ppx_expect) — package restore + lockfile (Issue #113)
+(library
+ (name cn_deps_test)
+ (modules cn_deps_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
 ; cn_extension tests (ppx_expect) — extension manifest, registry, dispatch (Issue #73)
 (library
  (name cn_extension_test)
  (modules cn_extension_test)
  (libraries cn_cmd cn_ffi cn_lib unix)
- (inline_tests)
+ (inline_tests
+  (deps ../../src/agent/extensions/cnos.net.http/host/cnos-ext-http))
  (preprocess (pps ppx_expect)))

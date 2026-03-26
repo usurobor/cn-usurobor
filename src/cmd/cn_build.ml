@@ -19,6 +19,7 @@ type source_decl = {
   doctrine : string list;
   mindsets : string list;
   skills : string list;
+  extensions : string list;
 }
 
 type package_manifest = {
@@ -61,6 +62,7 @@ let parse_sources json =
         doctrine = parse_string_array src_json "doctrine";
         mindsets = parse_string_array src_json "mindsets";
         skills = parse_string_array src_json "skills";
+        extensions = parse_string_array src_json "extensions";
       }
 
 let parse_package_json path =
@@ -149,7 +151,7 @@ let clean_package_dir pkg_dir =
   List.iter (fun sub ->
     let path = Cn_ffi.Path.join pkg_dir sub in
     if Cn_ffi.Fs.exists path then rm_tree path
-  ) ["doctrine"; "mindsets"; "skills"]
+  ) ["doctrine"; "mindsets"; "skills"; "extensions"]
 
 (* === Build === *)
 
@@ -182,6 +184,9 @@ let build_one ~agent_root ~pkgs_dir (dir_name, pkg) =
   (* Copy skills *)
   pkg.sources.skills |> List.iter (fun entry ->
     copy_source ~agent_root ~pkg_dir ~category:"skills" entry);
+  (* Copy extensions *)
+  pkg.sources.extensions |> List.iter (fun entry ->
+    copy_source ~agent_root ~pkg_dir ~category:"extensions" entry);
   pkg
 
 (** Compare file content between two paths. Returns list of mismatches. *)
@@ -235,6 +240,8 @@ let check_one ~agent_root ~pkgs_dir (dir_name, pkg) =
     copy_source ~agent_root ~pkg_dir:tmp_dir ~category:"mindsets" entry);
   pkg.sources.skills |> List.iter (fun entry ->
     copy_source ~agent_root ~pkg_dir:tmp_dir ~category:"skills" entry);
+  pkg.sources.extensions |> List.iter (fun entry ->
+    copy_source ~agent_root ~pkg_dir:tmp_dir ~category:"extensions" entry);
   (* Compare *)
   let mismatches =
     List.concat_map (fun cat ->
@@ -243,7 +250,7 @@ let check_one ~agent_root ~pkgs_dir (dir_name, pkg) =
       if Cn_ffi.Fs.exists tmp_cat || Cn_ffi.Fs.exists pkg_cat then
         diff_tree tmp_cat pkg_cat cat
       else []
-    ) ["doctrine"; "mindsets"; "skills"]
+    ) ["doctrine"; "mindsets"; "skills"; "extensions"]
   in
   rm_tree tmp_dir;
   (pkg.name, mismatches)
@@ -301,9 +308,12 @@ let run_build () =
         let n_doctrine = List.length pkg.sources.doctrine in
         let n_mindsets = List.length pkg.sources.mindsets in
         let n_skills = List.length pkg.sources.skills in
+        let n_extensions = List.length pkg.sources.extensions in
+        let ext_str = if n_extensions > 0
+          then Printf.sprintf ", %d extensions" n_extensions else "" in
         print_endline (Cn_fmt.ok (Printf.sprintf
-          "%s@%s: %d doctrine, %d mindsets, %d skills"
-          pkg.name pkg.version n_doctrine n_mindsets n_skills)));
+          "%s@%s: %d doctrine, %d mindsets, %d skills%s"
+          pkg.name pkg.version n_doctrine n_mindsets n_skills ext_str)));
       print_endline (Cn_fmt.ok (Printf.sprintf
         "Built %d packages" (List.length packages)))
 

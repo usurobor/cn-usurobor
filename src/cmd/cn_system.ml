@@ -332,9 +332,13 @@ let setup_assets hub_path =
 
   (* Write lockfile from manifest (pins current rev + subdir) *)
   if not (Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.lock.json")) then begin
-    let lock = Cn_deps.lockfile_for_manifest manifest in
-    Cn_deps.write_lockfile ~hub_path lock;
-    print_endline (Cn_fmt.ok "Created .cn/deps.lock.json")
+    (match Cn_deps.lockfile_for_manifest manifest with
+     | Ok lock ->
+         Cn_deps.write_lockfile ~hub_path lock;
+         print_endline (Cn_fmt.ok "Created .cn/deps.lock.json")
+     | Error msg ->
+         print_endline (Cn_fmt.fail msg);
+         Cn_ffi.Process.exit 1)
   end;
 
   (* Restore from lockfile — MUST succeed for hub to be wake-ready *)
@@ -401,8 +405,12 @@ let reconcile_packages hub_path =
       let role = read_role hub_path in
       Cn_deps.default_manifest_for_profile role
   in
-  let lock = Cn_deps.lockfile_for_manifest manifest in
-  Cn_deps.write_lockfile ~hub_path lock;
+  (match Cn_deps.lockfile_for_manifest manifest with
+   | Error msg ->
+       print_endline (Cn_fmt.fail msg);
+       Cn_ffi.Process.exit 1
+   | Ok lock ->
+       Cn_deps.write_lockfile ~hub_path lock);
   (match Cn_deps.restore ~hub_path with
    | Ok () ->
      print_endline (Cn_fmt.ok (Printf.sprintf "Packages reconciled to %s" version));

@@ -38,7 +38,7 @@ if [ -f "$CN_JSON" ]; then
 fi
 
 # 2. Package manifests — "version" and "cnos" inside "engines"
-for pkg in cnos.core cnos.eng cnos.pm; do
+for pkg in cnos.core cnos.eng; do
   PKG_FILE="$REPO_ROOT/packages/$pkg/cn.package.json"
   if [ -f "$PKG_FILE" ]; then
     OLD_VER=$(python3 -c "import json; print(json.load(open('$PKG_FILE'))['version'])" 2>/dev/null || echo "?")

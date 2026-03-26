@@ -746,9 +746,12 @@ let execute_extension_op ~hub_path ~trigger_id ~config ~ext_registry
   | Some (entry, _ext_op) ->
     let command = entry.manifest.backend.command in
     let arguments = op.Cn_shell.fields in
+    let permissions =
+      Cn_extension.effective_permissions ~manifest:entry.manifest ~config in
+    let limits = Cn_extension.execution_limits ~config in
     let result =
       Cn_ext_host.execute_extension_op ~command ~op_kind:kind_name
-        ~arguments ()
+        ~arguments ~permissions ~limits ()
     in
     match result with
     | Ok (_status, content) ->

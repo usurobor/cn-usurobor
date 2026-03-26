@@ -522,3 +522,164 @@ let%expect_test "build_registry: disabled extension" =
     cnos.net.http: disabled
     http_get: not found (correct — disabled)
   |}]
+
+(* === Policy intersection === *)
+
+(* Invariant: effective permissions = extension-declared ∩ runtime-allowed.
+   Secrets are always stripped. Network passes through if declared. *)
+
+let test_manifest ?(permissions = []) () : Cn_extension.extension_manifest =
+  { schema = "cn.extension.v1"; name = "test.ext"; version = "1.0.0";
+    interface = "cn.ext.v1"; ext_kind = "capability-provider";
+    backend = { backend_kind = "subprocess"; command = ["test-host"] };
+    ops = []; permissions;
+    engines = [] }
+
+(* exec_enabled=true to test permission intersection; false tested below *)
+let exec_config = { Cn_shell.default_shell_config with exec_enabled = true }
+
+let%expect_test "effective_permissions: network passes through when declared" =
+  let manifest = test_manifest ~permissions:[
+    "network", Cn_json.Bool true;
+    "default_read_only", Cn_json.Bool true;
+  ] () in
+  let eff = Cn_extension.effective_permissions ~manifest ~config:exec_config in
+  List.iter (fun (k, _) -> Printf.printf "%s\n" k) eff;
+  [%expect {|
+    network
+    default_read_only
+  |}]
+
+let%expect_test "effective_permissions: no network when not declared" =
+  let manifest = test_manifest ~permissions:[
+    "default_read_only", Cn_json.Bool true;
+  ] () in
+  let eff = Cn_extension.effective_permissions ~manifest ~config:exec_config in
+  List.iter (fun (k, _) -> Printf.printf "%s\n" k) eff;
+  [%expect {| default_read_only |}]
+
+(* Invariant: secrets are never passed to the host — always stripped to empty *)
+let%expect_test "effective_permissions: secrets always stripped" =
+  let manifest = test_manifest ~permissions:[
+    "allow_secrets", Cn_json.Array [Cn_json.String "API_KEY"];
+  ] () in
+  let eff = Cn_extension.effective_permissions ~manifest ~config:exec_config in
+  List.iter (fun (k, v) ->
+    Printf.printf "%s=%s\n" k (Cn_json.to_string v)) eff;
+  [%expect {| allow_secrets=[] |}]
+
+(* Invariant: exec_enabled=false gates ALL permissions — nothing passes through *)
+let%expect_test "effective_permissions: exec_disabled returns empty" =
+  let manifest = test_manifest ~permissions:[
+    "network", Cn_json.Bool true;
+    "default_read_only", Cn_json.Bool true;
+    "allow_secrets", Cn_json.Array [Cn_json.String "KEY"];
+  ] () in
+  let config = Cn_shell.default_shell_config in (* exec_enabled=false *)
+  let eff = Cn_extension.effective_permissions ~manifest ~config in
+  Printf.printf "permissions count: %d\n" (List.length eff);
+  [%expect {| permissions count: 0 |}]
+
+let%expect_test "execution_limits: derives from shell_config" =
+  let config = { Cn_shell.default_shell_config with
+    max_artifact_bytes_per_op = 8192 } in
+  let limits = Cn_extension.execution_limits ~config in
+  List.iter (fun (k, v) ->
+    Printf.printf "%s=%s\n" k (Cn_json.to_string v)) limits;
+  [%expect {| max_artifact_bytes=8192 |}]
+
+(* === Host binary protocol (cnos-ext-http stub) === *)
+
+(* Resolve host binary path. Works from repo root (local dev),
+   dune build sandbox (_build/default/test/cmd/), and dune inline_tests.
+   The dune (deps) stanza ensures the file is available. *)
+let find_host_binary () =
+  let rel = "src/agent/extensions/cnos.net.http/host/cnos-ext-http" in
+  let candidates = [
+    (* dune inline_tests: deps path relative to test/cmd/ *)
+    "../../" ^ rel;
+    (* repo root (cwd = repo root) *)
+    Sys.getcwd () ^ "/" ^ rel;
+    (* walk up from cwd to find repo root *)
+    "../../../" ^ rel;
+    "../../../../" ^ rel;
+  ] in
+  List.find_opt Sys.file_exists candidates
+
+(* Invariant: host responds to describe with extension metadata *)
+let%expect_test "host stub: describe returns extension info" =
+  (match find_host_binary () with
+   | None -> Printf.printf "host not found (skipping)\n"
+   | Some host_path ->
+     let request = Cn_ext_host.request_to_json Cn_ext_host.Describe in
+     let input = Cn_json.to_string request ^ "\n" in
+     let code, output =
+       Cn_ffi.Process.exec_args ~prog:host_path ~args:[]
+         ~stdin_data:input () in
+     Printf.printf "exit=%d\n" code;
+     (match Cn_json.parse (String.trim output) with
+      | Ok json ->
+        (match Cn_json.get_string "status" json with
+         | Some s -> Printf.printf "status=%s\n" s
+         | None -> Printf.printf "no status\n");
+        (match Cn_json.get "data" json with
+         | Some data ->
+           (match Cn_json.get_string "name" data with
+            | Some n -> Printf.printf "name=%s\n" n
+            | None -> Printf.printf "no name\n")
+         | None -> Printf.printf "no data\n")
+      | Error e -> Printf.printf "parse error: %s\n" e));
+  [%expect {|
+    exit=0
+    status=ok
+    name=cnos.net.http
+  |}]
+
+(* Invariant: host responds to health check *)
+let%expect_test "host stub: health returns ok" =
+  (match find_host_binary () with
+   | None -> Printf.printf "host not found (skipping)\n"
+   | Some host_path ->
+     match Cn_ext_host.check_health ~command:[host_path] () with
+     | Ok () -> Printf.printf "healthy\n"
+     | Error msg -> Printf.printf "unhealthy: %s\n" msg);
+  [%expect {| healthy |}]
+
+(* Negative space: host rejects unknown op kinds *)
+let%expect_test "host stub: unknown op kind rejected" =
+  (match find_host_binary () with
+   | None -> Printf.printf "host not found (skipping)\n"
+   | Some host_path ->
+     let result = Cn_ext_host.execute_extension_op
+       ~command:[host_path] ~op_kind:"nonexistent_op"
+       ~arguments:[] () in
+     match result with
+     | Ok _ -> Printf.printf "ok (wrong — should reject)\n"
+     | Error msg -> Printf.printf "rejected: %s\n" msg);
+  [%expect {| rejected: unknown op kind: nonexistent_op |}]
+
+(* Negative space: http_get rejects missing URL *)
+let%expect_test "host stub: http_get without url rejected" =
+  (match find_host_binary () with
+   | None -> Printf.printf "host not found (skipping)\n"
+   | Some host_path ->
+     let result = Cn_ext_host.execute_extension_op
+       ~command:[host_path] ~op_kind:"http_get"
+       ~arguments:[] () in
+     match result with
+     | Ok _ -> Printf.printf "ok (wrong — should reject)\n"
+     | Error msg -> Printf.printf "rejected: %s\n" msg);
+  [%expect {| rejected: missing required field: url |}]
+
+(* Negative space: http_get rejects non-http URL schemes *)
+let%expect_test "host stub: http_get rejects file:// scheme" =
+  (match find_host_binary () with
+   | None -> Printf.printf "host not found (skipping)\n"
+   | Some host_path ->
+     let result = Cn_ext_host.execute_extension_op
+       ~command:[host_path] ~op_kind:"http_get"
+       ~arguments:["url", Cn_json.String "file:///etc/passwd"] () in
+     match result with
+     | Ok _ -> Printf.printf "ok (wrong — should reject)\n"
+     | Error msg -> Printf.printf "rejected: %s\n" msg);
+  [%expect {| rejected: url must use http or https scheme |}]

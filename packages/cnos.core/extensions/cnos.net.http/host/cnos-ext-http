@@ -1,0 +1,111 @@
+#!/bin/sh
+# cnos-ext-http — subprocess host for cnos.net.http extension
+#
+# Implements the cn.ext.v1 host protocol over stdin/stdout JSON lines.
+# Methods: describe, health, execute, shutdown
+#
+# This is a minimal reference implementation using sh + curl.
+# Extensions are language-agnostic — this proves the subprocess model works.
+
+set -e
+
+# Read one JSON line from stdin
+read -r INPUT
+
+# Extract method field (portable: no jq dependency)
+METHOD=$(printf '%s' "$INPUT" | sed -n 's/.*"method"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+
+case "$METHOD" in
+  describe)
+    cat <<'RESPONSE'
+{"status":"ok","data":{"name":"cnos.net.http","version":"1.0.0","interface":"cn.ext.v1","ops":["http_get","dns_resolve"]}}
+RESPONSE
+    ;;
+
+  health)
+    # Check that curl is available
+    if command -v curl >/dev/null 2>&1; then
+      echo '{"status":"ok","data":{"curl":"available"}}'
+    else
+      echo '{"status":"error","error":"curl not found"}'
+    fi
+    ;;
+
+  execute)
+    # Extract op kind
+    OP_KIND=$(printf '%s' "$INPUT" | sed -n 's/.*"kind"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+
+    case "$OP_KIND" in
+      http_get)
+        # Extract URL from the op object
+        URL=$(printf '%s' "$INPUT" | sed -n 's/.*"url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+
+        if [ -z "$URL" ]; then
+          echo '{"status":"error","error":"missing required field: url"}'
+          exit 0
+        fi
+
+        # Validate URL scheme — only http/https allowed
+        case "$URL" in
+          http://*|https://*)
+            ;;
+          *)
+            echo '{"status":"error","error":"url must use http or https scheme"}'
+            exit 0
+            ;;
+        esac
+
+        # Execute HTTP GET via curl
+        # --fail-with-body: return error on HTTP errors but still capture body
+        # --max-time 30: timeout after 30 seconds
+        # --max-filesize 1048576: limit response to 1MB
+        # -s: silent (no progress)
+        # -L: follow redirects
+        BODY=$(curl -s -L --fail --max-time 30 --max-filesize 1048576 "$URL" 2>&1) || {
+          # Escape the error for JSON
+          ESCAPED=$(printf '%s' "$BODY" | sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g' | tr '\n' ' ')
+          printf '{"status":"error","error":"http_get failed: %s"}\n' "$ESCAPED"
+          exit 0
+        }
+
+        # Escape body for JSON output
+        ESCAPED_BODY=$(printf '%s' "$BODY" | sed 's/\\/\\\\/g; s/"/\\"/g; s/	/\\t/g' | tr '\n' '\\n')
+        printf '{"status":"ok","data":{"content":"%s"}}\n' "$ESCAPED_BODY"
+        ;;
+
+      dns_resolve)
+        HOSTNAME=$(printf '%s' "$INPUT" | sed -n 's/.*"hostname"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+
+        if [ -z "$HOSTNAME" ]; then
+          echo '{"status":"error","error":"missing required field: hostname"}'
+          exit 0
+        fi
+
+        # Use getent for DNS resolution (available on Linux)
+        if command -v getent >/dev/null 2>&1; then
+          RESULT=$(getent hosts "$HOSTNAME" 2>&1) || {
+            printf '{"status":"error","error":"dns resolution failed for %s"}\n' "$HOSTNAME"
+            exit 0
+          }
+          ADDR=$(printf '%s' "$RESULT" | head -1 | awk '{print $1}')
+          printf '{"status":"ok","data":{"hostname":"%s","address":"%s"}}\n' "$HOSTNAME" "$ADDR"
+        else
+          echo '{"status":"error","error":"getent not available"}'
+        fi
+        ;;
+
+      *)
+        printf '{"status":"error","error":"unknown op kind: %s"}\n' "$OP_KIND"
+        ;;
+    esac
+    ;;
+
+  shutdown)
+    echo '{"status":"ok","data":{}}'
+    exit 0
+    ;;
+
+  *)
+    printf '{"status":"error","error":"unknown method: %s"}\n' "$METHOD"
+    ;;
+esac

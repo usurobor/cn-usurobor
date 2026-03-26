@@ -384,6 +384,36 @@ let all_entries registry = registry.extensions
 let empty_registry () =
   { extensions = []; op_index = Hashtbl.create 0 }
 
+(* === Policy intersection === *)
+
+(** Compute effective permissions for an extension op execution.
+    Effective = extension-declared ∩ runtime-allowed.
+    The extension declares what it needs; runtime config declares what's granted.
+    Returns the intersection as key-value pairs suitable for the host protocol. *)
+let effective_permissions ~(manifest : extension_manifest)
+    ~(config : Cn_shell.shell_config) =
+  let ext_perms = manifest.permissions in
+  (* Runtime gate: exec_enabled controls whether extensions run at all *)
+  if not config.exec_enabled then []
+  else
+    List.filter_map (fun (k, v) ->
+      match k with
+      | "network" ->
+        (* Network requires extension declares it AND runtime allows exec *)
+        (match v with
+         | Cn_json.Bool true -> Some (k, v)
+         | _ -> None)
+      | "allow_secrets" -> Some (k, Cn_json.Array [])  (* strip — never pass ambient *)
+      | _ -> Some (k, v)  (* pass through for forward compat *)
+    ) ext_perms
+
+(** Compute execution limits from runtime config.
+    Maps shell_config budgets into the host protocol limits format. *)
+let execution_limits ~(config : Cn_shell.shell_config) =
+  [
+    "max_artifact_bytes", Cn_json.Int config.max_artifact_bytes_per_op;
+  ]
+
 (* === String helpers === *)
 
 let string_of_lifecycle_state = function
