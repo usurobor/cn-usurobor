@@ -1,6 +1,6 @@
 # Post-Release Assessment
 
-After every release, assess what shipped, what the system looks like now, and what to do next. This is CDD §11 executed as a concrete procedure.
+After every release, assess what shipped, what the system looks like now, and what to do next. This is CDD §9 (Assessment) and §10 (Closure) executed as a concrete procedure.
 
 ## When
 
@@ -84,7 +84,7 @@ The coherence note describes which incoherence was reduced, not what feature was
 
 All converged-but-unimplemented design commitments MUST appear in the lag table. This is not optional and has no wiggle room — if a design is converged and not shipped, it appears here.
 
-For every open design issue (issues with design docs, architecture docs, or converged plans that are not yet fully implemented) and every open process issue (repeatable failure modes from §11.8–§11.11):
+For every open design issue (issues with design docs, architecture docs, or converged plans that are not yet fully implemented) and every open process issue (repeatable failure modes from §9–§10):
 
 | Issue | Title | Type | Design | Impl | Lag |
 |-------|-------|------|--------|------|-----|
@@ -123,7 +123,7 @@ For every PR in this release cycle, record:
 3. **Finding taxonomy** — tag each review finding as `mechanical` (automatable: stale cross-refs, missing scope items, wrong branch name) or `judgment` (design coherence, architecture trade-offs).
 4. **Mechanical ratio** — mechanical findings / total findings. If >20%, file an issue to add the missing pre-flight check.
 
-This step closes the loop from CDD §11.11. The review quality section in the output template must be filled.
+This step closes the loop from CDD §9 (Assessment). The review quality section in the output template must be filled.
 
 ### Step 6: Decide next move
 

@@ -253,6 +253,8 @@ Mode: MCA
 Active skills: ocaml, performance-reliability
 ```
 
+When in doubt about mode, apply CAP: if the answer is already in the system, cite it (MCA) — don't reinvent it (MCI). If two paths close the same gap, take the lighter one unless the heavier one buys durability the lighter one cannot.
+
 Review (step 8) checks whether the implementation is consistent with the declared active skills. Findings that a loaded active skill would have prevented are process debt (§6.1).
 
 ---
