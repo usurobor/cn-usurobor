@@ -18,6 +18,7 @@
 | Stale issues | 2 (#65 Communication, #67 Network) |
 | Growing issues | 11 (#64, #68, #84, #79, #94, #100, #96, #74, #101, #20, #43) |
 | Previous commitment | #113 AC8 (or close #113 if AC8 already met) |
+| #67 state on GitHub | Closed as "not_planned" — design absorbed into #73 |
 
 ### 2. AC8 evaluation
 
@@ -40,18 +41,20 @@ The v3.19.0 assessment noted: "If AC8 is already met by existing extension archi
 | 1 | P0 override | No. #64 is P0 but known, mitigated since v3.12.0. |
 | 2 | Operational infrastructure debt | No cycle-sized debt. Mechanical ratio improved to 33%. |
 | 3 | Assessment commitment default | #113 AC8 was committed, but AC8 is already met. Assessment alternative fires: "close #113 and move to MCI freeze resolution." |
-| 4 | MCI freeze check | **Yes.** #65 and #67 stale since v3.14.5. Freeze has held for 5 releases. With #113 closing, the substrate beneath #67 is complete. MCI freeze rule requires next MCA from stale set. |
+| 4 | MCI freeze check | **Yes.** #65 and #67 stale since v3.14.5. Freeze has held for 5 releases. With #113 closing, the substrate beneath the stale set is complete. MCI freeze rule requires next MCA from stale set. |
 | 5 | Weakest axis | γ (B+). Process coherence. |
-| 6 | Leverage | #67 (Network) is subsumed by #73 (Runtime Extensions). #73 Phase 1 shipped. Completing #67 via #73 moves a stale issue AND closes a growing one. Higher leverage than #65 (Communication) which has no partial implementation. |
-| 7 | Dependency order | #67 depends on package substrate (now complete via #113) + extension architecture (shipped in #73 Phase 1). No remaining blockers. |
+| 6 | Leverage | #67 (Network) was closed as not_planned — its design was absorbed into #73 (Runtime Extensions). #73 is open, Phase 1 shipped. Completing #73's remaining ACs (end-to-end extension execution, cnos.net.http proving the model) resolves the stale #67 gap through the superseding issue. Higher leverage than #65 (Communication) which has no partial implementation. |
+| 7 | Dependency order | #73 remaining work depends on package substrate (now complete via #113) + extension architecture (shipped in #73 Phase 1). No remaining blockers. |
 
 ### 4. Selected gap
 
-**Next MCA:** #67 — Network access as CN Shell capability (via #73 Runtime Extensions completion)
+**Next MCA:** #73 — Runtime Extensions: end-to-end extension execution (cnos.net.http as proof)
 
-**Incoherence:** The extension architecture is type-complete and discovery-complete, but cnos.net.http has never executed end-to-end. The host binary exists but has not been validated through the full dispatch pipeline in a real agent session. #67 is the first reference extension proving the model.
+**Note on #67:** #67 (Network access) is closed as "not_planned" on GitHub — its design was absorbed into #73. The MCI freeze references #67 as stale, but the work lives in #73. Completing #73 resolves the #67 gap. After #73 ships, #67 can be formally noted as superseded in the encoding lag table.
 
-**What fails if skipped:** Extensions remain a design-level abstraction. The open op registry dispatches to a subprocess that hasn't been validated end-to-end. #67 stays stale. MCI freeze continues indefinitely.
+**Incoherence:** The extension architecture is type-complete and discovery-complete, but cnos.net.http has never executed end-to-end. The host binary exists but has not been validated through the full dispatch pipeline in a real agent session. #73's final AC ("cnos.net.http proves the model by shipping http_get as first extension") remains open.
+
+**What fails if skipped:** Extensions remain a design-level abstraction. The open op registry dispatches to a subprocess that hasn't been validated end-to-end. The stale #67 gap persists through #73. MCI freeze continues indefinitely.
 
 ### 5. Mode
 
@@ -64,6 +67,6 @@ The v3.19.0 assessment noted: "If AC8 is already met by existing extension archi
 
 ### 7. Deferred outputs
 
-- #67 branch creation and bootstrap
+- #73 branch creation and bootstrap for remaining ACs
 - End-to-end validation of cnos.net.http through full dispatch pipeline
-- MCI freeze re-evaluation after #67 ships
+- MCI freeze re-evaluation after #73 ships (#67 superseded, #65 re-evaluated)

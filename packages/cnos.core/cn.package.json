@@ -38,6 +38,7 @@
       "agent/onboarding",
       "agent/reflect",
       "agent/self-cohere",
+      "cdd",
       "cdd/design",
       "cdd/issue",
       "cdd/plan",
