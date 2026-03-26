@@ -185,9 +185,10 @@ let run_doctor hub_path =
      | Ok () -> { name = "package system"; passed = true;
          value = "consistent (manifest ↔ lockfile ↔ installed)" }
      | Error issues ->
+         let first = match issues with h :: _ -> h | [] -> "unknown" in
          { name = "package system"; passed = false;
            value = Printf.sprintf "%d issue(s): %s"
-             (List.length issues) (List.hd issues) });
+             (List.length issues) first });
 
     (* Runtime contract validation — issue #56, #62 (v2 vertical self-model) *)
     { name = "agent/";

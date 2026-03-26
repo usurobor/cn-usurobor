@@ -153,7 +153,13 @@ let write_lockfile ~hub_path (l : lockfile) =
 (** Compute a deterministic integrity hash for a package directory.
     Walks all files sorted by relative path, hashes each with Digest (md5),
     then hashes the concatenation of (path:hash) pairs.
-    Returns "md5:<hex>" or None if directory doesn't exist. *)
+    Returns "md5:<hex>" or None if directory doesn't exist.
+
+    Threat model: drift detection, not adversarial tampering. Packages are
+    local-only (no registry, no network fetch to untrusted sources). md5 is
+    sufficient for detecting corruption, stale installs, and accidental
+    modification. The "md5:" prefix enables algorithm migration (e.g. to
+    sha256) when a crypto library is added to deps. *)
 let rec collect_files_sorted root dir =
   let full = Cn_ffi.Path.join root dir in
   if not (Cn_ffi.Fs.exists full) then []
@@ -164,7 +170,7 @@ let rec collect_files_sorted root dir =
        |> List.concat_map (fun entry ->
          collect_files_sorted root
            (if dir = "." then entry else dir ^ "/" ^ entry))
-     with _ -> [])
+     with Sys_error _ | Unix.Unix_error _ -> [])
   else [dir]
 
 let compute_integrity dir =
@@ -464,7 +470,7 @@ let doctor ~hub_path =
                     "Package %s@%s installed but not in lockfile (stale install?)"
                     name version)
               | None -> ())
-          with _ -> ()
+          with Sys_error _ | Unix.Unix_error _ -> ()
         end
   end;
 
