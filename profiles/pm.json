@@ -3,6 +3,6 @@
   "name": "pm",
   "packages": [
     { "name": "cnos.core", "version": "^1.0.0" },
-    { "name": "cnos.pm", "version": "^1.0.0" }
+    { "name": "cnos.eng", "version": "^1.0.0" }
   ]
 }

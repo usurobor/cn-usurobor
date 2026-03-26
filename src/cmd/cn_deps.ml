@@ -4,7 +4,7 @@
     parsing, writing, and the restore pipeline.
 
     Unified package model (v3.5):
-    - Everything cognitive is a package (cnos.core, cnos.eng, cnos.pm)
+    - Everything cognitive is a package (cnos.core, cnos.eng)
     - Profiles are setup-time presets, not packages
     - Restore fetches by (source, rev, subdir) and copies into
       .cn/vendor/packages/<name>@<version>/
@@ -343,21 +343,14 @@ let doctor ~hub_path =
 (* === Default manifest for profile === *)
 
 (** Expand a profile name to its package list.
-    engineer => [cnos.core, cnos.eng]
-    pm       => [cnos.core, cnos.pm] *)
+    Both profiles use the same packages — cnos.pm was removed in the
+    skill reorg (all skills rehomed to eng/ and cdd/). *)
 let default_manifest_for_profile profile =
   let ver = Cn_lib.version in
-  let packages = match String.lowercase_ascii profile with
-    | "pm" -> [
-        { name = "cnos.core"; version = ver };
-        { name = "cnos.pm"; version = ver };
-      ]
-    | _ -> (* engineer is default *)
-      [
-        { name = "cnos.core"; version = ver };
-        { name = "cnos.eng"; version = ver };
-      ]
-  in
+  let packages = [
+    { name = "cnos.core"; version = ver };
+    { name = "cnos.eng"; version = ver };
+  ] in
   { schema = "cn.deps.v1"; profile; packages }
 
 (** Create a lockfile with first-party package entries.
