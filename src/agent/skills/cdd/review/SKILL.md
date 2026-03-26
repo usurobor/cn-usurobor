@@ -205,7 +205,14 @@ Check whether the change creates obligations on code it did not touch.
   - ❌ "Skill looks correct" (didn't compare with canonical doc)
   - ✅ "Canonical doc and executable skill agree on artifact contract"
 
-2.2.9. **Architecture leverage check**
+2.2.9. **Module-truth audit for model-correctness changes**
+  - When a change is about **correctness of a model** (package truth, config truth, type safety, schema alignment, profile/manifest consistency), do not limit review to the diff. Scan the full touched module for other assumptions of the same kind.
+  - Ask: "What else in this module assumes the same thing the diff is fixing? Are those assumptions still valid?"
+  - Common sites: hardcoded lists, profile/package name references, format assumptions, default values, conditional branches for categories that no longer exist.
+  - ❌ "The diff fixes the restore path — approve" (didn't check whether the same module still hardcodes a stale package name elsewhere)
+  - ✅ "Diff fixes restore_one for AC3; but default_manifest_for_profile in the same module still references cnos.pm which doesn't exist — C finding"
+
+2.2.10. **Architecture leverage check**
   - Ask explicitly whether the diff merely improves the current architecture or misses a higher-leverage boundary move.
   - Useful prompts:
     - Is this repeated pressure being treated as a one-off patch?
@@ -214,7 +221,7 @@ Check whether the change creates obligations on code it did not touch.
   - ❌ "The local fix is correct" (never asked whether the architecture assumption should change)
   - ✅ "This fix is coherent locally, but the repeated capability-growth pressure suggests an extension architecture instead of another built-in"
 
-2.2.10. **Process overhead check**
+2.2.11. **Process overhead check**
   - If the diff adds new docs, artifacts, gates, or procedures, ask:
     - What exact failure does this prevent?
     - Who uses the new artifact?
@@ -295,8 +302,9 @@ The verdict is a function of the worst named incoherence.
 
 3.7. **CI / release-gate state**
   - If merge is requested, verify required CI/build checks are complete and green.
-  - If checks are missing, stale, or red, approval is provisional.
-  - Do not issue an unconditional merge instruction when required checks have not run.
+  - "Green" means all required checks have **completed** with a passing status — not that a single snapshot of `gh pr checks` showed green. Checks may be re-running, queued, or in an intermediate state.
+  - If checks are missing, stale, re-running, or red, approval is provisional and the merge instruction must say "Do not merge until checks finish green."
+  - Do not issue an unconditional merge instruction when required checks have not run or are not in a final completed state.
 
 3.8. **Merge instruction is explicit and scoped**
   - Approval names the exact branch, PR number, and action.
@@ -321,6 +329,7 @@ Before submitting a review:
 - [ ] Higher-leverage architecture move considered where repeated pressure is visible
 - [ ] Added process burden checked for lighter alternatives / automation boundary
 - [ ] Unchanged siblings checked for new incoherence
+- [ ] For model-correctness changes: full touched module scanned for other assumptions of the same kind
 - [ ] For filters/sanitizers/validators: all input sources enumerated, full pipeline verified on each
 - [ ] File-move cross-refs validated by grep where applicable
 - [ ] System writes traced to system reads
