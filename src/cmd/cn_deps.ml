@@ -148,6 +148,56 @@ let write_lockfile ~hub_path (l : lockfile) =
   ] in
   Cn_ffi.Fs.write (lockfile_path hub_path) (Cn_json.to_string json ^ "\n")
 
+(* === Integrity === *)
+
+(** Compute a deterministic integrity hash for a package directory.
+    Walks all files sorted by relative path, hashes each with Digest (md5),
+    then hashes the concatenation of (path:hash) pairs.
+    Returns "md5:<hex>" or None if directory doesn't exist.
+
+    Threat model: drift detection, not adversarial tampering. Packages are
+    local-only (no registry, no network fetch to untrusted sources). md5 is
+    sufficient for detecting corruption, stale installs, and accidental
+    modification. The "md5:" prefix enables algorithm migration (e.g. to
+    sha256) when a crypto library is added to deps. *)
+let rec collect_files_sorted root dir =
+  let full = Cn_ffi.Path.join root dir in
+  if not (Cn_ffi.Fs.exists full) then []
+  else if Sys.is_directory full then
+    (try
+       Cn_ffi.Fs.readdir full
+       |> List.sort String.compare
+       |> List.concat_map (fun entry ->
+         collect_files_sorted root
+           (if dir = "." then entry else dir ^ "/" ^ entry))
+     with Sys_error _ | Unix.Unix_error _ -> [])
+  else [dir]
+
+let compute_integrity dir =
+  if not (Cn_ffi.Fs.exists dir) then None
+  else
+    let files = collect_files_sorted dir "." in
+    let pairs = files |> List.map (fun rel ->
+      let content = Cn_ffi.Fs.read (Cn_ffi.Path.join dir rel) in
+      Printf.sprintf "%s:%s" rel (Digest.to_hex (Digest.string content))
+    ) in
+    let combined = String.concat "\n" pairs in
+    Some (Printf.sprintf "md5:%s" (Digest.to_hex (Digest.string combined)))
+
+(** Verify that an installed package directory matches the expected integrity.
+    Returns Ok () if integrity matches or if no integrity is set.
+    Returns Error msg if integrity mismatches. *)
+let verify_integrity ~pkg_dir ~expected =
+  match expected with
+  | None -> Ok ()  (* no integrity to verify *)
+  | Some expected_hash ->
+    (match compute_integrity pkg_dir with
+     | None -> Error "package directory does not exist"
+     | Some actual_hash ->
+       if actual_hash = expected_hash then Ok ()
+       else Error (Printf.sprintf "integrity mismatch: expected %s, got %s"
+         expected_hash actual_hash))
+
 (* === Recursive copy helper === *)
 
 (** Copy all files from src_dir to dst_dir, preserving directory structure.
@@ -215,7 +265,11 @@ let restore_one ~hub_path (dep : locked_dep) =
   let pkg_root = Cn_assets.vendor_packages_path hub_path in
   let pkg_dir = Cn_ffi.Path.join pkg_root
     (Printf.sprintf "%s@%s" dep.name dep.version) in
-  if Cn_ffi.Fs.exists pkg_dir then None (* already installed *)
+  if Cn_ffi.Fs.exists pkg_dir then
+    (* Already installed — verify integrity if set *)
+    (match verify_integrity ~pkg_dir ~expected:dep.integrity with
+     | Ok () -> None
+     | Error msg -> Some (Printf.sprintf "Package %s@%s: %s" dep.name dep.version msg))
   else
     (* Try local first-party source first *)
     let local_result =
@@ -233,8 +287,16 @@ let restore_one ~hub_path (dep : locked_dep) =
         | Error _ -> None
       else None
     in
+    (* Verify integrity after installation (shared by both paths) *)
+    let verify_after_install () =
+      match verify_integrity ~pkg_dir ~expected:dep.integrity with
+      | Ok () -> None
+      | Error msg ->
+          rm_tree pkg_dir;
+          Some (Printf.sprintf "Package %s@%s: %s" dep.name dep.version msg)
+    in
     match local_result with
-    | Some (Ok ()) -> None
+    | Some (Ok ()) -> verify_after_install ()
     | Some (Error msg) -> Some msg
     | None ->
       (* Fetch by exact rev using structured argv calls *)
@@ -266,7 +328,7 @@ let restore_one ~hub_path (dep : locked_dep) =
           else tmp_dir in
           copy_tree src_root pkg_dir;
           rm_tree tmp_dir;
-          None
+          verify_after_install ()
 
 (** Install packages from lockfile into .cn/vendor/packages/.
     Fetches by exact lockfile rev + subdir using argv-only git calls.
@@ -306,7 +368,15 @@ let list_installed ~hub_path =
 (* === Doctor === *)
 
 (** Verify installed packages match lockfile. Returns Ok () or Error with
-    list of issues found. *)
+    list of issues found.
+
+    Validates the full package system chain:
+    - desired state (manifest) exists and is parseable
+    - resolved state (lockfile) exists and is parseable
+    - manifest packages are all represented in lockfile
+    - lockfile packages are all installed on disk
+    - installed package metadata (cn.package.json) is valid
+    - integrity hashes match (when set) *)
 let doctor ~hub_path =
   let issues = ref [] in
   let add msg = issues := msg :: !issues in
@@ -316,11 +386,17 @@ let doctor ~hub_path =
    | Ok () -> ()
    | Error msg -> add msg);
 
-  (* Check manifest exists *)
-  if not (Cn_ffi.Fs.exists (manifest_path hub_path)) then
-    add "Missing .cn/deps.json — run 'cn setup'";
+  (* Check manifest exists and is parseable *)
+  let manifest_opt =
+    if not (Cn_ffi.Fs.exists (manifest_path hub_path)) then begin
+      add "Missing .cn/deps.json — run 'cn setup'"; None
+    end else
+      match read_manifest ~hub_path with
+      | None -> add "Cannot parse .cn/deps.json"; None
+      | Some m -> Some m
+  in
 
-  (* Check lockfile exists *)
+  (* Check lockfile exists and is parseable *)
   if not (Cn_ffi.Fs.exists (lockfile_path hub_path)) then
     add "Missing .cn/deps.lock.json — run 'cn setup'"
   else begin
@@ -328,12 +404,74 @@ let doctor ~hub_path =
     | None -> add "Cannot parse .cn/deps.lock.json"
     | Some lock ->
         let pkg_root = Cn_assets.vendor_packages_path hub_path in
+
+        (* Desired vs resolved: every manifest package should be in lockfile *)
+        (match manifest_opt with
+         | Some manifest ->
+           manifest.packages |> List.iter (fun (dep : manifest_dep) ->
+             let in_lock = lock.packages |> List.exists (fun (ld : locked_dep) ->
+               ld.name = dep.name) in
+             if not in_lock then
+               add (Printf.sprintf
+                 "Package %s in manifest but not in lockfile — run 'cn deps update'"
+                 dep.name))
+         | None -> ());
+
+        (* Resolved vs installed: every lockfile package should be on disk *)
         lock.packages |> List.iter (fun (dep : locked_dep) ->
           let pkg_dir = Cn_ffi.Path.join pkg_root
             (Printf.sprintf "%s@%s" dep.name dep.version) in
           if not (Cn_ffi.Fs.exists pkg_dir) then
             add (Printf.sprintf "Package %s@%s declared in lockfile but not installed"
-              dep.name dep.version))
+              dep.name dep.version)
+          else begin
+            (* Package metadata validity *)
+            let meta_path = Cn_ffi.Path.join pkg_dir "cn.package.json" in
+            if not (Cn_ffi.Fs.exists meta_path) then
+              add (Printf.sprintf "Package %s@%s missing cn.package.json"
+                dep.name dep.version)
+            else begin
+              let content = Cn_ffi.Fs.read meta_path in
+              match Cn_json.parse content with
+              | Error _ ->
+                add (Printf.sprintf "Package %s@%s has invalid cn.package.json"
+                  dep.name dep.version)
+              | Ok json ->
+                let pkg_name = Cn_json.get_string "name" json in
+                (match pkg_name with
+                 | Some n when n <> dep.name ->
+                   add (Printf.sprintf
+                     "Package %s@%s metadata name mismatch: cn.package.json says %s"
+                     dep.name dep.version n)
+                 | _ -> ())
+            end;
+
+            (* Integrity verification *)
+            (match verify_integrity ~pkg_dir ~expected:dep.integrity with
+             | Ok () -> ()
+             | Error msg ->
+               add (Printf.sprintf "Package %s@%s: %s"
+                 dep.name dep.version msg))
+          end);
+
+        (* Extra installed: check for packages on disk not in lockfile *)
+        if Cn_ffi.Fs.exists pkg_root then begin
+          try
+            Cn_ffi.Fs.readdir pkg_root |> List.iter (fun dir_name ->
+              match String.index_opt dir_name '@' with
+              | Some i ->
+                let name = String.sub dir_name 0 i in
+                let version = String.sub dir_name (i + 1)
+                  (String.length dir_name - i - 1) in
+                let in_lock = lock.packages |> List.exists (fun (ld : locked_dep) ->
+                  ld.name = name && ld.version = version) in
+                if not in_lock then
+                  add (Printf.sprintf
+                    "Package %s@%s installed but not in lockfile (stale install?)"
+                    name version)
+              | None -> ())
+          with Sys_error _ | Unix.Unix_error _ -> ()
+        end
   end;
 
   match !issues with
@@ -368,12 +506,18 @@ let lockfile_for_manifest (m : manifest) =
       "Third-party packages not supported (no registry): %s" names)
   else
     let packages = m.packages |> List.map (fun (dep : manifest_dep) ->
+      let pkg_subdir = Printf.sprintf "%s/%s" packages_subdir dep.name in
+      (* Compute integrity from local package source if available *)
+      let integrity = match find_local_package_source dep.name with
+        | Ok local_path -> compute_integrity local_path
+        | Error _ -> None
+      in
       { name = dep.name;
         version = Cn_lib.version;
         source = default_first_party_source;
         rev = first_party_rev;
-        subdir = Printf.sprintf "%s/%s" packages_subdir dep.name;
-        integrity = None }
+        subdir = pkg_subdir;
+        integrity }
     ) in
     Ok { schema = "cn.deps.lock.v1"; packages }
 
