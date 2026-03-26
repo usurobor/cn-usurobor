@@ -142,6 +142,22 @@ This turns the assessment into an executable handoff, not just reflection.
 - Everything larger → becomes the next cycle's work via the commitment above
 - Do not attempt to execute a large MCA inside the post-release assessment itself
 
+## Pre-publish gate
+
+Before committing the assessment, verify mechanically:
+
+- [ ] §1 has Baseline, This release, Delta, and Coherence contract closed
+- [ ] §2 has encoding lag table with every open design/process issue
+- [ ] §2 has MCI/MCA balance decision with rationale
+- [ ] §3 has What went wrong, What went right, Skill patches
+- [ ] §4 has all fields: PRs, review rounds, superseded PRs, finding breakdown, mechanical ratio, action
+- [ ] §4 mechanical ratio: if >20%, a process issue is **filed and referenced** (not just noted)
+- [ ] §5 has all 6 fields: Next MCA, Owner, Branch, **First AC**, MCI frozen?, Rationale
+- [ ] §5 Closure evidence: immediate outputs listed with links, deferred outputs with issue/owner
+- [ ] CHANGELOG TSC row added or updated to match assessment scores
+
+This gate is mechanical. Two agents checking the same template must find the same missing fields.
+
 ## Anti-patterns
 
 - ❌ Skip assessment for patch releases ("it's just a small fix")
