@@ -1,0 +1,33 @@
+{
+  "schema": "cn.extension.v1",
+  "name": "cnos.net.http",
+  "version": "1.0.0",
+  "interface": "cn.ext.v1",
+  "kind": "capability-provider",
+  "backend": {
+    "kind": "subprocess",
+    "command": ["cnos-ext-http"]
+  },
+  "ops": [
+    {
+      "kind": "http_get",
+      "class": "observe",
+      "request_schema": "schemas/http_get.json",
+      "response_format": "artifact:text"
+    },
+    {
+      "kind": "dns_resolve",
+      "class": "observe",
+      "request_schema": "schemas/dns_resolve.json",
+      "response_format": "artifact:json"
+    }
+  ],
+  "permissions": {
+    "network": true,
+    "default_read_only": true,
+    "allow_secrets": []
+  },
+  "engines": {
+    "cnos": ">=3.12.0 <4.0.0"
+  }
+}
