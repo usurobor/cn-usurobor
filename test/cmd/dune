@@ -144,7 +144,7 @@
  (inline_tests)
  (preprocess (pps ppx_expect)))
 
-; cn_deps tests (ppx_expect) — package restore + lockfile (Issue #113)
+; cn_deps tests (ppx_expect) — package restore + lockfile + integrity (Issue #113)
 (library
  (name cn_deps_test)
  (modules cn_deps_test)

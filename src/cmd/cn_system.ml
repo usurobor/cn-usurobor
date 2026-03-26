@@ -180,6 +180,15 @@ let run_doctor hub_path =
       value = if Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path ".cn/deps.lock.json")
               then "present" else "missing (run 'cn setup')" };
 
+    (* v3.19: Deep package system validation — desired/resolved/installed chain *)
+    (match Cn_deps.doctor ~hub_path with
+     | Ok () -> { name = "package system"; passed = true;
+         value = "consistent (manifest ↔ lockfile ↔ installed)" }
+     | Error issues ->
+         { name = "package system"; passed = false;
+           value = Printf.sprintf "%d issue(s): %s"
+             (List.length issues) (List.hd issues) });
+
     (* Runtime contract validation — issue #56, #62 (v2 vertical self-model) *)
     { name = "agent/";
       passed = Cn_ffi.Fs.exists (Cn_ffi.Path.join hub_path "agent");

@@ -17,6 +17,9 @@
 type package_info = {
   name : string;
   version : string;
+  source : string;
+  rev : string;
+  integrity : string option;
   doctrine_count : int;
   mindset_count : int;
   skill_count : int;
@@ -151,6 +154,9 @@ let gather ~hub_path ~(shell_config : Cn_shell.shell_config)
       ?(ext_registry = Cn_extension.empty_registry ()) () =
   let hub_name = Filename.basename hub_path in
 
+  (* Read lockfile for package provenance (source, rev, integrity) *)
+  let lockfile = Cn_deps.read_lockfile ~hub_path in
+
   (* Package info: walk installed packages for detail *)
   let packages =
     Cn_assets.list_installed_packages hub_path
@@ -161,6 +167,19 @@ let gather ~hub_path ~(shell_config : Cn_shell.shell_config)
         | Some i -> String.sub dir_name (i + 1) (String.length dir_name - i - 1)
         | None -> "unknown"
       in
+      (* Look up lock entry for provenance *)
+      let lock_entry = match lockfile with
+        | None -> None
+        | Some lf ->
+          List.find_opt (fun (d : Cn_deps.locked_dep) ->
+            d.name = pkg_name && d.version = pkg_version) lf.packages
+      in
+      let source = match lock_entry with
+        | Some d -> d.source | None -> "" in
+      let rev = match lock_entry with
+        | Some d -> d.rev | None -> "" in
+      let integrity = match lock_entry with
+        | Some d -> d.integrity | None -> None in
       let doctrine_dir = Cn_ffi.Path.join pkg_path "doctrine" in
       let doctrine_count =
         if Cn_ffi.Fs.exists doctrine_dir then
@@ -180,6 +199,7 @@ let gather ~hub_path ~(shell_config : Cn_shell.shell_config)
       let skills_dir = Cn_ffi.Path.join pkg_path "skills" in
       let skill_count = List.length (Cn_assets.walk_skills skills_dir) in
       { name = pkg_name; version = pkg_version;
+        source; rev; integrity;
         doctrine_count; mindset_count; skill_count })
   in
 
@@ -272,8 +292,14 @@ use the cn_version field below.\n\n";
   else begin
     Buffer.add_char buf '\n';
     List.iter (fun (p : package_info) ->
-      Buffer.add_string buf (Printf.sprintf "  - %s@%s (%d doctrine, %d mindsets, %d skills)\n"
-        p.name p.version p.doctrine_count p.mindset_count p.skill_count)
+      let integrity_str = match p.integrity with
+        | Some h -> Printf.sprintf ", integrity=%s" h
+        | None -> ""
+      in
+      Buffer.add_string buf (Printf.sprintf
+        "  - %s@%s (%d doctrine, %d mindsets, %d skills%s)\n"
+        p.name p.version p.doctrine_count p.mindset_count p.skill_count
+        integrity_str)
     ) c.cognition.packages
   end;
 
@@ -351,13 +377,20 @@ let to_json ~(shell_config : Cn_shell.shell_config) (c : runtime_contract) =
     ];
     "cognition", Cn_json.Object [
       "installed_packages", Cn_json.Array (List.map (fun (p : package_info) ->
-        Cn_json.Object [
+        let base = [
           "name", str p.name;
           "version", str p.version;
+          "source", str p.source;
+          "rev", str p.rev;
           "doctrine_count", Cn_json.Int p.doctrine_count;
           "mindset_count", Cn_json.Int p.mindset_count;
           "skill_count", Cn_json.Int p.skill_count;
-        ]) c.cognition.packages);
+        ] in
+        let base = match p.integrity with
+          | Some h -> base @ ["integrity", str h]
+          | None -> base
+        in
+        Cn_json.Object base) c.cognition.packages);
       "active_overrides", Cn_json.Object [
         "doctrine", Cn_json.Array (List.map str c.cognition.overrides.doctrine);
         "mindsets", Cn_json.Array (List.map str c.cognition.overrides.mindsets);

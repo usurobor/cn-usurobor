@@ -169,6 +169,113 @@ let%expect_test "first-party subdir follows packages/<name> pattern (I3)" =
 
 (* === I5: no lock entry has empty source (negative space) === *)
 
+(* === I6: compute_integrity produces deterministic hash === *)
+
+let%expect_test "compute_integrity produces deterministic hash for same content (I6)" =
+  let dir = mk_temp_dir "cn-integrity" in
+  Fun.protect ~finally:(fun () -> rm_tree dir) (fun () ->
+    touch (Filename.concat dir "doctrine") "CORE.md" "# Core";
+    touch dir "cn.package.json" "{\"name\":\"test\"}";
+    let h1 = Cn_deps.compute_integrity dir in
+    let h2 = Cn_deps.compute_integrity dir in
+    (match h1, h2 with
+     | Some a, Some b ->
+       Printf.printf "deterministic: %b\n" (a = b);
+       Printf.printf "format: %b\n" (String.length a > 4 &&
+         String.sub a 0 4 = "md5:")
+     | _ -> print_endline "ERROR: no hash"));
+  [%expect {|
+    deterministic: true
+    format: true
+  |}]
+
+let%expect_test "compute_integrity differs when content changes (I6)" =
+  let dir = mk_temp_dir "cn-integrity-diff" in
+  Fun.protect ~finally:(fun () -> rm_tree dir) (fun () ->
+    touch dir "file.txt" "version 1";
+    let h1 = Cn_deps.compute_integrity dir in
+    touch dir "file.txt" "version 2";
+    let h2 = Cn_deps.compute_integrity dir in
+    (match h1, h2 with
+     | Some a, Some b -> Printf.printf "different: %b\n" (a <> b)
+     | _ -> print_endline "ERROR: no hash"));
+  [%expect {|
+    different: true
+  |}]
+
+let%expect_test "compute_integrity returns None for missing dir (I6)" =
+  let result = Cn_deps.compute_integrity "/nonexistent/path/xyz" in
+  Printf.printf "none: %b\n" (result = None);
+  [%expect {|
+    none: true
+  |}]
+
+(* === I7: verify_integrity catches tampering === *)
+
+let%expect_test "verify_integrity passes with correct hash (I7)" =
+  let dir = mk_temp_dir "cn-verify-ok" in
+  Fun.protect ~finally:(fun () -> rm_tree dir) (fun () ->
+    touch dir "data.txt" "hello";
+    let hash = Cn_deps.compute_integrity dir in
+    (match Cn_deps.verify_integrity ~pkg_dir:dir ~expected:hash with
+     | Ok () -> print_endline "verified"
+     | Error msg -> Printf.printf "ERROR: %s\n" msg));
+  [%expect {| verified |}]
+
+let%expect_test "verify_integrity fails with wrong hash (I7)" =
+  let dir = mk_temp_dir "cn-verify-bad" in
+  Fun.protect ~finally:(fun () -> rm_tree dir) (fun () ->
+    touch dir "data.txt" "hello";
+    (match Cn_deps.verify_integrity ~pkg_dir:dir
+       ~expected:(Some "md5:0000000000000000000000000000dead") with
+     | Ok () -> print_endline "ERROR: should have failed"
+     | Error msg ->
+       Printf.printf "caught: %b\n" (String.length msg > 0);
+       let has_sub s sub =
+         let slen = String.length s and sublen = String.length sub in
+         let rec check i =
+           if i > slen - sublen then false
+           else if String.sub s i sublen = sub then true
+           else check (i + 1)
+         in sublen <= slen && check 0
+       in
+       Printf.printf "mentions mismatch: %b\n" (has_sub msg "mismatch")));
+  [%expect {|
+    caught: true
+    mentions mismatch: true
+  |}]
+
+let%expect_test "verify_integrity passes when expected is None (I7)" =
+  let dir = mk_temp_dir "cn-verify-none" in
+  Fun.protect ~finally:(fun () -> rm_tree dir) (fun () ->
+    touch dir "data.txt" "hello";
+    (match Cn_deps.verify_integrity ~pkg_dir:dir ~expected:None with
+     | Ok () -> print_endline "skipped (no integrity)"
+     | Error msg -> Printf.printf "ERROR: %s\n" msg));
+  [%expect {| skipped (no integrity) |}]
+
+(* === I8: lockfile_for_manifest generates integrity hashes === *)
+
+let%expect_test "lockfile_for_manifest generates integrity when source available (I8)" =
+  let manifest : Cn_deps.manifest = {
+    schema = "cn.deps.v1";
+    profile = "engineer";
+    packages = [
+      { name = "cnos.core"; version = "3.17.0" };
+    ];
+  } in
+  (match Cn_deps.lockfile_for_manifest manifest with
+   | Ok lock ->
+     lock.packages |> List.iter (fun (dep : Cn_deps.locked_dep) ->
+       let has_integrity = dep.integrity <> None in
+       Printf.printf "%s: has_integrity=%b\n" dep.name has_integrity)
+   | Error msg -> Printf.printf "ERROR: %s\n" msg);
+  [%expect {|
+    cnos.core: has_integrity=true
+  |}]
+
+(* === I5: no lock entry has empty source (negative space) === *)
+
 let%expect_test "no lock entry ever has empty source (I5 negative)" =
   let manifest : Cn_deps.manifest = {
     schema = "cn.deps.v1";
