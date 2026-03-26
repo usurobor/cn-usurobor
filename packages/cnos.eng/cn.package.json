@@ -1,9 +1,9 @@
 {
   "schema": "cn.package.v1",
   "name": "cnos.eng",
-  "version": "3.17.0",
+  "version": "3.20.0",
   "kind": "package",
-  "engines": { "cnos": "3.17.0" },
+  "engines": { "cnos": "3.20.0" },
   "sources": {
     "skills": [
       "eng/architecture-evolution",
