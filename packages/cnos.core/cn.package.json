@@ -30,6 +30,7 @@
       "agent/coherence-test",
       "agent/coherent",
       "agent/communicating",
+      "agent/emoji-language",
       "agent/configure-agent",
       "agent/hello-world",
       "agent/human-interaction",
