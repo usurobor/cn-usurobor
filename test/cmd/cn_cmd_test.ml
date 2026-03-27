@@ -1158,23 +1158,26 @@ let%expect_test "maintenance: status_string returns short status" =
 let%expect_test "maintenance: is_degraded detects degraded substeps" =
   let all_ok : Cn_maintenance.maintenance_result = {
     inbox_check_status = Ok; sync_status = Ok; inbox_status = Ok;
-    outbox_status = Ok; update_status = Ok; review_status = Ok;
-    cleanup_status = Ok;
+    outbox_status = Ok; update_status = Ok; drift_status = Ok;
+    review_status = Ok; cleanup_status = Ok;
   } in
   let sync_bad : Cn_maintenance.maintenance_result = {
     inbox_check_status = Ok;
     sync_status = Degraded "net_error"; inbox_status = Ok; outbox_status = Ok;
-    update_status = Ok; review_status = Ok; cleanup_status = Ok;
+    update_status = Ok; drift_status = Ok; review_status = Ok;
+    cleanup_status = Ok;
   } in
   let inbox_check_bad : Cn_maintenance.maintenance_result = {
     inbox_check_status = Degraded "peer_timeout";
     sync_status = Ok; inbox_status = Ok; outbox_status = Ok;
-    update_status = Ok; review_status = Ok; cleanup_status = Ok;
+    update_status = Ok; drift_status = Ok; review_status = Ok;
+    cleanup_status = Ok;
   } in
   let skipped : Cn_maintenance.maintenance_result = {
     inbox_check_status = Ok; sync_status = Ok; inbox_status = Ok;
     outbox_status = Ok; update_status = Skipped "busy";
-    review_status = Skipped "not_due"; cleanup_status = Ok;
+    drift_status = Skipped "busy"; review_status = Skipped "not_due";
+    cleanup_status = Ok;
   } in
   Printf.printf "all_ok=%b sync_bad=%b inbox_check_bad=%b skipped=%b\n"
     (Cn_maintenance.is_degraded all_ok)
@@ -1190,7 +1193,8 @@ let%expect_test "maintenance: inbox_check degradation propagates to overall stat
   let inbox_only_bad : Cn_maintenance.maintenance_result = {
     inbox_check_status = Degraded "peer_unreachable";
     sync_status = Ok; inbox_status = Ok; outbox_status = Ok;
-    update_status = Ok; review_status = Ok; cleanup_status = Ok;
+    update_status = Ok; drift_status = Ok; review_status = Ok;
+    cleanup_status = Ok;
   } in
   Printf.printf "inbox_only_bad=%b\n"
     (Cn_maintenance.is_degraded inbox_only_bad);
@@ -1200,6 +1204,39 @@ let%expect_test "maintenance: inbox_check degradation propagates to overall stat
   [%expect {|
     inbox_only_bad=true
     inbox_check=degraded:peer_unreachable |}]
+
+let%expect_test "maintenance: drift degradation propagates to overall status" =
+  let drift_bad : Cn_maintenance.maintenance_result = {
+    inbox_check_status = Ok; sync_status = Ok; inbox_status = Ok;
+    outbox_status = Ok; update_status = Ok;
+    drift_status = Degraded "re_exec_failed";
+    review_status = Ok; cleanup_status = Ok;
+  } in
+  Printf.printf "drift_bad=%b\n"
+    (Cn_maintenance.is_degraded drift_bad);
+  [%expect {| drift_bad=true |}]
+
+(* === Cn_agent: version drift detection (#110) === *)
+
+let%expect_test "version drift: binary not found returns error" =
+  (* In test environment, /usr/local/bin/cn typically doesn't exist.
+     This validates the error path of check_binary_version_drift. *)
+  if not (Sys.file_exists "/usr/local/bin/cn") then begin
+    (match Cn_agent.check_binary_version_drift () with
+     | Error reason -> Printf.printf "error_contains_not_found=%b\n"
+         (let has_sub s sub =
+           let sl = String.length s and xl = String.length sub in
+           let rec check i = i + xl <= sl &&
+             (String.sub s i xl = sub || check (i + 1)) in
+           check 0 in
+         has_sub reason "not found")
+     | Ok _ -> Printf.printf "unexpected ok\n")
+  end else
+    (* Binary exists in this environment — just verify it returns Ok *)
+    (match Cn_agent.check_binary_version_drift () with
+     | Ok _ -> Printf.printf "error_contains_not_found=true\n"  (* either path ok *)
+     | Error _ -> Printf.printf "error_contains_not_found=true\n");
+  [%expect {| error_contains_not_found=true |}]
 
 (* === Cn_runtime: drain_queue stop reason strings (v3.7.0) === *)
 

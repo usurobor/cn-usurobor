@@ -15,6 +15,7 @@
     - materialize_inbox_once: queue inbox items for processing
     - flush_outbox_once: send pending outbox messages to peers
     - update_check_once: check for binary updates
+    - version_drift_check_once: detect external binary replacement (#110)
     - review_tick_once: time-gated MCA review (wall-clock via review_interval_sec)
     - cleanup_once: GC stale finalized markers *)
 
@@ -28,6 +29,7 @@ type maintenance_result = {
   inbox_status : substep_status;  (* materialization *)
   outbox_status : substep_status;
   update_status : substep_status;
+  drift_status : substep_status;
   review_status : substep_status;
   cleanup_status : substep_status;
 }
@@ -36,8 +38,8 @@ let is_degraded result =
   let check = function Degraded _ -> true | _ -> false in
   check result.inbox_check_status || check result.sync_status ||
   check result.inbox_status || check result.outbox_status ||
-  check result.update_status || check result.review_status ||
-  check result.cleanup_status
+  check result.update_status || check result.drift_status ||
+  check result.review_status || check result.cleanup_status
 
 let string_of_substep = function
   | Ok -> "ok"
@@ -235,6 +237,63 @@ let update_check_once ~hub_path =
       ~reason_code:"update_check_error" ~reason:msg ();
     Degraded msg
 
+(* === Version-drift detection primitive (#110) === *)
+
+(** Detect if the on-disk binary was replaced externally (e.g. operator ran
+    `cn update` from another terminal, CI replaced the binary). If drift is
+    detected and the daemon is idle, trigger re-exec to pick up the new binary.
+
+    This complements update_check_once: that primitive detects *available*
+    updates and downloads them. This primitive detects *already-applied*
+    updates that the running process missed.
+
+    AC3 safety: only runs under the same idle guard as update_check_once —
+    no input.md, output.md, or agent.lock present.
+    AC4 safety: if re_exec fails, log warning and continue on old binary. *)
+let version_drift_check_once ~hub_path =
+  Cn_trace.gemit ~component:"maintenance" ~layer:Body
+    ~event:"version_drift.check.start" ~severity:Info ~status:Ok_ ();
+  match Cn_agent.check_binary_version_drift () with
+  | Error reason ->
+    (* Can't determine disk version — skip, don't degrade *)
+    Cn_trace.gemit ~component:"maintenance" ~layer:Body
+      ~event:"version_drift.check.ok" ~severity:Info ~status:Skipped
+      ~reason_code:"check_failed" ~reason ();
+    Skipped reason
+  | Ok None ->
+    (* No drift — versions match *)
+    Cn_trace.gemit ~component:"maintenance" ~layer:Body
+      ~event:"version_drift.check.ok" ~severity:Info ~status:Ok_
+      ~reason_code:"no_drift"
+      ~details:["version", Cn_json.String Cn_lib.version] ();
+    Ok
+  | Ok (Some disk_version) ->
+    (* Drift detected — disk binary has different version *)
+    Cn_trace.gemit ~component:"maintenance" ~layer:Body
+      ~event:"version_drift.detected" ~severity:Warn ~status:Degraded
+      ~reason_code:"version_mismatch"
+      ~details:[
+        "running", Cn_json.String Cn_lib.version;
+        "disk", Cn_json.String disk_version;
+      ] ();
+    print_endline (Cn_fmt.warn
+      (Printf.sprintf "Version drift: running %s, disk has %s — re-executing..."
+         Cn_lib.version disk_version));
+    Cn_hub.log_action hub_path "maintenance.version_drift"
+      (Printf.sprintf "running:%s disk:%s" Cn_lib.version disk_version);
+    (* AC4: catch re_exec failure — continue on old binary with warning *)
+    (try Cn_agent.re_exec ()
+     with Unix.Unix_error (err, fn, arg) ->
+       let msg = Printf.sprintf "re_exec failed: %s (%s %s)"
+         (Unix.error_message err) fn arg in
+       Cn_trace.gemit ~component:"maintenance" ~layer:Body
+         ~event:"version_drift.re_exec_failed" ~severity:Warn ~status:Degraded
+         ~reason_code:"re_exec_failed" ~reason:msg ();
+       print_endline (Cn_fmt.warn
+         (Printf.sprintf "Re-exec failed (%s), continuing on %s"
+            (Unix.error_message err) Cn_lib.version));
+       Degraded msg)
+
 (* === MCA review tick primitive === *)
 
 (** Run MCA review tick if time-gated interval has elapsed.
@@ -356,15 +415,22 @@ let maintain_once ~(config : Cn_config.config) ~hub_path ~name =
   let sync_status = sync_once ~hub_path in
   let inbox_status = materialize_inbox_once ~hub_path in
   let outbox_status = flush_outbox_once ~hub_path ~name in
+  let is_idle =
+    let lock_path = Cn_ffi.Path.join hub_path "state/agent.lock" in
+    not (Cn_ffi.Fs.exists (Cn_agent.input_path hub_path))
+    && not (Cn_ffi.Fs.exists (Cn_agent.output_path hub_path))
+    && not (Cn_ffi.Fs.exists lock_path)
+  in
   let update_status =
     (* Only check updates when truly idle *)
-    let lock_path = Cn_ffi.Path.join hub_path "state/agent.lock" in
-    if not (Cn_ffi.Fs.exists (Cn_agent.input_path hub_path))
-       && not (Cn_ffi.Fs.exists (Cn_agent.output_path hub_path))
-       && not (Cn_ffi.Fs.exists lock_path) then
-      update_check_once ~hub_path
-    else
-      Skipped "agent_busy"
+    if is_idle then update_check_once ~hub_path
+    else Skipped "agent_busy"
+  in
+  (* Version-drift check: detect external binary replacement (#110).
+     Runs under same idle guard as update check — AC3 drain safety. *)
+  let drift_status =
+    if is_idle then version_drift_check_once ~hub_path
+    else Skipped "agent_busy"
   in
   let review_status =
     review_tick_once ~hub_path ~name
@@ -373,8 +439,8 @@ let maintain_once ~(config : Cn_config.config) ~hub_path ~name =
   let cleanup_status = cleanup_once ~hub_path in
 
   let result = { inbox_check_status; sync_status; inbox_status;
-                 outbox_status; update_status; review_status;
-                 cleanup_status } in
+                 outbox_status; update_status; drift_status;
+                 review_status; cleanup_status } in
 
   let overall_status = if is_degraded result then "degraded" else "ok" in
   Cn_trace.gemit ~component:"maintenance" ~layer:Body
@@ -386,6 +452,7 @@ let maintain_once ~(config : Cn_config.config) ~hub_path ~name =
       "inbox", Cn_json.String (string_of_substep inbox_status);
       "outbox", Cn_json.String (string_of_substep outbox_status);
       "update", Cn_json.String (string_of_substep update_status);
+      "drift", Cn_json.String (string_of_substep drift_status);
       "review", Cn_json.String (string_of_substep review_status);
       "cleanup", Cn_json.String (string_of_substep cleanup_status);
     ] ();

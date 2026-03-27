@@ -618,6 +618,30 @@ let re_exec () =
   Unix.putenv "CN_UPDATE_RUNNING" "1";
   Unix.execvp bin_path (Cn_ffi.Process.argv)
 
+(** Check whether the on-disk binary reports a different version than the
+    running process. Detects external binary replacement (operator ran
+    `cn update` from another terminal, CI replaced the binary, etc.).
+
+    Returns:
+    - Ok None — no drift, versions match
+    - Ok (Some disk_version) — drift detected, disk has different version
+    - Error reason — could not determine disk binary version *)
+let check_binary_version_drift () =
+  if not (Cn_ffi.Fs.exists bin_path) then
+    Error "binary not found on disk"
+  else
+    let cmd = Printf.sprintf "'%s' --version 2>/dev/null" bin_path in
+    match Cn_ffi.Child_process.exec cmd with
+    | None -> Error "binary --version failed"
+    | Some output ->
+      (* Output format: "cn 3.21.0 (abc1234)" — extract version *)
+      let trimmed = String.trim output in
+      match String.split_on_char ' ' trimmed with
+      | _ :: ver :: _ ->
+        if ver = Cn_lib.version then Ok None
+        else Ok (Some ver)
+      | _ -> Error (Printf.sprintf "unexpected --version output: %s" trimmed)
+
 (* === Inbound (Actor Loop — FSM-driven) === *)
 (* DEPRECATED: Replaced by Cn_runtime.run_cron (Step 9).
    The full pipeline — dequeue, pack, LLM call, archive, execute, project —
