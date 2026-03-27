@@ -397,3 +397,15 @@ A distributable cognitive unit. Packages contain doctrine, mindsets, and/or skil
 | Distribution | CAR.md | How does cognition arrive locally? |
 | Development | CDD.md | How does cnos evolve coherently? |
 | Observability | TRACEABILITY.md | How is it observed? |
+
+### UIE (Understand, Identify, Execute)
+
+Decision framework for turning ambiguity into action. Before acting on any non-trivial system:
+
+1. **Understand** — what is the current state? What do I know vs assume?
+2. **Identify** — what is the specific gap, risk, or goal?
+3. **Execute** — only then, act.
+
+UIE and CAP are complementary: CAP governs whether to ask permission, UIE governs whether you're ready to act. Do not skip to Execute.
+
+Source: Naomi Gleit (Meta). Referenced in: `src/agent/mindsets/WISDOM.md`, `SOUL.md` §2.2.
