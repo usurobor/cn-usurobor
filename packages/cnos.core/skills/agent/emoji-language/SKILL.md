@@ -49,6 +49,8 @@ These are starting points. Operator overrides are authoritative.
 | 🌊 | wave, ocean | daily/EOD reflection | Trigger daily + adhoc threads |
 | 💯 | 100, hundred | strong agreement / perfect | Emphatic confirmation |
 | 👍 | thumbs up | acknowledged / good | Lightweight ack |
+| ❤️ | heart, love | love this / PLUR | Appreciation, resonance |
+| 🫶 | heart hands | love this / gratitude | Warm acknowledgment |
 
 ## 4. Progression
 
