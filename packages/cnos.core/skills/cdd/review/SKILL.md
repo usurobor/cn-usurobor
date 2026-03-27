@@ -212,7 +212,14 @@ Check whether the change creates obligations on code it did not touch.
   - ❌ "The diff fixes the restore path — approve" (didn't check whether the same module still hardcodes a stale package name elsewhere)
   - ✅ "Diff fixes restore_one for AC3; but default_manifest_for_profile in the same module still references cnos.pm which doesn't exist — C finding"
 
-2.2.10. **Architecture leverage check**
+2.2.10. **Contract-implementation confinement check**
+  - When a function's docstring, AC, or PR description claims a restricted input domain (e.g. "bare names only," "positive integers," "known enum values"), verify the implementation actually **rejects** inputs outside that domain.
+  - The function may correctly handle the claimed inputs while silently accepting unclaimed ones — that's a confinement gap, not a correctness bug.
+  - Ask: "What inputs does the contract exclude? Does the code reject them, or just not test them?"
+  - ❌ "resolve_command handles bare names correctly — approve" (didn't check that `../foo` is also accepted)
+  - ✅ "Contract says 'bare command names' but code accepts any relative path including `../foo` — path confinement gap, D finding"
+
+2.2.11. **Architecture leverage check**
   - Ask explicitly whether the diff merely improves the current architecture or misses a higher-leverage boundary move.
   - Useful prompts:
     - Is this repeated pressure being treated as a one-off patch?
@@ -221,7 +228,7 @@ Check whether the change creates obligations on code it did not touch.
   - ❌ "The local fix is correct" (never asked whether the architecture assumption should change)
   - ✅ "This fix is coherent locally, but the repeated capability-growth pressure suggests an extension architecture instead of another built-in"
 
-2.2.11. **Process overhead check**
+2.2.12. **Process overhead check**
   - If the diff adds new docs, artifacts, gates, or procedures, ask:
     - What exact failure does this prevent?
     - Who uses the new artifact?
@@ -340,6 +347,7 @@ Before submitting a review:
 - [ ] Added process burden checked for lighter alternatives / automation boundary
 - [ ] Unchanged siblings checked for new incoherence
 - [ ] For model-correctness changes: full touched module scanned for other assumptions of the same kind
+- [ ] For restricted-domain functions: contract claims verified against actual rejection of out-of-domain inputs
 - [ ] For filters/sanitizers/validators: all input sources enumerated, full pipeline verified on each
 - [ ] File-move cross-refs validated by grep where applicable
 - [ ] System writes traced to system reads
