@@ -47,6 +47,8 @@ These are starting points. Operator overrides are authoritative.
 | 🛑 | stop | stop / don't merge | Block action |
 | 📝 | memo, note | update the issue/doc | Write to the source of truth |
 | 🌊 | wave, ocean | daily/EOD reflection | Trigger daily + adhoc threads |
+| 💯 | 100, hundred | strong agreement / perfect | Emphatic confirmation |
+| 👍 | thumbs up | acknowledged / good | Lightweight ack |
 
 ## 4. Progression
 
