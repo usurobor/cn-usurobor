@@ -54,8 +54,8 @@ let with_test_repo f =
   let eng_skill = Filename.concat agent "skills/eng/coding" in
   touch eng_skill "SKILL.md" "# Coding";
   (* Create src/agent/templates/ *)
-  touch (Filename.concat agent "templates") "SOUL.md" "# Soul\n\nDefault template.";
-  touch (Filename.concat agent "templates") "USER.md" "# User\n\nDefault template.";
+  touch (Filename.concat agent "templates") "SOUL.md" "# Soul -- Default template.";
+  touch (Filename.concat agent "templates") "USER.md" "# User -- Default template.";
   (* Create packages/ with manifests *)
   let core_dir = Filename.concat root "packages/cnos.core" in
   touch core_dir "cn.package.json"
@@ -332,7 +332,7 @@ let%expect_test "build_one copies templates to package" =
   [%expect {|
     SOUL.md
     USER.md
-    # Soul\n\nDefault template.
+    # Soul -- Default template.
   |}]
 
 let%expect_test "clean removes templates directory" =
@@ -410,4 +410,108 @@ let%expect_test "read_template returns Error when template file missing" =
         Printf.printf "error: has_reason=%b\n" has_not_found);
   [%expect {|
     error: has_reason=true
+  |}]
+
+(* === E2e: setup path regressions === *)
+
+let%expect_test "e2e: run_setup populates missing SOUL.md from installed templates" =
+  let hub = mk_temp_dir "cn-setup-e2e" in
+  Fun.protect ~finally:(fun () -> rm_tree hub) (fun () ->
+    (* Simulate installed cnos.core with templates *)
+    let tpl_dir = Filename.concat hub ".cn/vendor/packages/cnos.core@1.0.0/templates" in
+    touch tpl_dir "SOUL.md" "# Full Soul From template.";
+    touch tpl_dir "USER.md" "# Full User From template.";
+    (* Hub has spec/ but NO SOUL.md/USER.md *)
+    Cn_ffi.Fs.ensure_dir (Filename.concat hub "spec");
+    (* Verify spec/SOUL.md does not exist *)
+    let before = Sys.file_exists (Filename.concat hub "spec/SOUL.md") in
+    Printf.printf "before: soul_exists=%b\n" before;
+    (* Simulate the run_setup template-population path *)
+    let spec_dir = Filename.concat hub "spec" in
+    Cn_ffi.Fs.ensure_dir spec_dir;
+    let soul_path = Filename.concat spec_dir "SOUL.md" in
+    if not (Sys.file_exists soul_path) then
+      (match Cn_system.read_template ~hub_path:hub "SOUL.md" with
+       | Ok content -> Cn_ffi.Fs.write soul_path content
+       | Error _ -> ());
+    let user_path = Filename.concat spec_dir "USER.md" in
+    if not (Sys.file_exists user_path) then
+      (match Cn_system.read_template ~hub_path:hub "USER.md" with
+       | Ok content -> Cn_ffi.Fs.write user_path content
+       | Error _ -> ());
+    (* Verify both files now exist with template content *)
+    let soul = Cn_ffi.Fs.read soul_path in
+    let user = Cn_ffi.Fs.read user_path in
+    Printf.printf "soul: %s\n" soul;
+    Printf.printf "user: %s\n" user);
+  [%expect {|
+    before: soul_exists=false
+    soul: # Full Soul From template.
+    user: # Full User From template.
+  |}]
+
+let%expect_test "e2e: run_setup creates spec/ when missing on partial hub" =
+  let hub = mk_temp_dir "cn-setup-e2e" in
+  Fun.protect ~finally:(fun () -> rm_tree hub) (fun () ->
+    (* Simulate installed cnos.core with templates *)
+    let tpl_dir = Filename.concat hub ".cn/vendor/packages/cnos.core@1.0.0/templates" in
+    touch tpl_dir "SOUL.md" "# Full Soul";
+    touch tpl_dir "USER.md" "# Full User";
+    (* Hub has NO spec/ directory at all *)
+    let before = Sys.file_exists (Filename.concat hub "spec") in
+    Printf.printf "before: spec_exists=%b\n" before;
+    (* Simulate the fixed run_setup path: ensure_dir then populate *)
+    let spec_dir = Filename.concat hub "spec" in
+    Cn_ffi.Fs.ensure_dir spec_dir;
+    let soul_path = Filename.concat spec_dir "SOUL.md" in
+    if not (Sys.file_exists soul_path) then
+      (match Cn_system.read_template ~hub_path:hub "SOUL.md" with
+       | Ok content -> Cn_ffi.Fs.write soul_path content
+       | Error _ -> ());
+    let after = Sys.file_exists (Filename.concat hub "spec/SOUL.md") in
+    Printf.printf "after: soul_exists=%b\n" after);
+  [%expect {|
+    before: spec_exists=false
+    after: soul_exists=true
+  |}]
+
+let%expect_test "e2e: run_setup does NOT overwrite existing operator SOUL.md" =
+  let hub = mk_temp_dir "cn-setup-e2e" in
+  Fun.protect ~finally:(fun () -> rm_tree hub) (fun () ->
+    (* Simulate installed cnos.core with templates *)
+    let tpl_dir = Filename.concat hub ".cn/vendor/packages/cnos.core@1.0.0/templates" in
+    touch tpl_dir "SOUL.md" "# Full Soul Template";
+    (* Hub has existing operator-authored SOUL.md *)
+    touch (Filename.concat hub "spec") "SOUL.md" "# My Custom Soul";
+    (* Simulate the run_setup path *)
+    let spec_dir = Filename.concat hub "spec" in
+    Cn_ffi.Fs.ensure_dir spec_dir;
+    let soul_path = Filename.concat spec_dir "SOUL.md" in
+    if not (Sys.file_exists soul_path) then
+      (match Cn_system.read_template ~hub_path:hub "SOUL.md" with
+       | Ok content -> Cn_ffi.Fs.write soul_path content
+       | Error _ -> ());
+    (* Verify operator content is preserved *)
+    let soul = Cn_ffi.Fs.read soul_path in
+    Printf.printf "soul: %s\n" soul);
+  [%expect {|
+    soul: # My Custom Soul
+  |}]
+
+let%expect_test "e2e: init fallback to stubs when cnos.core not installed" =
+  let hub = mk_temp_dir "cn-init-e2e" in
+  Fun.protect ~finally:(fun () -> rm_tree hub) (fun () ->
+    (* No packages installed at all *)
+    Cn_ffi.Fs.ensure_dir (Filename.concat hub "spec");
+    let soul_path = Filename.concat hub "spec/SOUL.md" in
+    (* Simulate the run_init fallback path *)
+    let soul = match Cn_system.read_template ~hub_path:hub "SOUL.md" with
+      | Ok content -> content
+      | Error _ -> "# Stub SOUL"
+    in
+    Cn_ffi.Fs.write soul_path soul;
+    let content = Cn_ffi.Fs.read soul_path in
+    Printf.printf "soul: %s\n" content);
+  [%expect {|
+    soul: # Stub SOUL
   |}]

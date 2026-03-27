@@ -1,4 +1,4 @@
-## v3.24.0 — P0: distribute agent templates via package system (#119)
+## v3.24.0 -- P0: distribute agent templates via package system (#119)
 
 **Issue:** #119
 **Branch:** claude/review-issue-73-7yr26
@@ -7,13 +7,13 @@
 
 ### Gap
 
-`cn init` writes hardcoded 10-line SOUL.md and 8-line USER.md stubs instead of the distributed templates from `src/agent/`. The package system distributes doctrine, mindsets, skills, and extensions — but not agent identity templates. Every new hub starts with a degraded soul.
+`cn init` writes hardcoded 10-line SOUL.md and 8-line USER.md stubs instead of the distributed templates from `src/agent/`. The package system distributes doctrine, mindsets, skills, and extensions -- but not agent identity templates. Every new hub starts with a degraded soul.
 
 ### Coherence contract
 
-- **α target:** Templates as a first-class package source category, same pattern as doctrine/mindsets/skills/extensions
-- **β target:** Build, package, install, and setup paths aligned — template content flows from `src/agent/templates/` through `cn build` → package → install → `cn init`
-- **γ target:** P0 resolved. New hubs get the full distributed SOUL.md and USER.md on first setup
+- **alpha target:** Templates as a first-class package source category, same pattern as doctrine/mindsets/skills/extensions
+- **beta target:** Build, package, install, and setup paths aligned -- template content flows from `src/agent/templates/` through `cn build` -> package -> install -> `cn init`
+- **gamma target:** P0 resolved. New hubs get the full distributed SOUL.md and USER.md on first setup
 
 ### Acceptance criteria
 
@@ -27,10 +27,10 @@
 
 ### Deliverables
 
-- `src/agent/templates/SOUL.md` — template source (moved from `src/agent/SOUL.md`)
-- `src/agent/templates/USER.md` — template source (moved from `src/agent/USER.md`)
-- `packages/cnos.core/cn.package.json` — `templates` source list added
-- `src/cmd/cn_build.ml` — `templates` field in `source_decl`, build/check/clean support
-- `src/cmd/cn_system.ml` — `read_template` helper, `run_init` updated
-- `test/cmd/cn_cmd_test.ml` or `test/cmd/cn_system_test.ml` — template resolution tests
-- `docs/gamma/cdd/3.24.0/SELF-COHERENCE.md` — self-coherence report
+- `src/agent/templates/SOUL.md` -- template source (moved from `src/agent/SOUL.md`)
+- `src/agent/templates/USER.md` -- template source (moved from `src/agent/USER.md`)
+- `packages/cnos.core/cn.package.json` -- `templates` source list added
+- `src/cmd/cn_build.ml` -- `templates` field in `source_decl`, build/check/clean support
+- `src/cmd/cn_system.ml` -- `read_template` helper, `run_init` updated
+- `test/cmd/cn_cmd_test.ml` or `test/cmd/cn_system_test.ml` -- template resolution tests
+- `docs/gamma/cdd/3.24.0/SELF-COHERENCE.md` -- self-coherence report

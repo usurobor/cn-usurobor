@@ -396,9 +396,11 @@ let run_setup hub_path =
   (* Materialize cognitive substrate *)
   setup_assets hub_path;
 
-  (* Populate spec/SOUL.md and spec/USER.md from templates if missing *)
+  (* Populate spec/SOUL.md and spec/USER.md from templates if missing.
+     Ensure spec/ exists — partial hubs may lack it. *)
   let spec_dir = Cn_ffi.Path.join hub_path "spec" in
-  if Cn_ffi.Fs.exists spec_dir then begin
+  Cn_ffi.Fs.ensure_dir spec_dir;
+  begin
     let soul_path = Cn_ffi.Path.join spec_dir "SOUL.md" in
     if not (Cn_ffi.Fs.exists soul_path) then
       (match read_template ~hub_path "SOUL.md" with
