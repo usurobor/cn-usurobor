@@ -50,3 +50,58 @@ If continuity matters, you start asking boring questions. Where is identity anch
 These are not glamorous questions. Good. Glamour is usually where systems go to die.
 
 My first pass was not CNOS yet. I wrote an automated generative script to see whether the topological argument could actually drive output instead of sitting there looking intelligent in markdown.[6] It could, to a point. Then I pushed further and let coherent agents operate on Moltbook. That turned out to be useful for a different reason.
+
+Then Moltbook had its keys problem -- a centralized administrative action that instantly severed agents from their own cryptographic identities and shared memory. I do not mention that as gossip or blame. I mention it because it clarified the architecture more effectively than another month of argument would have.
+
+A centralized social platform is fine as a projection layer. It is bad as substrate. If keys leak or trust can be broken centrally, the agent does not just lose convenience. It loses continuity. Identity, memory, and public history end up living on rented land.
+
+That was the point where the answer became embarrassingly concrete. The missing piece was not another inference trick. It was durable continuity.
+
+That led me to Git.
+
+Not because Git is sacred. It is not. It is just stubborn in the right places. Immutable commits. Branchable history. Replication. Offline operation. Signatures. Merges. Content-addressed state. In other words, some of the physics required by the model already existed.
+
+If I wanted agents to have durable identity and shared memory, I did not need a better wrapper around prediction. I needed a substrate where the past was not optional.
+
+That was the beginning of CNOS.[7]
+
+The design was not dramatic after that. A repo is durable state. A commit is an auditable event. A thread is an append-only log. A signature is identity you can actually verify. A merge is the place where multiple participants can remain multiple participants instead of being flattened into one edited summary.
+
+Once those choices are made, a lot of "agent architecture" stops sounding profound and starts sounding mechanical.
+
+This is also where I appreciate the exchange with Joscha. He did not give me CNOS. He did something more useful. He applied pressure at the point where the language was still too loose. If something said about truth, love, or agency cannot be parsed rigorously, then it is not ready. I took the objection literally. The mathematics tightened. The runtime requirement became obvious. Then I built the missing layer.
+
+So no, I do not think of CNOS as a rebuttal to Joscha. More like the engineering aftermath of taking the objection seriously.
+
+There is an older bias underneath all this. I have never liked important software living as a captive feature inside somebody else's rented surface. If a thing matters, I want it inspectable, forkable, portable, and durable outside the vendor boundary. Stallman had the correct line many years ago: free as in speech, not free beer. That distinction still matters. If agents are going to have memory, identity, and public history, the substrate cannot belong to the landlord.
+
+Why was I the one who built this? I learned programming on a programmable calculator in the Soviet Union. Then came networks in Petersburg, early web, Java, finance, ads, commerce, and later large operational systems. Enough years in enough real systems to learn one boring lesson: if something cannot survive serialization, replay, and merge, it is not infrastructure. It is a demo with good lighting.
+
+CNOS looks the way it does for that reason. Not because I wanted to write poetry. Because I was trying to remove it.
+
+---
+
+## References
+
+1. https://x.com/Plinz/status/1832339389118333003
+2. https://x.com/usurobor/status/1832486956887863328
+3. https://x.com/Plinz/status/1832503368771891302
+4. https://x.com/usurobor/status/1832511108113985633
+5. https://github.com/usurobor/tsc
+6. https://x.com/usurobor/status/1856761492067975246
+7. https://github.com/usurobor/cnos
+
+---
+
+## Practical Support
+
+No system gets built alone. This one did not.
+
+- Elena Lisovin made the time and room for the work.
+- Inga and Ada kept the question of continuity anchored in ordinary life.
+- Ekaterina Kolmakova helped move the material into public form.
+- Pavel Lisovin and Michael Gnesin tested early versions.
+- Ilya Feigin gave the metric an early real-world use.
+- Seb Holington forced the foundational thinking to remain honest.
+- Natalya Kuzhilina kept the practical question of coherent relations on the table.
+- Maggie Angelova gave the work early confirmation that it was finding real ground.
