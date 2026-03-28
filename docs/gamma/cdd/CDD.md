@@ -428,6 +428,17 @@ When a cycle exceeded expected effort — extra review rounds, avoidable mechani
 3. **Skill impact** — which active skill, if any, should have prevented the friction. If a loaded skill failed to prevent a finding it covers, that skill must be patched as an immediate output (§10.1).
 4. **MCA** — system change shipped or proposed. "Won't repeat" without a mechanism is not an MCA.
 
+**Cycle level assessment:** After the friction log and MCA, assess the executed engineering level of the cycle using the diagnostic questions from `docs/gamma/ENGINEERING-LEVELS.md` §6:
+
+- **L5 miss** — mechanical errors reached review (compilation, type errors, broken assertions). Cycle caps at L5.
+- **L6 miss** — cross-surface drift reached review (package sync, authority-sync, doc/code mismatch, test gaps). Cycle caps at L6.
+- **L7 miss** — friction was fixed locally but no system change prevents recurrence (no MCA shipped, no skill patched, no gate added). Cycle caps at L6.
+- **L7 achieved** — cycle shipped an MCA that eliminates or reduces a friction class for future cycles.
+
+The cycle level is the lowest miss. A cycle with L5 misses caps at L5 regardless of whether it also shipped an L7 MCA. Each level must be earned cleanly.
+
+Record the cycle level in the assessment. Over time, cycle levels track whether the development process itself is improving.
+
 **Gate:** If the trigger fires and the cycle iteration section is absent, the cycle cannot close (§10.3).
 
 If the cycle went cleanly (no trigger fires), cycle iteration may be omitted.
