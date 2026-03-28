@@ -1,6 +1,10 @@
 # cnos Changelog
 
-Coherence grades use the [TSC](https://github.com/usurobor/tsc) triadic axes, applied as intuition-level letter grades (A+ to F) per the [CLP self-check](https://github.com/usurobor/tsc-practice/tree/main/clp):
+## Release Coherence Ledger
+
+Each release is scored on two dimensions: **coherence quality** (TSC grades) and **architectural scope** (engineering level).
+
+**TSC grades** use the [TSC](https://github.com/usurobor/tsc) triadic axes, applied as intuition-level letter grades (A+ to F) per the [CLP self-check](https://github.com/usurobor/tsc-practice/tree/main/clp):
 
 - **C_Σ** — Aggregate coherence: `(s_α · s_β · s_γ)^(1/3)`. Do the three axes describe the same system?
 - **α (PATTERN)** — Structural consistency and internal logic. Does repeated sampling yield stable structure?
@@ -8,6 +12,14 @@ Coherence grades use the [TSC](https://github.com/usurobor/tsc) triadic axes, ap
 - **γ (EXIT/PROCESS)** — Evolution stability and procedural explicitness. Does the system change consistently?
 
 These are intuition-level ratings, not outputs from a running TSC engine (formal C_Σ ranges 0–1; ≥0.80 = PASS).
+
+**Engineering level** per [ENGINEERING-LEVELS.md](docs/gamma/ENGINEERING-LEVELS.md), capped by CDD §9.1 cycle execution quality:
+
+- **L5** — Local correctness: fix works, follows patterns, no boundary change
+- **L6** — System-safe: cross-surface coherence, failure modes handled
+- **L7** — System-shaping: architecture boundary moved, class of future work eliminated
+
+See [RELEASE-LEVEL-CLASSIFICATION.md](docs/gamma/essays/RELEASE-LEVEL-CLASSIFICATION.md) for the full historical analysis.
 
 | Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Level | Coherence note                         |
 |---------|-----|-------------|--------------|------------------|-------|----------------------------------------|
