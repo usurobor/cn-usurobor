@@ -1,6 +1,10 @@
 # cnos Changelog
 
-Coherence grades use the [TSC](https://github.com/usurobor/tsc) triadic axes, applied as intuition-level letter grades (A+ to F) per the [CLP self-check](https://github.com/usurobor/tsc-practice/tree/main/clp):
+## Release Coherence Ledger
+
+Each release is scored on two dimensions: **coherence quality** (TSC grades) and **architectural scope** (engineering level).
+
+**TSC grades** use the [TSC](https://github.com/usurobor/tsc) triadic axes, applied as intuition-level letter grades (A+ to F) per the [CLP self-check](https://github.com/usurobor/tsc-practice/tree/main/clp):
 
 - **C_Σ** — Aggregate coherence: `(s_α · s_β · s_γ)^(1/3)`. Do the three axes describe the same system?
 - **α (PATTERN)** — Structural consistency and internal logic. Does repeated sampling yield stable structure?
@@ -9,68 +13,77 @@ Coherence grades use the [TSC](https://github.com/usurobor/tsc) triadic axes, ap
 
 These are intuition-level ratings, not outputs from a running TSC engine (formal C_Σ ranges 0–1; ≥0.80 = PASS).
 
-| Version | C_Σ | α (PATTERN) | β (RELATION) | γ (EXIT/PROCESS) | Level | Coherence note                         |
-|---------|-----|-------------|--------------|------------------|-------|----------------------------------------|
-| 3.24.0  | A   | A           | A            | A-               | L7    | Template distribution via package system (#119): templates as 6th content class in package system, `read_template` with Result-typed 3-case resolution (Ok/not-installed/not-found), `run_init` reads from installed cnos.core after `setup_assets`, `run_setup` populates missing spec/ from templates without overwriting operator content. PACKAGE-SYSTEM.md architecture doc (content class taxonomy, pipeline, explicit-vs-generic rationale). 11 new tests (7 build + 4 e2e regression). Unicode hygiene added to review skill/checklist. 1 review round, 1 mechanical finding (stale cross-ref). All 5 ACs met. |
-| 3.23.0  | A-  | A-          | A-           | A                | L7    | Pre-push gate (#117): `scripts/pre-push.sh` runs dune build, dune runtest, cn build --check, VERSION parity against origin/main. CDD §9.1 cycle iteration with structured template, triggers, cycle level (L5/L6/L7), closure gate, skill patching as immediate output. ENGINEERING-LEVELS.md cross-referenced. #64 P0 closed (all 3 root causes verified). SOUL §2.2 MCA-first on error correction. CDD §4.4 "load means read the file." ORIGIN.md genesis narrative. Squash merge enabled. |
-| v3.22.0 | A-  | A-          | A            | A-               | L6    | Daemon version-drift detection (#110): `version_drift_check_once` as 8th maintenance primitive, `check_binary_version_drift` detects external binary replacement via `--version` comparison, triggers `re_exec` with shared `is_idle` drain guard. 1 review round, 0% mechanical ratio. All 4 #110 ACs met. |
-| v3.20.0 | B+  | A-          | A-           | B                | L6    | Runtime Extensions e2e (#73): host command resolution maps bare manifest names to installed paths, returns Result with existence/permission/traversal validation. Extension dispatch pipeline validated end-to-end with real cnos.net.http host binary. 3 review rounds, 0% mechanical ratio. All 7 #73 ACs met. MCI freeze lifted (8 releases). |
-| v3.19.0 | A-  | A           | A-           | B+               | L5    | Package System Substrate AC5-AC7 (#113): integrity hash (md5 tree hash) in lock generation + restore verification, doctor validates full desired→resolved→installed chain (metadata, integrity, stale installs), Runtime Contract package truth expanded with source/rev/integrity. 1 review round, 33% mechanical ratio. #113 AC3-AC7 shipped across v3.18.0+v3.19.0. |
-| v3.18.0 | B+  | A-          | B+           | B-               | L5    | Package System Substrate AC3+AC4 (#113): path-consistent restore (copy_tree replaces 5-category hardcoded list), honest third-party rejection (lockfile_for_manifest returns Result), stale cnos.pm cleanup, package manifests synced with skill reorg. 3 review rounds, 57% mechanical ratio, 1 superseded PR. Partial: AC5-AC8 deferred. |
-| v3.17.0 | B+  | A           | B+           | C+               | L5    | Runtime Extensions Phase 1 (#73): open op registry replaces closed built-in vocabulary, subprocess host protocol, manifest-driven discovery, extension lifecycle (discovered→compatible→enabled/disabled/rejected), Runtime Contract integration (cognition + body), traceability (extension.* events), doctor health checks, first reference extension cnos.net.http. 5 review rounds, 53% mechanical ratio. Partial: build integration, policy intersection, host binary (Phase 2). TSC corrected by post-release assessment. |
-| v3.16.2 | A   | A           | A            | A-               | L6    | Two-membrane projection integrity (#106): presentation membrane hardened (shared xml_prefixes, block-level + inline stripping, matched-tag close), self-knowledge membrane (anti-probe in Runtime Contract). 5 review rounds, 12 D-level findings resolved. Configuration mode spec + templates shipped. Review skill converged (§2.1.3 mechanical scan, §2.2.1a input enumeration). |
-| v3.16.1 | A   | A           | A            | A                | L6    | Daemon retry limit + dead-letter (#28): 4xx fail-fast, exponential backoff (1s/2s/4s), offset advancement after dead-letter. Sustainability surface added. |
-| v3.16.0 | A   | A           | A            | A-               | L5    | End-to-end self-update (#37): same-version patch detection, ARM release matrix, bare version tag trigger, target_commitish SHA validation. CDD OVERVIEW.md. AGILE-PROCESS.md deleted. 3 review rounds (target ≤2), 63% mechanical ratio — no build step before review. |
-| v3.15.2 | A   | A           | A            | A                | L6    | Empty Telegram filter (#29), CDD v3.15.0 canonical rewrite (authority split resolved), review skill hardened (4 new checks from PR #103 comparison). |
-| v3.15.1 | A   | A           | A            | A-               | L6    | Fix #22 review blockers: re-exec after binary update (no stale in-process version), stamp-versions.sh derives manifests from VERSION, cn build --check + cn release gate version consistency, unified truth read in update_runtime. Process: reviewed before merge, CI green. |
-| v3.15.0 | A-  | A           | A-           | B+               | L5    | Version coherence (#22): VERSION→dune→cn_version.ml chain is sound (α A). β regressed: I1 CI check failed at merge, claim/reality gap on AC3+AC10. γ regressed: 0 review rounds (self-merged ~26min), merged with red CI, 3 fix commits post-implementation — first release after §11.11 review metrics bypassed review entirely. Manifests not yet stamped from VERSION (validate-only, not derive). Update path uses stale in-process version. Core architecture correct; contract partially closed. |
-| v3.14.7 | A   | A           | A            | A                | L7    | Reduce review round-trips (#97): branch pre-flight validation (§1.5), scope enumeration (§4.0), review quality metrics (§11.11), process debt integration (§11.12), encoding lag type column (§11.6), cross-ref validation in review skill (§2.2.5), finding taxonomy (§5.1). Post-release template updated with review quality section. |
-| v3.14.6 | A   | A           | A            | A                | L7    | Retroactive epoch assessments (#85): v3.12.0–v3.12.2 and v3.13.0–v3.14.5. CDD §9.11 release gate: previous release must have assessment before tagging. |
-| v3.14.5 | A   | A           | A            | A                | L5    | Organize gamma docs (#91): 6 gamma root files moved into 3 bundles (cdd, rules, essays). Bundle READMEs, frozen snapshots, 13+ cross-refs updated. Completes docs reorg trilogy: alpha→beta→gamma. |
-| v3.14.4 | A   | A           | A            | A                | L5    | Organize beta docs (#89): 7 beta root files moved into 4 thematic bundles (architecture, governance, lineage, schema). Bundle READMEs, frozen snapshots, cross-refs updated. CDD §5.1 freeze semantics note. |
-| v3.14.3 | A   | A           | A            | A                | L5    | Organize alpha docs (#86): all 18 root-level specs moved into 8 thematic bundles (doctrine, protocol, agent-runtime, runtime-extensions, cognitive-substrate, cli, security, ctb). Bundle READMEs created. Cross-references updated across 20+ files. Freeze policy updated: path-only corrections allowed. |
-| v3.14.2 | A   | A           | A            | A                | L5    | Alpha bundle migration (#81): legacy design docs and plans moved into CDD bundle structure. Version snapshot dirs with manifests. Navigation surfaces updated. |
-| v3.14.1 | A   | A           | A            | A                | L6    | CDD post-release tightening (#78): encoding lag table mandatory, concrete next-MCA commitment, MCI freeze triggers. First operator troubleshooting guide. LINEAGE.md taxonomy cleanup. |
-| v3.14.0 | A   | A           | A-           | A                | L7    | Runtime Contract v2 (#62): vertical self-model (identity, cognition, body, medium). Zone classification for all paths. All architecture docs updated. Doctor structural validation. |
-| v3.13.0 | A-  | A-          | A-           | A-               | L7    | Docs governance (#75): CDD pipeline with per-step artifacts, self-coherence report format, single cnos version lineage, feature bundles, frozen snapshots, bootstrap-first rule. CDD skill synced. |
-| v3.12.1 | A+  | A+          | A+           | A+               | L6    | Daemon boot log declares config sources (#61): version, hub, profile, model, secrets provenance, peers. Type-safe secret_source. |
-| v3.12.0 | A+  | A+          | A+           | A+               | L7    | Wake-up self-model contract (#56): Runtime Contract replaces overloaded capabilities block. CDD/review skill hardening (#57): issue AC gates, multi-format parity. |
-| v3.11.0 | A+  | A+          | A+           | A                | L6    | N-pass merge + misplaced ops correction (#51). Structured output reverted (needs rework). |
-| v3.10.0 | A+  | A+          | A+           | A+               | L7    | N-pass bind loop (#50): effect pass no longer terminal, generic pass architecture, processing indicators. |
-| v3.9.3  | A+  | A+          | A+           | A+               | L6    | Anti-confabulation (#49): explicit op result signals, denial reason surfacing, doctrine. |
-| v3.9.2  | A+  | A+          | A+           | A+               | L6    | Block Pass A projection when Pass B fails (#47). CURIOSITY mindset. MIC/MICA/CDD verbs in glossary. |
-| v3.9.1  | A+  | A+          | A+           | A+               | L5    | Fix Cn_shell.execute never called (#46), sync DUR skills to packages, add git_stage to protocol contract. |
-| v3.9.0  | A+  | A+          | A+           | A+               | L7    | Two-pass wiring (#41), COGNITIVE-SUBSTRATE spec, DUR skill contract, reflect + adhoc-thread + review skills cohered. |
-| v3.8.0  | A+  | A+          | A+           | A+               | L6    | Syscall surface coherence: fs_glob, git_stage, fs_read chunking, observe exclusion symmetry, CLI injection hardening. Review-driven. |
-| v3.7.3  | A   | A+          | A+           | A                | L6    | Agent output discipline: ops-in-body detection, peer awareness, coordination op examples, conditional MCA review. |
-| v3.7.2  | A   | A+          | A+           | A-               | L6    | Trace gap closure + boot drain fix + skill hardening. 5/7 trace gaps closed; peer-only heartbeat and outbox structure remain. |
-| v3.7.0  | A   | A+          | A+           | A-               | L7    | Scheduler unification: one loop, two schedulers (oneshot/daemon), 7-primitive maintenance engine. Boot drain gap found post-merge. |
-| v3.6.0  | A+  | A+          | A+           | A+               | L7    | Output Plane Separation: sink-safe rendering, typed op output, two-pass execution, CDD skill. |
-| v3.5.1  | A+  | A+          | A+           | A+               | L7    | TRACEABILITY: structured event stream, state projections (ready/runtime/coherence), boot sequence telemetry, CDD design doc. |
-| v3.5.0  | A+  | A+          | A+           | A+               | L7    | Unified package model + CAA + FOUNDATIONS. Everything cognitive is a package. Doctrinal capstone. Architecture spec. |
-| v3.4.0  | A+  | A+          | A+           | A+               | L7    | CAR: three-layer cognitive asset resolver + package system. Fresh hubs wake with full substrate. Git-native deps, lockfile, hub-local overrides. |
-| v3.3.1  | A+  | A+          | A+           | A+               | L6    | Agent instruction alignment: canonical ops examples in capabilities block, stale path fixes, output discipline. Prevents hallucinated tool syntaxes. |
-| v3.3.0  | A+  | A+          | A+           | A+               | L7    | CN Shell: typed ops, two-pass execution, path sandbox, crash recovery. Pure-pipe preserved — ops are post-call, governed, receipted. Zero new runtime deps. |
-| v3.2.0  | A+  | A+          | A+           | A+               | L7    | Structured LLM schema: system blocks with cache control + real multi-turn messages. Mindsets in context packer. Role-weighted skill scoring. Setup installer design. |
-| v3.0.0  | A+  | A+          | A+           | A+               | L7    | Native agent runtime. OpenClaw removed. Pure-pipe: LLM = `string → string`, cn = all effects. Zero runtime deps. |
-| v2.4.0  | A+  | A+          | A+           | A+               | L7    | Typed FSM protocol. All 4 state machines (sender, receiver, thread, actor) enforced at compile time. |
-| v2.3.x  | A+  | A+          | A+           | A                | L7    | Native OCaml binary, 10-module refactor. No more Node.js dependency. |
-| v2.2.0  | A+  | A+          | A+           | A+               | L7    | First hash consensus. Actor model complete: 5-min cron, input/output protocol, bidirectional messaging, verified sync. |
-| v2.1.x  | A+  | A+          | A+           | A                | L6    | Actor model iterations: cn sync/process/queue, auto-commit, wake mechanism fixes. |
-| v2.0.0  | A+  | A+          | A+           | A+               | L7    | Everything through cn. CLI v0.1, UX-CLI spec, SYSTEM.md, cn_actions library. Paradigm shift: agent purity enforced. |
-| v1.8.0  | A+  | A+          | A            | A+               | L7    | Agent purity (agent=brain, cn=body). CN Protocol, skills/eng/, ship/audit/adhoc-thread skills, AGILE-PROCESS, THREADS-UNIFIED. |
-| v1.7.0  | A   | A           | A            | A                | L7    | Actor model + inbox tool. GTD triage, RCA process, docs/design/ reorg. Erlang-inspired: your repo = your mailbox. |
-| v1.6.0  | A−  | A−          | A−           | A−               | L7    | Agent coordination: threads/, peer, peer-sync, HANDSHAKE.md, CA loops. First git-CN handshake. |
-| v1.5.0  | B+  | A−          | A−           | B+               | L6    | Robust CLI: rerunnable setup, safe attach, better preflights. |
-| v1.4.0  | B+  | A−          | A−           | B+               | L6    | Repo-quality hardening (CLI tests, input safety, docs aligned). |
-| v1.3.2  | B+  | A−          | B+           | B+               | L5    | CLI preflights git+gh; same hub/symlink design. |
-| v1.3.1  | B+  | A−          | B+           | B+               | L5    | Internal tweaks between tags.          |
-| v1.3.0  | B+  | A−          | B+           | B+               | L6    | CLI creates hub + symlinks; self-cohere wires. |
-| v1.2.1  | B+  | A−          | B+           | B+               | L5    | CLI cue + onboarding tweaks.           |
-| v1.2.0  | B+  | A−          | B+           | B+               | L5    | Audit + restructure; mindsets as dimensions. |
-| v1.1.0  | B   | B+          | B            | B                | L5    | Template layout; git-CN naming; CLI added.   |
-| v1.0.0  | B−  | B−          | C+           | B−               | L5    | First public template; git-CN hub + self-cohere. |
-| v0.1.0  | C−  | C           | C−           | D+               | L4    | Moltbook-coupled prototype with SQLite. |
+**Engineering level** per [ENGINEERING-LEVELS.md](docs/gamma/ENGINEERING-LEVELS.md), capped by CDD §9.1 cycle execution quality:
+
+- **L4** — Pre-architecture: working prototype, no stable boundaries yet
+- **L5** — Local correctness: fix works, follows patterns, no boundary change
+- **L6** — System-safe: cross-surface coherence, failure modes handled
+- **L7** — System-shaping: architecture boundary moved, class of future work eliminated
+
+See [RELEASE-LEVEL-CLASSIFICATION.md](docs/gamma/essays/RELEASE-LEVEL-CLASSIFICATION.md) for the full historical analysis.
+
+| Version | C_Σ | α | β | γ | Level | Coherence note |
+|---------|-----|---|---|---|-------|----------------|
+| 3.24.0 | A | A | A | A- | L7 | Template distribution via package system (#119): templates as 6th content class in package system, `read_template` with Result-typed 3-case resolution (Ok/not-installed/not-found), `run_init` reads from installed cnos.core after `setup_assets`, `run_setup` populates missing spec/ from templates without overwriting operator content. PACKAGE-SYSTEM.md architecture doc (content class taxonomy, pipeline, explicit-vs-generic rationale). 11 new tests (7 build + 4 e2e regression). Unicode hygiene added to review skill/checklist. 1 review round, 1 mechanical finding (stale cross-ref). All 5 ACs met. |
+| 3.23.0 | A- | A- | A- | A | L7 | Pre-push gate (#117): `scripts/pre-push.sh` runs dune build, dune runtest, cn build --check, VERSION parity against origin/main. CDD §9.1 cycle iteration with structured template, triggers, cycle level (L5/L6/L7), closure gate, skill patching as immediate output. ENGINEERING-LEVELS.md cross-referenced. #64 P0 closed (all 3 root causes verified). SOUL §2.2 MCA-first on error correction. CDD §4.4 "load means read the file." ORIGIN.md genesis narrative. Squash merge enabled. |
+| v3.22.0 | A- | A- | A | A- | L6 | Daemon version-drift detection (#110): `version_drift_check_once` as 8th maintenance primitive, `check_binary_version_drift` detects external binary replacement via `--version` comparison, triggers `re_exec` with shared `is_idle` drain guard. 1 review round, 0% mechanical ratio. All 4 #110 ACs met. |
+| v3.20.0 | B+ | A- | A- | B | L6 | Runtime Extensions e2e (#73): host command resolution maps bare manifest names to installed paths, returns Result with existence/permission/traversal validation. Extension dispatch pipeline validated end-to-end with real cnos.net.http host binary. 3 review rounds, 0% mechanical ratio. All 7 #73 ACs met. MCI freeze lifted (8 releases). |
+| v3.19.0 | A- | A | A- | B+ | L5 | Package System Substrate AC5-AC7 (#113): integrity hash (md5 tree hash) in lock generation + restore verification, doctor validates full desired→resolved→installed chain (metadata, integrity, stale installs), Runtime Contract package truth expanded with source/rev/integrity. 1 review round, 33% mechanical ratio. #113 AC3-AC7 shipped across v3.18.0+v3.19.0. |
+| v3.18.0 | B+ | A- | B+ | B- | L5 | Package System Substrate AC3+AC4 (#113): path-consistent restore (copy_tree replaces 5-category hardcoded list), honest third-party rejection (lockfile_for_manifest returns Result), stale cnos.pm cleanup, package manifests synced with skill reorg. 3 review rounds, 57% mechanical ratio, 1 superseded PR. Partial: AC5-AC8 deferred. |
+| v3.17.0 | B+ | A | B+ | C+ | L5 | Runtime Extensions Phase 1 (#73): open op registry replaces closed built-in vocabulary, subprocess host protocol, manifest-driven discovery, extension lifecycle (discovered→compatible→enabled/disabled/rejected), Runtime Contract integration (cognition + body), traceability (extension.* events), doctor health checks, first reference extension cnos.net.http. 5 review rounds, 53% mechanical ratio. Partial: build integration, policy intersection, host binary (Phase 2). TSC corrected by post-release assessment. |
+| v3.16.2 | A | A | A | A- | L6 | Two-membrane projection integrity (#106): presentation membrane hardened (shared xml_prefixes, block-level + inline stripping, matched-tag close), self-knowledge membrane (anti-probe in Runtime Contract). 5 review rounds, 12 D-level findings resolved. Configuration mode spec + templates shipped. Review skill converged (§2.1.3 mechanical scan, §2.2.1a input enumeration). |
+| v3.16.1 | A | A | A | A | L6 | Daemon retry limit + dead-letter (#28): 4xx fail-fast, exponential backoff (1s/2s/4s), offset advancement after dead-letter. Sustainability surface added. |
+| v3.16.0 | A | A | A | A- | L5 | End-to-end self-update (#37): same-version patch detection, ARM release matrix, bare version tag trigger, target_commitish SHA validation. CDD OVERVIEW.md. AGILE-PROCESS.md deleted. 3 review rounds (target ≤2), 63% mechanical ratio — no build step before review. |
+| v3.15.2 | A | A | A | A | L6 | Empty Telegram filter (#29), CDD v3.15.0 canonical rewrite (authority split resolved), review skill hardened (4 new checks from PR #103 comparison). |
+| v3.15.1 | A | A | A | A- | L6 | Fix #22 review blockers: re-exec after binary update (no stale in-process version), stamp-versions.sh derives manifests from VERSION, cn build --check + cn release gate version consistency, unified truth read in update_runtime. Process: reviewed before merge, CI green. |
+| v3.15.0 | A- | A | A- | B+ | L5 | Version coherence (#22): VERSION→dune→cn_version.ml chain is sound (α A). β regressed: I1 CI check failed at merge, claim/reality gap on AC3+AC10. γ regressed: 0 review rounds (self-merged ~26min), merged with red CI, 3 fix commits post-implementation — first release after §11.11 review metrics bypassed review entirely. Manifests not yet stamped from VERSION (validate-only, not derive). Update path uses stale in-process version. Core architecture correct; contract partially closed. |
+| v3.14.7 | A | A | A | A | L7 | Reduce review round-trips (#97): branch pre-flight validation (§1.5), scope enumeration (§4.0), review quality metrics (§11.11), process debt integration (§11.12), encoding lag type column (§11.6), cross-ref validation in review skill (§2.2.5), finding taxonomy (§5.1). Post-release template updated with review quality section. |
+| v3.14.6 | A | A | A | A | L7 | Retroactive epoch assessments (#85): v3.12.0–v3.12.2 and v3.13.0–v3.14.5. CDD §9.11 release gate: previous release must have assessment before tagging. |
+| v3.14.5 | A | A | A | A | L5 | Organize gamma docs (#91): 6 gamma root files moved into 3 bundles (cdd, rules, essays). Bundle READMEs, frozen snapshots, 13+ cross-refs updated. Completes docs reorg trilogy: alpha→beta→gamma. |
+| v3.14.4 | A | A | A | A | L5 | Organize beta docs (#89): 7 beta root files moved into 4 thematic bundles (architecture, governance, lineage, schema). Bundle READMEs, frozen snapshots, cross-refs updated. CDD §5.1 freeze semantics note. |
+| v3.14.3 | A | A | A | A | L5 | Organize alpha docs (#86): all 18 root-level specs moved into 8 thematic bundles (doctrine, protocol, agent-runtime, runtime-extensions, cognitive-substrate, cli, security, ctb). Bundle READMEs created. Cross-references updated across 20+ files. Freeze policy updated: path-only corrections allowed. |
+| v3.14.2 | A | A | A | A | L5 | Alpha bundle migration (#81): legacy design docs and plans moved into CDD bundle structure. Version snapshot dirs with manifests. Navigation surfaces updated. |
+| v3.14.1 | A | A | A | A | L6 | CDD post-release tightening (#78): encoding lag table mandatory, concrete next-MCA commitment, MCI freeze triggers. First operator troubleshooting guide. LINEAGE.md taxonomy cleanup. |
+| v3.14.0 | A | A | A- | A | L7 | Runtime Contract v2 (#62): vertical self-model (identity, cognition, body, medium). Zone classification for all paths. All architecture docs updated. Doctor structural validation. |
+| v3.13.0 | A- | A- | A- | A- | L7 | Docs governance (#75): CDD pipeline with per-step artifacts, self-coherence report format, single cnos version lineage, feature bundles, frozen snapshots, bootstrap-first rule. CDD skill synced. |
+| v3.12.1 | A+ | A+ | A+ | A+ | L6 | Daemon boot log declares config sources (#61): version, hub, profile, model, secrets provenance, peers. Type-safe secret_source. |
+| v3.12.0 | A+ | A+ | A+ | A+ | L7 | Wake-up self-model contract (#56): Runtime Contract replaces overloaded capabilities block. CDD/review skill hardening (#57): issue AC gates, multi-format parity. |
+| v3.11.0 | A+ | A+ | A+ | A | L6 | N-pass merge + misplaced ops correction (#51). Structured output reverted (needs rework). |
+| v3.10.0 | A+ | A+ | A+ | A+ | L7 | N-pass bind loop (#50): effect pass no longer terminal, generic pass architecture, processing indicators. |
+| v3.9.3 | A+ | A+ | A+ | A+ | L6 | Anti-confabulation (#49): explicit op result signals, denial reason surfacing, doctrine. |
+| v3.9.2 | A+ | A+ | A+ | A+ | L6 | Block Pass A projection when Pass B fails (#47). CURIOSITY mindset. MIC/MICA/CDD verbs in glossary. |
+| v3.9.1 | A+ | A+ | A+ | A+ | L5 | Fix Cn_shell.execute never called (#46), sync DUR skills to packages, add git_stage to protocol contract. |
+| v3.9.0 | A+ | A+ | A+ | A+ | L7 | Two-pass wiring (#41), COGNITIVE-SUBSTRATE spec, DUR skill contract, reflect + adhoc-thread + review skills cohered. |
+| v3.8.0 | A+ | A+ | A+ | A+ | L6 | Syscall surface coherence: fs_glob, git_stage, fs_read chunking, observe exclusion symmetry, CLI injection hardening. Review-driven. |
+| v3.7.3 | A | A+ | A+ | A | L6 | Agent output discipline: ops-in-body detection, peer awareness, coordination op examples, conditional MCA review. |
+| v3.7.2 | A | A+ | A+ | A- | L6 | Trace gap closure + boot drain fix + skill hardening. 5/7 trace gaps closed; peer-only heartbeat and outbox structure remain. |
+| v3.7.0 | A | A+ | A+ | A- | L7 | Scheduler unification: one loop, two schedulers (oneshot/daemon), 7-primitive maintenance engine. Boot drain gap found post-merge. |
+| v3.6.0 | A+ | A+ | A+ | A+ | L7 | Output Plane Separation: sink-safe rendering, typed op output, two-pass execution, CDD skill. |
+| v3.5.1 | A+ | A+ | A+ | A+ | L7 | TRACEABILITY: structured event stream, state projections (ready/runtime/coherence), boot sequence telemetry, CDD design doc. |
+| v3.5.0 | A+ | A+ | A+ | A+ | L7 | Unified package model + CAA + FOUNDATIONS. Everything cognitive is a package. Doctrinal capstone. Architecture spec. |
+| v3.4.0 | A+ | A+ | A+ | A+ | L7 | CAR: three-layer cognitive asset resolver + package system. Fresh hubs wake with full substrate. Git-native deps, lockfile, hub-local overrides. |
+| v3.3.1 | A+ | A+ | A+ | A+ | L6 | Agent instruction alignment: canonical ops examples in capabilities block, stale path fixes, output discipline. Prevents hallucinated tool syntaxes. |
+| v3.3.0 | A+ | A+ | A+ | A+ | L7 | CN Shell: typed ops, two-pass execution, path sandbox, crash recovery. Pure-pipe preserved — ops are post-call, governed, receipted. Zero new runtime deps. |
+| v3.2.0 | A+ | A+ | A+ | A+ | L7 | Structured LLM schema: system blocks with cache control + real multi-turn messages. Mindsets in context packer. Role-weighted skill scoring. Setup installer design. |
+| v3.0.0 | A+ | A+ | A+ | A+ | L7 | Native agent runtime. OpenClaw removed. Pure-pipe: LLM = `string → string`, cn = all effects. Zero runtime deps. |
+| v2.4.0 | A+ | A+ | A+ | A+ | L7 | Typed FSM protocol. All 4 state machines (sender, receiver, thread, actor) enforced at compile time. |
+| v2.3.x | A+ | A+ | A+ | A | L7 | Native OCaml binary, 10-module refactor. No more Node.js dependency. |
+| v2.2.0 | A+ | A+ | A+ | A+ | L7 | First hash consensus. Actor model complete: 5-min cron, input/output protocol, bidirectional messaging, verified sync. |
+| v2.1.x | A+ | A+ | A+ | A | L6 | Actor model iterations: cn sync/process/queue, auto-commit, wake mechanism fixes. |
+| v2.0.0 | A+ | A+ | A+ | A+ | L7 | Everything through cn. CLI v0.1, UX-CLI spec, SYSTEM.md, cn_actions library. Paradigm shift: agent purity enforced. |
+| v1.8.0 | A+ | A+ | A | A+ | L7 | Agent purity (agent=brain, cn=body). CN Protocol, skills/eng/, ship/audit/adhoc-thread skills, AGILE-PROCESS, THREADS-UNIFIED. |
+| v1.7.0 | A | A | A | A | L7 | Actor model + inbox tool. GTD triage, RCA process, docs/design/ reorg. Erlang-inspired: your repo = your mailbox. |
+| v1.6.0 | A− | A− | A− | A− | L7 | Agent coordination: threads/, peer, peer-sync, HANDSHAKE.md, CA loops. First git-CN handshake. |
+| v1.5.0 | B+ | A− | A− | B+ | L6 | Robust CLI: rerunnable setup, safe attach, better preflights. |
+| v1.4.0 | B+ | A− | A− | B+ | L6 | Repo-quality hardening (CLI tests, input safety, docs aligned). |
+| v1.3.2 | B+ | A− | B+ | B+ | L5 | CLI preflights git+gh; same hub/symlink design. |
+| v1.3.1 | B+ | A− | B+ | B+ | L5 | Internal tweaks between tags. |
+| v1.3.0 | B+ | A− | B+ | B+ | L6 | CLI creates hub + symlinks; self-cohere wires. |
+| v1.2.1 | B+ | A− | B+ | B+ | L5 | CLI cue + onboarding tweaks. |
+| v1.2.0 | B+ | A− | B+ | B+ | L5 | Audit + restructure; mindsets as dimensions. |
+| v1.1.0 | B | B+ | B | B | L5 | Template layout; git-CN naming; CLI added. |
+| v1.0.0 | B− | B− | C+ | B− | L5 | First public template; git-CN hub + self-cohere. |
+| v0.1.0 | C− | C | C− | D+ | L4 | Moltbook-coupled prototype with SQLite. |
 
 ---
 
