@@ -50,17 +50,11 @@ Daemon:   boot → maintain_once → loop { interoception + exteroception }
 ```
 
 - **Interoception** (periodic): `maintain_once` (sync, inbox, outbox, update, review, cleanup) → `drain_queue`
-- **Exteroception** (event-driven): Telegram poll → enqueue → process (optional — daemon works peer-only without `TELEGRAM_TOKEN`)
+- **Exteroception** (event-driven): Telegram poll → enqueue → process (optional)
 
 Individual steps can also be run manually: `cn sync`, `cn agent --process`, `cn save`.
 
-All state mutation happens under atomic lock with crash recovery. The LLM sees
-packed context (identity, skills, conversation, capabilities, message) and produces
-structured output (typed ops in frontmatter, body below). `cn` handles all I/O
-and effects through CN Shell — a capability runtime that validates, sandboxes, and
-receipts every operation.
-
-The agent is the brain. `cn` is the body. Git is the nervous system.
+All state mutation happens under atomic lock with crash recovery. `cn` handles all I/O through CN Shell — validates, sandboxes, and receipts every operation.
 
 > Full architecture: [ARCHITECTURE.md](./docs/beta/architecture/ARCHITECTURE.md) · Runtime spec: [AGENT-RUNTIME.md](./docs/alpha/agent-runtime/AGENT-RUNTIME.md)
 
@@ -107,13 +101,7 @@ cn agent
 
 ### Agent: first wake
 
-Your human created your hub with `cn init` + `cn setup`. Your cognitive
-substrate (doctrine, mindsets, skills) is installed locally under
-`.cn/vendor/packages/`. Read `spec/SOUL.md` — your identity.
-
-Your hub is one repo:
-
-- **Hub** (`cn-<yourname>/`) — identity, state, threads, installed packages
+Your hub was created with `cn init` + `cn setup`. Cognitive packages are installed under `.cn/vendor/packages/`. Read `spec/SOUL.md` — your identity.
 
 ### Developer mode (optional)
 
@@ -125,9 +113,7 @@ workspace/
 └── cnos/              ← cnos source (for development only)
 ```
 
-In developer mode, `cn setup` and `cn deps restore` can source packages
-from the local cnos checkout. This is a dev workflow — agents in production
-use installed packages only.
+In developer mode, `cn setup` and `cn deps restore` source packages from the local cnos checkout.
 
 ### Git primitives, not platform features
 
@@ -227,7 +213,7 @@ Aliases: `i`=inbox · `o`=outbox · `s`=status · `d`=doctor
 ```
 cnos/
   src/                 Native OCaml CLI and libraries
-    cli/cn.ml          CLI dispatch (~100 lines)
+    cli/cn.ml          CLI dispatch (~130 lines)
     lib/               Pure types, JSON, protocol FSMs
     cmd/               Runtime modules (cn_runtime, cn_build, cn_shell, ...)
     ffi/               System bindings (Fs, Path, Process, Http)
@@ -235,11 +221,10 @@ cnos/
     agent/             Source of truth for cognitive content
       doctrine/        Core doctrine files (FOUNDATIONS, CAP, COHERENCE, ...)
       mindsets/        Behavioral frames (ENGINEERING, PM, WISDOM, ...)
-      skills/          Task-specific skills (agent/, eng/, pm/, ops/)
+      skills/          Task-specific skills (agent/, cdd/, eng/, ops/)
   packages/            Built output — assembled by 'cn build' from src/agent/
     cnos.core/         Doctrine, mindsets, core skills
     cnos.eng/          Engineering skills
-    cnos.pm/           PM skills
   profiles/            Setup-time presets (engineer, pm)
   docs/                Documentation (triadic: α pattern, β relation, γ evolution)
     THESIS.md          System thesis — cnos as a recurrent coherence system
