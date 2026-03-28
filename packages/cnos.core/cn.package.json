@@ -11,14 +11,15 @@
       "*"
     ],
     "mindsets": [
+      "CURIOSITY.md",
       "ENGINEERING.md",
-      "PM.md",
+      "FUNCTIONAL.md",
+      "MEMES.md",
       "OPERATIONS.md",
       "PERSONALITY.md",
-      "MEMES.md",
+      "PM.md",
       "THINKING.md",
-      "WISDOM.md",
-      "FUNCTIONAL.md"
+      "WISDOM.md"
     ],
     "skills": [
       "agent/agent-ops",
@@ -45,7 +46,6 @@
       "cdd/post-release",
       "cdd/release",
       "cdd/review",
-      "eng/writing",
       "ops/adhoc-thread",
       "ops/inbox",
       "ops/peer",

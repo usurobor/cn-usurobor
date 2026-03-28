@@ -3,7 +3,9 @@
   "name": "cnos.eng",
   "version": "3.25.0",
   "kind": "package",
-  "engines": { "cnos": "3.25.0" },
+  "engines": {
+    "cnos": "3.25.0"
+  },
   "sources": {
     "skills": [
       "eng/architecture-evolution",
@@ -19,7 +21,8 @@
       "eng/skill",
       "eng/testing",
       "eng/tool-writing",
-      "eng/ux-cli"
+      "eng/ux-cli",
+      "eng/writing"
     ]
   }
 }
