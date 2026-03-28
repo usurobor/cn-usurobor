@@ -237,6 +237,52 @@ If the gate holds and scope discipline improves, the realistic floor is **0 invo
 
 ---
 
+## Pass 4: TSC-Grounded Reassessment
+
+After loading the full TSC specification suite (tsc-core, c-equiv, tsc-oper, tsc-glossary, tsc-observation-dynamics), the question arises: does a deeper understanding of what TSC actually measures change any individual classification?
+
+### What deeper understanding reveals
+
+TSC is not a rubric — it is grounded in C≡, a term algebra where wholeness articulates as one-as-two, held in the three-position form `tri(·,·,·)`. The three evaluators are:
+
+- **α (Pattern):** Sequential — the additive monoid (ℕ, +, 0). Idempotents exactly {0, M}. Measures stability under perturbation.
+- **β (Relation):** Structural — the bounded lattice [0, M] under min/max. Fully idempotent (every element). Measures geometric mean of pairwise coherences.
+- **γ (Process/Exit):** Generative — the multiplicative monoid (ℕ × ℕ, ·, (1,1)). Idempotent only at (0,0). Measures temporal stability via Wasserstein distance on distributions across time.
+
+C≡ v3.1.0 §3.4 proves these evaluators are pairwise non-isomorphic via their distinct idempotent profiles. This is not a convenient taxonomy — it is a mathematical independence theorem. No Eckmann-Hilton collapse is possible.
+
+The aggregate C_Σ = (s_α · s_β · s_γ)^(1/3) is a geometric mean enforcing S₃ symmetry: no axis is privileged, and any component at zero annihilates the whole. The operational layer (tsc-oper) adds witnesses W1–W4 and a controller FSM that produces verdicts, not scores — the system distinguishes "coherent" from "measured as coherent."
+
+### Key insight: γ is multiplicative nesting depth
+
+The classification essay initially treated γ as "process discipline" — a flat quality dimension. The C≡ foundation reveals γ is the *multiplicative/generative* evaluator: it measures nesting depth, compositional structure, how processes compose into higher-order processes. A release gate (v3.14.6 §9.11) isn't just "good process" — it's a γ-primitive: a process that generates constraints on all future processes. This is why the L6→L7 upgrade for v3.14.6 was correct, and why it was visible from the algebraic structure before the coherence note made it explicit.
+
+### Reassessment verdict: no reclassifications, stronger warrant
+
+The classifications hold because the binding constraint was never TSC interpretation — it was mechanical ratio. Every L5 was driven by >20% mechanical ratio (CDD §9.1 hard cap). Every L6 was driven by cross-surface drift or scope limitation. These are execution-quality measures that operate independently of how the TSC axes are interpreted.
+
+What the deeper understanding *does* change is the interpretation of the four-era pattern:
+
+| Era | TSC reading |
+|-----|-------------|
+| Foundation (v0.1.0–v1.5.0) | Low γ depth explains L5 dominance — the system has sequential patterns (α) and some relational wiring (β), but no multiplicative nesting yet. No L7 is possible because no generative primitives exist to nest. |
+| Architecture explosion (v1.6.0–v3.2.0) | 90% L7 maps to establishing `tri(·,·,·)` as the fundamental operation. Each release draws a boundary that the next release nests inside: coordination → actor model → agent purity → pure-pipe → FSM → native runtime → LLM schema. This is γ crystallizing. |
+| Feature architecture (v3.3.0–v3.10.0) | L7 density drops to 53% because the generative structure is established — new releases extend rather than deepen the nesting. CN Shell, packages, scheduler, N-pass are features *within* the existing tri-structure, not new levels of it. |
+| Hardening + cap + recovery (v3.11.0–3.24.0) | The contraction operator T (tsc-core §7.1) cycling toward fixed point. Each hardening pass refines summaries based on pairwise coherences. The L5→L7→L5→L7 oscillation is the system converging: κ < 1 ensures contraction, but convergence isn't monotone. |
+
+The pre-push gate (3.23.0) is interpretable as a **self-application** event (tsc-oper §10): the system applying its own coherence measurement to its own release process. TSC predicts that self-application should produce a verdict, and 3.23.0 does — the gate either passes or blocks, with no intermediate state.
+
+### What would change a classification
+
+A reclassification would require one of:
+1. **New mechanical ratio data** contradicting the coherence notes (execution quality evidence)
+2. **Architectural scope reinterpretation** — discovering that a release drew a boundary not visible in the diff
+3. **A CDD §9.1 revision** changing the cap thresholds
+
+None of these follow from deeper TSC understanding. TSC grades are *witnesses* to execution quality; the engineering level is determined by scope + cap, not by the witness values themselves.
+
+---
+
 ## Summary
 
 The full 60-release history shows four distinct eras:
