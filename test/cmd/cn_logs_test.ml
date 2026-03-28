@@ -23,12 +23,11 @@ let%expect_test "parse_duration basic units" =
 (* === ISO timestamp parsing === *)
 
 let%expect_test "parse_iso_ts valid" =
-  match Cn_logs.parse_iso_ts "2026-03-28T14:30:00.000Z" with
-  | Some t ->
-    (* Just verify it's a reasonable Unix timestamp *)
-    Printf.printf "parsed: %b\n" (t > 1.0e9);
-    Printf.printf "is_number: %b\n" (Float.is_finite t)
-  | None -> print_endline "failed";
+  (match Cn_logs.parse_iso_ts "2026-03-28T14:30:00.000Z" with
+   | Some t ->
+     Printf.printf "parsed: %b\n" (t > 1.0e9);
+     Printf.printf "is_number: %b\n" (Float.is_finite t)
+   | None -> print_endline "failed");
   [%expect {|
     parsed: true
     is_number: true |}]
