@@ -472,7 +472,7 @@ let update_ready_body hub_path ~fsm_state ~lock_held ~current_cycle =
     [chat_id_opt] is used to build a processing indicator for Telegram. *)
 let rec finalize ~(config : Cn_config.config) ~hub_path ~name
       ~trigger_id ~from ~inbound_message ~output_content
-      ?packed ?chat_id_opt () =
+      ?packed ?chat_id_opt ?invocation_t0 ?pass_count () =
   Cn_trace.gemit ~component:"runtime" ~layer:Body
     ~event:"finalize.start" ~severity:Info ~status:Ok_
     ~trigger_id
@@ -511,6 +511,7 @@ let rec finalize ~(config : Cn_config.config) ~hub_path ~name
     (* Recovery path: ops already done, project initial output *)
     finalize_project ~config ~hub_path ~trigger_id ~from ~inbound_message
       ~final_parsed:parsed ~initial_coord_ops ~name
+      ?invocation_t0 ?pass_count ()
   end else begin
     Cn_trace.gemit ~component:"runtime" ~layer:Body
       ~event:"effects.execute.start" ~severity:Info ~status:Ok_
@@ -658,6 +659,7 @@ let rec finalize ~(config : Cn_config.config) ~hub_path ~name
         ~trigger_id ();
       finalize_project ~config ~hub_path ~trigger_id ~from ~inbound_message
         ~final_parsed:parsed ~initial_coord_ops ~name
+        ?invocation_t0 ?pass_count ()
 
     | Ok (Some result) ->
       Cn_trace.gemit ~component:"runtime" ~layer:Body
@@ -710,13 +712,15 @@ let rec finalize ~(config : Cn_config.config) ~hub_path ~name
         ~trigger_id ();
       finalize_project ~config ~hub_path ~trigger_id ~from ~inbound_message
         ~final_parsed ~initial_coord_ops ~name
+        ?invocation_t0 ?pass_count ()
   end
 
 (** Project final output, append conversation, cleanup.
     Extracted from finalize to avoid duplication between the recovery
     path (ops_already_done) and the normal execution path. *)
 and finalize_project ~(config : Cn_config.config) ~hub_path ~trigger_id
-      ~from ~inbound_message ~final_parsed ~initial_coord_ops ~name =
+      ~from ~inbound_message ~final_parsed ~initial_coord_ops ~name
+      ?(invocation_t0 : float option) ?(pass_count : int option) () =
 
   (* 4. Project to Telegram if from Telegram.
         Uses Cn_projection.project_reply for crash-recovery idempotency. *)
@@ -826,10 +830,14 @@ and finalize_project ~(config : Cn_config.config) ~hub_path ~trigger_id
     ~lock_held:true ~current_cycle:None;
 
   (* Unified log: invocation end + message sent *)
+  let duration_ms = match invocation_t0 with
+    | Some t0 -> Some (int_of_float ((Unix.gettimeofday () -. t0) *. 1000.0))
+    | None -> None in
   Cn_ulog.write hub_path (Cn_ulog.make_entry
     ~kind:Invocation_end ~severity:Info
     ~msg_id:trigger_id
-    ~ops:(List.length initial_coord_ops) ());
+    ~ops:(List.length initial_coord_ops)
+    ?passes:pass_count ?duration_ms ());
   let response_preview = match assistant_text with
     | s when String.length s > 0 -> Some s | _ -> None in
   Cn_ulog.write hub_path (Cn_ulog.make_entry
@@ -1057,11 +1065,12 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
               ~details:["model", Cn_json.String config.model] ();
 
             (* Unified log: invocation start *)
+            let invocation_t0 = Unix.gettimeofday () in
             Cn_ulog.write hub_path (Cn_ulog.make_entry
               ~kind:Invocation_start ~severity:Info
               ~msg_id:trigger_id ~pass:1 ());
 
-            let llm_t0 = Unix.gettimeofday () in
+            let llm_t0 = invocation_t0 in
             match Cn_llm.call ~api_key:config.anthropic_key
                     ~model:config.model ~max_tokens:config.max_tokens
                     ~system:packed.system ~messages:packed.messages with
@@ -1098,6 +1107,7 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
                 finalize ~config ~hub_path ~name
                   ~trigger_id ~from ~inbound_message
                   ~output_content:response.content ~packed
+                  ~invocation_t0 ~pass_count:1
                   ?chat_id_opt ()
       end
     with

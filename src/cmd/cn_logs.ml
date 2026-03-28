@@ -41,7 +41,11 @@ let parse_duration s =
 (* === ISO timestamp parsing === *)
 
 let parse_iso_ts s =
-  (* Parse YYYY-MM-DDTHH:MM:SS.000Z to Unix timestamp *)
+  (* Parse YYYY-MM-DDTHH:MM:SS.000Z to Unix timestamp.
+     OCaml lacks timegm; we use mktime (local) and subtract the
+     system's UTC offset. This is correct for the daemon's timezone
+     but may be off by up to 1 hour during DST transitions.
+     Acceptable for --since filtering where precision is ~minutes. *)
   if String.length s < 19 then None
   else
     try
@@ -56,15 +60,14 @@ let parse_iso_ts s =
         tm_mday = day; tm_mon = month - 1; tm_year = year - 1900;
         tm_wday = 0; tm_yday = 0; tm_isdst = false
       } in
+      (* mktime interprets as local time; compute UTC offset from epoch *)
       let (t, _) = Unix.mktime tm in
-      (* Adjust for UTC — mktime assumes local time *)
-      let local_offset =
-        let utc = Unix.gmtime t in
-        let local = Unix.localtime t in
-        float_of_int ((local.tm_hour - utc.tm_hour) * 3600 +
-                       (local.tm_min - utc.tm_min) * 60)
-      in
-      Some (t -. local_offset)
+      let utc_of_epoch = Unix.gmtime 0.0 in
+      let local_of_epoch = Unix.localtime 0.0 in
+      let utc_offset =
+        float_of_int ((local_of_epoch.tm_hour - utc_of_epoch.tm_hour) * 3600 +
+                       (local_of_epoch.tm_min - utc_of_epoch.tm_min) * 60) in
+      Some (t -. utc_offset)
     with _ -> None
 
 (* === Filtering === *)

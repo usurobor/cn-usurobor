@@ -47,11 +47,11 @@ let%expect_test "parse_iso_ts invalid" =
 
 let%expect_test "parse_log_args defaults" =
   let opts = Cn_logs.parse_log_args [] in
-  Printf.printf "since: %b\n" (opts.since = None);
-  Printf.printf "msg_id: %b\n" (opts.msg_id = None);
+  Printf.printf "since: %b\n" (opts.since <> None);
+  Printf.printf "msg_id: %b\n" (opts.msg_id <> None);
   Printf.printf "errors_only: %b\n" opts.errors_only;
   Printf.printf "json_mode: %b\n" opts.json_mode;
-  Printf.printf "kind_filter: %b\n" (opts.kind_filter = None);
+  Printf.printf "kind_filter: %b\n" (opts.kind_filter <> None);
   Printf.printf "max_entries: %d\n" opts.max_entries;
   [%expect {|
     since: false
@@ -79,7 +79,7 @@ let%expect_test "parse_log_args with flags" =
 
 let%expect_test "parse_log_args since" =
   let opts = Cn_logs.parse_log_args ["--since"; "2h"] in
-  Printf.printf "has_since: %b\n" (opts.since <> None);
+  Printf.printf "has_since: %b\n" (Option.is_some opts.since);
   [%expect {| has_since: true |}]
 
 (* === Filtering === *)
