@@ -315,6 +315,12 @@ cn-<name>/
 | [MIGRATION.md](./docs/beta/guides/MIGRATION.md) | Migrate from older versions |
 | [WRITE-A-SKILL.md](./docs/beta/guides/WRITE-A-SKILL.md) | Write a new skill |
 
+| Process & History | |
+|-------------------|---|
+| [CHANGELOG.md](./CHANGELOG.md) | Release Coherence Ledger — TSC grades + engineering levels per release |
+| [CDD.md](./docs/gamma/cdd/CDD.md) | Coherence-Driven Development — the canonical development algorithm |
+| [ENGINEERING-LEVELS.md](./docs/gamma/ENGINEERING-LEVELS.md) | L5/L6/L7 rubric — local correctness → system-safe → system-shaping |
+
 ---
 
 ## Contributing
