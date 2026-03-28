@@ -20,6 +20,7 @@ type source_decl = {
   mindsets : string list;
   skills : string list;
   extensions : string list;
+  templates : string list;
 }
 
 type package_manifest = {
@@ -63,6 +64,7 @@ let parse_sources json =
         mindsets = parse_string_array src_json "mindsets";
         skills = parse_string_array src_json "skills";
         extensions = parse_string_array src_json "extensions";
+        templates = parse_string_array src_json "templates";
       }
 
 let parse_package_json path =
@@ -129,7 +131,7 @@ let copy_source ~agent_root ~pkg_dir ~category entry =
             Cn_ffi.Fs.write dst (Cn_ffi.Fs.read src))
       with _ -> ())
     end
-  end else if category = "mindsets" then begin
+  end else if category = "mindsets" || category = "templates" then begin
     (* Individual file copy *)
     let src = Cn_ffi.Path.join src_category_dir entry in
     if Cn_ffi.Fs.exists src then begin
@@ -151,7 +153,7 @@ let clean_package_dir pkg_dir =
   List.iter (fun sub ->
     let path = Cn_ffi.Path.join pkg_dir sub in
     if Cn_ffi.Fs.exists path then rm_tree path
-  ) ["doctrine"; "mindsets"; "skills"; "extensions"]
+  ) ["doctrine"; "mindsets"; "skills"; "extensions"; "templates"]
 
 (* === Build === *)
 
@@ -187,6 +189,9 @@ let build_one ~agent_root ~pkgs_dir (dir_name, pkg) =
   (* Copy extensions *)
   pkg.sources.extensions |> List.iter (fun entry ->
     copy_source ~agent_root ~pkg_dir ~category:"extensions" entry);
+  (* Copy templates *)
+  pkg.sources.templates |> List.iter (fun entry ->
+    copy_source ~agent_root ~pkg_dir ~category:"templates" entry);
   pkg
 
 (** Compare file content between two paths. Returns list of mismatches. *)
@@ -242,6 +247,8 @@ let check_one ~agent_root ~pkgs_dir (dir_name, pkg) =
     copy_source ~agent_root ~pkg_dir:tmp_dir ~category:"skills" entry);
   pkg.sources.extensions |> List.iter (fun entry ->
     copy_source ~agent_root ~pkg_dir:tmp_dir ~category:"extensions" entry);
+  pkg.sources.templates |> List.iter (fun entry ->
+    copy_source ~agent_root ~pkg_dir:tmp_dir ~category:"templates" entry);
   (* Compare *)
   let mismatches =
     List.concat_map (fun cat ->
@@ -250,7 +257,7 @@ let check_one ~agent_root ~pkgs_dir (dir_name, pkg) =
       if Cn_ffi.Fs.exists tmp_cat || Cn_ffi.Fs.exists pkg_cat then
         diff_tree tmp_cat pkg_cat cat
       else []
-    ) ["doctrine"; "mindsets"; "skills"; "extensions"]
+    ) ["doctrine"; "mindsets"; "skills"; "extensions"; "templates"]
   in
   rm_tree tmp_dir;
   (pkg.name, mismatches)
@@ -309,11 +316,14 @@ let run_build () =
         let n_mindsets = List.length pkg.sources.mindsets in
         let n_skills = List.length pkg.sources.skills in
         let n_extensions = List.length pkg.sources.extensions in
+        let n_templates = List.length pkg.sources.templates in
         let ext_str = if n_extensions > 0
           then Printf.sprintf ", %d extensions" n_extensions else "" in
+        let tpl_str = if n_templates > 0
+          then Printf.sprintf ", %d templates" n_templates else "" in
         print_endline (Cn_fmt.ok (Printf.sprintf
-          "%s@%s: %d doctrine, %d mindsets, %d skills%s"
-          pkg.name pkg.version n_doctrine n_mindsets n_skills ext_str)));
+          "%s@%s: %d doctrine, %d mindsets, %d skills%s%s"
+          pkg.name pkg.version n_doctrine n_mindsets n_skills ext_str tpl_str)));
       print_endline (Cn_fmt.ok (Printf.sprintf
         "Built %d packages" (List.length packages)))
 

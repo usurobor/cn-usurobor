@@ -406,7 +406,7 @@ Templates are sourced from the `cnos` template repo (at these paths):
 - `src/agent/mindsets/ENGINEERING.md` — engineer principles
 - `src/agent/mindsets/PM.md` — PM principles
 - `src/agent/mindsets/PERSONALITY.md` — identity structure (name, vibe, mission)
-- `src/agent/SOUL.md` — baseline Conduct section (shared by all roles)
+- `src/agent/templates/SOUL.md` — baseline Conduct section (shared by all roles)
 
 At build time, `cn setup` reads these files from the template repo
 (or uses embedded copies if the template repo is not cloned locally).

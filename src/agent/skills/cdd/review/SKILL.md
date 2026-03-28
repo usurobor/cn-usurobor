@@ -141,10 +141,14 @@ Read the diff for internal coherence.
     - Verify branch name matches project convention (e.g. CDD branch format)
     - If tests are in the diff, verify expect-test outputs are plausible (exact strings, whitespace)
     - Check new type definitions for overlapping field names within the same module — each shared name creates a disambiguation burden at every access site (see OCaml skill §3.1)
+    - **Unicode hygiene**: scan added lines for hidden/bidi control characters (U+200B..U+200F, U+202A..U+202E, U+2066..U+2069, U+FEFF, Unicode category Cf). These are blocker-worthy. Visible Unicode (emoji, em dashes, arrows, Greek letters) in human-facing content files (templates, docs) is allowed and not a finding. Do not conflate GitHub's "hidden characters" warning with the presence of visible Unicode — the warning targets invisible control characters, not content.
   - These are deterministic — two reviewers running the same grep must find the same results.
   - ❌ Read the diff for logic only
   - ✅ "L74: `<invoke>` appears twice in `xml_prefixes` — duplicate entry"
   - ✅ "`extension_op.kind` and `backend.kind` share field name in same module — rename to `op_kind`/`backend_kind`"
+  - ❌ "File contains Unicode" (without naming specific hidden/bidi codepoints)
+  - ✅ "L42 contains U+202E (RIGHT-TO-LEFT OVERRIDE) — hidden bidi control, D finding"
+  - ✅ "SOUL.md contains U+2705 (CHECK MARK) — visible content emoji, not a finding"
 
 ---
 

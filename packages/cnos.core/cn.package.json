@@ -1,10 +1,10 @@
 {
   "schema": "cn.package.v1",
   "name": "cnos.core",
-  "version": "3.23.0",
+  "version": "3.24.0",
   "kind": "package",
   "engines": {
-    "cnos": "3.23.0"
+    "cnos": "3.24.0"
   },
   "sources": {
     "doctrine": [
@@ -53,6 +53,10 @@
     ],
     "extensions": [
       "cnos.net.http"
+    ],
+    "templates": [
+      "SOUL.md",
+      "USER.md"
     ]
   }
 }

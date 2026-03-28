@@ -22,6 +22,7 @@ Pre-submit and review checklist. Both author and reviewer must verify.
 - [ ] **P2.6 Tests.** Tested?
 - [ ] **P2.7 History.** Clean commits?
 - [ ] **P2.8 Builds clean.** `dune build` succeeds with no warnings-as-errors. Check: variant constructors in bare let-bindings need type annotations (labeled args infer, tuples/lets don't).
+- [ ] **P2.9 Unicode hygiene.** Visible Unicode (emoji, em dashes, arrows) is allowed in human-facing content (templates, docs). Hidden or bidirectional control characters (U+200B..U+200F, U+202A..U+202E, U+2066..U+2069, U+FEFF, category Cf) are disallowed unless explicitly justified. GitHub's "hidden characters" warning targets the latter, not the former — do not block on visible Unicode in content files.
 
 ---
 

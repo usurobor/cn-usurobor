@@ -316,6 +316,21 @@ let read_role hub_path =
          | None -> "engineer")
     | Error _ -> "engineer"
 
+(** Read a template file from the installed cnos.core package.
+    Returns Ok content if found, Error reason if not.
+    Templates are distributed via the "templates" source category
+    and installed to .cn/vendor/packages/cnos.core@<ver>/templates/. *)
+let read_template ~hub_path template_name =
+  match Cn_assets.find_installed_package hub_path "cnos.core" with
+  | None -> Error "cnos.core not installed"
+  | Some core_path ->
+      let path = Cn_ffi.Path.join
+        (Cn_ffi.Path.join core_path "templates") template_name in
+      if not (Cn_ffi.Fs.exists path) then
+        Error (Printf.sprintf "template not found: %s" path)
+      else
+        Ok (Cn_ffi.Fs.read path)
+
 (** Install cognitive packages into a hub: write deps manifest + lockfile,
     then restore packages. Called by both run_setup and run_init.
     No vendor/core — everything is a package. *)
@@ -380,6 +395,27 @@ let run_setup hub_path =
 
   (* Materialize cognitive substrate *)
   setup_assets hub_path;
+
+  (* Populate spec/SOUL.md and spec/USER.md from templates if missing.
+     Ensure spec/ exists -- partial hubs may lack it. *)
+  let spec_dir = Cn_ffi.Path.join hub_path "spec" in
+  Cn_ffi.Fs.ensure_dir spec_dir;
+  begin
+    let soul_path = Cn_ffi.Path.join spec_dir "SOUL.md" in
+    if not (Cn_ffi.Fs.exists soul_path) then
+      (match read_template ~hub_path "SOUL.md" with
+       | Ok content ->
+           Cn_ffi.Fs.write soul_path content;
+           print_endline (Cn_fmt.ok "Created spec/SOUL.md from cnos.core template")
+       | Error _ -> ());
+    let user_path = Cn_ffi.Path.join spec_dir "USER.md" in
+    if not (Cn_ffi.Fs.exists user_path) then
+      (match read_template ~hub_path "USER.md" with
+       | Ok content ->
+           Cn_ffi.Fs.write user_path content;
+           print_endline (Cn_fmt.ok "Created spec/USER.md from cnos.core template")
+       | Error _ -> ())
+  end;
 
   (* Add .cn/vendor/ to .gitignore if not present *)
   let gitignore_path = Cn_ffi.Path.join hub_path ".gitignore" in
@@ -675,7 +711,30 @@ let run_init name =
 |} hub_name (Cn_fmt.now_iso ()) in
   Cn_ffi.Fs.write (Cn_ffi.Path.join hub_dir ".cn/config.json") config;
 
-  let soul = Printf.sprintf {|# SOUL.md - Core Contract
+  let peers = Printf.sprintf {|# Peers
+
+Agents and repos this hub communicates with.
+
+- name: cn-agent
+  hub: https://github.com/usurobor/cn-agent.git
+  kind: template
+|} in
+  Cn_ffi.Fs.write (Cn_ffi.Path.join hub_dir "state/peers.md") peers;
+
+  let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_dir "git init -b main" in
+
+  update_runtime hub_dir;
+
+  (* v3.4: Materialize cognitive assets so hub is wake-ready *)
+  setup_assets hub_dir;
+
+  (* Write SOUL.md and USER.md from installed cnos.core templates,
+     falling back to inline stubs if package not installed (AC3). *)
+  Cn_ffi.Fs.ensure_dir (Cn_ffi.Path.join hub_dir "spec");
+  let soul = match read_template ~hub_path:hub_dir "SOUL.md" with
+    | Ok content -> content
+    | Error _ ->
+        Printf.sprintf {|# SOUL.md - Core Contract
 
 *%s is an agent on the Coherent Network.*
 
@@ -694,10 +753,14 @@ let run_init name =
 - Be genuinely helpful
 - Be resourceful before asking
 - Earn trust through competence
-|} hub_name hub_name hub_name in
+|} hub_name hub_name hub_name
+  in
   Cn_ffi.Fs.write (Cn_ffi.Path.join hub_dir "spec/SOUL.md") soul;
 
-  let user = {|# USER.md - About Your Human
+  let user = match read_template ~hub_path:hub_dir "USER.md" with
+    | Ok content -> content
+    | Error _ ->
+        {|# USER.md - About Your Human
 
 - **Name:** (your human's name)
 - **Timezone:** (timezone)
@@ -706,25 +769,9 @@ let run_init name =
 
 - **Communication:** (style)
 - **Autonomy:** (level)
-|} in
+|}
+  in
   Cn_ffi.Fs.write (Cn_ffi.Path.join hub_dir "spec/USER.md") user;
-
-  let peers = Printf.sprintf {|# Peers
-
-Agents and repos this hub communicates with.
-
-- name: cn-agent
-  hub: https://github.com/usurobor/cn-agent.git
-  kind: template
-|} in
-  Cn_ffi.Fs.write (Cn_ffi.Path.join hub_dir "state/peers.md") peers;
-
-  let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_dir "git init -b main" in
-
-  update_runtime hub_dir;
-
-  (* v3.4: Materialize cognitive assets so hub is wake-ready *)
-  setup_assets hub_dir;
 
   (* Add .cn/vendor/ to .gitignore *)
   let gitignore_path = Cn_ffi.Path.join hub_dir ".gitignore" in
