@@ -188,7 +188,7 @@ let run_logs hub_path args =
         Cn_ulog.read_recent hub_path ~max_entries:opts.max_entries
       | _ ->
         (* Read all files, apply filters *)
-        let files = Cn_ulog.list_unified_files hub_path in
+        let files = List.rev (Cn_ulog.list_unified_files hub_path) in
         List.concat_map (fun f ->
           let path = Cn_ffi.Path.join dir f in
           Cn_ulog.read_file path

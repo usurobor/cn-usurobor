@@ -183,8 +183,8 @@ let list_unified_files hub_path =
 let read_recent hub_path ~max_entries =
   let files = list_unified_files hub_path in
   let rec collect acc remaining = function
-    | [] -> List.rev acc
-    | _ when remaining <= 0 -> List.rev acc
+    | [] -> acc
+    | _ when remaining <= 0 -> acc
     | f :: rest ->
       let path = Cn_ffi.Path.join (unified_dir hub_path) f in
       let entries = read_file path in
@@ -193,6 +193,7 @@ let read_recent hub_path ~max_entries =
         collect (List.rev_append entries acc) (remaining - n) rest
       else
         let tail = List.filteri (fun i _ -> i >= n - remaining) entries in
-        List.rev_append tail acc |> List.rev
+        List.rev_append tail acc
   in
-  collect [] max_entries files
+  let entries = collect [] max_entries files in
+  List.sort (fun a b -> String.compare a.ts b.ts) entries
