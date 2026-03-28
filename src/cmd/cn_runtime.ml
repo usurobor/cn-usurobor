@@ -1602,6 +1602,9 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
             Cn_trace.gemit ~component:"telegram" ~layer:Sensor
               ~event:"daemon.poll.error" ~severity:Warn ~status:Error_status
               ~reason_code:"poll_error" ();
+            Cn_ulog.write hub_path (Cn_ulog.make_entry
+              ~kind:Error ~severity:Error_
+              ~error:(Printf.sprintf "Telegram poll error: %s" msg) ());
             print_endline (Cn_fmt.warn (Printf.sprintf "Poll error: %s" msg))
         | Ok messages ->
             (* Sort ascending by update_id for monotonic offset advancement *)
@@ -1618,17 +1621,26 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                       ~event:"daemon.offset.advanced" ~severity:Info ~status:Ok_
                       ~reason_code:"rejected_user"
                       ~details:["update_id", Cn_json.Int msg.update_id] ();
+                    (* Unified log: rejected message *)
+                    let trigger_id = Printf.sprintf "tg-%d" msg.update_id in
+                    Cn_ulog.write hub_path (Cn_ulog.make_entry
+                      ~kind:Message_received ~severity:Warn
+                      ~msg_id:trigger_id ~source:"telegram"
+                      ~error:"rejected: unauthorized user" ());
                     offset := max !offset (msg.update_id + 1);
                     write_offset hub_path !offset;
                     drain_tg rest
                   end else if String.trim msg.text = "" then begin
-                    (* #29: skip empty/whitespace-only messages — photos,
-                       stickers, edits have no text content and would cause
-                       Claude API 400 → infinite retry loop (#28). *)
                     Cn_trace.gemit ~component:"telegram" ~layer:Sensor
                       ~event:"daemon.offset.advanced" ~severity:Info ~status:Ok_
                       ~reason_code:"empty_content"
                       ~details:["update_id", Cn_json.Int msg.update_id] ();
+                    (* Unified log: empty message *)
+                    let trigger_id = Printf.sprintf "tg-%d" msg.update_id in
+                    Cn_ulog.write hub_path (Cn_ulog.make_entry
+                      ~kind:Message_received ~severity:Warn
+                      ~msg_id:trigger_id ~source:"telegram"
+                      ~error:"skipped: empty content" ());
                     offset := max !offset (msg.update_id + 1);
                     write_offset hub_path !offset;
                     drain_tg rest
