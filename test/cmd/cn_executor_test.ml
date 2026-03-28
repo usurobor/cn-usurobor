@@ -1217,9 +1217,8 @@ let%expect_test "fs_read: package manifest returns contract_redirect" =
     show_receipt r);
   [%expect {| kind=fs_read status=contract_redirect reason=contract_redirect: 'cn.package.json' is a package manifest — package info is declared in your Runtime Contract (Cognition section). Read installed_packages from the Runtime Contract instead. artifacts=0 |}]
 
-let%expect_test "fs_read: state/runtime-contract.json returns contract_redirect" =
+let%expect_test "fs_read: state/runtime-contract.json denied by sandbox" =
   with_test_hub (fun hub ->
-    let _hub = hub in
     let op = { Cn_shell.kind = Observe Fs_read;
                op_id = Some "obs-01";
                fields = [("path", Cn_json.String "state/runtime-contract.json")] } in
@@ -1256,10 +1255,80 @@ let%expect_test "fs_list: directory listing unaffected by interceptor" =
 
 let%expect_test "fs_read: nonexistent cn.json still redirected (not file_not_found)" =
   with_test_hub (fun hub ->
-    let _hub = hub in
     let op = { Cn_shell.kind = Observe Fs_read;
                op_id = Some "obs-01";
                fields = [("path", Cn_json.String "cn.json")] } in
     let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
     show_receipt r);
   [%expect {| kind=fs_read status=contract_redirect reason=contract_redirect: 'cn.json' contains identity/version info declared in your Runtime Contract (Identity section). Read cn_version from the Runtime Contract instead of probing the filesystem. artifacts=0 |}]
+
+(* === v3.25.0 #64 R2: Close membrane holes — glob, list-child, grep === *)
+
+let%expect_test "fs_list root: cn.json filtered from child entries" =
+  with_test_hub (fun hub ->
+    let touch path content =
+      let full = Filename.concat hub path in
+      let oc = open_out full in
+      output_string oc content; close_out oc in
+    touch "cn.json" {|{"cn_version":"3.25.0"}|};
+    let op = { Cn_shell.kind = Observe Fs_list;
+               op_id = Some "obs-01";
+               fields = [("path", Cn_json.String ".")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r;
+    let content = read_artifact hub r in
+    Printf.printf "has_cn_json: %b\n"
+      (try ignore (Str.search_forward (Str.regexp_string "cn.json") content 0); true
+       with Not_found -> false);
+    Printf.printf "has_src: %b\n"
+      (try ignore (Str.search_forward (Str.regexp_string "src") content 0); true
+       with Not_found -> false));
+  [%expect {|
+    kind=fs_list status=ok reason=(none) artifacts=1
+    has_cn_json: false
+    has_src: true |}]
+
+let%expect_test "fs_list root: package manifest filtered from child entries" =
+  with_test_hub (fun hub ->
+    let touch path content =
+      let full = Filename.concat hub path in
+      let oc = open_out full in
+      output_string oc content; close_out oc in
+    touch "cn.package.json" {|{"name":"cnos.core"}|};
+    let op = { Cn_shell.kind = Observe Fs_list;
+               op_id = Some "obs-01";
+               fields = [("path", Cn_json.String ".")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r;
+    let content = read_artifact hub r in
+    Printf.printf "has_package_json: %b\n"
+      (try ignore (Str.search_forward (Str.regexp_string "cn.package.json") content 0); true
+       with Not_found -> false));
+  [%expect {|
+    kind=fs_list status=ok reason=(none) artifacts=1
+    has_package_json: false |}]
+
+let%expect_test "fs_glob: self-knowledge files excluded from glob results" =
+  with_test_hub (fun hub ->
+    let touch path content =
+      let full = Filename.concat hub path in
+      let oc = open_out full in
+      output_string oc content; close_out oc in
+    touch "cn.json" {|{"cn_version":"3.25.0"}|};
+    touch "cn.package.json" {|{"name":"cnos.core"}|};
+    let op = { Cn_shell.kind = Observe Fs_glob;
+               op_id = Some "obs-01";
+               fields = [("pattern", Cn_json.String "*.json")] } in
+    let r = Cn_executor.execute_op ~hub_path:hub ~trigger_id ~config:test_config op in
+    show_receipt r;
+    let content = read_artifact hub r in
+    Printf.printf "has_cn_json: %b\n"
+      (try ignore (Str.search_forward (Str.regexp_string "cn.json") content 0); true
+       with Not_found -> false);
+    Printf.printf "has_package_json: %b\n"
+      (try ignore (Str.search_forward (Str.regexp_string "cn.package.json") content 0); true
+       with Not_found -> false));
+  [%expect {|
+    kind=fs_glob status=ok reason=(none) artifacts=1
+    has_cn_json: false
+    has_package_json: false |}]

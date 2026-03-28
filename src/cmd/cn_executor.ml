@@ -76,14 +76,17 @@ let scrub_env ~extra_keys =
     Write-protection for protected files is enforced per-candidate
     in git_stage via Cn_sandbox.validate_path ~access:Write_access. *)
 let git_observe_exclusions =
-  ["--"; "."; ":!.cn"; ":!state"; ":!logs"]
+  ["--"; "."; ":!.cn"; ":!state"; ":!logs";
+   (* v3.25.0 #64: exclude self-knowledge files from git observe ops *)
+   ":!cn.json"; ":!*.package.json"]
 
 (** Just the :! exclude pathspecs, without -- and ".".
     Used by git_grep when an explicit path is provided: the user path
     goes through :(literal) to disable magic, then these exclusions
     are appended so internal dirs stay excluded. *)
 let git_observe_exclusions_pathspecs =
-  [":!.cn"; ":!state"; ":!logs"]
+  [":!.cn"; ":!state"; ":!logs";
+   ":!cn.json"; ":!*.package.json"]
 
 (* === Op field extraction helpers === *)
 
@@ -143,6 +146,12 @@ let check_self_knowledge_path normalized_path =
       normalized_path)
   else
     None
+
+(** Check if a path is a self-knowledge path (for filtering from results).
+    Unlike check_self_knowledge_path which returns a reason, this is a
+    simple predicate for filtering lists. *)
+let is_self_knowledge_path path =
+  check_self_knowledge_path path <> None
 
 (* === Observe op executors === *)
 
@@ -227,6 +236,15 @@ let execute_fs_list ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
           start_time = start; end_time = now_iso (); artifacts = [] }
       else
         let entries = Cn_ffi.Fs.readdir full in
+        (* v3.25.0 #64: filter self-knowledge entries from directory listings.
+           Construct child-relative path to check against self-knowledge paths. *)
+        let entries = List.filter (fun entry ->
+          let child_path =
+            if resolved = "." then entry
+            else resolved ^ "/" ^ entry
+          in
+          not (is_self_knowledge_path child_path)
+        ) entries in
         let content = String.concat "\n" (List.sort String.compare entries) in
         let op_id_str = match op.op_id with Some id -> id | None -> "unknown" in
         let artifact = write_artifact ~hub_path ~trigger_id ~op_id:op_id_str
@@ -459,6 +477,8 @@ let execute_fs_glob ~hub_path ~trigger_id ~config (op : Cn_shell.typed_op) =
         let path_segs = String.split_on_char '/' p
           |> List.filter (fun s -> s <> "") in
         glob_match glob_segs path_segs
+        (* v3.25.0 #64: exclude self-knowledge paths from glob results *)
+        && not (is_self_knowledge_path p)
       ) all_paths in
       let sorted = List.sort String.compare filtered in
       let content = String.concat "\n" sorted in

@@ -43,12 +43,16 @@ The change moves the boundary: self-knowledge probes are intercepted at the exec
 
 ### beta (alignment)
 
-**A** — Cross-surface coherence:
-- Executor, sandbox, and RC all agree: `cn.json` and manifests contain self-knowledge that the RC already declares
-- The RC authority declaration now references structural enforcement ("returns a contract_redirect, not file content")
+**A** — Cross-surface coherence across all five observe surfaces:
+- **fs_read**: self-knowledge paths return `contract_redirect` (interceptor)
+- **fs_list**: self-knowledge entries filtered from child results (R2 fix)
+- **fs_glob**: self-knowledge paths filtered from glob results (R2 fix)
+- **git_grep**: `cn.json` and `*.package.json` added to exclusion pathspecs (R2 fix)
+- **git_status/git_diff/git_log**: already use `git_observe_exclusions` which now include self-knowledge files
+- The RC authority declaration references structural enforcement
 - The `receipt_result_signal` in orchestrator says "[REDIRECTED: this information is in your Runtime Contract]"
-- Test expectations match code behavior — 7 new expect tests cover positive, negative, and edge cases
-- `state/runtime-contract.json` correctly defers to sandbox denial (it's in `state/` denylist) — no conflict between interceptor and sandbox
+- Test expectations match code behavior — 10 expect tests cover positive, negative, and membrane-hole cases
+- `state/runtime-contract.json` correctly defers to sandbox denial (it's in `state/` denylist)
 
 ### gamma (process)
 
@@ -57,6 +61,7 @@ The change moves the boundary: self-knowledge probes are intercepted at the exec
 - Version bumped via VERSION-first flow: `VERSION` -> `stamp-versions.sh` -> `check-version-consistency.sh`
 - Tests written alongside code (not after)
 - Issue #64 reopened with rationale before fix
+- R2 fixes three D-level membrane holes found in review (glob, list-child, grep)
 - No OCaml toolchain available — compilation verified in CI, not locally (known limitation of this environment)
 
 ## Known Debt
@@ -73,8 +78,8 @@ The change moves the boundary: self-knowledge probes are intercepted at the exec
 | `packages/cnos.core/cn.package.json` | version stamped |
 | `packages/cnos.eng/cn.package.json` | version stamped |
 | `src/cmd/cn_shell.ml` | Added `Contract_redirect` to `receipt_status` and `string_of_receipt_status` |
-| `src/cmd/cn_executor.ml` | Added `self_knowledge_paths`, `self_knowledge_suffixes`, `check_self_knowledge_path`; integrated into `execute_fs_read` and `execute_fs_list` |
+| `src/cmd/cn_executor.ml` | Added `self_knowledge_paths`, `self_knowledge_suffixes`, `check_self_knowledge_path`, `is_self_knowledge_path`; integrated into `execute_fs_read`, `execute_fs_list` (redirect + child filter), `execute_fs_glob` (result filter); added `cn.json`/`*.package.json` to `git_observe_exclusions` |
 | `src/cmd/cn_orchestrator.ml` | Handle `Contract_redirect` in 3 pattern matches |
 | `src/cmd/cn_runtime_contract.ml` | Updated authority declaration to reference structural enforcement |
-| `test/cmd/cn_executor_test.ml` | 7 new expect tests for self-knowledge interception |
+| `test/cmd/cn_executor_test.ml` | 10 expect tests for self-knowledge interception (7 R1 + 3 R2 membrane tests) |
 | `docs/gamma/cdd/3.25.0/` | CDD bundle: README, SELECTION, PLAN, SELF-COHERENCE |
