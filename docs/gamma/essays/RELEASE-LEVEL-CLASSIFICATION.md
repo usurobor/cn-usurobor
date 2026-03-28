@@ -1,6 +1,6 @@
 # Release-Level Classification
 
-**Scope**: All 60 releases in the coherence grade table (v0.1.0–3.24.0)
+**Scope**: All 60 releases in the coherence grade table (v0.1.0–v3.24.0)
 **Rubric**: `docs/gamma/ENGINEERING-LEVELS.md` §8 (diff-level) + `docs/gamma/cdd/CDD.md` §9.1 (cycle-level caps)
 **Date**: 2026-03-28
 
@@ -49,7 +49,7 @@ Where mechanical ratio data is available in the coherence note, it is applied as
 | v3.0.0  | A+  | **L7** | Pure-pipe: LLM = string→string, cn = all effects — execution model boundary, zero runtime deps |
 | v3.2.0  | A+  | **L7** | Structured LLM schema, multi-turn messages, context packer with mindsets — new communication layer |
 
-### v3.3.0–3.24.0 (feature architecture through recovery)
+### v3.3.0–v3.24.0 (feature architecture through recovery)
 
 | Version | C_Σ | Executed Level | Evidence |
 |---------|-----|---------------|----------|
@@ -107,22 +107,16 @@ Where mechanical ratio data is available in the coherence note, it is applied as
 | L6    | 19    | 32%        |
 | L7    | 24    | 40%        |
 
-#### Shift over time
+#### Four eras
 
-Four eras emerge when the full 60-release history is considered:
+| Period | Releases | L4 | L5 | L6 | L7 | Character |
+|--------|----------|----|----|----|----|-----------|
+| Foundation (v0.1.0–v1.5.0) | 10 | 1 (10%) | 6 (60%) | 3 (30%) | 0 (0%) | Finding shape — no L7 because no boundaries drawn yet |
+| Architecture explosion (v1.6.0–v3.2.0) | 10 | 0 | 0 | 1 (10%) | 9 (90%) | Every release draws a fundamental boundary |
+| Feature architecture (v3.3.0–v3.10.0) | 15 | 0 | 1 (7%) | 6 (40%) | 8 (53%) | Runtime fills out within established boundaries |
+| Hardening + cap + recovery (v3.11.0–v3.24.0) | 25 | 0 | 9 (36%) | 9 (36%) | 7 (28%) | Mechanical-ratio caps suppress levels; pre-push gate breaks the pattern |
 
-| Period | Releases | L4 | L5 | L6 | L7 |
-|--------|----------|----|----|----|----|
-| Foundation (v0.1.0–v1.5.0)          | 10 | 1 (10%) | 6 (60%) | 3 (30%) | 0 (0%)  |
-| Architecture explosion (v1.6.0–v3.2.0) | 10 | 0       | 0       | 1 (10%) | 9 (90%) |
-| Feature architecture (v3.3.0–v3.10.0)  | 15 | 0       | 1 (7%)  | 6 (40%) | 8 (53%) |
-| Hardening + cap + recovery (v3.11.0–3.24.0) | 25 | 0  | 9 (36%) | 9 (36%) | 7 (28%) |
-
-The system's history follows a clear arc: **bootstrap → explode → build → harden**.
-
-The foundation era (v0.1.0–v1.5.0) is dominated by L5 — getting basic structure working. No L7 exists because the system is still finding its shape. Then v1.6.0 triggers the architecture explosion: 9 of 10 releases are L7 as the core concepts crystallize (coordination layer → actor model → agent purity → pure-pipe → FSM protocol → native runtime → LLM schema). This 90% L7 density is the highest in the project's history and reflects the fundamental boundaries being drawn.
-
-The feature architecture era (v3.3.0–v3.10.0) continues at 53% L7 as the runtime fills out (CN Shell, packages, traceability, scheduler, N-pass). The final era drops to 28% L7 as the system matures — hardening overtakes creation, and mechanical-ratio caps suppress levels where execution quality doesn't match architectural ambition.
+Arc: **bootstrap → explode → build → harden**.
 
 ### 2. Grade–Level Correlation
 
@@ -131,10 +125,10 @@ The feature architecture era (v3.3.0–v3.10.0) continues at 53% L7 as the runti
 | C−    | 1 (v0.1.0) | 0 | 0 | 0 |
 | B−    | 0 | 1 (v1.0.0) | 0 | 0 |
 | B     | 0 | 1 (v1.1.0) | 0 | 0 |
-| B+    | 0 | 6 | 4 (v1.3.0, v1.4.0, v1.5.0, v3.20.0) | 0 |
+| B+    | 0 | 6 (v1.2.0, v1.2.1, v1.3.1, v1.3.2, v3.17.0, v3.18.0) | 4 (v1.3.0, v1.4.0, v1.5.0, v3.20.0) | 0 |
 | A−    | 0 | 2 (v3.15.0, v3.19.0) | 1 (v3.22.0) | 3 (v1.6.0, v3.13.0, v3.23.0) |
 | A     | 0 | 4 (v3.14.2–5, v3.16.0) | 6 | 5 (v1.7.0, v3.14.0, v3.14.6, v3.14.7, v3.24.0) |
-| A+    | 0 | 1 (v3.9.1) | 7 (v2.1.x, +6 from v3.x) | 15 |
+| A+    | 0 | 1 (v3.9.1) | 7 (v2.1.x, v3.3.1, v3.8.0, v3.9.2, v3.9.3, v3.11.0, v3.12.1) | 15 |
 
 **Key findings:**
 
@@ -151,7 +145,7 @@ Within the four eras identified in §1, the fine-grained transitions are:
 | Transition | Releases | What changed |
 |------------|----------|--------------|
 | **L4→L5** | v0.1.0→v1.0.0 | Coupled prototype → standalone git-CN concept |
-| **L7→L6 (era 2→3 boundary)** | v3.2.0→v3.3.0 | Boundary-drawing gives way to feature-building; L6 hardening interleaves with L7 |
+| **Era 2→3 shift** | v3.2.0→v3.3.0 | L7 density drops from 90% to 53% — L6 hardening begins interleaving with L7 creation |
 | **L7→L6 shift** | v3.10.0→v3.11.0 | N-pass merge extends rather than creates — first non-L7 after 3 consecutive L7s |
 | **L7 cluster** | v3.12.0–v3.14.0 | Runtime Contract → CDD pipeline → RC v2: three L7s in 5 releases (process formalization) |
 | **L5 plateau** | v3.14.2–v3.14.5 | Four consecutive L5s (doc reorganization) — organizationally necessary, architecturally flat |
@@ -207,7 +201,7 @@ The pre-push gate in v3.23.0 is the MCA for the mechanical-cap era. v3.24.0 conf
 
 ### 3 Recommendations for Increasing L7 Density
 
-1. **Enforce the pre-push gate universally.** The 3.23.0 pre-push gate (`dune build`, `dune runtest`, `cn build --check`, VERSION parity) directly prevents mechanical-ratio caps. Five releases (v3.15.0–v3.19.0) were capped at L5 by errors that this gate catches. Eliminating those caps alone would have raised 2–3 releases to their architectural level (L6/L7).
+1. **Enforce the pre-push gate universally.** The v3.23.0 pre-push gate (`dune build`, `dune runtest`, `cn build --check`, VERSION parity) directly prevents mechanical-ratio caps. Five releases (v3.15.0–v3.19.0) were capped at L5 by errors that this gate catches. Eliminating those caps alone would have raised 2–3 releases to their architectural level (L6/L7).
 
 2. **Scope L7 releases smaller.** The early L7 streak (v3.3.0–v3.10.0) achieved 53% L7 density because each release shipped one boundary change with tight scope. Later L7 attempts (v3.17.0: extensions Phase 1) bundled too many ACs, drowning in mechanical errors. Target one boundary change per release; split multi-AC features into separate cycles with explicit phase gates.
 
@@ -223,7 +217,7 @@ The pre-push gate in v3.23.0 is the MCA for the mechanical-cap era. v3.24.0 conf
 
 ### Prediction: Next 10 Releases
 
-Given the trajectory — L7-dominant early → L5-capped late → 3.23.0 showing meta-level L7 recovery with the pre-push gate — the next 10 releases should target:
+Given the trajectory — L7-dominant early → L5-capped late → v3.23.0 showing meta-level L7 recovery with the pre-push gate — the next 10 releases should target:
 
 | Level | Target Count | Rationale |
 |-------|-------------|-----------|
