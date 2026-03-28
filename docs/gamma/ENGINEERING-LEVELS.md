@@ -2,7 +2,7 @@
 
 ## What L5, L6, and L7 Mean in cnos
 
-Version: 1.0.0
+Version: 1.1.0
 Status: Draft
 
 Purpose: Define the shared meaning of engineering levels used in cnos so references to "L5", "L6", or "L7" are stable, local, and actionable.
@@ -295,7 +295,42 @@ This doc is the stable reference.
 
 ---
 
-## 11. Summary
+## 11. L8 Horizon — Meta-Systematic Leverage
+
+L8 is not an operational level yet. It names a pattern visible in the L7 data.
+
+### The pattern
+
+Some L7 changes are first-order: they create a new boundary. Others are second-order: they change how boundaries change. Examples from the release history:
+
+| Release | What it does | Why it's second-order |
+|---------|-------------|----------------------|
+| v3.23.0 | Pre-push gate | Governs how all future cycles execute |
+| v3.14.6 | §9.11 release gate | Governs what "releasing" requires for all future releases |
+| v1.8.0 | Agent purity | Every future boundary resolves against this separation |
+| v3.0.0 | Pure-pipe | Redefines what "execution" means for everything after |
+
+### What L8 would mean
+
+L7 changes a boundary. L8 changes how boundaries change. The system's capacity to evolve is structurally different after an L8 change.
+
+In TSC terms: L7 creates γ-depth. L8 is γ applied to γ — self-application (tsc-oper §10).
+
+Outside this project: a programming language is L8 relative to programs written in it. A constitution is L8 relative to laws. Category theory is L8 relative to the structures it describes.
+
+### Why it's not a level yet
+
+1. **The distinction is continuous, not discrete.** v3.10.0 (N-pass) removes a ceiling — is that L7 or L8? It's a boundary change that enables future boundary changes. The line blurs.
+2. **Sample size.** ~4 candidates in 60 releases (7%). A level that applies to <10% of releases adds rubric complexity without proportionate discrimination.
+3. **No different action.** L5/L6/L7 each change how you plan a cycle. "This is L8" does not yet produce a different planning decision from "this is high-leverage L7."
+
+### When to revisit
+
+If the next 20 releases produce 4+ second-order changes — primitives that govern how primitives ship — then L8 earns its own section with definition, behaviors, and diff criteria.
+
+---
+
+## 12. Summary
 
 The cnos engineering levels mean:
 
