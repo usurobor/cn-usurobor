@@ -109,6 +109,20 @@ cn build --check             Verify packages/ matches src/agent/ (CI mode)
 cn build clean               Remove generated content from packages/
 ```
 
+### Observability
+
+```
+cn logs                      Human-formatted tail (last 50 entries)
+cn logs --since <duration>   Filter by time (e.g. 2h, 30m, 1d)
+cn logs --msg <id>           Trace single message by correlation ID
+cn logs --errors             Show only warnings and errors
+cn logs --json               Raw JSONL output
+cn logs --kind <kind>        Filter by event kind
+cn logs -n <count>           Limit number of entries
+```
+
+Reads from `logs/unified/YYYYMMDD.jsonl`. Alias: `l`.
+
 ### Hub Management
 
 ```
@@ -131,7 +145,7 @@ cn peer sync                 Fetch all peer repos
 
 ```
 i = inbox    o = outbox    s = status    d = doctor
-in = agent
+l = logs     in = agent
 ```
 
 ### Flags
@@ -174,6 +188,7 @@ type command =
   | Release of string option   (* Tag + GH release; optional version override *)
   | Deps of Deps.cmd           (* List | Restore | Doctor | Add | Remove | Update | Vendor *)
   | Build of Build.cmd          (* Packages | Check | Clean *)
+  | Logs of Logs.cmd            (* Show *)
 ```
 
 ## Dispatch
@@ -220,6 +235,7 @@ cn-<name>/
  |    +-- conversation.json
  |    +-- telegram.offset
  +-- logs/
+ |    +-- unified/       (operator log: YYYYMMDD.jsonl, schema cn.ulog.v1)
  |    +-- input/
  |    +-- output/
  +-- spec/
@@ -265,6 +281,8 @@ src/
       +-- cn_commands.ml     Peer + git commands
       +-- cn_system.ml       Init, setup, update, status, doctor
       +-- cn_hub.ml          Hub discovery, paths, logging
+      +-- cn_ulog.ml         Unified operator log (append-only JSONL writer/reader)
+      +-- cn_logs.ml         cn logs CLI (filtering, human formatting)
       +-- cn_fmt.ml          Output formatting, timestamps
 ```
 

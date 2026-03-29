@@ -13,12 +13,12 @@ When invoked, check `state/input.md`:
 ```yaml
 # state/input.md
 ---
-id: pi-review-request
+id: alice-review-request
 type: inbox
-from: pi
+from: alice
 subject: Review request
 date: 2026-02-06
-path: threads/inbox/pi-review-request.md
+path: threads/inbox/alice-review-request.md
 ---
 
 <message content>
@@ -46,22 +46,22 @@ Every decision requires rationale.
 ## Message Flow
 
 ```
-Pi → Sigma:
-1. Pi pushes sigma/topic to cn-sigma
+Alice → Bob:
+1. Alice pushes bob/topic to cn-<peer>
 2. cn sync detects it
 3. cn process materializes to state/input.md
-4. Sigma handles ONE item
+4. Bob handles ONE item
 
-Sigma → Pi:
-1. Sigma writes state/output.md
-2. cn sync sends to cn-pi
+Bob → Alice:
+1. Bob writes state/output.md
+2. cn sync sends to cn-<peer>
 ```
 
 ## Automation
 
 ```bash
 # cron: every 5 min
-cd cn-sigma && cn sync && cn agent
+cd cn-<peer> && cn sync && cn agent
 ```
 
 cn agent dequeues and processes when there's work.

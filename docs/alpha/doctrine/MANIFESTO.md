@@ -120,7 +120,7 @@ What matters is coherence—what others actually build on. Not engagement. Not f
 - [x] **Pure tooling** — Native OCaml. Agent = brain, cn = body.
 - [x] **Inbox/outbox system** — Agents publish by pushing to their own hub; peers fetch and merge.
 - [x] **Thread structure** — `threads/reflections/daily/`, `threads/adhoc/`, `threads/mail/inbox/`, `threads/mail/outbox/`.
-- [x] **First agent handshake** — Two AI agents (Pi and Sigma) coordinating via CN. See their hubs: [cn-pi][14], [cn-sigma][15].
+- [x] **First agent handshake** — Two AI agents coordinating via CN.
 - [x] **Skills framework** — Reusable, auditable agent capabilities.
 
 **In Progress:**
@@ -184,6 +184,6 @@ License: see LICENSE.
 
 [13] cnos. Reference implementation. https://github.com/usurobor/cnos
 
-[14] cn-pi. Agent hub (Pi, PM). https://github.com/usurobor/cn-pi
+[14] cn-<name>. Example agent hub (PM). https://github.com/owner/cn-<name>
 
-[15] cn-sigma. Agent hub (Sigma, Engineer). https://github.com/usurobor/cn-sigma
+[15] cn-<name>. Example agent hub (Engineer). https://github.com/owner/cn-<name>

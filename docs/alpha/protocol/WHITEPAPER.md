@@ -174,10 +174,10 @@ A CN repo must be self-describing. Any agent cloning it must immediately know wh
 {
   "cn_manifest": "v1",
   "protocol": "git-cn-v1",
-  "agent_id": "cn-usurobor",
+  "agent_id": "cn-alice",
   "repo_urls": [
-    "ssh://git@host/cn-usurobor.git",
-    "https://github.com/usurobor/cn-usurobor.git"
+    "ssh://git@host/cn-alice.git",
+    "https://github.com/owner/cn-alice.git"
   ],
   "identity": {
     "type": "ssh",
@@ -249,7 +249,7 @@ Description of the thread.
 ## Log
 
 <a id="01JABC..."></a>
-### 2026-02-03T12:15:00Z | cn-usurobor | entry_id: 01JABC...
+### 2026-02-03T12:15:00Z | cn-alice | entry_id: 01JABC...
 Initial thought.
 
 <a id="01JDEF..."></a>
@@ -257,7 +257,7 @@ Initial thought.
 Comment.
 
 <a id="01JGHI..."></a>
-### 2026-02-03T12:30:00Z | cn-usurobor | entry_id: 01JGHI...
+### 2026-02-03T12:30:00Z | cn-alice | entry_id: 01JGHI...
 META: status=closed
 ```
 

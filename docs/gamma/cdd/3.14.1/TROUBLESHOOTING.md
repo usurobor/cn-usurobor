@@ -7,8 +7,8 @@ How to diagnose issues with a CN agent deployment.
 ### Is the daemon running?
 
 ```bash
-systemctl status cn-pi          # or whatever your service name is
-journalctl -u cn-pi --since "1 hour ago" --no-pager
+systemctl status cn-<name>          # or whatever your service name is
+journalctl -u cn-<name> --since "1 hour ago" --no-pager
 ```
 
 ### What version is running?
@@ -20,7 +20,18 @@ cd /path/to/hub
 
 ### Is the agent processing messages?
 
-Check the daemon log for recent activity:
+Use the unified log for a quick overview:
+
+```bash
+cd /path/to/hub
+cn logs                     # last 50 entries, human-formatted
+cn logs --since 2h          # last 2 hours
+cn logs --errors            # only warnings and errors
+cn logs --msg tg-12345      # trace a single message end-to-end
+cn logs --json              # raw JSONL for scripting
+```
+
+Or check the daemon log for raw activity:
 
 ```bash
 tail -50 /path/to/hub/logs/daemon.log
@@ -32,9 +43,10 @@ Look for `Processed: tg-<id> (N ops)` lines. If you see them, the daemon is rece
 
 | Log | Path | Contains |
 |-----|------|----------|
+| **Unified log** | `logs/unified/YYYYMMDD.jsonl` | **Start here.** Operator-facing stream: message receipt, invocation, response, errors. Read with `cn logs`. |
 | Daemon log | `logs/daemon.log` | Service lifecycle, inbox/outbox sync, message processing summaries |
 | CN structured log | `logs/cn.log` | JSON-structured ops: inbox materialize, outbox send, auto-save, queue |
-| Event logs | `logs/events/YYYYMMDD.jsonl` | Daily event journals |
+| Event logs | `logs/events/YYYYMMDD.jsonl` | Daily event journals (detailed system telemetry) |
 | Input logs | `logs/input/tg-<id>.md` | Full prompt sent to LLM (includes user message at the end) |
 | Output logs | `logs/output/tg-<id>.md` | Agent's response for that message |
 | Rotated CN logs | `logs/cn-YYYYMMDD.log` | Older CN structured logs |
@@ -57,6 +69,20 @@ cat logs/output/tg-194570546.md
 **Note:** Input files are large (60-70KB) because they contain the full prompt context. The user's actual message is in the last few lines.
 
 ## Common Issues
+
+### Why did the agent do nothing?
+
+```bash
+cn logs --errors --since 1h
+```
+
+This surfaces all failure paths: rejected users, empty messages, poll errors, LLM failures, and N-pass exhaustion. Each entry includes a reason. To trace a specific message:
+
+```bash
+cn logs --msg tg-12345
+```
+
+This shows the full lifecycle: receive → invocation start → invocation end → response sent (or error).
 
 ### Agent responds but does nothing (0 ops)
 
@@ -107,7 +133,7 @@ Check the Runtime Contract for `readable_paths` and `writable_paths`. The agent 
 ### Daemon keeps restarting
 
 ```bash
-journalctl -u cn-pi --since "1 hour ago" | grep -E "Started|Stopped|Stopping"
+journalctl -u cn-<name> --since "1 hour ago" | grep -E "Started|Stopped|Stopping"
 ```
 
 If you see rapid start/stop cycles, check for:
@@ -185,10 +211,10 @@ ls threads/adhoc/
 
 ### After upgrading CN version
 
-1. Stop the daemon: `systemctl stop cn-pi`
+1. Stop the daemon: `systemctl stop cn-<name>`
 2. Replace the binary: `cp cn-new bin/cn && chmod +x bin/cn`
 3. Verify: `./bin/cn --version`
-4. Start: `systemctl start cn-pi`
+4. Start: `systemctl start cn-<name>`
 5. Check: `tail -20 logs/daemon.log`
 
 ### After updating packages (cnos.core, cnos.eng)

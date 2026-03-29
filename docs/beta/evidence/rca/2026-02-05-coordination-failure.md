@@ -3,31 +3,31 @@
 **Date:** 2026-02-05  
 **Severity:** Critical  
 **Duration:** ~4 hours (12:08 - 16:18 UTC)  
-**Author:** Sigma  
+**Author:** Bob  
 
 ## Summary
 
-Two agents (Sigma and Pi) failed to coordinate for 4 hours despite both being online and running heartbeat checks. Sigma posted a CLP thread that Pi never saw. Both agents believed they were waiting on the other. Human intervention required to diagnose.
+Two agents (Bob and Alice) failed to coordinate for 4 hours despite both being online and running heartbeat checks. Bob posted a CLP thread that Alice never saw. Both agents believed they were waiting on the other. Human intervention required to diagnose.
 
 ## Timeline
 
 | Time (UTC) | Event |
 |------------|-------|
-| 12:01 | Pi marks peer-sync scheduling complete in backlog |
-| 12:08 | Sigma posts CLP thread to cn-sigma, pushes to `master` branch |
+| 12:01 | Alice marks peer-sync scheduling complete in backlog |
+| 12:08 | Bob posts CLP thread to cn-<name>, pushes to `master` branch |
 | 12:08 | User signs off ("bye now") |
 | 12:08-16:18 | Both agents run heartbeats, report "all clear" |
 | 16:18 | User returns, asks for status |
-| 16:20 | Pi reports "nothing happened for 4 hours" |
-| 16:22 | Investigation reveals Sigma pushed to wrong branch |
+| 16:20 | Alice reports "nothing happened for 4 hours" |
+| 16:22 | Investigation reveals Bob pushed to wrong branch |
 | 16:25 | Root causes identified |
 
 ## Root Causes
 
 | # | Cause | Category |
 |---|-------|----------|
-| 1 | Sigma pushed to `master`, GitHub default was `main` | Technical |
-| 2 | Pi fetched cn-sigma but only checked for branches, not main | Process |
+| 1 | Bob pushed to `master`, GitHub default was `main` | Technical |
+| 2 | Alice fetched cn-<name> but only checked for branches, not main | Process |
 | 3 | No ACK mechanism for message delivery | Process |
 | 4 | No timeout/escalation after prolonged silence | Process |
 | 5 | Git default branch mismatch (local `master` vs remote `main`) | Technical |
@@ -52,21 +52,21 @@ Two agents (Sigma and Pi) failed to coordinate for 4 hours despite both being on
 ## Resolution
 
 1. Identified branch mismatch (`master` vs `main`)
-2. Pushed Sigma's commits from `master` to `main`
-3. Merged pending Pi branches
+2. Pushed Bob's commits from `master` to `main`
+3. Merged pending Alice branches
 4. Diagnosed protocol gaps
 
 ## Preventive Actions
 
 | Action | Owner | Status |
 |--------|-------|--------|
-| Standardize all repos on `main` | Sigma | TODO |
-| Set `git config --global init.defaultBranch main` | Sigma | TODO |
-| Implement actor model (push TO peer's repo) | Sigma | IN PROGRESS |
-| peer-sync v2: check own repo only, all branches | Sigma | TODO |
-| Add ACK requirement for all messages | Sigma/Pi | TODO |
-| Add timeout escalation (no response > 2h) | Sigma/Pi | TODO |
-| Document new protocol in WHITEPAPER | Pi | TODO |
+| Standardize all repos on `main` | Bob | TODO |
+| Set `git config --global init.defaultBranch main` | Bob | TODO |
+| Implement actor model (push TO peer's repo) | Bob | IN PROGRESS |
+| peer-sync v2: check own repo only, all branches | Bob | TODO |
+| Add ACK requirement for all messages | Bob/Alice | TODO |
+| Add timeout escalation (no response > 2h) | Bob/Alice | TODO |
+| Document new protocol in WHITEPAPER | Alice | TODO |
 
 ## Lessons Learned
 
@@ -79,4 +79,4 @@ Two agents (Sigma and Pi) failed to coordinate for 4 hours despite both being on
 ## Related
 
 - Design doc: ACTOR-MODEL-DESIGN.md (archived, see git history)
-- Branch: `sigma/actor-model-design`
+- Branch: `bob/actor-model-design`

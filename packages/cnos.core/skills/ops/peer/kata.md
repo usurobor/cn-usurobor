@@ -21,7 +21,7 @@ Expected: Entry added to `state/peers.md` with `kind: agent`.
 Peer your human's personal hub (if they have one):
 
 ```
-Peer https://github.com/usurobor/cn-usurobor kind=human
+Peer https://github.com/owner/cn-<peer> kind=human
 ```
 
 Expected: Entry with `kind: human`.

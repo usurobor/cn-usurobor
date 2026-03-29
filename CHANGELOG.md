@@ -708,7 +708,7 @@ The CN security invariant is enforced:
 4. Add cron: `* * * * * cn agent` (processes queue)
 5. Disable OpenClaw after verification
 
-Rollback: `systemctl stop cn-agent && systemctl start openclaw`
+Rollback: `systemctl stop cn-<name> && systemctl start <previous-service>`
 
 ### Technical Highlights
 

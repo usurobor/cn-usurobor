@@ -13,7 +13,7 @@
 | Code: cn_logs.ml | present | src/cmd/cn_logs.ml |
 | Code: cn_lib.ml | modified | Logs command + parsing |
 | Code: cn.ml | modified | dispatch wiring |
-| Code: cn_runtime.ml | modified | 4 unified log emission points |
+| Code: cn_runtime.ml | modified | 9 unified log emission points (5 happy path + 2 silent drops + 1 poll error + 1 N-pass failure) |
 | Code: dune (cmd) | modified | new modules registered |
 | Tests: cn_ulog_test.ml | present | test/cmd/cn_ulog_test.ml (13 tests) |
 | Tests: cn_logs_test.ml | present | test/cmd/cn_logs_test.ml (8 tests) |
@@ -37,8 +37,7 @@
 ### What changed
 - New observability surface: `logs/unified/YYYYMMDD.jsonl` (append-only JSONL, schema cn.ulog.v1)
 - New CLI command: `cn logs` with 6 filter flags
-- Runtime emits 4 event kinds: message.received, invocation.start, invocation.end, message.sent
-- Error events on LLM and n-pass failures
+- Runtime emits at 9 points: message lifecycle (received, start, end, sent), error paths (LLM failure, N-pass exhaustion), silent failure paths (rejected user, empty message, poll error)
 
 ### What did NOT change
 - Existing events stream (`logs/events/`) unchanged — still written, still used for detailed telemetry

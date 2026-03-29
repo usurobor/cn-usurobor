@@ -6,18 +6,18 @@
 **Date:** 2026-02-07  
 **Severity:** Critical  
 **Duration:** ~4 days (since actor model went live)  
-**Author:** Sigma  
+**Author:** Bob  
 
 ## Summary
 
-Assumed 37 inbox items were processed because queue showed empty. Reality: the processing loop never ran properly. Work accumulated for 4 days. Pi's branches piled up. Duplicate threads appeared. Discovered only when Axiom asked to verify branch count.
+Assumed 37 inbox items were processed because queue showed empty. Reality: the processing loop never ran properly. Work accumulated for 4 days. Alice's branches piled up. Duplicate threads appeared. Discovered only when Axiom asked to verify branch count.
 
 ## Timeline
 
 | Time (UTC) | Event |
 |------------|-------|
 | 2026-02-03 | Actor model first deployed |
-| 2026-02-03 → 02-07 | Pi pushes 34+ branches to cn-sigma |
+| 2026-02-03 → 02-07 | Alice pushes 34+ branches to cn-<name> |
 | 2026-02-03 → 02-07 | `cn sync` materializes threads to inbox/ |
 | 2026-02-06 ~20:00 | Some items manually moved to `_archived/` (bypassing process) |
 | 2026-02-07 03:07 | Batch "archive" logged 42 io.archive events |
@@ -38,13 +38,13 @@ Assumed 37 inbox items were processed because queue showed empty. Reality: the p
 
 ## 5 Whys (Primary)
 
-1. **Why are 34 branches still on cn-sigma?**  
-   → Because Pi hasn't deleted them.
+1. **Why are 34 branches still on cn-<name>?**
+   → Because Alice hasn't deleted them.
 
-2. **Why hasn't Pi deleted them?**  
-   → Because Sigma never replied (signaling completion).
+2. **Why hasn't Alice deleted them?**
+   → Because Bob never replied (signaling completion).
 
-3. **Why didn't Sigma reply?**  
+3. **Why didn't Bob reply?**  
    → Because the inbox items were never processed.
 
 4. **Why weren't they processed?**  
@@ -73,8 +73,8 @@ Assumed 37 inbox items were processed because queue showed empty. Reality: the p
 
 - **4 days** of accumulated work not done
 - **37 inbox items** unprocessed
-- **34 branches** cluttering cn-sigma
-- **Pi blocked** waiting for responses
+- **34 branches** cluttering cn-<name>
+- **Alice blocked** waiting for responses
 - **Duplicate threads** when sync re-materialized archived items
 - **Trust damage:** Reported completion that wasn't real
 
@@ -87,11 +87,11 @@ Assumed 37 inbox items were processed because queue showed empty. Reality: the p
 
 | Action | Owner | Status |
 |--------|-------|--------|
-| Add `cn status` inbox health: pending/processed/archived counts | Sigma | TODO |
-| Add warning when inbox > N items for > M hours | Sigma | TODO |
-| Process all 37 pending inbox items | Sigma | TODO |
-| Add verification step: branches should decrease after processing | Sigma | TODO |
-| Never manually archive — always use cn process | Sigma | POLICY |
+| Add `cn status` inbox health: pending/processed/archived counts | Bob | TODO |
+| Add warning when inbox > N items for > M hours | Bob | TODO |
+| Process all 37 pending inbox items | Bob | TODO |
+| Add verification step: branches should decrease after processing | Bob | TODO |
+| Never manually archive — always use cn process | Bob | POLICY |
 
 ## Lessons Learned
 

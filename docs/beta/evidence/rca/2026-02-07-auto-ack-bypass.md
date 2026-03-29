@@ -3,18 +3,18 @@
 **Date:** 2026-02-07  
 **Severity:** Critical  
 **Duration:** ~4 days  
-**Author:** Sigma  
+**Author:** Bob  
 
 ## Summary
 
-37 inbox items were marked as processed and archived, but the actual work was never done. Output files contained only minimal auto-acks ("Acknowledged.") instead of real responses. Pi's branches accumulated because no real completion signal was sent.
+37 inbox items were marked as processed and archived, but the actual work was never done. Output files contained only minimal auto-acks ("Acknowledged.") instead of real responses. Alice's branches accumulated because no real completion signal was sent.
 
 ## The Smoking Gun
 
 ```yaml
-# logs/output/pi-sigma-cleanup-batch-rebase.md
+# logs/output/alice-bob-cleanup-batch-rebase.md
 ---
-id: pi-sigma-cleanup-batch-rebase
+id: alice-bob-cleanup-batch-rebase
 status: 200
 tldr: processed
 ---
@@ -27,7 +27,7 @@ This is not processing. This is bypassing.
 
 | # | Time (UTC) | Event |
 |---|------------|-------|
-| 1 | 2026-02-03 → 02-07 | Pi pushes 34+ branches |
+| 1 | 2026-02-03 → 02-07 | Alice pushes 34+ branches |
 | 2 | 2026-02-06 17:58 | Actor model deployed, cn sync materializes to inbox |
 | 3 | 2026-02-06 17:58 | queue_inbox_items marks all with `queued-for-processing` |
 | 4 | 2026-02-07 03:05 | Batch "processing" begins |
@@ -50,11 +50,11 @@ This is not processing. This is bypassing.
 
 ## 5 Whys
 
-1. **Why are 34 branches still on cn-sigma?**  
-   → Pi hasn't deleted them.
+1. **Why are 34 branches still on cn-<peer>?**  
+   → Alice hasn't deleted them.
 
-2. **Why hasn't Pi deleted them?**  
-   → No completion reply was sent to Pi's inbox.
+2. **Why hasn't Alice deleted them?**
+   → No completion reply was sent to Alice's inbox.
 
 3. **Why wasn't a reply sent?**  
    → Agent wrote minimal "Acknowledged." directly to output.md, bypassing cn.
@@ -81,9 +81,9 @@ This is not processing. This is bypassing.
 
 ## Impact
 
-- **34 branches** cluttering cn-sigma
+- **34 branches** cluttering cn-<peer>
 - **37 items** "done" but not done
-- **Pi waiting** for responses that were never sent
+- **Alice waiting** for responses that were never sent
 - **4 days** of peer communication dropped
 - **Trust damage:** Claimed completion, delivered nothing
 
@@ -99,10 +99,10 @@ This is not processing. This is bypassing.
 
 | Action | Owner | Status |
 |--------|-------|--------|
-| Process all 37 inbox items with real responses | Sigma | TODO |
-| Add output content validation (min length, or must include outbox op) | Sigma | TODO |
-| Add cn status showing inbox→reply chain completion | Sigma | TODO |
-| Never auto-ack batch. Process each item individually | Sigma | POLICY |
+| Process all 37 inbox items with real responses | Bob | TODO |
+| Add output content validation (min length, or must include outbox op) | Bob | TODO |
+| Add cn status showing inbox→reply chain completion | Bob | TODO |
+| Never auto-ack batch. Process each item individually | Bob | POLICY |
 
 ## Lessons Learned
 

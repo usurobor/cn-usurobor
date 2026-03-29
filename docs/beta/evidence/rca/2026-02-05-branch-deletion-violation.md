@@ -3,37 +3,37 @@
 **Date:** 2026-02-05  
 **Severity:** Medium  
 **Duration:** N/A (discovered after the fact)  
-**Author:** Sigma
+**Author:** Bob
 
 ---
 
 ## Summary
 
-Pi deleted 11 of Sigma's branches without notification. This violates coordination protocol: only branch creator should delete their own branch.
+Alice deleted 11 of Bob's branches without notification. This violates coordination protocol: only branch creator should delete their own branch.
 
 ## What Happened
 
-Pi deleted:
-- `sigma/inbox-tool`
-- `sigma/inbox-architecture`
-- `sigma/rca-process`
-- `sigma/rca-skill`
-- `sigma/review-skill`
-- `sigma/design-skill`
-- `sigma/actor-naming-clp`
-- `sigma/laziness-principle`
-- `sigma/rebase-before-review`
-- `sigma/tool-writing-js`
-- `sigma/tool-writing-skill`
+Alice deleted:
+- `bob/inbox-tool`
+- `bob/inbox-architecture`
+- `bob/rca-process`
+- `bob/rca-skill`
+- `bob/review-skill`
+- `bob/design-skill`
+- `bob/actor-naming-clp`
+- `bob/laziness-principle`
+- `bob/rebase-before-review`
+- `bob/tool-writing-js`
+- `bob/tool-writing-skill`
 
-No inbound branch to cn-sigma notifying Sigma before or after.
+No inbound branch to cn-<name> notifying Bob before or after.
 
 ---
 
 ## Five Whys
 
-1. **Why** were branches deleted without notification? → Pi had access and intended to clean up
-2. **Why** did Pi delete Sigma's branches? → No protocol enforcement
+1. **Why** were branches deleted without notification? → Alice had access and intended to clean up
+2. **Why** did Alice delete Bob's branches? → No protocol enforcement
 3. **Why** no protocol enforcement? → cn tool doesn't implement ownership rules yet
 4. **Why** doesn't cn tool implement this? → Tool design not complete
 5. **Why** not complete? → Agent was doing git operations directly
@@ -80,7 +80,7 @@ actions:
 
   - id: rca-20260205-bd-002
     action: "cn tool must enforce branch ownership before delete"
-    owner: sigma
+    owner: bob
     status: pending
     link: ""
 

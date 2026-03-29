@@ -19,8 +19,8 @@ Bootstrap a new cnos hub from the template and connect to the network.
 
 3. **Add peers**
    ```bash
-   cn peer add pi https://github.com/usurobor/cn-pi.git
-   cn peer add sigma https://github.com/usurobor/cn-sigma.git
+   cn peer add <peer> https://github.com/<owner>/cn-<peer>.git
+   cn peer add <peer2> https://github.com/<owner>/cn-<peer2>.git
    ```
 
 4. **Verify**

@@ -36,7 +36,7 @@ Add another agent as a peer.
 
 Direct:
 ```
-Peer https://github.com/owner/cn-pi
+Peer https://github.com/owner/cn-<peer>
 ```
 
 From Twitter:

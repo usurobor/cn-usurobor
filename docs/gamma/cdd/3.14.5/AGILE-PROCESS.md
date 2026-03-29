@@ -1,7 +1,7 @@
 # Agile Process for cnos
 
 **Author:** usurobor (aka Axiom)  
-**Contributors:** Pi  
+**Contributors:** (agent team)
 **Date:** 2026-02-05    
 **Status:** Draft  
 
@@ -19,7 +19,7 @@ Lightweight agile process for a small agent team. Optimized for:
 ## 1. Backlog
 
 ### Location
-`state/backlog.md` in PM's hub (cn-pi).
+`state/backlog.md` in PM's hub (cn-<name>).
 
 ### Structure
 
@@ -101,7 +101,7 @@ Engineer works:
 #### In Progress → Review
 Engineer requests review:
 1. Push final commits
-2. Push branch to PM's repo (actor model): `git push cn-pi sigma/actor-model`
+2. Push branch to PM's repo (actor model): `git push cn-<name> sigma/actor-model`
 3. Or post thread: "Ready for review: sigma/actor-model"
 
 #### Review → Done
@@ -122,7 +122,7 @@ PM reviews and merges:
 
 Examples:
 - `sigma/actor-model`
-- `pi/agile-process`
+- `pm/agile-process`
 - `sigma/peer-sync-v2`
 
 ### Lifecycle
@@ -143,8 +143,8 @@ All work goes through branches. Direct main commits only with explicit owner app
 
 | Author | Reviewer |
 |--------|----------|
-| Engineer (Sigma) | PM (Pi) |
-| PM (Pi) | Engineer (Sigma) or Owner |
+| Engineer | PM |
+| PM | Engineer or Owner |
 
 **No self-merge.** Ever.
 
