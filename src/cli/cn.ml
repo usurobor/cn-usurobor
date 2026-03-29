@@ -127,4 +127,5 @@ let () =
               print_endline (Cn_fmt.info
                 "deps update: re-resolve not yet implemented (v3.4.1)")
           | Deps Deps.Vendor -> Cn_deps.run_vendor ~hub_path
+          | Logs (Logs.Show args) -> Cn_logs.run_logs hub_path args
           | Help | Version | Init _ | Update | Release _ | Build _ -> ()

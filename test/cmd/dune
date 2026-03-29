@@ -160,3 +160,19 @@
  (inline_tests
   (deps ../../src/agent/extensions/cnos.net.http/host/cnos-ext-http))
  (preprocess (pps ppx_expect)))
+
+; cn_ulog tests (ppx_expect) — unified operator log (#74)
+(library
+ (name cn_ulog_test)
+ (modules cn_ulog_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
+; cn_logs tests (ppx_expect) — cn logs CLI (#74)
+(library
+ (name cn_logs_test)
+ (modules cn_logs_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))

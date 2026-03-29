@@ -93,6 +93,10 @@ module Build = struct
   type cmd = Packages | Check | Clean
 end
 
+module Logs = struct
+  type cmd = Show of string list  (* remaining args passed through *)
+end
+
 module Gtd = struct
   type cmd =
     | Delete of string
@@ -227,6 +231,7 @@ type command =
   | Setup            (* Hub setup: materialize assets + deps *)
   | Deps of Deps.cmd (* Dependency management *)
   | Build of Build.cmd (* Package assembly from src/agent/ *)
+  | Logs of Logs.cmd   (* Unified log reader *)
 
 (* Exhaustive - compiler warns on missing cases *)
 let string_of_command = function
@@ -293,6 +298,7 @@ let string_of_command = function
   | Build Build.Packages -> "build"
   | Build Build.Check -> "build --check"
   | Build Build.Clean -> "build clean"
+  | Logs (Logs.Show _) -> "logs"
 
 (* === Alias Expansion === *)
 
@@ -302,6 +308,7 @@ let expand_alias = function
   | "s" -> "status"
   | "d" -> "doctor"
   | "p" -> "peer"
+  | "l" -> "logs"
   | s -> s  (* identity for non-aliases *)
 
 (* === Command Parsing (Option for totality) === *)
@@ -425,6 +432,7 @@ let rec parse_command = function
   | "queue" :: rest -> parse_queue_cmd rest |> Option.map (fun c -> Queue c)
   | "deps" :: rest -> parse_deps_cmd rest |> Option.map (fun c -> Deps c)
   | "build" :: rest -> parse_build_cmd rest |> Option.map (fun c -> Build c)
+  | "logs" :: rest -> Some (Logs (Logs.Show rest))
   | "mca" :: rest -> parse_mca_cmd rest |> Option.map (fun c -> Mca c)
   | ["sync"] -> Some Sync
   | ["next"] -> Some Next
@@ -674,6 +682,14 @@ Commands:
   build --check       Verify packages/ matches src/agent/ (CI mode)
   build clean         Remove generated content from packages/
 
+  # Observability
+  logs                Tail the unified log stream
+  logs --since <dur>  Time filter (e.g. 2h, 30m, 1d)
+  logs --msg <id>     Trace one message end-to-end
+  logs --errors       Errors and warnings only
+  logs --json         Raw JSONL for piping
+  logs --kind <kind>  Filter by event kind
+
   # Hub management
   init [name]         Create new hub
   setup               Set up hub: install packages, write deps, restore
@@ -687,7 +703,7 @@ Commands:
   release [version]   Tag + create GitHub release (default: current version)
 
 Aliases:
-  i = inbox, o = outbox, s = status, d = doctor
+  i = inbox, o = outbox, s = status, d = doctor, l = logs
 
 Flags:
   --help, -h          Show help

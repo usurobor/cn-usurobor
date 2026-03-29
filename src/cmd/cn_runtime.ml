@@ -472,7 +472,7 @@ let update_ready_body hub_path ~fsm_state ~lock_held ~current_cycle =
     [chat_id_opt] is used to build a processing indicator for Telegram. *)
 let rec finalize ~(config : Cn_config.config) ~hub_path ~name
       ~trigger_id ~from ~inbound_message ~output_content
-      ?packed ?chat_id_opt () =
+      ?packed ?chat_id_opt ?invocation_t0 ?pass_count () =
   Cn_trace.gemit ~component:"runtime" ~layer:Body
     ~event:"finalize.start" ~severity:Info ~status:Ok_
     ~trigger_id
@@ -511,6 +511,7 @@ let rec finalize ~(config : Cn_config.config) ~hub_path ~name
     (* Recovery path: ops already done, project initial output *)
     finalize_project ~config ~hub_path ~trigger_id ~from ~inbound_message
       ~final_parsed:parsed ~initial_coord_ops ~name
+      ?invocation_t0 ?pass_count ()
   end else begin
     Cn_trace.gemit ~component:"runtime" ~layer:Body
       ~event:"effects.execute.start" ~severity:Info ~status:Ok_
@@ -638,6 +639,13 @@ let rec finalize ~(config : Cn_config.config) ~hub_path ~name
         ~event:"finalize.n_pass_failed" ~severity:Error_ ~status:Error_status
         ~trigger_id ~reason_code:"n_pass_failed"
         ~reason:"Blocking projection — intermediate output would misrepresent state" ();
+
+      (* Unified log: error *)
+      Cn_ulog.write hub_path (Cn_ulog.make_entry
+        ~kind:Error ~severity:Error_
+        ~msg_id:trigger_id
+        ~error:(Printf.sprintf "N-pass processing failed: %s" msg) ());
+
       Error (Printf.sprintf "N-pass processing failed: %s" msg)
 
     | Ok None ->
@@ -651,6 +659,7 @@ let rec finalize ~(config : Cn_config.config) ~hub_path ~name
         ~trigger_id ();
       finalize_project ~config ~hub_path ~trigger_id ~from ~inbound_message
         ~final_parsed:parsed ~initial_coord_ops ~name
+        ?invocation_t0 ?pass_count ()
 
     | Ok (Some result) ->
       Cn_trace.gemit ~component:"runtime" ~layer:Body
@@ -703,13 +712,15 @@ let rec finalize ~(config : Cn_config.config) ~hub_path ~name
         ~trigger_id ();
       finalize_project ~config ~hub_path ~trigger_id ~from ~inbound_message
         ~final_parsed ~initial_coord_ops ~name
+        ?invocation_t0 ?pass_count ()
   end
 
 (** Project final output, append conversation, cleanup.
     Extracted from finalize to avoid duplication between the recovery
     path (ops_already_done) and the normal execution path. *)
 and finalize_project ~(config : Cn_config.config) ~hub_path ~trigger_id
-      ~from ~inbound_message ~final_parsed ~initial_coord_ops ~name =
+      ~from ~inbound_message ~final_parsed ~initial_coord_ops ~name
+      ?(invocation_t0 : float option) ?(pass_count : int option) () =
 
   (* 4. Project to Telegram if from Telegram.
         Uses Cn_projection.project_reply for crash-recovery idempotency. *)
@@ -817,6 +828,21 @@ and finalize_project ~(config : Cn_config.config) ~hub_path ~trigger_id
     ~lock_held:true ~pending_projection:None;
   update_ready_body hub_path ~fsm_state:"idle"
     ~lock_held:true ~current_cycle:None;
+
+  (* Unified log: invocation end + message sent *)
+  let duration_ms = match invocation_t0 with
+    | Some t0 -> Some (int_of_float ((Unix.gettimeofday () -. t0) *. 1000.0))
+    | None -> None in
+  Cn_ulog.write hub_path (Cn_ulog.make_entry
+    ~kind:Invocation_end ~severity:Info
+    ~msg_id:trigger_id
+    ~ops:(List.length initial_coord_ops)
+    ?passes:pass_count ?duration_ms ());
+  let response_preview = match assistant_text with
+    | s when String.length s > 0 -> Some s | _ -> None in
+  Cn_ulog.write hub_path (Cn_ulog.make_entry
+    ~kind:Message_sent ~severity:Info
+    ~msg_id:trigger_id ?response_preview ());
 
   ignore name;
   print_endline (Cn_fmt.ok
@@ -989,6 +1015,12 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
               ~reason_code:"fresh_dequeue"
               ~details:["from", Cn_json.String from] ();
 
+            (* Unified log: message received *)
+            Cn_ulog.write hub_path (Cn_ulog.make_entry
+              ~kind:Message_received ~severity:Info
+              ~msg_id:trigger_id ~source:from
+              ~user_msg:inbound_message ());
+
             Cn_trace.gemit ~component:"runtime" ~layer:Body
               ~event:"queue.dequeue" ~severity:Info ~status:Ok_
               ~trigger_id ();
@@ -1032,7 +1064,13 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
               ~trigger_id
               ~details:["model", Cn_json.String config.model] ();
 
-            let llm_t0 = Unix.gettimeofday () in
+            (* Unified log: invocation start *)
+            let invocation_t0 = Unix.gettimeofday () in
+            Cn_ulog.write hub_path (Cn_ulog.make_entry
+              ~kind:Invocation_start ~severity:Info
+              ~msg_id:trigger_id ~pass:1 ());
+
+            let llm_t0 = invocation_t0 in
             match Cn_llm.call ~api_key:config.anthropic_key
                     ~model:config.model ~max_tokens:config.max_tokens
                     ~system:packed.system ~messages:packed.messages with
@@ -1045,6 +1083,13 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
                     "model", Cn_json.String config.model;
                     "latency_ms", Cn_json.Int latency_ms;
                   ] ();
+
+                (* Unified log: error *)
+                Cn_ulog.write hub_path (Cn_ulog.make_entry
+                  ~kind:Error ~severity:Error_
+                  ~msg_id:trigger_id
+                  ~error:(Printf.sprintf "LLM call failed: %s" msg) ());
+
                 Error (Printf.sprintf "LLM call failed: %s" msg)
             | Ok response ->
                 let latency_ms = int_of_float ((Unix.gettimeofday () -. llm_t0) *. 1000.0) in
@@ -1062,6 +1107,7 @@ let process_one ~(config : Cn_config.config) ~hub_path ~name =
                 finalize ~config ~hub_path ~name
                   ~trigger_id ~from ~inbound_message
                   ~output_content:response.content ~packed
+                  ~invocation_t0 ~pass_count:1
                   ?chat_id_opt ()
       end
     with
@@ -1556,6 +1602,9 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
             Cn_trace.gemit ~component:"telegram" ~layer:Sensor
               ~event:"daemon.poll.error" ~severity:Warn ~status:Error_status
               ~reason_code:"poll_error" ();
+            Cn_ulog.write hub_path (Cn_ulog.make_entry
+              ~kind:Error ~severity:Error_
+              ~error:(Printf.sprintf "Telegram poll error: %s" msg) ());
             print_endline (Cn_fmt.warn (Printf.sprintf "Poll error: %s" msg))
         | Ok messages ->
             (* Sort ascending by update_id for monotonic offset advancement *)
@@ -1572,17 +1621,26 @@ let run_daemon ~(config : Cn_config.config) ~hub_path ~name =
                       ~event:"daemon.offset.advanced" ~severity:Info ~status:Ok_
                       ~reason_code:"rejected_user"
                       ~details:["update_id", Cn_json.Int msg.update_id] ();
+                    (* Unified log: rejected message *)
+                    let trigger_id = Printf.sprintf "tg-%d" msg.update_id in
+                    Cn_ulog.write hub_path (Cn_ulog.make_entry
+                      ~kind:Message_received ~severity:Warn
+                      ~msg_id:trigger_id ~source:"telegram"
+                      ~error:"rejected: unauthorized user" ());
                     offset := max !offset (msg.update_id + 1);
                     write_offset hub_path !offset;
                     drain_tg rest
                   end else if String.trim msg.text = "" then begin
-                    (* #29: skip empty/whitespace-only messages — photos,
-                       stickers, edits have no text content and would cause
-                       Claude API 400 → infinite retry loop (#28). *)
                     Cn_trace.gemit ~component:"telegram" ~layer:Sensor
                       ~event:"daemon.offset.advanced" ~severity:Info ~status:Ok_
                       ~reason_code:"empty_content"
                       ~details:["update_id", Cn_json.Int msg.update_id] ();
+                    (* Unified log: empty message *)
+                    let trigger_id = Printf.sprintf "tg-%d" msg.update_id in
+                    Cn_ulog.write hub_path (Cn_ulog.make_entry
+                      ~kind:Message_received ~severity:Warn
+                      ~msg_id:trigger_id ~source:"telegram"
+                      ~error:"skipped: empty content" ());
                     offset := max !offset (msg.update_id + 1);
                     write_offset hub_path !offset;
                     drain_tg rest
