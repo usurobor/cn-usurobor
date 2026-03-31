@@ -1,6 +1,9 @@
 ---
 name: skill
 description: Write coherent skills. Use when creating, rewriting, classifying, or reviewing any artifact under src/agent/skills/.
+artifact_class: skill
+kata_surface: embedded
+governing_question: How do we write, classify, and verify coherent skills?
 triggers:
   - creating a new skill
   - rewriting an old skill
@@ -12,7 +15,7 @@ triggers:
 
 ## Core Principle
 
-Coherent skill: a skill teaches repeatable judgment in one domain through a domain-specific coherence formula, unfolded into necessary sections, enforced by imperative rules, and demonstrated by its own structure.
+**Coherent skill: a true skill teaches repeatable judgment in one domain through a domain-specific coherence formula, unfolded into necessary sections, enforced by imperative rules, and made trainable through a kata surface.**
 
 A skill is not a pile of advice. A skill is not a lookup page. A skill is not a runbook with a nicer title.
 
@@ -20,10 +23,10 @@ If the formula is generic, the artifact is not ready. If the artifact is really 
 
 ## Algorithm
 
-1. Define — classify the artifact, name the domain formula, the parts, the governing question, and the failure mode.
-2. Unfold — organize the skill so each section serves the formula in a necessary order.
+1. Define — classify the artifact, name the domain formula, the governing question, the parts, and the failure mode.
+2. Unfold — organize the artifact so each section serves the formula in a necessary order.
 3. Rules — write imperative rules with stable IDs and contrastive ❌/✅ examples.
-4. Verify — check that the skill itself obeys the structure it teaches.
+4. Verify — check that the artifact, its classification, and its kata surface all match.
 
 ---
 
@@ -31,31 +34,42 @@ If the formula is generic, the artifact is not ready. If the artifact is really 
 
 ### 1.0. Classify the artifact first
 
-Before writing or rewriting, decide what kind of artifact this is.
+Every artifact under `src/agent/skills/` must declare its class. Valid classes:
 
-A true skill:
+- **skill** — teaches repeatable judgment in a domain
+- **runbook** — teaches ordered operational steps
+- **reference** — provides lookup-oriented material
+- **deprecated** — superseded, merged, or no longer authoritative
 
-- teaches repeatable judgment in a domain
+Use these tests:
+
+A skill:
+
 - has a domain-specific coherence formula
+- teaches judgment, not just sequence
 - benefits from Define → Unfold → Rules
+- should expose a kata surface
 
 A runbook:
 
-- is mostly ordered operational steps
-- depends on sequence and preconditions more than judgment
+- is mainly ordered steps
+- depends on sequence and preconditions
+- may have a drill or checklist, but does not need a coherence formula
 
 A reference:
 
+- is mainly conventions, APIs, commands, templates, or examples
 - is lookup-oriented
-- mainly holds commands, conventions, templates, APIs, or examples
+- should be declarative, not artificially "skill-shaped"
 
-A deprecated / merged artifact:
+A deprecated artifact:
 
-- is too small to stand alone
-- belongs inside another skill or reference
+- is superseded
+- belongs inside another artifact
+- should not silently remain live
 
-- ❌ Force every low-quality artifact into skill form
-- ✅ Reclassify first, then rewrite only the true skills
+- ❌ Force every low-scoring artifact into skill form
+- ✅ Reclassify first, then rewrite only true skills
 
 ### 1.1. Identify the parts
 
@@ -66,8 +80,8 @@ Ask:
 - what must fit together?
 
 - ❌ Skip straight to bullet rules
-- ✅ "Reflection has: observation, interpretation, output"
-- ✅ "Design has: problem, constraints, impact graph, proposal, acceptance criteria"
+- ✅ "Review has: contract, evidence, verdict"
+- ✅ "Writing has: document, section, paragraph, sentence, word"
 
 ### 1.2. Articulate how they fit
 
@@ -75,36 +89,31 @@ State the coherence formula in one sentence. The formula must explain:
 
 - how the parts serve the whole
 - what makes the domain coherent
-- what would be lost if one part were missing
+- what is lost if one part is missing
 
 - ❌ "Coherent writing: follow best practices"
-- ✅ "Coherent writing: nothing can be removed without loss"
+- ✅ "Coherent writing moves understanding forward with the minimum text required"
 - ❌ "Coherent review: be thorough"
-- ✅ "Coherent review: terms, pointer, and exit all resolve to the same gap"
+- ✅ "Coherent review resolves terms, pointer, and exit to the same gap"
 
 ### 1.3. Name the governing question
 
-Every skill should answer one governing question. Use a sentence like:
+Every true skill should answer one governing question. Use a sentence like:
 
 > This skill teaches how to...
 
-- ❌ One skill mixing several domains
-- ✅ One skill with one governing question
-
-Examples:
-
-- "This skill teaches how to design a change before implementing it."
-- "This skill teaches how to review a change against its declared contract."
-- "This skill teaches how to write so the reader understands the point on the first pass."
+- ❌ One artifact teaching two or three domains at once
+- ✅ "This skill teaches how to design a change before implementing it"
+- ✅ "This skill teaches how to review a change against its declared contract"
 
 ### 1.4. Name the failure mode
 
 A good skill names what incoherence looks like in its domain.
 
 - ❌ Generic: "doing it wrong"
-- ✅ Specific: "Reflection fails via motivated reasoning"
-- ✅ Specific: "Design fails via incomplete impact tracing"
+- ✅ Specific: "Design fails through incomplete impact tracing"
 - ✅ Specific: "Writing fails through clutter and drift"
+- ✅ Specific: "Review fails when evidence and verdict drift apart"
 
 If you cannot name the failure mode, the formula is probably still vague.
 
@@ -117,92 +126,105 @@ If you cannot name the failure mode, the formula is probably still vague.
 Do not let one skill do several jobs.
 
 - ❌ A skill that mixes theory, operations, and style guidance
-- ✅ A skill that owns one domain and points to adjacent skills when needed
+- ✅ A skill that owns one domain and points to adjacent artifacts when needed
 
 ### 2.2. Order sections by dependency
 
-Sections should build on one another. Good progressions:
+Sections should build on one another. Common progressions:
 
 - small → large
 - simple → complex
 - gather → process → act
 - observe → interpret → decide → act
 
-- ❌ Random ordering of tips
+- ❌ Random ordering of advice
 - ✅ Each section depends on the one before it
 
-### 2.3. High alpha — each bullet stands on its own
+### 2.3. Make the artifact demonstrate its own formula
 
-Each bullet should be locally coherent. The reader should not need to leave the bullet to understand the rule.
+A coherent skill should obey its own rules.
 
-- ❌ "Cut filler (see appendix for examples)"
-- ✅ "Cut filler: ❌ 'In order to' → ✅ 'To'"
+- ❌ A writing skill that rambles
+- ❌ A design skill with no impact graph
+- ❌ A review skill with no clear verdict structure
+- ✅ The artifact itself is the first proof that the formula works
 
-### 2.4. High beta — sections serve the whole
+### 2.4. Provide a kata surface for every true skill
 
-Each section should answer a necessary sub-question.
+A true skill must be kata-compatible. Allowed values:
 
-- ❌ Section exists because it sounds related
-- ✅ Section exists because the formula needs it
+- **embedded** — the skill contains its own kata section
+- **external** — the skill points to a sibling kata file
+- **none** — allowed only for runbook, reference, or deprecated artifacts
 
-Ask:
+A kata surface must define:
 
-- if I remove this section, what necessary understanding disappears?
+- scenario
+- task
+- governing skills
+- inputs
+- expected artifacts
+- verification
+- common failures
+- reflection
 
-### 2.5. Keep examples small and contrastive
+- ❌ A true skill with no practice surface
+- ✅ A skill with an embedded or external kata that proves it can be exercised
 
-Examples should show one failure and one fix.
+### 2.5. Use output formats only when the artifact produces recurring outputs
 
-- ❌ One giant before/after example with many unrelated changes
-- ✅ One bad line and one corrected line
-- ✅ One incoherent behavior and the coherent version of the same situation
+If the artifact regularly produces:
 
-### 2.6. Use output formats only when the skill produces recurring artifacts
-
-If the skill regularly produces:
-
-- issue specs
 - design docs
-- self-coherence reports
 - review requests
+- self-coherence reports
+- release notes
 
-then provide a stable output format.
+provide a stable output format.
 
-If it does not, do not force a template into the skill.
+Do not force templates into artifacts that do not need them.
 
-- ❌ Add output templates to every skill
-- ✅ Add them only when the artifact recurs and benefits from structure
+- ❌ Add output templates to every artifact
+- ✅ Add them only when the artifact produces recurring structured outputs
 
 ---
 
 ## 3. Rules
 
-### 3.1. Start with the formula
+### 3.1. Require frontmatter
 
-Put the domain-specific coherence formula near the top.
+Every artifact should declare what it is. Minimum frontmatter:
 
-- ❌ Three paragraphs of setup before the principle appears
-- ✅ "Coherent design: every decision traces to a named incoherence..."
+- `name`
+- `description`
+- `artifact_class`
+- `kata_surface`
+- `governing_question`
 
-### 3.2. State what the skill is
+- ❌ Leave classification implicit
+- ✅ Make the artifact say what it is
 
-Name the skill positively and concretely.
+### 3.2. State what the artifact is
+
+Name the artifact positively and concretely.
 
 - ❌ "This is not just a checklist"
 - ✅ "This skill teaches how to..."
+- ✅ "This runbook explains how to..."
+- ✅ "This reference lists..."
 
 ### 3.3. Write imperative rules
 
 Each rule should start with a verb.
 
-- ❌ "Filler phrases are bad"
-- ✅ "Cut filler phrases"
 - ❌ "Impact graphs are important"
 - ✅ "Trace the impact graph"
+- ❌ "Filler phrases are bad"
+- ✅ "Cut filler phrases"
 
 ### 3.4. Add one line of context only when it helps
 
-Rules may have one short line explaining why they matter or when they apply.
+A rule may have one short line explaining why it matters or when it applies.
 
 - ❌ Three sentences of background before the rule starts
 - ✅ "Vague observations do not produce action."
@@ -222,14 +244,14 @@ Use numbered IDs such as:
 - 2.4.
 - 3.7.
 
-Do not renumber casually. Add new items at the end of a section when possible.
+Do not renumber casually.
 
 - ❌ "See above"
 - ✅ "See 2.3."
 
 ### 3.7. Keep authority explicit
 
-If the skill depends on another surface, say so directly.
+If the artifact depends on another surface, say so directly.
 
 - ✅ "Canonical doc governs on disagreement."
 - ✅ "This is a reference profile, not the method."
@@ -239,86 +261,83 @@ Do not make the reader infer authority from tone.
 
 ### 3.8. Say stable facts once, then point to them
 
-If a stable fact belongs elsewhere, point to it. Do not duplicate it across many skills.
+Stable facts should have one home. State them once. Elsewhere, point back.
 
-- ❌ Restate the same authority rule in multiple places with slight drift
-- ✅ Name the owning document once and point to it
+- ❌ Restate the same authority rule in multiple artifacts with slight drift
+- ✅ Name the owning artifact once and point to it
 
-### 3.9. Make the skill demonstrate its own formula
-
-A coherent skill should obey its own rules.
-
-- ❌ A writing skill that rambles
-- ❌ A design skill with no impact graph
-- ❌ A review skill with no clear verdict structure
-- ✅ The skill itself is the first proof that the formula works
-
-### 3.10. Do not force skill form onto the wrong artifact
+### 3.9. Do not force skill form onto the wrong artifact
 
 If the artifact is really a runbook or reference, reclassify it.
 
 - ❌ Add fake coherence language to a command cheat sheet
 - ✅ Keep lookup docs declarative and let skills teach judgment
 
-### 3.11. Sync source and packaged copies
+### 3.10. Sync source and packaged copies
 
 If you edit anything under `src/agent/skills/`, keep packaged copies in sync.
 
-- ❌ Update only the source skill and leave the packaged copy stale
+- ❌ Update only the source artifact and leave the packaged copy stale
 - ✅ Run the build/sync path before claiming the change is complete
 
 ---
 
 ## 4. Verify
 
-### 4.1. File-level check
+### 4.1. Classification check
 
 Ask:
 
-- what is the one governing question?
 - is this really a skill?
-- what is the domain-specific coherence formula?
-- what is the named failure mode?
+- if not, should it be runbook, reference, or deprecated?
 
-### 4.2. Structure check
+### 4.2. Formula check
+
+Ask:
+
+- is the formula domain-specific?
+- is the failure mode named?
+- does the artifact answer one governing question?
+
+### 4.3. Structure check
 
 Ask:
 
 - does each section serve the formula?
 - are sections ordered by dependency?
-- does each paragraph make one move?
+- does the artifact obey the rules it teaches?
 
-### 4.3. Rule check
-
-Ask:
-
-- does each rule start with a verb?
-- does each rule have a real ❌/✅ pair?
-- are examples small and contrastive?
-- are IDs stable?
-
-### 4.4. Self-demonstration check
+### 4.4. Kata check
 
 Ask:
 
-- does the skill itself obey the writing, design, and coherence standards it teaches?
+- does every true skill expose a kata surface?
+- is the kata embedded or external?
+- does the kata define scenario, task, governing skills, inputs, expected artifacts, verification, failures, and reflection?
 
-If not, it is not done.
+### 4.5. Corpus check
+
+Ask:
+
+- is frontmatter present?
+- is the artifact class explicit?
+- is the package copy synced if needed?
 
 ---
 
 ## 5. Final Test
 
-A skill is coherent when:
+An artifact is coherent when:
 
-- the artifact is correctly classified
-- the governing question is singular
-- the formula is domain-specific
-- the failure mode is named
-- sections unfold in a necessary order
-- rules are imperative
-- examples show one failure and one fix
-- authority is explicit
-- the skill demonstrates its own formula
+- its class is explicit
+- its governing question is singular
+- its formula is domain-specific
+- its failure mode is named
+- its sections unfold in a necessary order
+- its rules are imperative
+- its examples show one failure and one fix
+- its authority is explicit
+- every true skill has a kata surface
+- it demonstrates its own formula
 
-If a formula is generic, sharpen it. If a section does not serve the whole, cut it. If the artifact is not really a skill, reclassify it.
+If the formula is generic, sharpen it. If the artifact is not a skill, reclassify it. If the skill cannot be practiced, add a kata surface.
