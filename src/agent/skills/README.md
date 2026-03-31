@@ -12,12 +12,12 @@ The corpus uses one directory axis for domain and one metadata axis for artifact
 
 Current directories group artifacts by domain:
 
-- `agent/` — foundational coherent-agent behavior
-- `eng/` — engineering practice
-- `ops/` — operational / hub-facing practice
-- `cdd/` — development method
-- `release/` — release procedure
-- `testing/` — testing-related artifacts
+- agent/ — foundational coherent-agent behavior
+- eng/ — engineering practice
+- ops/ — operational / hub-facing practice
+- cdd/ — development method
+- release/ — release procedure
+- testing/ — testing-related artifacts
 
 These folders do not tell you whether an artifact is a skill, runbook, or reference. That is handled by frontmatter.
 
@@ -25,11 +25,11 @@ These folders do not tell you whether an artifact is a skill, runbook, or refere
 
 ## Artifact classes
 
-Every artifact under `src/agent/skills/` should declare:
+Every artifact under src/agent/skills/ should declare:
 
-- `artifact_class: skill | runbook | reference | deprecated`
-- `kata_surface: embedded | external | none`
-- `governing_question: ...`
+- artifact_class: skill | runbook | reference | deprecated
+- kata_surface: embedded | external | none
+- governing_question: ...
 
 ### Skill
 
@@ -38,7 +38,7 @@ A skill teaches repeatable judgment in one domain.
 A true skill:
 
 - has a domain-specific coherence formula
-- follows the meta-skill standard
+- follows the meta-skill
 - exposes a kata surface
 
 ### Runbook
@@ -66,9 +66,9 @@ A deprecated artifact is superseded, merged, or no longer authoritative. Do not 
 
 Every true skill must be kata-compatible. That means the artifact must expose a kata surface:
 
-- `kata_surface: embedded` — the skill contains its own kata section
-- `kata_surface: external` — the skill points to a sibling kata file
-- `kata_surface: none` — allowed only for runbook, reference, or deprecated artifacts
+- kata_surface: embedded — the skill contains its own kata section
+- kata_surface: external — the skill points to a sibling kata.md
+- kata_surface: none — allowed only for runbook, reference, or deprecated artifacts
 
 A kata should define:
 
@@ -89,8 +89,8 @@ The goal is not ceremony. The goal is practice and evidence.
 
 Older artifacts may still reflect the previous corpus model. That older model included:
 
-- TERMS / INPUTS / EFFECTS structure
-- mandatory sibling `kata.md`
+- TERMS / INPUTS / EFFECTS
+- mandatory sibling kata.md
 - flatter skill descriptions
 
 The current standard is the meta-skill in:
@@ -113,21 +113,21 @@ When rewriting an artifact:
 
 Put the artifact in the domain it belongs to:
 
-- `agent`
-- `eng`
-- `ops`
-- `cdd`
-- `release`
-- `testing`
+- agent
+- eng
+- ops
+- cdd
+- release
+- testing
 
 **Step 2** — classify it
 
 Choose one:
 
-- `skill`
-- `runbook`
-- `reference`
-- `deprecated`
+- skill
+- runbook
+- reference
+- deprecated
 
 **Step 3** — add frontmatter
 
@@ -143,11 +143,11 @@ governing_question: <one sentence>
 ---
 ```
 
-Adjust `artifact_class` and `kata_surface` to match reality.
+Adjust artifact_class and kata_surface to match reality.
 
 **Step 4** — follow the right standard
 
-- skill → follow `eng/skill/SKILL.md`
+- skill → follow eng/skill/SKILL.md
 - runbook → ordered steps, explicit preconditions, verification
 - reference → declarative lookup structure
 - deprecated → state replacement and status clearly
