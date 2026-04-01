@@ -73,7 +73,8 @@ Use when building interfaces or tooling for humans/operators.
 Use when writing durable engineering artifacts.
 
 - documenting/ - write docs that are authoritative and maintainable
-- skill/ - author executable skills coherently
+
+Note: the meta-skill (how to write, classify, and verify skills) lives at the corpus level: `src/agent/skills/skill/SKILL.md`.
 
 ---
 
@@ -130,8 +131,8 @@ Load when building tools or CLI/operator surfaces.
 Load when writing docs or skills that will become durable system artifacts.
 
 - documenting
-- skill
 - review
+- (meta-skill at top-level skill/SKILL.md when authoring skills)
 
 ---
 
