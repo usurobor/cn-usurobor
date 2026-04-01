@@ -713,7 +713,7 @@ Flags:
   --dry-run           Show what would happen
 
 Runtime:
-  Oneshot scheduler (cn agent) runs one cycle on cron:
+  Oneshot scheduler (cn agent) runs one cycle:
   1. maintain_once: sync, inbox, outbox, update check, review, cleanup
   2. drain_queue: dequeue → pack context → call LLM → execute ops
   All state mutation under atomic lock. Recovery handles crash at any point.

@@ -384,8 +384,8 @@ let setup_assets hub_path =
 (** cn setup — interactive hub setup.
     Makes any hub wake-ready: materializes core assets, writes default
     deps manifest with profile package, runs restore.
-    Does NOT require root. System-level setup (logrotate, cron) is
-    handled separately via cn setup --system. *)
+    Does NOT require root. System-level setup (logrotate, systemd) is
+    handled separately. *)
 let run_setup hub_path =
   print_endline (Cn_fmt.info (Printf.sprintf "Setting up hub: %s" hub_path));
 
@@ -434,14 +434,6 @@ let run_setup hub_path =
   print_endline (Cn_fmt.ok "Hub setup complete!")
 
 (* === Update === *)
-
-let update_cron hub_path =
-  let cron_line = Printf.sprintf "*/5 * * * * cn-cron %s" (Filename.quote hub_path) in
-  print_endline (Cn_fmt.info "Updating crontab (5 min intervals)...");
-  let cmd = Printf.sprintf "echo %s | crontab -" (Filename.quote cron_line) in
-  match Cn_ffi.Child_process.exec cmd with
-  | Some _ -> print_endline (Cn_fmt.ok "Crontab updated")
-  | None -> print_endline (Cn_fmt.warn "Crontab update failed - update manually")
 
 (** Reconcile first-party packages after a binary update.
     Rewrites lock entries to match the new runtime version, then restores. *)
@@ -518,9 +510,8 @@ let run_update hub_path_opt =
         | _ ->
             print_endline (Cn_fmt.fail "Binary download failed. Check network and try again.")))
 
-let run_update_with_cron hub_path =
+let run_update_in_hub hub_path =
   run_update (Some hub_path);
-  update_cron hub_path;
   update_runtime hub_path;
   print_endline (Cn_fmt.info "Auto-committing runtime changes...");
   let _ = Cn_ffi.Child_process.exec_in ~cwd:hub_path "git add state/runtime.md" in

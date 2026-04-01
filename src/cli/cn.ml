@@ -48,7 +48,7 @@ let () =
   | Some Version -> Printf.printf "cn %s (%s)\n" version cnos_commit
   | Some Update ->
       (match Cn_hub.find_hub_path (Cn_ffi.Process.cwd ()) with
-       | Some hub_path -> Cn_system.run_update_with_cron hub_path
+       | Some hub_path -> Cn_system.run_update_in_hub hub_path
        | None -> Cn_system.run_update None)
   | Some (Release v) ->
       let hub_path_opt = Cn_hub.find_hub_path (Cn_ffi.Process.cwd ()) in
