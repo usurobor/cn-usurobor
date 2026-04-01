@@ -60,10 +60,13 @@ Failure mode: version drift — tag says X, binary says Y, agent reports Z. Or: 
   - ✅ `echo "X.Y.Z" > VERSION && scripts/stamp-versions.sh && scripts/check-version-consistency.sh`
 
 2.4. **CHANGELOG**
-  - Add row to version table with TSC grades
-  - Add detailed section: Added / Changed / Fixed
+  - Add a ledger row matching the format defined in `CHANGELOG.md` § Release Coherence Ledger. That format is canonical — do not reinvent the row shape here.
+  - The ledger row includes: Version, C_Σ, α, β, γ, Level, and a coherence note.
+  - Add a detailed section below the ledger: Added / Changed / Fixed, with each commit's impact named and linked to issues.
   - ❌ "Various improvements" (no detail)
+  - ❌ Ledger row without engineering level (Level column is required)
   - ✅ Each commit's impact named, linked to issues
+  - ✅ Honest TSC grades — not everything is A+
 
 2.5. **Tag and push**
   - **Tag naming convention:** use bare version numbers without `v` prefix: `3.15.1`, not `v3.15.1`. This matches VERSION file content, branch naming (`claude/3.15.0-22-...`), and snapshot directory names (`docs/gamma/cdd/3.15.0/`). Consistency across all version surfaces.
