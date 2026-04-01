@@ -104,6 +104,17 @@ If no governing gap can be named with enough evidence:
 - ask the operator if the ambiguity is blocking
 - defer action explicitly if needed
 
+Ask the operator when:
+
+- the ambiguity blocks a decision the operator cares about
+- gathering more evidence would take longer than asking
+- two candidate gaps lead to incompatible response paths
+
+Gather more evidence when:
+
+- the answer is likely observable without operator input
+- asking would transfer work the agent can do itself
+
 - ❌ "Unclear, but I'll just fix the most visible symptom"
 - ✅ "Two candidate gaps remain; not enough evidence yet; next step is X"
 
