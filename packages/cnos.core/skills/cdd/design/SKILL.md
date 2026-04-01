@@ -302,11 +302,28 @@ List every file that needs to change, grouped by action.
 
 ## Known Debt
 [What remains after this change]
+
+## CDD Trace
+| Step | Artifact | Skills loaded | Decision |
+|------|----------|--------------|----------|
+| §2.0 | — | — | [observation inputs and selected signal] |
+| §2.1 | — | — | [selected gap] |
+| §2.4 | this artifact | [active skills] | [work shape, level if used, mode] |
+| §2.5 | [artifact name] | — | [design/plan/tests/docs progress] |
 ```
 
 ---
 
-### 3.2. Pre-Submission Checklist
+### 3.2. Keep the CDD Trace in the primary branch artifact
+
+If this design artifact is the primary branch artifact for a substantial cycle, it must carry the CDD Trace.
+
+- ❌ Mode and active skills stated, but no trace of when or why they were chosen
+- ✅ The design artifact records observation, selected gap, mode, active skills, and artifact progress
+
+If another artifact is the primary branch artifact, point to it explicitly.
+
+### 3.3. Pre-Submission Checklist
 
 Before requesting review:
 
@@ -331,3 +348,4 @@ Before requesting review:
 - [ ] Known debt acknowledged
 - [ ] Artifact boundaries respected: gap lives here, order lives in plan, summary lives in issue
 - [ ] Companion artifacts linked (issue, plan, prior art)
+- [ ] CDD Trace present and filled through the current lifecycle step (if substantial)

@@ -55,7 +55,15 @@ The assessment produces one artifact with five sections:
 **How to verify:** [concrete steps]
 **Result:** [pass / fail / deferred]
 
-### 6. Next Move
+### 6. CDD Closeout
+
+| Step | Artifact | Skills loaded | Decision |
+|------|----------|--------------|----------|
+| §2.9 | observation surface | post-release | runtime/design alignment result |
+| §2.10 | POST-RELEASE-ASSESSMENT.md | post-release | assessment completed |
+| §2.11 | immediate fixes / next MCA issue | post-release (+ others if used) | cycle closed / deferred outputs committed |
+
+### 7. Next Move
 **Next MCA:** #NN — title
 **Owner:** ...
 **Branch:** ...
@@ -223,8 +231,9 @@ Before committing the assessment, verify mechanically:
 - [ ] §4 mechanical ratio: if >20%, a process issue is **filed and referenced** (not just noted)
 - [ ] §4a CDD self-coherence: α/β/γ scored, weakest axis named, action stated (or "none" if all ≥3)
 - [ ] §5.7 has production verification scenario (or explicit deferral with commitment)
-- [ ] §5 has all 6 fields: Next MCA, Owner, Branch, **First AC**, MCI frozen?, Rationale
-- [ ] §5 Closure evidence: immediate outputs listed with links, deferred outputs with issue/owner
+- [ ] §6 CDD Closeout trace present with rows for observe/assess/close steps
+- [ ] §7 has all 6 fields: Next MCA, Owner, Branch, **First AC**, MCI frozen?, Rationale
+- [ ] §7 Closure evidence: immediate outputs listed with links, deferred outputs with issue/owner
 - [ ] CHANGELOG TSC row added or updated to match assessment scores
 
 This gate is mechanical. Two agents checking the same template must find the same missing fields.

@@ -298,7 +298,64 @@ The canonical artifact order is:
 12. assess
 13. close
 
-### 5.3 Supporting rules
+### 5.3 Artifact manifest
+
+CDD is artifact-driven. For substantial changes, each lifecycle step must leave one inspectable evidence surface.
+
+| Step | Name | Required evidence | Owner |
+|------|------|-------------------|-------|
+| 0 | Observe | CDD Trace row recording inputs read and selected signal | primary branch artifact |
+| 1 | Select | CDD Trace row naming selected gap | primary branch artifact |
+| 2 | Branch | valid branch name | branch + CDD Trace row |
+| 3 | Bootstrap | version directory + manifest README + declared stubs | branch diff |
+| 4 | Gap | named incoherence / coherence contract | primary branch artifact |
+| 5 | Mode | mode + active skills (+ bundle/level if used) | primary branch artifact |
+| 6a | Design | design artifact or explicit "not required" note by change class | primary branch artifact |
+| 6b | Plan | plan artifact when cycle-sized, otherwise explicit "not required" note | primary branch artifact or linked plan |
+| 6c | Tests | test files or explicit reason no tests apply | diff / primary branch artifact |
+| 6d | Code | implementation diff or explicit "docs/process only" note | diff / primary branch artifact |
+| 6e | Docs | changed canonical docs / specs / READMEs as required | diff |
+| 7 | Self-coherence | SELF-COHERENCE.md | version directory |
+| 8 | Review | review artifact / PR review / review comment link | review surface |
+| 9 | Gate | gate result / release-readiness evidence | release surface or review surface |
+| 10 | Release | CHANGELOG row, tag, release note / release artifact | release surface |
+| 11 | Observe | post-release observation result | post-release assessment |
+| 12 | Assess | POST-RELEASE-ASSESSMENT.md | version directory |
+| 13 | Close | immediate outputs executed + deferred outputs committed | post-release assessment |
+
+Rules:
+- "Not required" is valid only when stated explicitly.
+- An omitted step with no explicit note is incomplete, not implicit.
+- Small-change mode may collapse steps 4–7 into commit/PR-body evidence, but the same distinctions still apply.
+
+### 5.4 CDD Trace
+
+Every substantial cycle must carry a lightweight execution trace. For steps 0–10, the trace lives in the primary branch artifact. For steps 11–13, closure lives in the post-release assessment.
+
+The primary branch artifact is the artifact that owns the named incoherence, mode, active skills, and acceptance criteria. In most cycles this is the design artifact. For governance/process work it may be the governing doc being changed. For smaller substantial changes it may be the PR body when no separate design doc is required.
+
+Required format:
+
+```markdown
+## CDD Trace
+| Step | Artifact | Skills loaded | Decision |
+|------|----------|--------------|----------|
+| §2.0 | — | — | Observation inputs read; selected signal |
+| §2.1 | — | — | Selected gap |
+| §2.4 | primary artifact | skill1, skill2 | Work shape, level (if used), mode, active skills |
+| §2.5 | design / plan / tests / docs | — | Artifact progress or explicit "not required" |
+| §2.6 | review surface | review (+ others if loaded) | CLP review result |
+| §2.8 | release surface | release, writing (if used) | Tag / changelog / release decision |
+```
+
+Rules:
+- One row per completed lifecycle step.
+- "Skills loaded" is required when skills shaped generation or lifecycle execution.
+- If a lifecycle skill is used later (review, release, writing, post-release), record it when it becomes active.
+- Missing rows mean the step is not yet evidenced.
+- Contradictory rows are findings.
+
+### 5.5 Supporting rules
 
 - one source of truth per fact
 - derive, do not duplicate
@@ -308,7 +365,7 @@ The canonical artifact order is:
 - enumerate affected files before implementation begins
 - every AC must map to evidence before review
 
-### 5.4 Frozen snapshot rule
+### 5.6 Frozen snapshot rule
 
 After release, version directories are frozen by repository policy. Only path-reference repairs are allowed after freeze:
 

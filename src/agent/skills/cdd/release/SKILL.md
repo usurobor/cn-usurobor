@@ -67,6 +67,7 @@ Failure mode: version drift — tag says X, binary says Y, agent reports Z. Or: 
   - ❌ Ledger row without engineering level (Level column is required)
   - ✅ Each commit's impact named, linked to issues
   - ✅ Honest TSC grades — not everything is A+
+  - If release notes or CHANGELOG wording are being authored, load the writing skill and record it in the CDD Trace.
 
 2.5. **Tag and push**
   - **Tag naming convention:** use bare version numbers without `v` prefix: `3.15.1`, not `v3.15.1`. This matches VERSION file content, branch naming (`claude/3.15.0-22-...`), and snapshot directory names (`docs/gamma/cdd/3.15.0/`). Consistency across all version surfaces.
@@ -97,6 +98,13 @@ Failure mode: version drift — tag says X, binary says Y, agent reports Z. Or: 
   - Check telemetry for errors on first cycle
   - ❌ "It deployed" (no functional validation)
   - ✅ Trace telemetry, confirm receipts/artifacts exist, agent responds correctly
+
+2.9. **CDD Trace update**
+  - Update the primary branch artifact's CDD Trace with the release row:
+    - artifact: tag / CHANGELOG / release artifact
+    - skills loaded: release, plus writing if used
+    - decision: released version X.Y.Z
+  - If the branch has no primary branch artifact, the PR body must carry the trace instead.
 
 ## 3. Rules
 
