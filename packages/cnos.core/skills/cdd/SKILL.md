@@ -136,6 +136,8 @@ State why MCI is required if action is blocked.
 
 Name 2–3 skills as hard generation constraints for this change. **Read each SKILL.md file before beginning any work step.** Naming a skill without reading it is not loading it. All others are reference only. Fewer constraints deeply applied > many constraints lightly checked. (CDD §4.4)
 
+To select active skills: identify the work shape (bugfix, feature, runtime, architecture, tooling, docs), then the engineering level (L5/L6/L7), then choose from the default matrix in `src/agent/skills/eng/README.md` § "Default active skills by work shape and level." Review, ship, and post-release are lifecycle skills — they govern later CDD phases, not generation. Do not overload this step with lifecycle skills.
+
 ### 2.5 Build artifacts in order
 
 For substantial changes:

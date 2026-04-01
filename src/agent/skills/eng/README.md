@@ -217,6 +217,30 @@ See docs/gamma/ENGINEERING-LEVELS.md for the full shared definition.
 
 ---
 
+## Default active skills by work shape and level
+
+Levels describe the **scale of impact**. Bundles describe the **work context**. Active skills are the 2–3 hard generation constraints chosen for this specific change (CDD §2.4).
+
+Selection rule:
+1. Pick the work-shape bundle first
+2. Identify the level of impact (L5 / L6 / L7)
+3. Choose 2–3 active skills from the bundle that would most likely prevent the class of mistake this change risks
+
+Review, ship, and post-release are **lifecycle skills** — they govern later CDD phases, not generation. Do not overload CDD §2.4 with lifecycle skills unless the change is specifically about review/release process.
+
+| Work shape | Typical level | Default active skills | Notes |
+|------------|---------------|----------------------|-------|
+| Local bugfix | L5 | domain skill + testing | e.g. ocaml + testing |
+| Cross-module feature | L6 | domain skill + design + testing | Add review as lifecycle, not generation constraint |
+| Runtime / platform change | L6–L7 | design + architecture-evolution + testing | Add performance-reliability if load/failure matters |
+| Architecture move | L7 | architecture-evolution + process-economics + testing | The L7 lane |
+| Tool / CLI | L5–L6 | tool-writing + ux-cli + testing | |
+| Docs / skills | L5–L6 | documenting + writing | Add skill/ meta-skill when authoring skills |
+
+These are defaults, not mandates. Override when the specific change warrants it.
+
+---
+
 ## How to aim for L7 in cnos
 
 The path from strong L6 to L7 is not "write more code." It is:
