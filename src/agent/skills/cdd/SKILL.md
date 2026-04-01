@@ -261,9 +261,9 @@ A release without assessment is incomplete CDD.
 
 Immediate outputs must be executed now. Deferred outputs must be recorded concretely as next-cycle commitments.
 
-### 3.7 No direct-to-main for substantial public changes
+### 3.7 No direct-to-main without retro-closure (§12)
 
-If a substantial docs/process change lands directly on main of a public repo without a branch or PR, the author must immediately open a retro-review issue before the cycle is considered closed. Content quality does not excuse a skipped review surface. (#137)
+If a substantial change lands directly on main without a branch or PR, the canonical spec §12 (retro-packaging rule) requires: retro-snapshot, self-coherence artifact, and version-history entry. In addition, on public repos the author must immediately open a retro-review issue. Content quality does not excuse a skipped review surface. (#137)
 
 ---
 
