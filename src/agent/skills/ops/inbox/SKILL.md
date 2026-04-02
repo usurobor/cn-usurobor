@@ -45,16 +45,19 @@ Every decision requires rationale.
 
 ## Message Flow
 
+**Pull-only model: agents only push to their own repo. Peers fetch from you.**
+
 ```
 Alice → Bob:
-1. Alice pushes bob/topic to cn-<peer>
-2. cn sync detects it
-3. cn process materializes to state/input.md
+1. Alice pushes bob/topic branch to her own repo (cn-alice)
+2. Bob's cn sync fetches from cn-alice, detects bob/ prefixed branches
+3. cn process materializes to Bob's state/input.md
 4. Bob handles ONE item
 
 Bob → Alice:
 1. Bob writes state/output.md
-2. cn sync sends to cn-<peer>
+2. Bob's cn sync pushes alice/topic branch to his own repo (cn-bob)
+3. Alice's cn sync fetches from cn-bob, detects alice/ prefixed branches
 ```
 
 ## Automation
