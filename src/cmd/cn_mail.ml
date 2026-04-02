@@ -72,11 +72,12 @@ let reject_orphan_branch hub_path peer_name branch =
       "---\nto: %s\nfrom: %s\ncreated: %s\nsubject: Branch rejected (orphan)\n---\n\n\
        Branch `%s` rejected and deleted.\n\n\
        **Reason:** No merge base with main.\n\n\
-       This happens when pushing from `cn-%s` instead of `cn-{recipient}-clone`.\n\n\
+       This branch was pushed directly or from the wrong repository. \
+       Branches must share a merge base with main to be accepted.\n\n\
        **Fix:**\n\
-       1. Delete local branch: `git branch -D %s`\n\
-       2. Re-send via cn outbox (uses clone automatically)\n"
-      peer_name (derive_name hub_path) ts branch peer_name branch in
+       1. Delete the orphan branch: `git branch -D %s`\n\
+       2. Push `%s/{topic}` to your own hub repo so the recipient can fetch it\n"
+      peer_name (derive_name hub_path) ts branch branch peer_name in
 
     let outbox_dir = Cn_hub.threads_mail_outbox hub_path in
     Cn_ffi.Fs.ensure_dir outbox_dir;

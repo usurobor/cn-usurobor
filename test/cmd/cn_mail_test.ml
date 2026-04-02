@@ -146,3 +146,23 @@ let%expect_test "rejection_filename: no timestamp prefix" =
     starts_with_rejected = true
     has_timestamp_prefix = false
   |}]
+
+(* ============================================================
+   Negative space: rejection hint has no stale clone wording
+   ============================================================
+
+   Finding #2 / #6 from review R1: rejection message must reference
+   current pull-only protocol, not stale clone-based send model.
+   Regression: "cn-{recipient}-clone" and "uses clone automatically"
+   must never appear in rejection filenames or hints. *)
+
+let%expect_test "rejection_filename: no clone reference in filename" =
+  let f = Cn_mail.rejection_filename "pi" "sigma/topic" in
+  let contains_clone s =
+    let len = String.length s in
+    let rec check i = if i + 5 > len then false
+      else if String.sub s i 5 = "clone" then true
+      else check (i + 1) in
+    check 0 in
+  Printf.printf "has_clone_in_filename = %b\n" (contains_clone f);
+  [%expect {| has_clone_in_filename = false |}]
