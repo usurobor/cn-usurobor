@@ -24,6 +24,7 @@ See [RELEASE-LEVEL-CLASSIFICATION.md](docs/gamma/essays/RELEASE-LEVEL-CLASSIFICA
 
 | Version | C_Σ | α | β | γ | Level | Coherence note |
 |---------|-----|---|---|---|-------|----------------|
+| 3.28.0 | A | A | A | A- | L6 | Orphan rejection loop fix (#144): deterministic rejection filenames (`rejection_filename` keyed on peer+branch replaces timestamped `make_thread_filename`), `is_already_rejected` dedup across outbox+sent, `get_branch_author` removed (fetched peer identity authoritative), self-send guard in `send_thread`, `from:` field in rejection envelope. 9 ppx_expect tests. Inbox skill v3: meta-skill alignment (artifact_class, kata_surface, governing_question), Define/Unfold/Rules/Verify structure, two embedded katas, pull-only transport model documented with contrastive examples. 1 review round, 1 D-level finding (stale clone wording), fixed same session. |
 | 3.27.1 | A | A | A | A | L5 | Remove cron installation management (#138): `update_cron` and `cn-cron` deleted, docs rewritten (AUTOMATION.md daemon-first, README systemd prerequisite, CLI.md cron label removed). Oneshot mode preserved. CDD traceability normalization: lifecycle step numbers (0–13) replace §2.x in PR template and review skill (#143). 2 PRs, 1 review round on #139 (scope narrowing). |
 | 3.27.0 | A- | A | A- | B+ | L6 | CDD traceability + skill-loading bridge: artifact manifest (§5.3), execution trace (§5.4), review enforcement (§2.0.8), release trace update, post-release closeout (§6). Active-skill matrix by work shape × level in eng/README. CDD §2.4 binds level labels to concrete skills. Writing skill rewrite. CAP skill v2 (UIE-based). Meta-skill rewrite (artifact classification, kata surface). 18 commits, 5 skill rewrites, 2 new CDD sections. Process: 3 direct-to-main commits retro-closed via #137; §3.7 added as preventive rule. |
 | 3.26.1 | A | A | A | A | L5 | Docs: OPERATOR.md (day-2 operations manual), post-release assessment v3.26.0, CLI/troubleshooting updated for cn logs, hub name sanitization across 19 files (strip deployment-specific agent names from public docs). |
@@ -91,6 +92,29 @@ See [RELEASE-LEVEL-CLASSIFICATION.md](docs/gamma/essays/RELEASE-LEVEL-CLASSIFICA
 | v0.1.0 | C− | C | C− | D+ | L4 | Moltbook-coupled prototype with SQLite. |
 
 ---
+
+## 3.28.0 (2026-04-02)
+
+**Orphan rejection loop fix + inbox skill v3**
+
+### Fixed
+
+- **Orphan rejection deduplication (#144):** `rejection_filename` produces deterministic names keyed on (peer, branch), replacing `make_thread_filename` which prepended timestamps and caused unbounded rejection spam (~12/hour per orphan). `is_already_rejected` checks both outbox and sent dirs before creating a new rejection.
+- **Authoritative sender identity (#144):** Removed `get_branch_author` (git log inference). Rejection messages now use fetched peer identity (`peer_name`) exclusively. Added `from:` field to rejection frontmatter envelope.
+- **Self-send guard (#144):** `send_thread` rejects `to == my_name` before peer lookup, emitting `outbox.skip` trace event with `reason_code:"self_send"`.
+- **Stale rejection hint wording (#144):** Rejection message updated from clone-based model to current pull-only protocol ("Push `peer/topic` to your own hub repo so the recipient can fetch it").
+
+### Added
+
+- `test/cmd/cn_mail_test.ml` — 9 ppx_expect tests: filename determinism (3), dedup across outbox/sent (4), self-send detection (2), no-timestamp-prefix (1), no-clone-wording regression (1).
+
+### Changed
+
+- **Inbox skill v3:** Rewritten to meta-skill standard — `artifact_class: skill`, `kata_surface: embedded`, `governing_question`. Define/Unfold/Rules/Verify structure. Pull-only transport model with contrastive examples. Two embedded katas (review request triage, rejection loop handling). Visible closing artifact requirement for every message.
+
+### Removed
+
+- `get_branch_author` — dead code after sender identity fix.
 
 ## 3.27.1 (2026-04-02)
 
