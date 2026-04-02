@@ -71,23 +71,39 @@ Failure mode: version drift — tag says X, binary says Y, agent reports Z. Or: 
 
 2.5. **Release notes — RELEASE.md**
   - Write `RELEASE.md` at repo root before tagging. This is the GitHub release body.
-  - Format matches the CHANGELOG detailed section: summary line, then Added / Changed / Fixed / Removed sections with issue links.
+  - A release is a measured coherence delta. The release body must foreground what got more coherent and why, then detail the changes.
   - The release CI workflow uses `RELEASE.md` as the release body if present; otherwise it auto-generates (which produces only PR titles — not acceptable).
   - `RELEASE.md` is committed in the release commit and consumed by CI. It stays in the repo until the next release overwrites it.
   - ❌ Let CI auto-generate release notes (just PR titles, no detail)
+  - ❌ Jump straight into Fixed/Added/Changed (change-loggy, not coherence-framed)
   - ❌ Manually create the GitHub release after CI (race condition with workflow)
+  - ✅ Outcome first, then changes, then proof
   - ✅ Write `RELEASE.md` → commit in release commit → CI uses it as release body
 
   ```markdown
   # RELEASE.md format
 
+  ## Outcome
+
+  **Coherence delta:** `α X, β X, γ X` (from CHANGELOG ledger)
+
+  One-sentence statement of what became more coherent after this release.
+  Plain language. A reader should be able to answer "what got better?" in one breath.
+
+  ## Why it matters
+
+  Name the targeted incoherence this release closes. What was the gap between
+  model and reality before? What is it after? 2-3 sentences max.
+
   ## Fixed / Added / Changed / Removed
 
-  - **Short description** (#issue): what changed and why it matters. Link to PR if different from issue.
+  - **Short description** (#issue): what changed and why it matters.
 
   ## Validation
 
   - Deployed to [target], validated [specific check].
+  - State what the validation proves about the coherence delta, not just
+    that deployment succeeded.
 
   ## Known Issues
 
