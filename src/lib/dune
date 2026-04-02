@@ -18,4 +18,4 @@
 (rule
  (target cn_repo_info.ml)
  (deps ../../cn.json)
- (action (bash "repo=$(sed -n 's|.*github.com/\\([^\"]*\\)\".*|\\1|p' ../../cn.json | head -1); echo \"let repo = \\\"${repo:-usurobor/cnos}\\\"\" > %{target}")))
+ (action (bash "repo=$(sed -n 's|.*github.com/\\([^\"]*\\)\".*|\\1|p' ../../cn.json | head -1 | sed 's/\\.git$//'); if [ -z \"$repo\" ]; then echo 'Error: no GitHub repo URL found in cn.json' >&2; exit 1; fi; echo \"let repo = \\\"${repo}\\\"\" > %{target}")))
