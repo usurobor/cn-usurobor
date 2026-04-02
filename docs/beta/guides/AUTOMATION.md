@@ -1,36 +1,47 @@
-# Automation: Cron + Daemon Setup
+# Automation: Daemon + Oneshot Setup
 
-cnos uses system cron or a long-running daemon for automation. This follows the principle:
+cnos uses a long-running daemon or manual oneshot invocations for automation. This follows the principle:
 
 > *"Tokens for thinking. Electrons for clockwork."*
 
-Cron handles orchestration. The LLM handles response. Zero tokens wasted on routine checks.
+The daemon handles orchestration. The LLM handles response. Zero tokens wasted on routine checks.
 
 ---
 
 ## Two Modes (Unified Scheduler — v3.7.0)
 
-Both schedulers run the **same protocol loop**: maintenance (sync, inbox, outbox,
+Both modes run the **same protocol loop**: maintenance (sync, inbox, outbox,
 update check, MCA review, cleanup) → queue drain → exit/loop. The only difference
 is cadence.
 
 | Mode | Entry point | Best for |
 |------|-------------|----------|
-| **Oneshot** | `cn agent` (via cron/timer) | Peer-based agents, minimal resource use |
-| **Daemon** | `cn agent --daemon` (long-running) | Telegram-connected agents, or peer-only agents needing faster sync |
+| **Daemon** | `cn agent --daemon` (long-running) | Telegram-connected agents, or peer-only agents needing continuous sync |
+| **Oneshot** | `cn agent` (manual or external timer) | Peer-based agents, minimal resource use, scripting |
+
+The daemon is the recommended scheduler. It runs as a systemd service and handles
+maintenance ticks, Telegram polling, and queue draining automatically.
+
+The oneshot mode runs a single maintenance cycle and exits. It is useful for manual
+runs, scripting, and environments where a long-running daemon is not practical.
+
+> **Note (v3.27.1):** cnos no longer installs or manages OS crontabs. The daemon
+> (systemd service) is the recommended continuous scheduler. Oneshot mode remains
+> available for manual or externally-triggered runs.
 
 The daemon no longer requires a Telegram token. A peer-only daemon runs maintenance
 ticks on its configured interval without any external transport.
 
 ---
 
-## Cron / Oneshot Setup
+## Daemon Setup (Recommended)
 
-`cn agent` runs one full maintenance cycle + bounded queue drain under atomic lock:
-1. Maintenance: sync peers, materialize inbox, flush outbox, update check, MCA review, cleanup
-2. Drain queue: dequeue → pack context → call LLM → execute ops → archive (up to `oneshot_drain_limit`)
-3. Exit
-4. Recovery: handles crash at any point (resumes from correct step)
+The daemon runs the unified scheduler loop continuously. It has two activity sources:
+- **Exteroception** (sensor-driven): Telegram poll (if token configured) → immediate drain after new work
+- **Interoception** (self-driven): Periodic maintenance tick (sync, inbox, outbox, update, review, cleanup) → bounded drain
+
+The daemon works with or without Telegram. A peer-only daemon (no `TELEGRAM_TOKEN`)
+runs maintenance ticks on the configured `sync_interval_sec` interval.
 
 ### 1. Install cn
 
@@ -66,7 +77,6 @@ Optionally create `.cn/config.json` for non-secret settings:
     "scheduler": {
       "sync_interval_sec": 300,
       "review_interval_sec": 300,
-      "oneshot_drain_limit": 1,
       "daemon_drain_limit": 8
     }
   }
@@ -84,57 +94,7 @@ Optionally create `.cn/config.json` for non-secret settings:
 
 All values are clamped to minimum 1.
 
-### 3. Add to crontab
-
-```bash
-crontab -e
-```
-
-Add:
-```cron
-# cn runtime: agent every 5 minutes (maintenance + drain built-in)
-*/5 * * * * cd /path/to/your-hub && cn agent >> /var/log/cn.log 2>&1
-```
-
-Replace `/path/to/your-hub` with your actual hub path.
-
-> **Note (v3.7.0):** `cn agent` now includes maintenance (sync, inbox, outbox)
-> automatically. A separate `cn sync` before `cn agent` is no longer required
-> but remains available as a standalone command.
-
-### 4. Verify
-
-```bash
-# Manual test
-cd /path/to/your-hub
-cn agent
-
-# Check logs
-tail -f /var/log/cn.log
-
-# Check state projections
-cat state/ready.json    # scheduler section shows last_sync_at, last_maintenance_status
-```
-
----
-
-## Daemon Setup
-
-The daemon runs the unified scheduler loop continuously. It has two activity sources:
-- **Exteroception** (sensor-driven): Telegram poll (if token configured) → immediate drain after new work
-- **Interoception** (self-driven): Periodic maintenance tick (sync, inbox, outbox, update, review, cleanup) → bounded drain
-
-The daemon works with or without Telegram. A peer-only daemon (no `TELEGRAM_TOKEN`)
-runs maintenance ticks on the configured `sync_interval_sec` interval.
-
-### 1. Set environment variables
-
-```bash
-export ANTHROPIC_KEY="sk-ant-..."
-export TELEGRAM_TOKEN="123456:ABC..."   # optional — daemon works without it
-```
-
-### 2. Configure allowed users
+### 3. Configure allowed users
 
 In `.cn/config.json`, set `allowed_users` to the Telegram user IDs that may
 interact with the agent. **An empty list denies all users** (secure default):
@@ -147,14 +107,7 @@ interact with the agent. **An empty list denies all users** (secure default):
 }
 ```
 
-### 3. Run the daemon
-
-```bash
-cd /path/to/your-hub
-cn agent --daemon
-```
-
-Or via systemd:
+### 4. Set up systemd service
 
 ```ini
 [Unit]
@@ -175,6 +128,21 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
+Or use `cn setup` which offers to create the systemd unit automatically.
+
+### 5. Verify
+
+```bash
+# Check service status
+systemctl status cn-<agentname>
+
+# Check logs
+journalctl -u cn-<agentname> -f
+
+# Check state projections
+cat state/ready.json    # scheduler section shows last_sync_at, last_maintenance_status
+```
+
 ### Daemon guarantees
 
 - **Offset persistence:** Telegram update offset is persisted to `state/telegram.offset`.
@@ -192,12 +160,33 @@ WantedBy=multi-user.target
 
 ---
 
+## Oneshot Mode
+
+`cn agent` runs one full maintenance cycle + bounded queue drain under atomic lock:
+1. Maintenance: sync peers, materialize inbox, flush outbox, update check, MCA review, cleanup
+2. Drain queue: dequeue → pack context → call LLM → execute ops → archive (up to `oneshot_drain_limit`)
+3. Exit
+4. Recovery: handles crash at any point (resumes from correct step)
+
+Oneshot is useful for:
+- Manual runs (`cn agent` from a shell)
+- External schedulers (systemd timers, task runners)
+- Scripting and testing
+
+```bash
+# Manual test
+cd /path/to/your-hub
+cn agent
+```
+
+---
+
 ## How It Works (v3.7.0 Unified Scheduler)
 
 ```
 ┌──────────────────┐         ┌──────────────────┐
-│  System cron     │    OR   │  Daemon loop     │
-│  (every 5 min)   │         │  (long-running)  │
+│  Oneshot          │    OR   │  Daemon loop     │
+│  (manual/timer)   │         │  (long-running)  │
 └────────┬─────────┘         └────────┬─────────┘
          │                             │
          ▼                             ▼
@@ -262,7 +251,7 @@ Daemon adds:
 ## Prerequisites
 
 - Unix-like OS (Linux, macOS, WSL)
-- System cron or systemd (for automation)
+- systemd (recommended for daemon automation) or any external timer
 - curl (for Claude API and Telegram API)
 - `cn` native binary installed
 

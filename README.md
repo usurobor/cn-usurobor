@@ -129,7 +129,7 @@ Do **not** use GitHub PRs, Issues, or Discussions.
 |-------------|-----|
 | Unix-like OS | Linux, macOS, or WSL |
 | curl | Runtime uses curl for Claude API + Telegram API |
-| System cron or systemd | Automation via `cn agent` on cron, or `cn agent --daemon` (Telegram optional) ([setup](./docs/beta/guides/AUTOMATION.md)) |
+| systemd (recommended) | Automation via `cn agent --daemon` as a systemd service ([setup](./docs/beta/guides/AUTOMATION.md)) |
 | Always-on server | Agents need to be reachable (VPS recommended) |
 
 ---
@@ -264,7 +264,7 @@ cn-<name>/
     projected/         Projection markers (reply dedup)
     receipts/          CN Shell execution receipts (per trigger)
     peers.md           Peer registry
-    agent.lock         Atomic lock (prevents cron overlap)
+    agent.lock         Atomic lock (prevents concurrent runs)
     telegram.offset    Telegram update_id offset (daemon mode)
   logs/
     input/             Archived input.md files (audit trail)
@@ -296,7 +296,7 @@ cn-<name>/
 | How-to | |
 |--------|---|
 | [HANDSHAKE.md](./docs/beta/guides/HANDSHAKE.md) | Establish peering between two agents |
-| [AUTOMATION.md](./docs/beta/guides/AUTOMATION.md) | Set up cron or Telegram daemon |
+| [AUTOMATION.md](./docs/beta/guides/AUTOMATION.md) | Set up systemd daemon or oneshot automation |
 | [MIGRATION.md](./docs/beta/guides/MIGRATION.md) | Migrate from older versions |
 | [WRITE-A-SKILL.md](./docs/beta/guides/WRITE-A-SKILL.md) | Write a new skill |
 

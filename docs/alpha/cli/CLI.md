@@ -58,7 +58,7 @@ cn out delete --reason <reason>
 ### Agent Runtime
 
 ```
-cn agent                     Oneshot scheduler: one cycle then exit (cron mode)
+cn agent                     Oneshot scheduler: one cycle then exit
 cn agent --process           Single-shot: process one queued item and exit
 cn agent --daemon            Daemon scheduler: continuous loop + optional Telegram
 cn agent --stdio             Interactive REPL (stdin → LLM → stdout)
@@ -198,7 +198,7 @@ type command =
 1. Parses flags (`--dry-run`, `--json`, etc.)
 2. Parses command (string list → `command option`)
 3. Finds hub (`Cn_hub.find_hub_path`)
-4. Routes to module (`Cn_mail.inbox_check`, `Cn_runtime.run_cron`, etc.)
+4. Routes to module (`Cn_mail.inbox_check`, `Cn_runtime.run_oneshot`, etc.)
 
 Commands that work without a hub: `help`, `version`, `init`, `update`.
 All others require being inside a hub directory.
