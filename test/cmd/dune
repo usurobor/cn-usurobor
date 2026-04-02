@@ -176,3 +176,11 @@
  (libraries cn_cmd cn_ffi cn_lib unix)
  (inline_tests)
  (preprocess (pps ppx_expect)))
+
+; cn_mail tests (ppx_expect) — orphan rejection loop fix (#144)
+(library
+ (name cn_mail_test)
+ (modules cn_mail_test)
+ (libraries cn_cmd cn_ffi cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))

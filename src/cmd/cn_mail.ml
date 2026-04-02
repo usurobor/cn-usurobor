@@ -38,41 +38,55 @@ let is_orphan_branch hub_path branch =
   | Some _ -> false
   | None -> true
 
-let get_branch_author hub_path branch =
-  let cmd = Printf.sprintf "git log -1 --format='%%an <%%ae>' origin/%s 2>/dev/null" (Filename.quote branch) in
-  Cn_ffi.Child_process.exec_in ~cwd:hub_path cmd
-  |> Option.map String.trim
-  |> Option.value ~default:"unknown"
+(* Deterministic rejection filename — same (peer, branch) always maps to same file.
+   This prevents the amplification loop where timestamped filenames caused
+   unbounded rejection messages for the same orphan branch. (#144) *)
+let rejection_filename peer_name branch =
+  let slug = Cn_hub.slugify branch in
+  Printf.sprintf "rejected-%s-%s.md" peer_name slug
+
+let is_already_rejected hub_path peer_name branch =
+  let filename = rejection_filename peer_name branch in
+  let outbox_dir = Cn_hub.threads_mail_outbox hub_path in
+  let sent_dir = Cn_hub.threads_mail_sent hub_path in
+  Cn_ffi.Fs.exists (Cn_ffi.Path.join outbox_dir filename)
+  || (Cn_ffi.Fs.exists sent_dir
+      && Cn_ffi.Fs.exists (Cn_ffi.Path.join sent_dir filename))
 
 let reject_orphan_branch hub_path peer_name branch =
-  let author = get_branch_author hub_path branch in
-
-  if !(Cn_fmt.dry_run_mode) then begin
-    print_endline (Cn_fmt.dim (Printf.sprintf "Would: reject orphan %s (from %s)" branch author));
+  (* Use fetched peer identity (peer_name) as authoritative sender.
+     git log author is informational only — not used for routing. (#144) *)
+  if is_already_rejected hub_path peer_name branch then begin
+    print_endline (Cn_fmt.dim (Printf.sprintf "  Already rejected: %s (from %s)" branch peer_name));
+    Cn_hub.log_action hub_path "inbox.reject.dedup"
+      (Printf.sprintf "branch:%s peer:%s reason:already_rejected" branch peer_name)
+  end
+  else if !(Cn_fmt.dry_run_mode) then begin
+    print_endline (Cn_fmt.dim (Printf.sprintf "Would: reject orphan %s (from %s)" branch peer_name));
     print_endline (Cn_fmt.dim (Printf.sprintf "Would: send rejection notice to %s" peer_name))
   end else begin
     let ts = Cn_fmt.now_iso () in
-    let slug = Cn_hub.slugify branch in
-    let filename = Cn_hub.make_thread_filename (Printf.sprintf "rejected-%s" slug) in
+    let filename = rejection_filename peer_name branch in
 
     let content = Printf.sprintf
-      "---\nto: %s\ncreated: %s\nsubject: Branch rejected (orphan)\n---\n\n\
+      "---\nto: %s\nfrom: %s\ncreated: %s\nsubject: Branch rejected (orphan)\n---\n\n\
        Branch `%s` rejected and deleted.\n\n\
        **Reason:** No merge base with main.\n\n\
-       This happens when pushing from `cn-%s` instead of `cn-{recipient}-clone`.\n\n\
-       **Author:** %s\n\n\
+       This branch was pushed directly or from the wrong repository. \
+       Branches must share a merge base with main to be accepted.\n\n\
        **Fix:**\n\
-       1. Delete local branch: `git branch -D %s`\n\
-       2. Re-send via cn outbox (uses clone automatically)\n"
-      peer_name ts branch peer_name author branch in
+       1. Delete the orphan branch: `git branch -D %s`\n\
+       2. Push `%s/{topic}` to your own hub repo so the recipient can fetch it\n"
+      peer_name (derive_name hub_path) ts branch branch peer_name in
 
     let outbox_dir = Cn_hub.threads_mail_outbox hub_path in
     Cn_ffi.Fs.ensure_dir outbox_dir;
-    Cn_ffi.Fs.write (Cn_ffi.Path.join outbox_dir filename) content
-  end;
+    Cn_ffi.Fs.write (Cn_ffi.Path.join outbox_dir filename) content;
 
-  Cn_hub.log_action hub_path "inbox.reject" (Printf.sprintf "branch:%s peer:%s author:%s reason:orphan" branch peer_name author);
-  print_endline (Cn_fmt.fail (Printf.sprintf "Rejected orphan: %s (from %s)" branch author))
+    Cn_hub.log_action hub_path "inbox.reject"
+      (Printf.sprintf "branch:%s peer:%s reason:orphan" branch peer_name);
+    print_endline (Cn_fmt.fail (Printf.sprintf "Rejected orphan: %s (from %s)" branch peer_name))
+  end
 
 (* === Rejection Terminal Cleanup === *)
 
@@ -289,6 +303,18 @@ let send_thread hub_path name peers outbox_dir sent_dir file =
       print_endline (Cn_fmt.warn (Printf.sprintf "Skipping %s: no 'to:' in frontmatter" file));
       None
   | Some to_name ->
+      (* Self-send guard: prevent outbox flush when to == my_name (#144) *)
+      if to_name = name then begin
+        Cn_trace.gemit ~component:"mail" ~layer:Body
+          ~event:"outbox.skip" ~severity:Warn ~status:Degraded
+          ~reason_code:"self_send"
+          ~details:[
+            "thread", Cn_json.String file;
+            "peer", Cn_json.String to_name;
+          ] ();
+        print_endline (Cn_fmt.warn (Printf.sprintf "Skipping %s: self-send (to=%s)" file to_name));
+        None
+      end else
       let peer = peers |> List.find_opt (fun p -> p.name = to_name) in
       match peer with
       | None ->
