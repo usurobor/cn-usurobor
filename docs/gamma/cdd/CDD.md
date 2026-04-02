@@ -305,7 +305,7 @@ CDD is artifact-driven. For substantial changes, each lifecycle step must leave 
 | Step | Name | Phase | Evidence | Format spec | Owner | Producer | Required | Skill |
 |------|------|-------|----------|-------------|-------|----------|----------|-------|
 | 0 | Observe | observe | CDD Trace row: inputs read, selected signal | §5.4 | primary branch artifact | agent | always | cdd |
-| 1 | Select | observe | CDD Trace row: selected gap | §5.4 | primary branch artifact | agent | always | cdd |
+| 1 | Select | observe | CDD Trace row: selected gap + issue | §5.4 (trace) + `.github/ISSUE_TEMPLATE/cdd-issue.md` (issue) | primary branch artifact + issue tracker | agent | always | cdd |
 | 2 | Branch | build | valid branch name | — | branch + CDD Trace row | mechanical | always | cdd |
 | 3 | Bootstrap | build | version directory + manifest README + declared stubs | §5.1 | branch diff | mechanical | substantial only | cdd |
 | 4 | Gap | build | named incoherence / coherence contract | PR template §Gap or design/SKILL.md §3.1 | primary branch artifact | agent | always | cdd |
