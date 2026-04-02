@@ -122,7 +122,7 @@ Review fails via **surface reading** — checking only what changed, missing wha
 2.0.8. **CDD execution trace (CDD §5.4)**
   - For substantial changes, verify that the primary branch artifact contains a CDD Trace.
   - Check that rows exist for all completed steps through the current review point.
-  - Check that step §2.4 records: mode, active skills, work shape, and level if level shorthand is used.
+  - Check that step 5 records: mode, active skills, work shape, and level if level shorthand is used.
   - Check that any lifecycle skill already used (review, writing, release) is recorded when relevant.
   - Missing or contradictory rows are findings.
   - ❌ "Design exists" but no visible trace of selection, mode, or loaded skills

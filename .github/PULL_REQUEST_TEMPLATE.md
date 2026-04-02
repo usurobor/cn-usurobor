@@ -11,7 +11,7 @@
 | 9 Gate | — | — | Pending |
 | 10 Release | — | — | Pending |
 
-## Gap (§2.3)
+## Gap (step 4)
 
 **What:** <!-- named incoherence -->
 
@@ -19,7 +19,7 @@
 
 **What fails if skipped:** <!-- concrete failure -->
 
-## Mode + Active Skills (§2.4)
+## Mode + Active Skills (step 5)
 
 - **Mode:** MCA / MCI
 - **Work shape:** <!-- bugfix / feature / runtime / architecture / docs -->
