@@ -5,6 +5,13 @@
     2. Fetched peer identity is authoritative — peer_name, not git log author
     3. Self-send guard — to == my_name is rejected before send *)
 
+(* Filename.temp_dir requires OCaml 5.1+; CI may use older. *)
+let make_temp_dir prefix =
+  let f = Filename.temp_file prefix ".tmp" in
+  Sys.remove f;
+  Unix.mkdir f 0o700;
+  f
+
 (* ============================================================
    Invariant 1: Rejection filename is deterministic
    ============================================================
@@ -57,7 +64,7 @@ let%expect_test "rejection_filename: different branches produce different files"
    If a rejection file exists in either, skip re-rejection. *)
 
 let%expect_test "is_already_rejected: false when no rejection exists" =
-  let tmp = Filename.temp_dir "cn-test-" "" in
+  let tmp = make_temp_dir "cn-test-" in
   let result = Cn_mail.is_already_rejected tmp "pi" "sigma/orphan-topic" in
   Printf.printf "already_rejected = %b\n" result;
   (* cleanup *)
@@ -65,7 +72,7 @@ let%expect_test "is_already_rejected: false when no rejection exists" =
   [%expect {| already_rejected = false |}]
 
 let%expect_test "is_already_rejected: true when rejection in outbox" =
-  let tmp = Filename.temp_dir "cn-test-" "" in
+  let tmp = make_temp_dir "cn-test-" in
   let outbox = Filename.concat tmp "threads/mail/outbox" in
   let _ = Sys.command (Printf.sprintf "mkdir -p %s" (Filename.quote outbox)) in
   let filename = Cn_mail.rejection_filename "pi" "sigma/orphan-topic" in
@@ -78,7 +85,7 @@ let%expect_test "is_already_rejected: true when rejection in outbox" =
   [%expect {| already_rejected = true |}]
 
 let%expect_test "is_already_rejected: true when rejection in sent" =
-  let tmp = Filename.temp_dir "cn-test-" "" in
+  let tmp = make_temp_dir "cn-test-" in
   let sent = Filename.concat tmp "threads/mail/sent" in
   let _ = Sys.command (Printf.sprintf "mkdir -p %s" (Filename.quote sent)) in
   let filename = Cn_mail.rejection_filename "pi" "sigma/orphan-topic" in
@@ -91,7 +98,7 @@ let%expect_test "is_already_rejected: true when rejection in sent" =
   [%expect {| already_rejected = true |}]
 
 let%expect_test "is_already_rejected: false for different peer same branch" =
-  let tmp = Filename.temp_dir "cn-test-" "" in
+  let tmp = make_temp_dir "cn-test-" in
   let outbox = Filename.concat tmp "threads/mail/outbox" in
   let _ = Sys.command (Printf.sprintf "mkdir -p %s" (Filename.quote outbox)) in
   (* Create rejection for pi *)
