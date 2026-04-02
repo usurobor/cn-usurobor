@@ -24,6 +24,7 @@ See [RELEASE-LEVEL-CLASSIFICATION.md](docs/gamma/essays/RELEASE-LEVEL-CLASSIFICA
 
 | Version | C_Σ | α | β | γ | Level | Coherence note |
 |---------|-----|---|---|---|-------|----------------|
+| 3.29.0 | A | A | A | A | L6 | Remove hardcoded paths (#146): `resolve_bin_path` derives binary location at runtime (`$CN_BIN` → `/proc/self/exe` → `readlink Sys.executable_name` → fallback), `resolve_repo` derives GitHub repo from build-time `cn.json` extraction (`$CN_REPO` override). `cn_repo_info.ml` dune-generated module. `cn_deps.ml` default source derived from `Cn_lib.cnos_repo`. 7 ppx_expect tests. 2 review rounds, 5 findings R1 (1B/4C), all addressed R2. Build fails if `cn.json` lacks GitHub URL (no silent fallback). |
 | 3.28.0 | A | A | A | A- | L6 | Orphan rejection loop fix (#144): deterministic rejection filenames (`rejection_filename` keyed on peer+branch replaces timestamped `make_thread_filename`), `is_already_rejected` dedup across outbox+sent, `get_branch_author` removed (fetched peer identity authoritative), self-send guard in `send_thread`, `from:` field in rejection envelope. 9 ppx_expect tests. Inbox skill v3: meta-skill alignment (artifact_class, kata_surface, governing_question), Define/Unfold/Rules/Verify structure, two embedded katas, pull-only transport model documented with contrastive examples. 1 review round, 1 D-level finding (stale clone wording), fixed same session. |
 | 3.27.1 | A | A | A | A | L5 | Remove cron installation management (#138): `update_cron` and `cn-cron` deleted, docs rewritten (AUTOMATION.md daemon-first, README systemd prerequisite, CLI.md cron label removed). Oneshot mode preserved. CDD traceability normalization: lifecycle step numbers (0–13) replace §2.x in PR template and review skill (#143). 2 PRs, 1 review round on #139 (scope narrowing). |
 | 3.27.0 | A- | A | A- | B+ | L6 | CDD traceability + skill-loading bridge: artifact manifest (§5.3), execution trace (§5.4), review enforcement (§2.0.8), release trace update, post-release closeout (§6). Active-skill matrix by work shape × level in eng/README. CDD §2.4 binds level labels to concrete skills. Writing skill rewrite. CAP skill v2 (UIE-based). Meta-skill rewrite (artifact classification, kata surface). 18 commits, 5 skill rewrites, 2 new CDD sections. Process: 3 direct-to-main commits retro-closed via #137; §3.7 added as preventive rule. |
@@ -92,6 +93,27 @@ See [RELEASE-LEVEL-CLASSIFICATION.md](docs/gamma/essays/RELEASE-LEVEL-CLASSIFICA
 | v0.1.0 | C− | C | C− | D+ | L4 | Moltbook-coupled prototype with SQLite. |
 
 ---
+
+## 3.29.0 (2026-04-02)
+
+**Remove hardcoded paths — runtime bin_path + build-time repo**
+
+### Fixed
+
+- **Hardcoded `bin_path`** replaced with `resolve_bin_path()`: `$CN_BIN` env var → `readlink /proc/self/exe` (Linux) → `readlink Sys.executable_name` (macOS/fallback) → `Sys.executable_name`. Self-update now works for any install prefix where user has write access.
+- **Hardcoded `repo`** replaced with `resolve_repo()`: `$CN_REPO` env var → `Cn_lib.cnos_repo` (build-time from `cn.json`).
+- **`cn_deps.ml` default source** derived from `Cn_lib.cnos_repo` instead of hardcoded `"usurobor/cnos"`.
+
+### Added
+
+- `cn_repo_info.ml` — dune-generated module extracting repo from `cn.json` at build time. Build fails if no GitHub URL found (no silent fallback).
+- `test/cmd/cn_selfpath_test.ml` — 7 ppx_expect tests: env var override precedence, fallback behavior, format validation, derived source, negative space.
+- `$CN_BIN` and `$CN_REPO` environment variable overrides for non-standard installations.
+
+### Removed
+
+- All `/usr/local/bin/cn` literals from `src/**/*.ml`.
+- Hardcoded `"usurobor/cnos"` from `cn_agent.ml`.
 
 ## 3.28.0 (2026-04-02)
 
