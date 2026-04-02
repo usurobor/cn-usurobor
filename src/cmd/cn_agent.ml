@@ -476,9 +476,11 @@ let resolve_bin_path () =
   match Sys.getenv_opt "CN_BIN" with
   | Some p when String.length p > 0 -> p
   | _ ->
-    (* Linux: /proc/self/exe is canonical *)
-    match Cn_ffi.Child_process.exec "readlink -f /proc/self/exe 2>/dev/null" with
-    | Some p when String.length (String.trim p) > 0 -> String.trim p
+    (* Linux: /proc/self/exe — read directly, no child process.
+       Spawning a shell to readlink /proc/self/exe returns the shell's exe, not ours. *)
+    let proc_self = try Some (Unix.readlink "/proc/self/exe") with _ -> None in
+    match proc_self with
+    | Some p when String.length p > 0 -> p
     | _ ->
       (* macOS / fallback: resolve symlinks on Sys.executable_name *)
       match Cn_ffi.Child_process.exec
