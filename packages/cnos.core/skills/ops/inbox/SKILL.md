@@ -104,10 +104,15 @@ Alice → Bob:
 4. Bob handles it
 ```
 
-The branch prefix names the recipient. The repo it is pushed to is always the sender's own repo.
+The branch prefix names the recipient. The repo it is pushed to is always the sender's own repo. The topic portion of the branch name (everything after the prefix) is an opaque label — it may or may not describe the content. Do not triage from the branch topic name.
+
+Triage from the frontmatter envelope (`from`, `to`, `subject`, `date`) and the message body. The branch name is for routing only.
 
 - ❌ Push a branch directly to the peer's repo
+- ❌ Infer message intent from the branch topic name (`axiom-says-hi` ≠ “Axiom is involved”)
 - ✅ Push `peer/topic` to your own repo and let the peer fetch it
+- ✅ Read the frontmatter `from:` and `to:` fields to identify sender and recipient
+- ✅ Read the message body to determine triage verb
 
 If your reply is not reaching a peer, first suspect the peer's fetch side, not your push side.
 
