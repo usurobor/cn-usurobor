@@ -80,7 +80,7 @@ The substance of the system — doctrine, specs, definitions.
 | [DAEMON.md](./alpha/cli/DAEMON.md) | Daemon mode design |
 | [SETUP-INSTALLER.md](./alpha/cli/SETUP-INSTALLER.md) | Install script specification |
 | [THREAD-API.md](./alpha/protocol/THREAD-API.md) | Agent content API |
-| [DESIGN-message-packet-transport.md](./alpha/protocol/DESIGN-message-packet-transport.md) | Fail-closed inbox materialization — packet-based transport (#150) |
+| [MESSAGE-PACKET-TRANSPORT.md](./alpha/protocol/MESSAGE-PACKET-TRANSPORT.md) | Fail-closed inbox materialization — packet-based transport (#150) |
 
 **Feature-scoped design docs** (version-stamped, see [migration path](./beta/governance/DOCUMENTATION-SYSTEM.md#6-migration-path-for-legacy-filenames)):
 
