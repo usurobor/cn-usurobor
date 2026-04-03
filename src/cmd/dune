@@ -9,4 +9,4 @@
           cn_assets cn_deps cn_trace cn_trace_state cn_build cn_output
           cn_runtime_contract cn_extension cn_ext_host
           cn_ulog cn_logs)
- (libraries cn_ffi cn_lib cn_protocol inbox_lib git cn_io unix))
+ (libraries cn_ffi cn_lib cn_protocol inbox_lib git cn_io cn_packet unix))

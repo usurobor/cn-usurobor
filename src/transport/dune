@@ -10,6 +10,12 @@
  (modules cn_io)
  (libraries git cn_ffi))
 
+; cn_packet module (canonical message packet schema + validation #150)
+(library
+ (name cn_packet)
+ (modules cn_packet)
+ (libraries cn_ffi cn_lib unix))
+
 ; inbox library (pure functions, used by cn_lib)
 (library
  (name inbox_lib)

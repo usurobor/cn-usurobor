@@ -1,0 +1,7 @@
+; cn_packet tests (ppx_expect) — message packet transport (#150)
+(library
+ (name cn_packet_test)
+ (modules cn_packet_test)
+ (libraries cn_packet cn_lib unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
