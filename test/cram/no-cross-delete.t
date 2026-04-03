@@ -61,8 +61,7 @@ Create pi-clone for sigma (sigma's local clone of pi's repo):
   $ cd pi-clone
   $ git config user.email "sigma@test"
   $ git config user.name "Sigma"
-  $ git fetch origin '+refs/cn/msg/pi/*:refs/remotes/origin/cn/msg/pi/*' 2>&1 | head -5
-  From */pi-origin (glob)
+  $ git fetch origin '+refs/cn/msg/pi/*:refs/remotes/origin/cn/msg/pi/*' 2>&1 | grep -v "^From"
    * [new ref]         refs/cn/msg/pi/hello-001@pi -> origin/cn/msg/pi/hello-001@pi
   $ cd ..
 
