@@ -1,6 +1,6 @@
 # Thread Event Model
 
-**Issue:** TBD
+**Issue:** #153
 **Version:** 1.0.0
 **Mode:** MCA
 **Active Skills:** design, inbox, writing
