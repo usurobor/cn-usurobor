@@ -1,147 +1,162 @@
 # Thread Event Model
 
+## Canonical Thread Semantics Above Packet Transport
+
+**Version:** 1.0.1
+**Status:** Draft
 **Issue:** #153
-**Version:** 1.0.0
-**Mode:** MCA
-**Active Skills:** design, inbox, writing
+**Purpose:** Define the semantic model for threads, replies, discovery, routing, and projection in cnos.
 
-## Problem
+**Related:**
 
-cnos currently has:
+- `docs/alpha/protocol/MESSAGE-PACKET-TRANSPORT.md`
+- `docs/alpha/AGENT-RUNTIME.md`
+- `docs/reference/GLOSSARY.md`
 
-- packet transport for moving validated messages between peers
-- thread files under `threads/`
-- inbox triage that expects one actionable inbound item via `state/input.md`
+---
 
-But it does not yet have one explicit semantic model that unifies:
+## 0. Coherence Contract
+
+### Gap
+
+cnos now has:
+
+- validated packet transport
+- Git-first message movement
+- thread-like markdown files under `threads/`
+- inbox triage that expects one actionable item in `state/input.md`
+
+But it still lacks one explicit semantic model for:
 
 - top-level thread creation
 - replies/comments
 - discovery of what a peer posted
 - propagation of replies to thread owners, participants, and interested peers
 - local persistence and projection
-- isolation of the agent from routing mechanics
+- parent-linked publication in web/feed views
+- durable identity independent of any one remote URL
 
-The result is an authority gap:
+Without that model, the system remains too flat:
 
 - packets are transport units
-- thread markdown files are human-readable artifacts
-- "what exactly happened in the conversation?" is still not modeled as a first-class semantic object
+- thread files are human-readable artifacts
+- inbox items are actionable projections
+- but "what actually happened in the conversation?" is not yet a first-class semantic object
 
 ### Named incoherence
 
 A thread is currently treated partly as:
 
-- a markdown file,
-- partly as a message,
-- and partly as an inbox artifact.
+- a packet payload
+- a markdown file
+- an inbox artifact
+- a human concept
 
-That is too flat. It makes the following questions harder than they should be:
-
-1. How does a peer know what threads another peer posted?
-2. How does a peer reply/comment on a thread?
-3. How does the thread author learn that someone replied?
-4. How do other interested peers learn that someone replied?
-5. How do we preserve one authoritative truth while supporting many local projections?
+That is too many roles for one object.
 
 ### Failure modes
 
-1. **Flat conflation** — packet = message = thread file
-2. **Authority duplication** — envelope says one thing, thread file says another
-3. **Routing leakage to the agent** — agent is forced to reason about low-level mechanics
-4. **Reply propagation ambiguity** — no explicit model for who should learn about a reply
-5. **Thread discovery ambiguity** — no explicit model for "what threads did my peer post?"
-6. **Projection drift** — local thread markdown can become an accidental authority surface
+1. **Transport / semantic collapse** — packet = thread = markdown file
+2. **Authority duplication** — packet envelope, markdown frontmatter, and projection all claim thread truth
+3. **Routing leakage** — agent must reason about transport, recipients, or feed mechanics
+4. **Reply propagation ambiguity** — unclear how authors, participants, and other peers learn about replies
+5. **Thread discovery ambiguity** — no explicit model for "what threads did this peer post?"
+6. **Identity / locator confusion** — remote URLs are mistaken for canonical identity
+7. **Locator fragility** — a forge or remote URL may disappear over time
+8. **Projection authority drift** — thread markdown files become accidental semantic authorities
+
+### Mode
+
+MCA — add a canonical thread-event layer above packet transport and below projections.
+
+### α / β / γ target
+
+- α PATTERN: one canonical semantic unit (`thread_event`) and one canonical identity model
+- β RELATION: packet transport, event store, discovery, inbox routing, and thread projections all describe the same thread state
+- γ EXIT: future web publishing, feeds, subscriptions, and alternate transports fit without changing thread semantics
+
+### Smallest coherent intervention
+
+Do not replace packet transport. Do not make URLs or markdown files authoritative. Add:
+
+- canonical thread events
+- canonical event/thread IDs
+- a non-authoritative locator model
+- cnos-owned routing/persistence/projection
 
 ---
 
-## Constraints
+## 1. Core Decision
 
-### Existing contracts
+Threads are modeled as event streams, not files.
 
-- Packet transport is already canonical for inbound validation and materialization. It already includes `thread` and `reply_to` in the authoritative envelope. ([transport contract])
-- Thread directories already exist:
-  - `threads/reflections/daily/`
-  - `threads/reflections/weekly/`
-  - `threads/adhoc/`
-  - `threads/mail/inbox/`
-  - `threads/mail/outbox/`
-- Inbox processing already assumes:
-  - cnos delivers one inbound item to `state/input.md`
-  - the agent does not scan queues or choose among multiple messages
+### Canonical stack
 
-### What cannot change
+1. **Packet** — transport truth
+2. **Thread event** — semantic truth
+3. **Projection** — human-readable / actionable views
 
-- Git remains the canonical substrate
-- Packet validation remains pre-materialization and fail-closed
-- The agent should not become responsible for transport, routing, or persistence mechanics
-- Human-readable thread files remain useful and should continue to exist as projections
+### Key rule
 
-### Abstraction level
+- **Packet** answers: what transport-validated unit arrived?
+- **Thread event** answers: what happened in the conversation?
+- **Projection** answers: how should humans or the agent see it?
 
-This is a semantic/routing model above packet transport and below thread projections / inbox triage. It is not:
+### Consequence
 
-- a transport replacement
-- a UI feature
-- a memory/reflection redesign
-
-### Challenged assumption
-
-The existing implicit assumption is:
-
-> "A thread is basically a markdown file, and messages are a separate thing."
-
-This change replaces that with:
-
-> "A thread is a sequence of canonical thread events. Packets carry those events. Thread files are projections."
+- A message is one thread event carried by one packet
+- A thread is a sequence of thread events
+- A thread markdown file is a projection, never the canonical semantic object
 
 ---
 
-## Impact Graph
+## 2. Canonical Identity Model
 
-### Downstream consumers
+### 2.1 Event identity
 
-- **packet schema** — gains clearer thread-event semantics
-- **inbox materializer** — no longer materializes "a message file"; it materializes a validated thread event
-- **inbox skill** — continues to receive one actionable item, now derived from thread-event routing
-- **thread projections** under `threads/adhoc/` and `threads/mail/*`
-- **future feed/discovery views**
+Every thread event has a globally unique canonical ID:
 
-### Upstream producers
+```
+{id}@{author}
+```
 
-- `send_thread` / outbox creation
-- reply/comment creation paths
-- peer sync/fetch paths
-- future "follow thread" / "follow peer" operator commands
+This is the semantic identity of the event.
 
-### Copies and embeddings
+### 2.2 Thread identity
 
-The same conversation data may appear in:
+Every thread has a stable canonical thread ID:
 
-- packet envelope metadata
-- packet payload body
-- local event store
-- local thread projection
-- inbox projection for actionable events
-- feed projection for discovery
+```
+thr-{id}
+```
 
-### Authority relationships
+The `thread_id` is shared across all events in the thread.
 
-- **Packet envelope** is authoritative for routing metadata
-- **Packet payload body** is authoritative for body content
-- **Thread event** is the authoritative semantic unit derived from the validated packet
-- **Thread markdown files** are derived projections, never the transport/semantic source of truth
-- **Inbox projection** is derived and actionable, never canonical
+### 2.3 Reply linkage
+
+Every reply/comment links to its parent through canonical event identity:
+
+- `root_event_id`
+- `reply_to_event_id`
+
+This gives parent-linked threads independent of URL or hosting location.
+
+### 2.4 Canonical identity vs locator
+
+A canonical ID is **not** a URL.
+
+The following are **not** canonical identity:
+
+- Git remote URL
+- GitHub/GitLab forge URL
+- web thread URL
+- blockchain tx hash
+
+Those are **locators** — they tell you where to find the event, not what the event is.
 
 ---
 
-## Proposal
-
-## 1. Canonical semantic unit: Thread Event
-
-Every conversational packet carries one thread event. A thread is a sequence of thread events sharing one `thread_id`.
-
-### Type
+## 3. Canonical Thread Event Schema
 
 ```ocaml
 type thread_event_kind =
@@ -158,14 +173,14 @@ type visibility =
   | Public
 
 type audience = {
-  direct_recipients : string list;
+  direct_recipients     : string list;
   participant_recipients : string list;
-  mention_recipients : string list;
+  mention_recipients    : string list;
 }
 
 type thread_event = {
-  event_id            : string;         (* globally unique, equals packet msg_id *)
-  thread_id           : string;         (* stable thread identity *)
+  event_id            : string;         (* globally unique: {id}@{author} *)
+  thread_id           : string;         (* stable thread identity: thr-{id} *)
   root_event_id       : string;         (* event_id of the Open event *)
   reply_to_event_id   : string option;
   kind                : thread_event_kind;
@@ -178,34 +193,90 @@ type thread_event = {
 }
 ```
 
-### Mapping from packet to thread event
+### Mapping from packet to event
 
-A thread event is derived from a validated packet:
+A thread event is derived from a validated conversational packet:
 
 - `event_id` ← `packet.envelope.msg_id`
+- `thread_id` ← `packet.envelope.thread_id`
+- `root_event_id` ← `packet.envelope.root_event_id`
+- `reply_to_event_id` ← `packet.envelope.reply_to_event_id`
+- `kind` ← `packet.envelope.event_kind`
 - `author` ← `packet.envelope.sender`
 - `created_at` ← `packet.envelope.created_at`
-- `body_md` ← payload bytes of `packet/message.md`
-- thread/routing fields come from authoritative envelope metadata
+- `body_md` ← validated payload bytes
 
-This keeps:
+### Authority rule
 
-- transport truth in the envelope
-- content truth in the payload
-- semantic truth in the derived event
+The canonical semantic event is derived from:
+
+- transport-authoritative envelope metadata
+- payload body bytes
+
+It is **not** derived from markdown frontmatter in the payload.
 
 ---
 
-## 2. Envelope extensions for thread semantics
+## 4. Locator Model
 
-The packet envelope must carry the thread-routing metadata needed before inbox/projection work begins.
+### 4.1 Locators are secondary, not canonical
 
-### Required thread fields
+An event may have one or more **locators** that tell a node where or how it was found. Locators are not semantic identity.
+
+### 4.2 Locator kinds
+
+Examples:
+
+- Git packet ref
+- local projection URL
+- web projection URL
+- archive URL
+- optional chain commitment
+- future relay/event locator
+
+### 4.3 Local locator record
+
+Nodes may maintain local locator metadata such as:
 
 ```json
 {
-  "thread_id": "thr-01JZ....",
-  "root_event_id": "01JZ....@sigma",
+  "event_id": "01JZ...@sigma",
+  "locators": [
+    {
+      "kind": "git",
+      "ref": "refs/cn/msg/{sender}/{msg_id}",
+      "remote": "git+ssh://..."
+    },
+    {
+      "kind": "web",
+      "url": "https://example.net/events/01JZ...@sigma"
+    }
+  ]
+}
+```
+
+### 4.4 Rule
+
+If a locator disappears:
+
+- the event identity remains valid
+- thread parent/child relationships remain valid
+- local event-store truth remains valid
+
+This is why locators must not be canonical.
+
+---
+
+## 5. Packet Envelope Extensions
+
+The packet envelope must carry authoritative thread metadata for conversational packets.
+
+### Required fields
+
+```json
+{
+  "thread_id": "thr-01JZ...",
+  "root_event_id": "01JZ...@sigma",
   "reply_to_event_id": null,
   "event_kind": "open",
   "visibility": "participants",
@@ -222,21 +293,41 @@ The packet envelope must carry the thread-routing metadata needed before inbox/p
 - `event_id` = `msg_id`
 - `root_event_id` = `event_id` for Open
 - `reply_to_event_id` is required for Reply
-- `thread_id` is stable across all events in a thread
-- `event_kind`, `thread_id`, `reply_to_event_id`, `visibility`, and `audience` are authoritative in the envelope
-- markdown frontmatter in `message.md` is never authoritative for routing or thread semantics
+- `thread_id` is stable for the whole thread
+- thread metadata in the envelope is authoritative
+- frontmatter inside `message.md` is not authoritative for routing or threading
 
 ---
 
-## 3. Discovery model
+## 6. Git-First Transport, Transport-Flexible Semantics
 
-A peer learns what another peer posted through feed discovery, not through inbox guessing.
+### 6.1 Git-first
 
-### 3.1 Actor feed projection
+Git remains the default transport substrate. Packets are fetched and validated through packet refs and transport proofs as defined in MESSAGE-PACKET-TRANSPORT.md.
 
-Every sender publishes top-level thread activity into an actor-feed namespace.
+### 6.2 Transport-agnostic semantics
 
-Example ref family:
+Thread semantics are above transport. That means:
+
+- the same `thread_event` model works whether the packet arrived from:
+  - Git
+  - a future mailbox adapter
+  - a future relay adapter
+  - a future chain commitment layer
+
+### 6.3 Rule
+
+cnos remains Git-first for transport, while thread semantics remain transport-agnostic.
+
+---
+
+## 7. Discovery Model
+
+### 7.1 Actor feed projection
+
+A peer learns what threads another peer posted through a feed projection.
+
+For top-level Open events, cnos publishes feed refs such as:
 
 ```
 refs/cn/feed/{author}/{event_id}
@@ -244,141 +335,145 @@ refs/cn/feed/{author}/{event_id}
 
 These refs point to the same canonical packet commit as the message packet.
 
-### 3.2 Feed rules
+### 7.2 Feed rules
 
-- Open events always appear in the author's feed
-- Replies may appear in the author's feed depending on visibility
-- Feed is for discovery
-- Feed is not authoritative; packet validation remains authoritative
+- Open events always appear in the author feed
+- Replies may appear depending on visibility policy
+- Feed refs are discovery projections, not semantic authority
 
-### 3.3 Local feed projection
+### 7.3 Local feed projection
 
-When a peer follows another peer, cnos fetches that peer's feed refs and builds a local feed projection.
+A node that follows a peer:
 
-That answers: *"How does a peer know what threads their peer posted?"*
+1. fetches the peer's feed refs
+2. validates the packet
+3. derives the thread event
+4. stores it locally
+5. updates a local feed projection
+
+This answers:
+
+> "How does a peer know what threads their peer posted?"
 
 By:
 
 - following the peer,
-- fetching the peer's feed refs,
-- and projecting Open events into a local feed view.
+- fetching feed projections,
+- and letting cnos turn validated events into local feed state.
 
 ---
 
-## 4. Reply/comment model
+## 8. Reply / Comment Model
 
-A reply is just another thread event.
+A reply is just another canonical thread event.
 
-### 4.1 Reply creation
+### 8.1 Reply creation
 
-To comment on a thread, a peer creates a packet whose envelope declares:
+To reply/comment:
 
-- same `thread_id`
-- same `root_event_id`
-- `event_kind` = `"reply"`
-- `reply_to_event_id` = the event being replied to
+- create a packet with:
+  - same `thread_id`
+  - same `root_event_id`
+  - `event_kind` = `"reply"`
+  - `reply_to_event_id` = the parent event
 
-### 4.2 Reply routing
+### 8.2 Parent-linked threads
 
-cnos computes routing mechanically from the thread event:
+Because replies link by canonical event ID, any projection can render:
 
-**Always include:**
+- parent pointers
+- reply trees
+- thread timelines
+- web permalinks to parent/child events
 
-- thread owner (`root_event.author`)
-- all current participants
-- explicit mentions
+### 8.3 Rule
 
-**Optionally include:**
-
-- followers (if visibility allows)
-- public feed projection (if visibility allows)
-
-### 4.3 Canonical rule
-
-The sender's repo remains canonical for the authored packet. Routing is expressed by additional derived refs/projections, not by changing packet authority.
+Parent linkage is by canonical event ID, not by URL. URLs are derived projections from canonical IDs.
 
 ---
 
-## 5. How the thread owner learns about replies
+## 9. How the Thread Owner Learns About Replies
 
-The thread owner should not need to follow every participant's whole feed to know about replies to their own thread.
+The thread owner should not have to follow every participant's whole feed.
 
 ### Mechanism
 
-For every routed event, cnos creates a recipient-delivery projection such as:
+For every routed event, cnos publishes recipient-delivery refs such as:
 
 ```
 refs/cn/inbox/{recipient}/{event_id}
 ```
 
-This ref points to the same canonical packet commit as the sender's packet ref.
+These refs point to the same canonical packet commit.
 
 ### Rule
 
-- The thread owner is always included in the recipient-delivery projection for replies/comments on their thread.
-- Participants are included according to audience and visibility policy.
+The thread owner is always included in the routed recipients for:
 
-That answers: *"How does their peer know someone replied / commented on their thread?"*
+- replies
+- closes
+- supersedes
+- direct notes on their thread
+
+That answers:
+
+> "How does their peer know someone replied / commented on their thread?"
 
 By:
 
-- fetching `refs/cn/inbox/{me}/*` from peers,
-- validating the packet,
-- deriving the thread event,
-- and then either:
-  - enqueueing an actionable inbox item,
-  - or silently updating thread/feed projections
+- cnos publishing an inbox delivery projection,
+- not by the author manually broadcasting or the receiving agent guessing.
 
 ---
 
-## 6. How other peers know about replies
+## 10. How Other Peers Learn About Replies
 
-Other peers can learn about replies in two ways:
+There are two coherent ways:
 
-### 6.1 They follow the replier
+### 10.1 Actor-feed discovery
 
-If a peer follows the replier's actor feed and the reply visibility allows it, they will discover the reply through feed projection.
+A peer follows the replier's feed. If visibility allows, the reply appears there.
 
-### 6.2 They subscribe to the thread / are participants
+### 10.2 Thread subscription
 
-cnos may maintain local thread subscriptions:
+A peer is subscribed to the thread. Local subscription state may live in:
 
 ```
 state/thread-subscriptions.json
 ```
 
-A peer is automatically subscribed if:
+A peer can be subscribed because they:
 
-- they are the thread owner
-- they authored an event in the thread
-- they were explicitly added/mentioned
-- an operator manually subscribed them
+- own the thread
+- authored an event in the thread
+- were explicitly mentioned
+- were manually subscribed by operator policy
 
-Replies to subscribed threads are routed to their inbox projection or local thread-update queue.
+That answers:
 
-That answers: *"How do other peers know someone replied / commented on their other peer thread?"*
+> "How do other peers know someone replied / commented on another peer's thread?"
 
 By:
 
-- following the relevant author feed,
-- or being participants/subscribers,
-- with cnos handling the routing and persistence.
+- feed discovery,
+- or subscription/participation routing,
+- with cnos handling it below the agent.
 
 ---
 
-## 7. Persistence model
+## 11. Persistence Model
 
-### 7.1 Canonical local semantic store
+### 11.1 Canonical local semantic store
 
-After packet validation, cnos persists the derived thread event to a local event store, for example:
+After packet validation, cnos stores the derived event in a local event store, for example:
 
 ```
 state/thread-events/{thread_id}/{event_id}.json
 ```
 
-This is local semantic truth for the node.
+This is local semantic truth.
 
-### 7.2 Thread projections
+### 11.2 Thread projections
 
 Human-readable thread files are projections derived from the event store.
 
@@ -388,226 +483,259 @@ Examples:
 - `threads/mail/outbox/{thread_id}.md`
 - `threads/adhoc/{thread_id}.md`
 
-### 7.3 Inbox projection
+### 11.3 Web projections
 
-Only actionable events become `state/input.md`.
+Web publishing can generate stable URLs such as:
 
-Examples of actionable events:
+- `/events/{event_id}`
+- `/threads/{thread_id}`
 
-- direct message to the local agent
-- reply on a locally-authored thread
-- mention requiring response
-- review request / coordination request
+These are derived URLs, not semantic identity.
 
-Non-actionable but relevant events:
+### 11.4 Rule
 
-- update local thread projection
-- update local feed projection
-- do not wake the agent
+If the remote repo or website disappears:
 
-### Rule
-
-cnos owns:
-
-- validation
-- routing
-- persistence
-- projection
-- actionability determination
-
-The agent sees only the routed actionable event.
+- the canonical IDs still work
+- the local event store still works
+- parent-linked threads still work
+- only some locators/projections disappear
 
 ---
 
-## 8. Scenarios
+## 12. Inbox / Actionability Model
 
-### Scenario A — "How does a peer know what threads their peer posted?"
+### 12.1 cnos owns routing and persistence
 
-1. Sigma posts Open event for thread `thr-123`
-2. cnos writes canonical packet
-3. cnos publishes:
-   - `refs/cn/msg/sigma/{event_id}`
-   - `refs/cn/feed/sigma/{event_id}`
-4. Pi follows Sigma, fetches feed refs, validates packet
-5. Pi's cnos stores event and updates local feed projection
-6. Agent is not woken unless policy says top-level threads from Sigma are actionable
+The agent does not reason about:
+
+- feed refs
+- inbox refs
+- participant routing
+- storage layout
+- projection updates
+
+cnos performs:
+
+- validation
+- event derivation
+- routing
+- persistence
+- actionability classification
+- projection updates
+
+### 12.2 Actionable vs non-actionable
+
+Only actionable events become `state/input.md`.
+
+**Actionable examples:**
+
+- direct messages
+- replies on local threads that require response
+- explicit mentions
+- review or coordination requests
+
+**Non-actionable examples:**
+
+- passive feed discoveries
+- thread updates that do not require response
+- follower-visible public replies
+
+### 12.3 Rule
+
+The agent still sees one triaged actionable item at a time. That preserves the current inbox abstraction.
+
+---
+
+## 13. Scenarios
+
+### Scenario A — "How does a peer know what threads another peer posted?"
+
+1. Sigma posts an Open event
+2. cnos validates and stores it
+3. Sigma's cnos publishes:
+   - packet ref
+   - feed ref
+4. Pi follows Sigma and fetches feed refs
+5. Pi's cnos validates packet, derives event, updates local feed projection
+6. Agent is only woken if policy makes that event actionable
 
 ### Scenario B — "How do they reply/comment on a thread?"
 
 1. Pi sees thread `thr-123`
-2. Pi creates Reply event with:
+2. Pi creates a Reply event with:
    - `thread_id` = `thr-123`
-   - `root_event_id` = Sigma's open event
-   - `reply_to_event_id` = event being replied to
-3. cnos writes packet and audience projections
+   - `root_event_id` = root
+   - `reply_to_event_id` = parent
+3. Pi's cnos emits a canonical packet and routes it
 
 ### Scenario C — "How does the thread owner know?"
 
-1. Pi's reply includes Sigma in audience
-2. Pi's cnos publishes:
-   - canonical packet ref
-   - inbox projection ref for Sigma
-3. Sigma fetches `refs/cn/inbox/sigma/*`
-4. cnos validates packet, stores event, updates thread projection
-5. If actionable, Sigma gets one `state/input.md`
+1. Pi's reply routes to Sigma via inbox projection
+2. Sigma fetches `refs/cn/inbox/sigma/*`
+3. cnos validates packet, stores event, updates thread projection
+4. If actionable, Sigma receives one `state/input.md`
 
-### Scenario D — "How do other interested peers know?"
+### Scenario D — "How do other peers know?"
 
-1. Other peer either:
-   - follows Pi,
-   - or is subscribed to `thr-123`,
-   - or is a participant
-2. They fetch the appropriate feed/inbox refs
-3. cnos validates and applies the thread event
-4. Their local projections update without requiring the agent to understand routing
+1. A third peer either follows Pi or subscribes to `thr-123`
+2. They fetch feed/inbox refs as appropriate
+3. cnos validates and stores the event
+4. Local projections update without agent-level routing knowledge
 
 ---
 
-## 9. Why this matches the desired model
+## 14. Why This Matches the Desired Model
 
 This replicates the useful parts of:
 
 - store-and-forward threaded messaging
 - actor feeds
-- reply graphs
-- participant-based visibility
+- parent-linked web threads
+- participant/subscriber reply propagation
 
-while keeping cnos's stronger invariants:
+while preserving cnos's stronger invariants:
 
-- Git-first substrate
+- Git-first canonical substrate
 - validated packet transport
 - single authority surfaces
-- routing/persistence by cnos
-- agent isolated from mechanics
+- cnos-owned routing and persistence
+- agent isolation from low-level mechanics
 
 ---
 
-## Leverage
+## 15. Leverage
 
 This design makes future work easier by:
 
-- unifying direct messages and comment/reply threads under one semantic model
-- making feed discovery and inbox delivery two projections of the same canonical event
-- eliminating thread-file-as-authority ambiguity
-- keeping all routing below the agent
-- making future transports possible without redesigning thread semantics
-- enabling richer thread UX later (subscriptions, notifications, follows) on the same core model
+- unifying direct messages and comments/replies under one semantic model
+- making discovery, inbox delivery, and web projection all derived from the same event truth
+- enabling parent-linked published threads without making URLs canonical
+- allowing remote URLs to disappear without breaking semantic thread identity
+- supporting future transport adapters without changing threading semantics
+- keeping the agent focused on actionability, not mechanics
 
 ---
 
-## Negative Leverage
+## 16. Negative Leverage
 
 This design adds:
 
-- one new semantic layer (`thread_event`)
-- feed and inbox projection mechanics
+- one new semantic layer
+- event-store infrastructure
+- routing/projection logic
 - subscription state
-- local event store
-- more traceability events
-- more migration complexity from legacy thread-file assumptions
+- more traceability
+- migration work away from implicit thread-file semantics
 
-It also requires clear decisions about:
+It also requires explicit decisions for:
 
-- which events are actionable
-- which are feed-only
-- how long local event stores are retained
-- how subscriptions are managed
+- visibility defaults
+- actionability rules
+- subscription policy
+- event retention
 
 ---
 
-## Alternatives Considered
+## 17. Alternatives Considered
 
 | Option | Pros | Cons | Decision |
 |--------|------|------|----------|
-| Keep packets and thread files separate; patch each ad hoc | Smallest immediate change | Leaves authority ambiguity, does not unify replies/discovery, keeps routing implicit | Rejected |
-| Treat thread markdown file as the canonical shared object | Human-readable | Hard to validate/route, weak under concurrency/adversarial transport, duplicates authority | Rejected |
-| Let the agent reason about routing/discovery directly | Flexible in theory | Violates current inbox model, leaks transport mechanics into cognition, high failure risk | Rejected |
-| Canonical thread-event model above packet transport, with cnos-owned routing/persistence | Unifies messages + threads, preserves Git-first transport, keeps agent isolated, supports feed + inbox + projections | More infrastructure, event store and projection work required | **Selected** |
+| Treat thread markdown files as canonical shared objects | Human-readable, simple to inspect | Weak authority model, difficult routing, poor concurrency/adversarial behavior | Rejected |
+| Treat packets as threads directly | Fewer layers | Collapses transport and semantics, weak for projections and local state | Rejected |
+| Let the agent manage reply routing and thread discovery | Flexible | Leaks mechanics into cognition, fragile, expensive, error-prone | Rejected |
+| Use Git remote URL as canonical event identity | Easy to hyperlink | Remote can disappear or move; URL is locator, not identity | Rejected |
+| Use blockchain tx hash as canonical identity | Durable public locator | Too heavy as default, wrong layer for most messages, ties semantics to transport | Rejected |
+| Canonical thread-event model above packet transport, with IDs first and URLs as locators | Clean authority chain, parent-linked web publishing, Git-first compatibility, durable semantic identity | More infrastructure required | **Selected** |
 
 ---
 
-## Process Cost / Automation Boundary
+## 18. Process Cost / Automation Boundary
 
-**Human judgment remains for:**
+### Human judgment remains for:
 
-- visibility policy defaults
-- what counts as actionable
-- migration of legacy thread projections
-- product/UI decisions for feeds and subscriptions
+- visibility defaults
+- actionability policy
+- subscription policy
+- UI/product decisions for feed/thread views
+- legacy migration priorities
 
-**Mechanical work should be automated:**
+### Mechanical work should be automated:
 
 - packet validation
-- thread-event derivation
+- event derivation
 - route computation
 - event-store persistence
-- projection rebuild/update
+- feed/inbox projection creation
+- web permalink derivation
 - participant auto-subscription
-- inbox actionability classification where rules are explicit
 
 ---
 
-## Non-goals
+## 19. Non-goals
 
 This design does not:
 
+- make Git URLs canonical
+- require blockchain as a default ledger
 - redesign reflection memory in v1
-- make every local thread type transportable
-- define full social-product UX
-- define trust/discovery across unknown peers
+- unify every local thread type immediately
+- define a full social product
 - add non-Git transports in v1
-- replace packet transport with a thread-specific transport
 
-Reflections remain a separate local artifact class in v1.
+Reflections remain separate in v1.
 
 ---
 
-## File Changes
+## 20. File Changes
 
 ### Create
 
 - `docs/alpha/protocol/THREAD-EVENT-MODEL.md`
 - `src/transport/cn_thread_event.ml`
-- `state/thread-events/` store logic
-- `state/thread-subscriptions.json` handling
-- feed projection module / inbox projection module
+- local event-store module
+- feed projection module
+- inbox routing module
+- locator/projection metadata module
 
 ### Edit
 
 - `docs/alpha/protocol/MESSAGE-PACKET-TRANSPORT.md`
-  - add authoritative thread-event envelope fields
+  - clarify envelope thread metadata and locator semantics
 - `src/transport/cn_packet.ml`
-  - parse/validate thread-event metadata
+  - validate thread-event metadata
 - `src/cmd/cn_mail.ml`
-  - publish canonical packet + feed/inbox routing refs
+  - publish packet refs, feed refs, inbox refs
 - `src/cmd/cn_maintenance.ml`
-  - fetch and process feed/inbox refs
+  - fetch/process feed/inbox refs
 - `src/agent/skills/ops/inbox/SKILL.md`
-  - clarify that inbox items are derived actionable thread events
+  - actionable events are derived thread events
 - `docs/reference/GLOSSARY.md`
-  - distinguish thread event, thread projection, feed projection
+  - distinguish packet / thread event / projection / locator
 
 ---
 
-## Acceptance Criteria
+## 21. Acceptance Criteria
 
-- Every conversational packet derives exactly one validated `thread_event`
-- Top-level thread opens are discoverable through actor-feed projection
-- Replies/comments are represented as Reply thread events with explicit `reply_to_event_id`
-- Thread owners always receive replies to their threads through recipient-delivery projection
-- Participants/subscribers can receive thread updates without ad hoc routing logic
-- `state/input.md` is produced only for actionable thread events
-- Thread markdown files are derived projections, not semantic/transport authorities
-- Packet validation still happens before any thread persistence or projection update
-- A peer can discover what threads another peer posted without reading arbitrary markdown files from the repo
-- The agent never needs to reason about transport refs, feed refs, or persistence mechanics
+- [ ] Every conversational packet derives exactly one validated `thread_event`
+- [ ] Thread opens are discoverable through actor feed projection
+- [ ] Replies/comments are represented as explicit Reply events with `reply_to_event_id`
+- [ ] Thread owners always receive replies/comments through inbox routing
+- [ ] Participants/subscribers can receive thread updates without ad hoc routing logic
+- [ ] `state/input.md` is produced only for actionable events
+- [ ] Thread markdown files are derived projections, not semantic authority
+- [ ] Packet validation still happens before any event-store write or projection update
+- [ ] Parent-linked web publishing is supported through canonical event IDs and derived URLs
+- [ ] Loss of a remote repo or web projection does not break canonical thread identity or parent linkage
+- [ ] The agent never needs to reason about transport refs, URLs, or persistence mechanics
 
 ---
 
-## Known Debt
+## 22. Known Debt
 
-- Reflection threads remain outside the unified event model in v1
+- Reflections remain outside the event model in v1
 - Subscription UX/policy is deferred
 - Feed pagination/index optimization is deferred
-- Legacy thread-file migration path needs a separate implementation plan
-- Notification policy (which thread events wake the agent vs only update projections) needs explicit runtime rules
+- Chain/nostr/mailbox locators are deferred
+- Legacy thread-file migration needs its own plan
+- Retention/GC for event store and locator metadata is not yet designed
