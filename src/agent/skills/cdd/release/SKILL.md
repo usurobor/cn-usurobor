@@ -67,6 +67,7 @@ Failure mode: version drift — tag says X, binary says Y, agent reports Z. Or: 
   - ❌ Ledger row without engineering level (Level column is required)
   - ✅ Each commit's impact named, linked to issues
   - ✅ Honest TSC grades — not everything is A+
+  - `RELEASE.md` must restate the ledger row as the Outcome section in prose. The ledger row remains canonical; the release body explains it.
   - If release notes or CHANGELOG wording are being authored, load the writing skill and record it in the CDD Trace.
 
 2.5. **Release notes — RELEASE.md**
@@ -85,25 +86,39 @@ Failure mode: version drift — tag says X, binary says Y, agent reports Z. Or: 
 
   ## Outcome
 
-  **Coherence delta:** `α X, β X, γ X` (from CHANGELOG ledger)
+  Coherence delta: C_Σ <grade> (`α <grade>`, `β <grade>`, `γ <grade>`) · **Level:** `L<level>`
 
-  One-sentence statement of what became more coherent after this release.
-  Plain language. A reader should be able to answer "what got better?" in one breath.
+  One short paragraph:
+  - what became more coherent
+  - what surface is now more truthful / portable / durable / explicit
 
   ## Why it matters
 
-  Name the targeted incoherence this release closes. What was the gap between
-  model and reality before? What is it after? 2-3 sentences max.
+  One short paragraph:
+  - what incoherence this cycle targeted
+  - why it mattered operationally or structurally
+  - what changed in the system's behavior or authority model
 
-  ## Fixed / Added / Changed / Removed
+  ## Fixed
 
   - **Short description** (#issue): what changed and why it matters.
+
+  ## Added
+
+  - **Short description** (#issue): what was added and what new capability or clarity it provides.
+
+  ## Changed
+
+  - **Short description** (#issue): what changed in behavior, authority, or shape.
+
+  ## Removed
+
+  - **Short description** (#issue): what was removed and what incoherence it eliminated.
 
   ## Validation
 
   - Deployed to [target], validated [specific check].
-  - State what the validation proves about the coherence delta, not just
-    that deployment succeeded.
+  - State what was proven coherent by the validation, not only that deployment succeeded.
 
   ## Known Issues
 
@@ -137,6 +152,7 @@ Failure mode: version drift — tag says X, binary says Y, agent reports Z. Or: 
   - Version matches everywhere: binary, cn.json, tag
   - The specific fix or feature works end-to-end
   - Check telemetry for errors on first cycle
+  - Validation must confirm the targeted coherence delta, not only binary/version correctness.
   - ❌ "It deployed" (no functional validation)
   - ✅ Trace telemetry, confirm receipts/artifacts exist, agent responds correctly
 
