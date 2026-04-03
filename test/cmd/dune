@@ -185,10 +185,10 @@
  (inline_tests)
  (preprocess (pps ppx_expect)))
 
-; cn_mail tests (ppx_expect) — orphan rejection loop fix (#144)
+; cn_mail tests (ppx_expect) — mail transport invariants
 (library
  (name cn_mail_test)
  (modules cn_mail_test)
- (libraries cn_cmd cn_ffi cn_lib unix)
+ (libraries cn_lib)
  (inline_tests)
  (preprocess (pps ppx_expect)))

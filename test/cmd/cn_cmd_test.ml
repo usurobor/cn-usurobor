@@ -1,7 +1,6 @@
 (** cn_cmd_test: ppx_expect tests for cn_cmd module functions
 
     Tests pure or near-pure functions from the cn_cmd modules:
-    - Cn_mail.parse_rejected_branch (string parsing)
     - Cn_agent.version_to_tuple (version string parsing)
     - Cn_agent.is_newer_version (semver comparison)
     - Cn_agent.auto_update_enabled (recursion guard + kill switch)
@@ -43,54 +42,6 @@ let mk_temp_dir prefix =
   in
   Random.self_init ();
   attempt 50
-
-(* === Cn_mail: parse_rejected_branch === *)
-
-let%expect_test "parse_rejected_branch: valid rejection notice" =
-  let content = "Branch `pi/review-request` rejected and deleted." in
-  (match Cn_mail.parse_rejected_branch content with
-   | Some branch -> Printf.printf "Some %s\n" branch
-   | None -> print_endline "None");
-  [%expect {| Some pi/review-request |}]
-
-let%expect_test "parse_rejected_branch: simple branch name" =
-  let content = "Branch `fix-bug` rejected and deleted." in
-  (match Cn_mail.parse_rejected_branch content with
-   | Some branch -> Printf.printf "Some %s\n" branch
-   | None -> print_endline "None");
-  [%expect {| Some fix-bug |}]
-
-let%expect_test "parse_rejected_branch: not a rejection notice" =
-  let content = "Something else `branch` here" in
-  (match Cn_mail.parse_rejected_branch content with
-   | Some branch -> Printf.printf "Some %s\n" branch
-   | None -> print_endline "None");
-  [%expect {| None |}]
-
-let%expect_test "parse_rejected_branch: empty string" =
-  (match Cn_mail.parse_rejected_branch "" with
-   | Some branch -> Printf.printf "Some %s\n" branch
-   | None -> print_endline "None");
-  [%expect {| None |}]
-
-let%expect_test "parse_rejected_branch: too short" =
-  (match Cn_mail.parse_rejected_branch "Branch" with
-   | Some branch -> Printf.printf "Some %s\n" branch
-   | None -> print_endline "None");
-  [%expect {| None |}]
-
-let%expect_test "parse_rejected_branch: no closing backtick" =
-  (match Cn_mail.parse_rejected_branch "Branch `foo" with
-   | Some branch -> Printf.printf "Some %s\n" branch
-   | None -> print_endline "None");
-  [%expect {| None |}]
-
-let%expect_test "parse_rejected_branch: empty branch name" =
-  (match Cn_mail.parse_rejected_branch "Branch `` rejected" with
-   | Some branch -> Printf.printf "Some %s\n" branch
-   | None -> print_endline "None");
-  [%expect {| None |}]
-
 
 (* === Cn_agent: version_to_tuple === *)
 
