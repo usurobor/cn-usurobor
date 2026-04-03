@@ -47,7 +47,7 @@ Create peer clone (simulating pi's repo with a packet ref for sigma):
 Create a packet ref with envelope + payload:
 
   $ PAYLOAD="Hello from pi!"
-  $ PAYLOAD_SHA=$(printf '%s' "$PAYLOAD" | sha256sum | cut -d' ' -f1)
+  $ PAYLOAD_SHA=$(printf '%s' "$PAYLOAD" | shasum -a 256 | cut -d' ' -f1)
   $ PAYLOAD_BYTES=$(printf '%s' "$PAYLOAD" | wc -c | tr -d ' ')
   $ ENVELOPE=$(printf '{"schema":"cn.packet.v1","msg_id":"test-msg-001@pi","sender":"pi","recipient":"sigma","created_at":"2026-04-03T00:00:00Z","content_type":"text/markdown","payload_path":"packet/message.md","payload_sha256":"%s","payload_bytes":%s,"topic":"hello","protocol":{"transport_kind":"git","packet_version":1}}' "$PAYLOAD_SHA" "$PAYLOAD_BYTES")
   $ ENV_BLOB=$(printf '%s' "$ENVELOPE" | git hash-object -w --stdin)
