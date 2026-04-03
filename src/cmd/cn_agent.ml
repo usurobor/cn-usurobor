@@ -1,7 +1,7 @@
 (** cn_agent.ml — Agent I/O, queue, and execution
 
     Queue FIFO management, agent input/output processing,
-    operation execution, archival, and the inbound actor loop.
+    operation execution, and archival.
 
     Merged from: cn_agent + cn_queue in the 14-module plan.
     Queue is FIFO infrastructure for agent — not a separate domain. *)

@@ -44,7 +44,9 @@ let find_installed_package hub_path pkg_name =
         | Some i -> String.sub dir_name 0 i = pkg_name
         | None -> dir_name = pkg_name)
       |> Option.map (fun dir_name -> Cn_ffi.Path.join pkg_root dir_name)
-    with _ -> None
+    with exn ->
+      Printf.eprintf "cn: warning: cannot read %s: %s\n" pkg_root (Printexc.to_string exn);
+      None
 
 (** List all installed package directories. Returns (pkg_name, pkg_path) pairs. *)
 let list_installed_packages hub_path =
@@ -60,7 +62,9 @@ let list_installed_packages hub_path =
           | None -> dir_name
         in
         (pkg_name, Cn_ffi.Path.join pkg_root dir_name))
-    with _ -> []
+    with exn ->
+      Printf.eprintf "cn: warning: cannot list packages in %s: %s\n" pkg_root (Printexc.to_string exn);
+      []
 
 (* Hub override paths — namespaced by package *)
 let hub_doctrine_override_path hub_path pkg_name =
@@ -120,7 +124,9 @@ let walk_skills root_dir =
           else if Sys.is_directory path then
             walk path
           else [])
-      with _ -> []
+      with exn ->
+        Printf.eprintf "cn: warning: cannot walk skills dir %s: %s\n" dir (Printexc.to_string exn);
+        []
     in
     walk root_dir
 
@@ -210,7 +216,8 @@ let load_core_doctrine ~hub_path : string =
       |> List.iter (fun f ->
         let content = String.trim (read_opt (Cn_ffi.Path.join override_dir f)) in
         if content <> "" then Hashtbl.replace tbl f content)
-    with _ -> ());
+    with exn ->
+      Printf.eprintf "cn: warning: cannot read doctrine overrides %s: %s\n" override_dir (Printexc.to_string exn));
 
   (* Emit in deterministic order *)
   doctrine_order
@@ -248,7 +255,9 @@ let scan_mindsets_dir dir =
       |> List.filter_map (fun f ->
           let content = String.trim (read_opt (Cn_ffi.Path.join dir f)) in
           if content = "" then None else Some (f, content))
-    with _ -> []
+    with exn ->
+      Printf.eprintf "cn: warning: cannot scan mindsets dir %s: %s\n" dir (Printexc.to_string exn);
+      []
 
 (** Load mindsets from installed packages + hub-local overrides.
     Two layers only: installed package > hub override.
@@ -324,7 +333,9 @@ let summarize ~hub_path =
         if Cn_ffi.Fs.exists d then
           (try Cn_ffi.Fs.readdir d
                |> List.filter (fun f -> Filename.check_suffix f ".md")
-               |> List.length with _ -> 0)
+               |> List.length with exn ->
+                 Printf.eprintf "cn: warning: cannot count doctrine in %s: %s\n" d (Printexc.to_string exn);
+                 0)
         else 0
   in
 
@@ -337,7 +348,8 @@ let summarize ~hub_path =
         (try Cn_ffi.Fs.readdir d
              |> List.filter (fun f -> Filename.check_suffix f ".md")
              |> List.iter (fun f -> Hashtbl.replace tbl f ())
-         with _ -> ()));
+         with exn ->
+           Printf.eprintf "cn: warning: cannot count mindsets in %s: %s\n" d (Printexc.to_string exn)));
     Hashtbl.length tbl
   in
 
@@ -360,7 +372,8 @@ let summarize ~hub_path =
           (Cn_ffi.Fs.readdir d
            |> List.filter (fun f -> Filename.check_suffix f ".md")
            |> List.length)
-        with _ -> ()));
+        with exn ->
+          Printf.eprintf "cn: warning: cannot count mindset overrides in %s: %s\n" d (Printexc.to_string exn)));
     !count
   in
   let hub_overrides_skills =
