@@ -1,6 +1,9 @@
 ---
 name: cdd
 description: Apply Coherence-Driven Development to substantial changes. Use when work spans design, code, tests, docs, runtime behavior, process, or release.
+artifact_class: skill
+kata_surface: embedded
+governing_question: Is every release a measured coherence delta with a complete audit trail?
 ---
 
 # CDD
@@ -271,10 +274,10 @@ If a substantial change lands directly on main without a branch or PR, the canon
 
 CDD owns the lifecycle. Sub-skills own execution details:
 
-- design → `eng/design/SKILL.md`
-- review → `eng/review/SKILL.md`
-- release → `release/SKILL.md`
-- post-release assessment → `ops/post-release/SKILL.md`
+- design → `cdd/design/SKILL.md`
+- review → `cdd/review/SKILL.md`
+- release → `cdd/release/SKILL.md`
+- post-release assessment → `cdd/post-release/SKILL.md`
 
 CDD defines what must happen and in what order. Sub-skills define how.
 
@@ -296,8 +299,24 @@ If this skill and the canonical doc disagree, the canonical doc governs.
 
 - canonical spec: `docs/gamma/cdd/CDD.md`
 - rationale: `docs/gamma/cdd/RATIONALE.md`
-- post-release assessment: `ops/post-release/SKILL.md`
-- review protocol: `eng/review/SKILL.md`
-- design protocol: `eng/design/SKILL.md`
-- release procedure: `release/SKILL.md`
+- post-release assessment: `cdd/post-release/SKILL.md`
+- review protocol: `cdd/review/SKILL.md`
+- design protocol: `cdd/design/SKILL.md`
+- release procedure: `cdd/release/SKILL.md`
 - coherence history: `CHANGELOG.md`
+
+---
+
+## 7. Kata
+
+**Scenario:** A P0 bug report lands. Walk the full CDD cycle:
+
+1. Observe — read CHANGELOG TSC, lag table, last assessment
+2. Select — justify why this gap overrides the default next-MCA
+3. Branch + bootstrap — create branch, stub the snapshot directory
+4. Name the gap, choose mode + active skills
+5. Produce artifacts in order through self-coherence
+6. Request review, iterate to convergence
+7. Gate, release, validate, assess, close
+
+**Verify:** Did every step produce a concrete artifact? Did the release commit include RELEASE.md? Did the post-release assessment execute immediate outputs and commit deferred outputs?

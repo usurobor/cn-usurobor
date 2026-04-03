@@ -1,3 +1,11 @@
+---
+name: release
+description: Execute coherent releases where every version bump is a measured coherence delta with a complete audit trail. Use for all tagged releases.
+artifact_class: skill
+kata_surface: embedded
+governing_question: Do all version surfaces agree, and does the release body foreground the coherence delta?
+---
+
 # Release
 
 ## Core Principle
@@ -210,3 +218,20 @@ Failure mode: version drift — tag says X, binary says Y, agent reports Z. Or: 
   - Honest grades — not everything is A+
   - ❌ Every release is A+ (grade inflation, no signal)
   - ✅ "β: A- — DUR skills synced but README.md still references old framing"
+
+---
+
+## 4. Kata
+
+**Scenario:** A bugfix is ready on main. Execute the release.
+
+1. Readiness check — CI green, no unmerged branches
+2. Version decision — patch, minor, or major
+3. VERSION bump + stamp-versions.sh + check-version-consistency.sh
+4. CHANGELOG ledger row with honest TSC grades
+5. RELEASE.md with Outcome mirroring the ledger row
+6. Commit, tag (bare version), push
+7. Wait for release CI, deploy, validate with the specific fix
+8. Post-release assessment
+
+**Verify:** Does `scripts/check-version-consistency.sh` pass? Does RELEASE.md start with the coherence delta? Does validation confirm the targeted incoherence is closed?

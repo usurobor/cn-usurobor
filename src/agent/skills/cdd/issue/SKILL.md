@@ -1,6 +1,8 @@
 ---
 name: issue
 description: Write issues that enable action without author involvement. Use when filing bugs, feature requests, or implementation issues. Triggers on any new issue creation.
+artifact_class: runbook
+kata_surface: none
 ---
 
 # Issue

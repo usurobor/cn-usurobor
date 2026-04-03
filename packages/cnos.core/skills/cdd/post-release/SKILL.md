@@ -1,3 +1,11 @@
+---
+name: post-release
+description: Assess what shipped, measure the coherence delta, execute immediate outputs, and commit deferred outputs. Use after every tagged release.
+artifact_class: skill
+kata_surface: embedded
+governing_question: Did the release close the targeted incoherence, and are all outputs (immediate and deferred) handled?
+---
+
 # Post-Release Assessment
 
 After every release, assess what shipped, what the system looks like now, and what to do next. This is CDD §9 (Assessment) and §10 (Closure) executed as a concrete procedure.
@@ -283,3 +291,17 @@ Immediate fixes (executed this session):
 - review §2.0 structural gate (eeca922)
 - CDD §7.6 output format (64634fb)
 ```
+
+---
+
+## Kata
+
+**Scenario:** v3.29.1 just shipped. Write the post-release assessment.
+
+1. Restate what was released and what coherence delta was targeted
+2. Grade TSC honestly — where did the release fall short?
+3. Identify immediate outputs (skill patches, doc fixes) and execute them now
+4. Identify deferred outputs and commit them as next-cycle work
+5. Check if §9.1 triggers fired (review rounds > 2, mechanical ratio > 20%, etc.)
+
+**Verify:** Are all immediate outputs executed, not just listed? Are deferred outputs recorded concretely? Is the cycle closed?

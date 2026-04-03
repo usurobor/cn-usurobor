@@ -1,6 +1,9 @@
 ---
 name: design
 description: Design systems where the impact graph is fully traced and every acceptance criterion maps to a specific file. Use before implementing substantial changes. Triggers on architecture decisions, new subsystems, protocol changes, issue spec writing.
+artifact_class: skill
+kata_surface: embedded
+governing_question: Does the design trace every acceptance criterion to a specific file and every downstream consumer to its authority source?
 ---
 
 # Design
@@ -350,3 +353,18 @@ Before requesting review:
 - [ ] Artifact boundaries respected: gap lives here, order lives in plan, summary lives in issue
 - [ ] Companion artifacts linked (issue, plan, prior art)
 - [ ] CDD Trace present and filled through the current lifecycle step (if substantial)
+
+---
+
+## Kata
+
+**Scenario:** A new transport adapter is proposed. Produce a design doc.
+
+1. Name the incoherence the adapter closes
+2. State the challenged assumption
+3. Map all downstream consumers and upstream producers
+4. Identify every copy and its authority source
+5. Write ACs that map to specific files with specific checks
+6. State non-goals and known debt
+
+**Verify:** Does the impact graph cover every consumer? Does every AC map to a file? Is the challenged assumption named, not implied?

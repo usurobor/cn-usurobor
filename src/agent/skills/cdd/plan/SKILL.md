@@ -1,6 +1,8 @@
 ---
 name: plan
 description: Turn a design into an ordered implementation plan with steps, acceptance criteria, and file changes. Use after design is converged, before implementation begins.
+artifact_class: runbook
+kata_surface: none
 ---
 
 # Plan

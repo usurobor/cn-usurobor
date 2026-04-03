@@ -1,3 +1,11 @@
+---
+name: review
+description: Review code so that every verdict traces to evidence in the diff, its surrounding contract, and the relevant unchanged context. Use for all PR reviews.
+artifact_class: skill
+kata_surface: embedded
+governing_question: Does every review claim trace to evidence, and does the verdict reflect the worst named incoherence?
+---
+
 # Review
 
 Review code so that every verdict traces to evidence in the diff and its surrounding contract.
@@ -461,3 +469,19 @@ The reviewer must have a different GitHub identity than the PR author so that:
 - Review audit trail is platform-native, not comment-based
 
 If the reviewer shares the author's GitHub account, reviews degrade to comments and review state is unenforceable. This is a known gap (tracked in #45 migration queue) — when it applies, note "posted as comment (shared identity)" in the review.
+
+---
+
+## 8. Kata
+
+**Scenario:** A PR adds a new validation function and claims "structurally prevented" for a failure class. Review it.
+
+1. Complete §2.0 before reading the diff — walk every AC, check named docs
+2. Read the diff for internal coherence
+3. Enumerate all input sources that feed the validator (§2.2.1a)
+4. Check unchanged siblings for new incoherence
+5. Verify the "structurally prevented" claim against exhaustive input-source enumeration
+6. Assign severity and type to each finding
+7. State verdict with evidence
+
+**Verify:** Did you complete §2.0 before the diff? Did you enumerate input sources at security-level rigor for the closure claim? Does every finding trace to a line, file, or artifact?
