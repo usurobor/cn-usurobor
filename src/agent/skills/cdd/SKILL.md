@@ -3,7 +3,7 @@ name: cdd
 description: Apply Coherence-Driven Development to substantial changes. Use when work spans design, code, tests, docs, runtime behavior, process, or release.
 artifact_class: skill
 kata_surface: embedded
-governing_question: Is every release a measured coherence delta with a complete audit trail?
+governing_question: How does a substantial change move from observed incoherence to closed cycle with explicit artifacts and assessment?
 ---
 
 # CDD
@@ -182,7 +182,7 @@ Before release verify:
 
 ### 2.8 Release
 
-Delegate release mechanics to release/SKILL.md. CDD owns:
+Delegate release mechanics to `cdd/release/SKILL.md`. CDD owns:
 
 - when release is allowed
 - what must already be true
