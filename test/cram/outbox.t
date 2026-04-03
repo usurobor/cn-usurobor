@@ -38,7 +38,7 @@ Outbox check shows pending:
 Dry-run shows would send (no clone path needed for sending):
 
   $ $CN sync --dry-run 2>&1 | grep "Would:"
-  Would: send hello.md to recipient (branch: recipient/hello)
+  Would: send hello.md to recipient (packet)
 
 Message still in outbox (dry-run doesn't move it):
 
