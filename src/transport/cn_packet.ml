@@ -264,6 +264,13 @@ let check_dedup index ~msg_id ~sender ~payload_sha256 =
       else
         Equivocation
 
+(* === Helpers === *)
+
+(** Split string on newlines, drop empty lines.
+    Inlined from Cn_hub to avoid circular dependency (cn_hub is in cmd/). *)
+let split_lines s =
+  String.split_on_char '\n' s |> List.filter (fun s -> String.length s > 0)
+
 (* === Git Packet Operations === *)
 
 (** Parse ref into (sender, msg_id) from refs/cn/msg/{sender}/{msg_id} *)
@@ -290,7 +297,7 @@ let list_packet_refs ~cwd ~sender =
   match Cn_ffi.Child_process.exec_in ~cwd cmd with
   | None -> []
   | Some output ->
-      Cn_hub.split_lines output
+      split_lines output
       |> List.filter_map (fun ref ->
         (* Convert refs/remotes/origin/cn/msg/... → refs/cn/msg/... *)
         let prefix = "refs/remotes/origin/" in
@@ -317,7 +324,7 @@ let read_git_packet ~cwd ~ref_name =
        | None -> Error { reason_code = "invalid_commit_or_proof";
                          reason = "could not list tree" }
        | Some tree_output ->
-           let files = Cn_hub.split_lines tree_output in
+           let files = split_lines tree_output in
            let allowed = ["packet/envelope.json"; "packet/message.md"; "packet/signature.ed25519"] in
            let unexpected = files |> List.filter (fun f -> not (List.mem f allowed)) in
            if unexpected <> [] then
