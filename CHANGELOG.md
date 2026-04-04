@@ -24,6 +24,7 @@ See [RELEASE-LEVEL-CLASSIFICATION.md](docs/gamma/essays/RELEASE-LEVEL-CLASSIFICA
 
 | Version | C_Σ | α | β | γ | Level | Coherence note |
 |---------|-----|---|---|---|-------|----------------|
+| 3.32.0 | A- | A | A | B+ | L6 | Legacy fallback audit (#152): 29 findings — 7 removed (dead `run_inbound`/`wake_agent`/`feed_next_input`, flat hub-path compat), 7 justified keeps (fail-closed), 15 silent `with _ ->` swallows converted to warning-logged fallbacks. Zero bare `with _ ->` in touched files. CDD bundle normalized: all 7 skills have full frontmatter, governing questions, kata. Design docs: thread event model (#153), hub placement models (#156). 5 review rounds, 10 findings. |
 | 3.31.0 | A- | A | A | B+ | L7 | Canonical packet transport replaces diff-based inbox materialization (#150). `cn_packet.ml`: envelope schema (`cn.packet.v1`), 9-step validation pipeline, dedup/equivocation index, `refs/cn/msg/{sender}/{msg_id}` namespace. Legacy `materialize_branch` + orphan rejection pipeline fully deleted. Send-side creates root commits under packet refs. 16 ppx_expect tests, 8 cram tests rewritten. 13 review rounds, 22 findings (79% mechanical -- no pre-push test sweep). Silent content swap structurally eliminated. Post-release assessment revised gamma: A -> B+. |
 | 3.29.1 | A | A | A | A | L6 | Patch: `resolve_bin_path` uses `Unix.readlink` directly instead of spawning shell child (#148). Fixes false version drift + daemon crash loop on Pi. Release skill updated: §2.5 RELEASE.md format, §3.7 mechanical gate. |
 | 3.29.0 | A | A | A | A | L6 | Remove hardcoded paths (#146): `resolve_bin_path` derives binary location at runtime (`$CN_BIN` → `/proc/self/exe` → `readlink Sys.executable_name` → fallback), `resolve_repo` derives GitHub repo from build-time `cn.json` extraction (`$CN_REPO` override). `cn_repo_info.ml` dune-generated module. `cn_deps.ml` default source derived from `Cn_lib.cnos_repo`. 7 ppx_expect tests. 2 review rounds, 5 findings R1 (1B/4C), all addressed R2. Build fails if `cn.json` lacks GitHub URL (no silent fallback). |
@@ -93,6 +94,27 @@ See [RELEASE-LEVEL-CLASSIFICATION.md](docs/gamma/essays/RELEASE-LEVEL-CLASSIFICA
 | v1.1.0 | B | B+ | B | B | L5 | Template layout; git-CN naming; CLI added. |
 | v1.0.0 | B− | B− | C+ | B− | L5 | First public template; git-CN hub + self-cohere. |
 | v0.1.0 | C− | C | C− | D+ | L4 | Moltbook-coupled prototype with SQLite. |
+
+---
+
+## 3.32.0 (2026-04-04)
+
+### Fixed
+
+- **Legacy fallback path audit** (#152): systematic audit of all legacy/fallback/deprecated paths in src/. 29 findings classified in frozen audit table.
+  - **Removed (7):** `run_inbound`, `feed_next_input`, `wake_agent` (~160 lines dead code since v3.27), `hub_flat_mindsets_path`, `hub_flat_skills_path` + loader blocks (~25 lines, package namespace only since v3.25).
+  - **Converted (15):** all bare `with _ ->` in touched files converted to `Printf.eprintf` warning + fallback. Covers `cn_assets.ml` (9), `cn_deps.ml` (3), `cn_agent.ml` (2), plus 1 narrowed catch.
+  - **Kept (7):** `git.ml` main/master fallback, `release_lock` cleanup, `extract_inbound_message` defensive fallback, `resolve_render` traced fallback, `cn_dotenv.ml` optional load, `cn_sandbox.validate_path` (fail-closed). All justified.
+  - 5 review rounds, 10 findings (3D in R1, 3D in R2, 2 in R3, 1 in R4, 0 in R5). Net: ~185 lines deleted, ~40 added.
+
+### Added
+
+- **Thread event model design** (#153): `docs/alpha/protocol/THREAD-EVENT-MODEL.md` v1.0.1 — canonical ID (`{id}@{author}`) vs locator split, parent-linked publication, Git-first transport-flexible. Implementation plan: `docs/gamma/cdd/3.32.0/PLAN-thread-event-model.md`.
+- **Hub placement models design** (#156): `docs/alpha/HUB-PLACEMENT-MODELS.md` — split `hub_root`/`workspace_root` for sandboxed agents, placement manifest (`.cn/placement.json`), nested clone as default backend, submodule optional. Implementation plan: `docs/gamma/cdd/3.33.0/PLAN-hub-placement-models.md`.
+
+### Changed
+
+- **CDD bundle normalization**: all 7 CDD skill artifacts (`cdd`, `design`, `review`, `release`, `post-release`, `plan`, `issue`) have full frontmatter (`artifact_class`, `kata_surface`, `governing_question`). Descriptions sharpened as "How do we..." process questions. Kata expanded to Scenario/Task/Verification/Common failures. Package copies synced.
 
 ---
 
