@@ -3,7 +3,7 @@ name: cdd
 description: Apply Coherence-Driven Development to substantial changes. Use when work spans design, code, tests, docs, runtime behavior, process, or release.
 artifact_class: skill
 kata_surface: embedded
-governing_question: Is every release a measured coherence delta with a complete audit trail?
+governing_question: How does a substantial change move from observed incoherence to closed cycle with explicit artifacts and assessment?
 ---
 
 # CDD
@@ -182,7 +182,7 @@ Before release verify:
 
 ### 2.8 Release
 
-Delegate release mechanics to release/SKILL.md. CDD owns:
+Delegate release mechanics to `cdd/release/SKILL.md`. CDD owns:
 
 - when release is allowed
 - what must already be true
@@ -309,14 +309,43 @@ If this skill and the canonical doc disagree, the canonical doc governs.
 
 ## 7. Kata
 
-**Scenario:** A P0 bug report lands. Walk the full CDD cycle:
+### Scenario
 
-1. Observe — read CHANGELOG TSC, lag table, last assessment
-2. Select — justify why this gap overrides the default next-MCA
-3. Branch + bootstrap — create branch, stub the snapshot directory
-4. Name the gap, choose mode + active skills
-5. Produce artifacts in order through self-coherence
-6. Request review, iterate to convergence
-7. Gate, release, validate, assess, close
+A substantial docs/process change has been selected from the lag table and must be carried through to release.
 
-**Verify:** Did every step produce a concrete artifact? Did the release commit include RELEASE.md? Did the post-release assessment execute immediate outputs and commit deferred outputs?
+### Task
+
+Produce:
+
+- mode + active skills
+- primary branch artifact
+- trace through review/gate/release
+- post-release assessment closeout
+
+### Governing skills
+
+- cdd
+- design
+- review
+- release
+- post-release
+
+### Expected artifacts
+
+- one primary branch artifact with CDD Trace
+- one review surface
+- one gate surface
+- one release surface
+- one post-release assessment
+
+### Verification
+
+- lifecycle steps are evidenced
+- active skills are explicit
+- immediate and deferred outputs are both handled
+
+### Common failures
+
+- release without assessment
+- review without contract
+- direct-to-main without retro-closure

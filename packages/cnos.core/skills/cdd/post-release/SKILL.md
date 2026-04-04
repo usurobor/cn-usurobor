@@ -1,9 +1,9 @@
 ---
 name: post-release
-description: Assess what shipped, measure the coherence delta, execute immediate outputs, and commit deferred outputs. Use after every tagged release.
+description: Assess what shipped, what changed, what remains open, and what the next cycle must do.
 artifact_class: skill
 kata_surface: embedded
-governing_question: Did the release close the targeted incoherence, and are all outputs (immediate and deferred) handled?
+governing_question: How do we measure what a release actually changed and close the cycle instead of merely shipping and moving on?
 ---
 
 # Post-Release Assessment

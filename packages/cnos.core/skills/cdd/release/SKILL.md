@@ -1,9 +1,9 @@
 ---
 name: release
-description: Execute coherent releases where every version bump is a measured coherence delta with a complete audit trail. Use for all tagged releases.
+description: Ship a version as a measured coherence delta with matching code, changelog, tag, release notes, deployment, and validation.
 artifact_class: skill
 kata_surface: embedded
-governing_question: Do all version surfaces agree, and does the release body foreground the coherence delta?
+governing_question: How do we turn a converged branch into a released version with a complete and auditable coherence delta?
 ---
 
 # Release

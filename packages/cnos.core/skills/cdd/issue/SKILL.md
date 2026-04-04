@@ -1,8 +1,9 @@
 ---
 name: issue
-description: Write issues that enable action without author involvement. Use when filing bugs, feature requests, or implementation issues. Triggers on any new issue creation.
+description: Write an issue so problem, impact, and acceptance criteria are specific enough to act on without clarification loops.
 artifact_class: runbook
 kata_surface: none
+governing_question: How do we write an issue that is specific, actionable, and testable?
 ---
 
 # Issue

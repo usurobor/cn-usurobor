@@ -3,7 +3,7 @@ name: design
 description: Design systems where the impact graph is fully traced and every acceptance criterion maps to a specific file. Use before implementing substantial changes. Triggers on architecture decisions, new subsystems, protocol changes, issue spec writing.
 artifact_class: skill
 kata_surface: embedded
-governing_question: Does the design trace every acceptance criterion to a specific file and every downstream consumer to its authority source?
+governing_question: How do we turn a named incoherence into a design whose impact graph, acceptance criteria, and file changes are explicit before implementation begins?
 ---
 
 # Design

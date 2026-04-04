@@ -1,9 +1,9 @@
 ---
 name: review
-description: Review code so that every verdict traces to evidence in the diff, its surrounding contract, and the relevant unchanged context. Use for all PR reviews.
+description: Review changes so every verdict traces to evidence in the diff, the surrounding contract, and the relevant unchanged context.
 artifact_class: skill
 kata_surface: embedded
-governing_question: Does every review claim trace to evidence, and does the verdict reflect the worst named incoherence?
+governing_question: How do we verify that a change closes its declared gap without creating a larger incoherence elsewhere?
 ---
 
 # Review

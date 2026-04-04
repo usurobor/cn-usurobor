@@ -1,8 +1,9 @@
 ---
 name: plan
-description: Turn a design into an ordered implementation plan with steps, acceptance criteria, and file changes. Use after design is converged, before implementation begins.
+description: Turn a converged design into an ordered implementation sequence with acceptance criteria, file changes, and exit conditions.
 artifact_class: runbook
 kata_surface: none
+governing_question: How do we operationalize an accepted design into an ordered sequence of implementation steps?
 ---
 
 # Plan
