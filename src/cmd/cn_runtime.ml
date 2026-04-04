@@ -3,8 +3,7 @@
     Owns the full processing pipeline: dequeue → pack → call LLM →
     write output → archive → parse → execute → project → conversation.
 
-    Replaces the previous run_inbound + feed_next_input + wake_agent
-    split. Single entry points: process_one and run_cron.
+    Single entry points: process_one and run_cron.
 
     Uses atomic file locking (O_CREAT|O_EXCL) to prevent cron overlap
     and daemon race conditions on state/input.md and state/output.md.

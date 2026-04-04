@@ -608,7 +608,7 @@ let%expect_test "gtd mapping: invalid transitions agents hit" =
    Cross-FSM: Actor state derivation + inbound flow
    ============================================================
 
-   cn_agent.run_inbound derives actor state from filesystem,
+   cn_runtime.run_cron derives actor state from filesystem,
    then drives transitions. Test the derivation→transition chain. *)
 
 let%expect_test "actor: idle → feed → processing → archive → idle" =

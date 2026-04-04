@@ -10,7 +10,7 @@
       cn_llm.ml     → Claude API client (curl-backed)
       cn_telegram.ml→ Telegram Bot API client
       cn_config.ml  → Config loader (env vars + .cn/config.json)
-      cn_agent.ml   → Agent I/O, queue, execution (legacy: run_inbound deprecated)
+      cn_agent.ml   → Agent I/O, queue, execution
       cn_mail.ml    → Inbox/outbox mail transport
       cn_gtd.ml     → Thread lifecycle + creation
       cn_mca.ml     → Managed Concern Aggregation

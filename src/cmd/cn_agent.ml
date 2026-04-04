@@ -1,7 +1,7 @@
 (** cn_agent.ml — Agent I/O, queue, and execution
 
     Queue FIFO management, agent input/output processing,
-    operation execution, archival, and the inbound actor loop.
+    operation execution, and archival.
 
     Merged from: cn_agent + cn_queue in the 14-module plan.
     Queue is FIFO infrastructure for agent — not a separate domain. *)
@@ -21,7 +21,9 @@ let queue_depth hub_path =
       Cn_ffi.Fs.readdir dir
       |> List.filter Cn_hub.is_md_file
       |> List.length
-    with _ -> 0
+    with exn ->
+      Printf.eprintf "cn: warning: cannot count queue in %s: %s\n" dir (Printexc.to_string exn);
+      0
 
 let queue_add hub_path id from content =
   let dir = queue_dir hub_path in
@@ -266,43 +268,6 @@ let queue_inbox_items hub_path =
         end)
     |> List.length
 
-(* === Feed next input === *)
-(* DEPRECATED: Replaced by Cn_runtime.process_one (Step 9).
-   Kept for one release cycle — existing cron setups may still call run_inbound. *)
-
-let feed_next_input hub_path =
-  let inp = input_path hub_path in
-
-  match queue_pop hub_path with
-  | None ->
-      print_endline (Cn_fmt.ok "Queue empty - nothing to process");
-      false
-  | Some content ->
-      Cn_ffi.Fs.ensure_dir (Cn_ffi.Path.join hub_path "state");
-      Cn_ffi.Fs.write inp content;
-
-      let meta = parse_frontmatter content in
-      let id = meta |> List.find_map (fun (k, v) -> if k = "id" then Some v else None)
-        |> Option.value ~default:"unknown" in
-      let from = meta |> List.find_map (fun (k, v) -> if k = "from" then Some v else None)
-        |> Option.value ~default:"unknown" in
-
-      Cn_hub.log_action hub_path "process.feed" (Printf.sprintf "id:%s from:%s" id from);
-      print_endline (Cn_fmt.ok (Printf.sprintf "Wrote state/input.md: %s (from %s)" id from));
-
-      let remaining = queue_count hub_path in
-      if remaining > 0 then
-        print_endline (Cn_fmt.info (Printf.sprintf "Queue depth: %d remaining" remaining));
-
-      true
-
-(* === Wake agent === *)
-(* DEPRECATED: OpenClaw removed, replaced by Cn_runtime.process_one (Step 9).
-   Kept for one release cycle — existing cron setups may still call run_inbound. *)
-
-let wake_agent _hub_path =
-  print_endline (Cn_fmt.warn "wake_agent: deprecated — use `cn agent` (Cn_runtime.run_cron)")
-
 (* === Queue Commands === *)
 
 let run_queue_list hub_path =
@@ -478,7 +443,7 @@ let resolve_bin_path () =
   | _ ->
     (* Linux: /proc/self/exe — read directly, no child process.
        Spawning a shell to readlink /proc/self/exe returns the shell's exe, not ours. *)
-    let proc_self = try Some (Unix.readlink "/proc/self/exe") with _ -> None in
+    let proc_self = try Some (Unix.readlink "/proc/self/exe") with Unix.Unix_error _ -> None in
     match proc_self with
     | Some p when String.length p > 0 -> p
     | _ ->
@@ -663,124 +628,3 @@ let check_binary_version_drift () =
         else Ok (Some ver)
       | _ -> Error (Printf.sprintf "unexpected --version output: %s" trimmed)
 
-(* === Inbound (Actor Loop — FSM-driven) === *)
-(* DEPRECATED: Replaced by Cn_runtime.run_cron (Step 9).
-   The full pipeline — dequeue, pack, LLM call, archive, execute, project —
-   is now handled by Cn_runtime.process_one under atomic lock.
-   Kept for one release cycle — existing cron setups may still call this. *)
-
-let run_inbound hub_path name =
-  print_endline (Cn_fmt.warn "run_inbound: deprecated — use `cn agent` (Cn_runtime.run_cron)");
-  print_endline (Cn_fmt.info "cn in: handling external input (legacy path)...");
-
-  (* Step 1: Queue any new inbox items *)
-  let queued = queue_inbox_items hub_path in
-  if queued > 0 then
-    print_endline (Cn_fmt.info (Printf.sprintf "Added %d item(s) to queue" queued));
-
-  (* Step 2: Check MCA review cycle *)
-  let cycle = Cn_mca.increment_mca_cycle hub_path in
-  if cycle mod Cn_mca.mca_review_interval = 0 && Cn_mca.mca_count hub_path > 0 then begin
-    let review = Cn_mca.prepare_mca_review hub_path name in
-    let _ = queue_add hub_path review.trigger "system" review.body in
-    Cn_hub.log_action hub_path "mca.review-queued" (Printf.sprintf "trigger:%s count:%d" review.trigger review.count);
-    print_endline (Cn_fmt.ok (Printf.sprintf "Queued MCA review (%d MCAs) trigger:%s" review.count (String.sub review.trigger 0 7)))
-  end;
-
-  (* Step 3: Actor FSM — derive state, apply transitions *)
-  let inp = input_path hub_path in
-  let outp = output_path hub_path in
-  
-  (* Timeout config: read from env or use defaults *)
-  let cron_period_min = match Sys.getenv_opt "CN_CRON_PERIOD_MIN" with
-    | Some s -> (try int_of_string s with Failure _ -> 5)
-    | None -> 5 in
-  let timeout_cycles = match Sys.getenv_opt "CN_TIMEOUT_CYCLES" with
-    | Some s -> (try int_of_string s with Failure _ -> 3)
-    | None -> 3 in
-  let max_age_min = cron_period_min * timeout_cycles in
-  
-  (* Calculate input.md age in minutes *)
-  let input_age_min = 
-    if Cn_ffi.Fs.exists inp then
-      let stat = Unix.stat inp in
-      let age_sec = Unix.time () -. stat.Unix.st_mtime in
-      int_of_float (age_sec /. 60.0)
-    else 0 in
-  
-  let actor_state = Cn_protocol.actor_derive_state_with_timeout
-    ~input_exists:(Cn_ffi.Fs.exists inp)
-    ~output_exists:(Cn_ffi.Fs.exists outp)
-    ~input_age_min
-    ~max_age_min in
-
-  print_endline (Cn_fmt.dim (Printf.sprintf "Actor state: %s"
-    (Cn_protocol.string_of_actor_state actor_state)));
-
-  match actor_state with
-  | Cn_protocol.OutputReady ->
-      (* output.md exists — archive, then feed next *)
-      (match Cn_protocol.actor_transition actor_state Cn_protocol.Archive_complete with
-       | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "Actor FSM error: %s" e))
-       | Ok Cn_protocol.Idle ->
-           if archive_io_pair hub_path name then begin
-             auto_save hub_path name;
-             if feed_next_input hub_path then wake_agent hub_path
-           end
-       | Ok _ -> ())
-  | Cn_protocol.TimedOut ->
-      (* Agent timed out — archive as failed, proceed to next *)
-      print_endline (Cn_fmt.warn (Printf.sprintf "Agent timeout (age=%d min, max=%d min)" input_age_min max_age_min));
-      Cn_hub.log_action hub_path "actor.timeout" (Printf.sprintf "age:%d max:%d" input_age_min max_age_min);
-      if archive_timeout hub_path name then begin
-        auto_save hub_path name;
-        if feed_next_input hub_path then wake_agent hub_path
-      end
-  | Cn_protocol.Processing ->
-      (* Agent working — show progress *)
-      print_endline (Cn_fmt.info (Printf.sprintf "Agent working (%d/%d min)" input_age_min max_age_min));
-      print_endline (Cn_fmt.info (Printf.sprintf "Queue depth: %d" (queue_count hub_path)))
-  | Cn_protocol.Idle ->
-      (* Auto-update check before processing queue — Issue 4: call FSM transitions *)
-      let update_info = check_for_update hub_path in
-      (match update_info with
-       | Update_skip ->
-           (* FSM: Idle + Update_skip → Idle *)
-           (match Cn_protocol.actor_transition Cn_protocol.Idle Cn_protocol.Update_skip with
-            | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "FSM error: %s" e))
-            | Ok _ -> if feed_next_input hub_path then wake_agent hub_path)
-       | Update_patch ver | Update_available ver ->
-           (* FSM: Idle + Update_available → Updating *)
-           (match Cn_protocol.actor_transition Cn_protocol.Idle Cn_protocol.Update_available with
-            | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "FSM error: %s" e))
-            | Ok Cn_protocol.Updating ->
-                print_endline (Cn_fmt.info (Printf.sprintf "Update available: %s → %s" Cn_lib.version ver));
-                Cn_hub.log_action hub_path "actor.update" (Printf.sprintf "checking:%s" ver);
-                let result = do_update update_info in
-                (match result with
-                 | Cn_protocol.Update_complete ->
-                     (* FSM: Updating + Update_complete → Idle (but we re-exec) *)
-                     (match Cn_protocol.actor_transition Cn_protocol.Updating Cn_protocol.Update_complete with
-                      | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "FSM error: %s" e))
-                      | Ok _ ->
-                          Cn_hub.log_action hub_path "actor.update" (Printf.sprintf "complete:%s" ver);
-                          print_endline (Cn_fmt.ok (Printf.sprintf "Updated to %s, re-executing..." ver));
-                          re_exec ())
-                 | Cn_protocol.Update_fail ->
-                     (* FSM: Updating + Update_fail → Idle *)
-                     (match Cn_protocol.actor_transition Cn_protocol.Updating Cn_protocol.Update_fail with
-                      | Error e -> print_endline (Cn_fmt.fail (Printf.sprintf "FSM error: %s" e))
-                      | Ok _ ->
-                          Cn_hub.log_action hub_path "actor.update" "failed";
-                          print_endline (Cn_fmt.warn "Update failed, continuing with current version");
-                          if feed_next_input hub_path then wake_agent hub_path)
-                 | _ -> ())
-            | Ok _ -> ()))
-  | Cn_protocol.Updating ->
-      (* Transient state — should not be derived from filesystem.
-         Included for FSM exhaustiveness; the Updating state only exists
-         during the update flow within a single run_inbound call. *)
-      ()
-  | Cn_protocol.InputReady ->
-      (* input.md written but agent not woken — wake it *)
-      wake_agent hub_path

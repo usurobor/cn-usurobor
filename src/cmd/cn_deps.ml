@@ -170,7 +170,11 @@ let rec collect_files_sorted root dir =
        |> List.concat_map (fun entry ->
          collect_files_sorted root
            (if dir = "." then entry else dir ^ "/" ^ entry))
-     with Sys_error _ | Unix.Unix_error _ -> [])
+     with
+     | Sys_error msg ->
+       Printf.eprintf "cn: warning: cannot read directory %s: %s\n" full msg; []
+     | Unix.Unix_error (e, _, _) ->
+       Printf.eprintf "cn: warning: cannot read directory %s: %s\n" full (Unix.error_message e); [])
   else [dir]
 
 let compute_integrity dir =
@@ -214,7 +218,8 @@ let rec copy_tree src_dir dst_dir =
           copy_tree src dst
         else
           Cn_ffi.Fs.write dst (Cn_ffi.Fs.read src))
-    with _ -> ()
+    with exn ->
+      Printf.eprintf "cn: warning: cannot copy tree %s: %s\n" src_dir (Printexc.to_string exn)
   end
 
 (* === First-party package source resolution === *)
@@ -363,7 +368,9 @@ let list_installed ~hub_path =
               (String.length dir_name - i - 1) in
             Some (name, version)
         | None -> Some (dir_name, "unknown"))
-    with _ -> []
+    with exn ->
+      Printf.eprintf "cn: warning: cannot list installed packages: %s\n" (Printexc.to_string exn);
+      []
 
 (* === Doctor === *)
 
