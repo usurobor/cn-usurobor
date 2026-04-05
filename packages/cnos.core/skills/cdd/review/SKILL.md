@@ -190,6 +190,19 @@ Check whether the change creates obligations on code it did not touch.
   - ❌ "All 6 emission points are correct" (didn't verify the reader returns correct chronological order across day boundaries)
   - ✅ "6 emission points verified. Reader `read_recent` iterates files newest-first, reverses — cross-day order is wrong. Filtered path concatenates without global sort."
 
+2.2.1b. **Sibling fallback audit for compatibility/legacy paths**
+  - When the diff removes, converts, or justifies one legacy/fallback/compatibility path, enumerate sibling fallback paths in the same module/family and verify they are:
+    - also removed,
+    - also converted,
+    - or explicitly kept with justification.
+  - This is mandatory for patterns such as:
+    - `with _ -> []`
+    - `with _ -> None`
+    - silent compatibility aliases
+    - resolver/scanner paths that swallow missing resources
+  - ❌ "Converted one `with _ ->` — looks good"
+  - ✅ "Converted `read_opt`, then audited sibling `with _ -> []` in `list_installed_packages` and `walk_skills`"
+
 2.2.2. **Cross-module leakage**
   - Follow what the changed code writes/produces and inspect what reads/exposes it.
   - ❌ Review executor in isolation
@@ -371,6 +384,7 @@ Before submitting a review:
 - [ ] Type assigned to every finding (mechanical / judgment)
 - [ ] Multi-format outputs checked for semantic parity
 - [ ] Authority surfaces checked for conflict where multiple define the same thing
+- [ ] Sibling fallback paths audited when one fallback/compatibility path was touched (§2.2.1b)
 - [ ] Higher-leverage architecture move considered where repeated pressure is visible
 - [ ] Added process burden checked for lighter alternatives / automation boundary
 - [ ] Unchanged siblings checked for new incoherence
